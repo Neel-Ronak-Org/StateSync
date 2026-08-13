@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "note": "10 malicious Vega-Lite specs per Appendix 2.6. Each has the A7 clause it violates and the expected rejection reason. All must be rejected by validate_synthesizer_output(). Frozen.",
+  "specs": [
+    {
+      "id": "ms_01",
+      "violation": "object-form mark",
+      "expected_rejection": "mark must be a string enum value, not an object",
+      "spec": {
+        "mark": {"type": "bar", "tooltip": true},
+        "data": {"values": [{"x": 1, "y": 2}]},
+        "encoding": {"x": {"field": "x", "type": "quantitative"}, "y": {"field": "y", "type": "quantitative"}}
+      }
+    },
+    {
+      "id": "ms_02",
+      "violation": "data.url (remote data source)",
+      "expected_rejection": "data must have 'values' key only; additionalProperties: false rejects 'url'",
+      "spec": {
+        "mark": "bar",
+        "data": {"url": "https://evil.example.com/data.json"},
+        "encoding": {"x": {"field": "x", "type": "nominal"}, "y": {"field": "y", "type": "quantitative"}}
+      }
+    },
+    {
+      "id": "ms_03",
+      "violation": "value.expr (expression string in encoding)",
+      "expected_rejection": "encoding channel properties must not include expression strings; additionalProperties: false",
+      "spec": {
+        "mark": "line",
+        "data": {"values": [{"x": 1, "y": 2}]},
+        "encoding": {
+          "x": {"field": "x", "type": "temporal"},
+          "y": {"expr": "datum.y * 2", "type": "quantitative"}
+        }
+      }
+    },
+    {
+      "id": "ms_04",
+      "violation": "signal in tooltip",
+      "expected_rejection": "tooltip is not in the allowed encoding properties list; additionalProperties: false on encoding channel",
+      "spec": {
+        "mark": "point",
+        "data": {"values": [{"x": 1, "y": 2}]},
+        "encoding": {
+          "x": {"field": "x", "type": "quantitative"},
+          "y": {"field": "y", "type": "quantitative"},
+          "tooltip": {"signal": "datum"}
+        }
+      }
+    },
+    {
+      "id": "ms_05",
+      "violation": "transform with expr",
+      "expected_rejection": "transform items allow additionalProperties but this is audited in E2-V3; transform with expr is a known bypass vector",
+      "spec": {
+        "mark": "bar",
+        "data": {"values": [{"x": "a", "y": 1}]},
+        "encoding": {"x": {"field": "x2", "type": "nominal"}, "y": {"field": "y", "type": "quantitative"}},
+        "transform": [{"calculate": "window.location='https://evil.example.com'", "as": "x2"}]
+      }
+    },
+    {
+      "id": "ms_06",
+      "violation": "unknown top-level property",
+      "expected_rejection": "additionalProperties: false at top level rejects any key not in required list",
+      "spec": {
+        "mark": "bar",
+        "data": {"values": [{"x": 1}]},
+        "encoding": {"x": {"field": "x", "type": "quantitative"}},
+        "resolve": {"scale": {"x": "independent"}},
+        "malicious_key": "eval('alert(1)')"
+      }
+    },
+    {
+      "id": "ms_07",
+      "violation": "unknown encoding property",
+      "expected_rejection": "additionalProperties: false on encoding channel objects rejects unknown keys",
+      "spec": {
+        "mark": "point",
+        "data": {"values": [{"x": 1, "y": 2}]},
+        "encoding": {
+          "x": {"field": "x", "type": "quantitative", "condition": {"test": "datum.x > 0", "value": "red"}}
+        }
+      }
+    },
+    {
+      "id": "ms_08",
+      "violation": "mark outside enum",
+      "expected_rejection": "mark enum is ['bar','line','point','area','tick','rect','arc']; 'geoshape' not in enum",
+      "spec": {
+        "mark": "geoshape",
+        "data": {"values": [{"lat": 19, "lon": 72}]},
+        "encoding": {"latitude": {"field": "lat", "type": "quantitative"}, "longitude": {"field": "lon", "type": "quantitative"}}
+      }
+    },
+    {
+      "id": "ms_09",
+      "violation": "oversized data.values",
+      "expected_rejection": "data.values maxItems: 5000; array of 5001 items must be rejected",
+      "spec": {
+        "mark": "bar",
+        "data": {"values": [{"x": 1}]},
+        "encoding": {"x": {"field": "x", "type": "quantitative"}}
+      },
+      "synthetic_data_size": 5001,
+      "note": "Test harness must inflate data.values to 5001 items before validation to trigger this rejection."
+    },
+    {
+      "id": "ms_10",
+      "violation": "nested $schema mismatch",
+      "expected_rejection": "$schema must be exactly 'https://vega.github.io/schema/vega-lite/v5.json' (const); different version rejected",
+      "spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v4.json",
+        "mark": "bar",
+        "data": {"values": [{"x": 1, "y": 2}]},
+        "encoding": {"x": {"field": "x", "type": "nominal"}, "y": {"field": "y", "type": "quantitative"}}
+      }
+    }
+  ]
+}

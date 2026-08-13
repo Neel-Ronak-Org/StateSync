@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StateSync — ONDC Network Analytics</title>
+  <meta name="description" content="Multi-agent analytics for ONDC network data. Ask questions in plain English and get structured answers powered by AI." />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Vega-Lite (Phase E2 readiness) — vega-interpreter only, NOT the default
+       expression compiler, so unsafe-eval is never required (A7 spec). -->
+  <script src="https://cdn.jsdelivr.net/npm/vega@5/build/vega-interpreter.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+
+  <style>
+    :root {
+      --bg:        #0b0f1a;
+      --surface:   #111827;
+      --surface2:  #1a2236;
+      --border:    #1e2d45;
+      --accent:    #3b82f6;
+      --accent2:   #6366f1;
+      --success:   #10b981;
+      --warning:   #f59e0b;
+      --error:     #ef4444;
+      --text:      #e2e8f0;
+      --text-muted:#94a3b8;
+      --radius:    12px;
+      --mono:      'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1a1f3a 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .logo {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 1rem; color: #fff;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; }
+    header p  { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+    .phase-badge {
+      margin-left: auto;
+      background: rgba(59,130,246,0.15);
+      border: 1px solid rgba(59,130,246,0.3);
+      color: var(--accent);
+      font-size: 0.7rem; font-weight: 600;
+      padding: 0.25rem 0.6rem; border-radius: 20px;
+    }
+
+    /* ── Main layout ── */
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    /* ── Query panel ── */
+    .query-panel {
+      border-right: 1px solid var(--border);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .panel-title {
+      font-size: 0.7rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+
+    /* Query suggestions */
+    .suggestions { display: flex; flex-direction: column; gap: 0.5rem; }
+    .suggestion-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 8px;
+      padding: 0.6rem 1rem;
+      font-size: 0.8rem; font-family: 'Inter', sans-serif;
+      text-align: left; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .suggestion-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+      background: var(--surface2);
+    }
+
+    /* Query input area */
+    .query-form { display: flex; flex-direction: column; gap: 0.75rem; }
+    #query-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      padding: 1rem;
+      resize: vertical;
+      min-height: 100px;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    #query-input:focus { border-color: var(--accent); }
+    #query-input::placeholder { color: var(--text-muted); }
+
+    #submit-btn {
+      align-self: flex-start;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; border-radius: 8px;
+      color: #fff; font-family: 'Inter', sans-serif;
+      font-size: 0.875rem; font-weight: 600;
+      padding: 0.65rem 1.5rem;
+      cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+    }
+    #submit-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    #submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* State trace (B-V2) */
+    .trace-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      display: none;
+    }
+    .trace-card.visible { display: block; }
+    .trace-key { color: var(--accent2); }
+    .trace-value { color: var(--success); }
+
+    /* ── Result panel ── */
+    .result-panel {
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Loading spinner */
+    .loading {
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .loading.visible { display: flex; }
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Answer card */
+    .answer-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      display: none;
+    }
+    .answer-card.visible { display: block; }
+    .answer-header {
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .answer-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--success);
+    }
+    .answer-label {
+      font-size: 0.7rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+    .latency-badge {
+      margin-left: auto;
+      font-size: 0.7rem; color: var(--text-muted);
+    }
+    #answer-text {
+      font-size: 0.9rem; line-height: 1.7; color: var(--text);
+    }
+
+    /* SQL display */
+    .sql-card {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      display: none;
+    }
+    .sql-card.visible { display: block; }
+    .sql-label {
+      font-size: 0.65rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-muted); margin-bottom: 0.5rem;
+    }
+    #sql-text {
+      font-family: var(--mono); font-size: 0.78rem;
+      color: #c9d1d9; white-space: pre-wrap; word-break: break-all;
+    }
+
+    /* Error card */
+    .error-card {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      display: none;
+    }
+    .error-card.visible { display: block; }
+    #error-text { font-size: 0.85rem; color: var(--error); }
+
+    /* Chart container (Phase E2 readiness) */
+    #chart-container {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      min-height: 300px;
+    }
+    #chart-container.visible { display: block; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 0.75rem 2rem;
+      font-size: 0.7rem; color: var(--text-muted);
+      display: flex; gap: 2rem;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+      .query-panel { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">SS</div>
+  <div>
+    <h1>StateSync</h1>
+    <p>ONDC Network Analytics</p>
+  </div>
+  <span class="phase-badge">Phase B</span>
+</header>
+
+<main>
+  <!-- ── Query panel ── -->
+  <section class="query-panel">
+    <div class="panel-title">Ask a question</div>
+
+    <div>
+      <div class="panel-title" style="margin-bottom:0.5rem">Suggested queries</div>
+      <div class="suggestions" id="suggestions">
+        <button class="suggestion-btn" id="s1">How many orders were placed in Mumbai last month?</button>
+        <button class="suggestion-btn" id="s2">Which sellers have the highest average order value?</button>
+        <button class="suggestion-btn" id="s3">List logistics providers with more than 50 fulfillments.</button>
+        <button class="suggestion-btn" id="s4">How many disputes were raised in the last 90 days?</button>
+        <button class="suggestion-btn" id="s5">What are the top 5 cities by number of orders?</button>
+      </div>
+    </div>
+
+    <form class="query-form" id="query-form">
+      <textarea
+        id="query-input"
+        placeholder="Ask anything about the ONDC network data…"
+        rows="5"
+        autocomplete="off"
+      ></textarea>
+      <button type="submit" id="submit-btn">Run Query</button>
+    </form>
+
+    <!-- State trace (for B-V2) -->
+    <div>
+      <div class="panel-title" style="margin-bottom:0.5rem">State trace</div>
+      <div class="trace-card" id="trace-card"></div>
+    </div>
+  </section>
+
+  <!-- ── Result panel ── -->
+  <section class="result-panel">
+    <div class="panel-title">Result</div>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <span>Running query through agent graph…</span>
+    </div>
+
+    <div class="error-card" id="error-card">
+      <div class="sql-label">Error</div>
+      <div id="error-text"></div>
+    </div>
+
+    <div class="answer-card" id="answer-card">
+      <div class="answer-header">
+        <div class="answer-dot"></div>
+        <span class="answer-label">Answer</span>
+        <span class="latency-badge" id="latency-badge"></span>
+      </div>
+      <div id="answer-text"></div>
+    </div>
+
+    <div class="sql-card" id="sql-card">
+      <div class="sql-label">Executed SQL</div>
+      <pre id="sql-text"></pre>
+    </div>
+
+    <!-- Chart container (Phase E2 readiness — hidden until chart data arrives) -->
+    <div id="chart-container"></div>
+  </section>
+</main>
+
+<footer>
+  <span id="footer-status">Ready.</span>
+  <span>StateSync v0.1.0-phase-b</span>
+</footer>
+
+<script>
+  // ── Config ─────────────────────────────────────────────────────────────────
+  // In Docker: orchestrator is accessed from the browser via the host machine.
+  // ORCHESTRATOR_URL is nginx-substituted at container start.
+  const ORCHESTRATOR_URL = window.__ORCHESTRATOR_URL__ || 'http://localhost:8090';
+
+  // ── Elements ───────────────────────────────────────────────────────────────
+  const form        = document.getElementById('query-form');
+  const input       = document.getElementById('query-input');
+  const submitBtn   = document.getElementById('submit-btn');
+  const loading     = document.getElementById('loading');
+  const answerCard  = document.getElementById('answer-card');
+  const answerText  = document.getElementById('answer-text');
+  const sqlCard     = document.getElementById('sql-card');
+  const sqlText     = document.getElementById('sql-text');
+  const errorCard   = document.getElementById('error-card');
+  const errorText   = document.getElementById('error-text');
+  const traceCard   = document.getElementById('trace-card');
+  const chartCont   = document.getElementById('chart-container');
+  const latencyBadge= document.getElementById('latency-badge');
+  const footerStatus= document.getElementById('footer-status');
+
+  // ── Suggestion buttons ─────────────────────────────────────────────────────
+  document.querySelectorAll('.suggestion-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      input.value = btn.textContent.trim();
+      input.focus();
+    });
+  });
+
+  // ── Reset UI ───────────────────────────────────────────────────────────────
+  function resetUI() {
+    answerCard.classList.remove('visible');
+    sqlCard.classList.remove('visible');
+    errorCard.classList.remove('visible');
+    traceCard.classList.remove('visible');
+    chartCont.classList.remove('visible');
+    chartCont.innerHTML = '';
+    answerText.textContent = '';
+    sqlText.textContent = '';
+    errorText.textContent = '';
+    traceCard.innerHTML = '';
+  }
+
+  function showLoading(show) {
+    loading.classList.toggle('visible', show);
+    submitBtn.disabled = show;
+  }
+
+  // ── Trace renderer ─────────────────────────────────────────────────────────
+  function renderTrace(trace) {
+    if (!trace) return;
+    const lines = Object.entries(trace).map(([k, v]) => {
+      const val = typeof v === 'object' ? JSON.stringify(v) : String(v);
+      return `<span class="trace-key">${k}</span>: <span class="trace-value">${val}</span>`;
+    });
+    traceCard.innerHTML = lines.join('\n');
+    traceCard.classList.add('visible');
+  }
+
+  // ── Chart renderer (Phase E2 readiness) ───────────────────────────────────
+  async function renderChart(spec) {
+    if (!spec) return;
+    try {
+      chartCont.classList.add('visible');
+      // Use vega-interpreter (CSP-safe, no Function construction) as required by A7.
+      await vegaEmbed(chartCont, spec, {
+        renderer: 'canvas',
+        actions: false,
+        config: { background: '#111827', view: { stroke: 'transparent' } },
+        // Explicitly use the safe interpreter (not the default expression compiler)
+        expressionFunctions: window.vegaInterpreter,
+      });
+    } catch (err) {
+      console.error('Chart render error (A7 violation or vega error):', err);
+      chartCont.classList.remove('visible');
+    }
+  }
+
+  // ── Submit handler ─────────────────────────────────────────────────────────
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const query = input.value.trim();
+    if (!query) return;
+
+    resetUI();
+    showLoading(true);
+    footerStatus.textContent = 'Running…';
+
+    try {
+      const resp = await fetch(`${ORCHESTRATOR_URL}/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({ detail: resp.statusText }));
+        throw new Error(errBody.detail || `HTTP ${resp.status}`);
+      }
+
+      const data = await resp.json();
+
+      // Answer
+      answerText.textContent = data.answer_text || '';
+      answerCard.classList.add('visible');
+      latencyBadge.textContent = data.latency_ms ? `${data.latency_ms}ms` : '';
+
+      // SQL (from state trace)
+      const sql = data.state_trace?.executed_sql;
+      if (sql) {
+        sqlText.textContent = sql;
+        sqlCard.classList.add('visible');
+      }
+
+      // State trace
+      renderTrace(data.state_trace);
+
+      // Chart (Phase E2 — chart will be null in Phase B)
+      if (data.chart) {
+        await renderChart(data.chart);
+      }
+
+      footerStatus.textContent = `Done. query_id=${data.query_id}`;
+
+    } catch (err) {
+      errorText.textContent = err.message || 'Unknown error.';
+      errorCard.classList.add('visible');
+      footerStatus.textContent = `Error: ${err.message}`;
+    } finally {
+      showLoading(false);
+    }
+  });
+</script>
+</body>
+</html>

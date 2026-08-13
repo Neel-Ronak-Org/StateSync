@@ -1,0 +1,207 @@
+version: "3.9"
+
+# ─── Networks ────────────────────────────────────────────────────────────────
+# Security property (A1): postgres & qdrant are ONLY on db_net.
+# orchestrator is ONLY on app_net. An orchestrator process that tries to reach
+# postgres gets "no route to host" at the network layer — verified by B-V3.
+networks:
+  db_net:
+    driver: bridge
+    internal: true   # no external routing; containers cannot reach the internet
+  app_net:
+    driver: bridge
+
+# ─── Volumes ─────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+  qdrant_data:
+  ollama_data:
+
+# ─── Services ────────────────────────────────────────────────────────────────
+services:
+
+  # ── 1. postgres ────────────────────────────────────────────────────────────
+  postgres:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    networks:
+      - db_net          # db_net ONLY — no app_net attachment (A1 isolation)
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: statesync_migrator
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_migrator_password
+      POSTGRES_DB: statesync
+    secrets:
+      - pg_migrator_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U statesync_migrator -d statesync"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    # pgvector extension is required for document_chunks.embedding (A5)
+    # PostGIS image includes it; pgvector must be separately installed.
+    # The migration job installs CREATE EXTENSION IF NOT EXISTS vector.
+
+  # ── 2. qdrant ──────────────────────────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:v1.9.4
+    restart: unless-stopped
+    networks:
+      - db_net          # db_net ONLY — no app_net attachment (A1 isolation)
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6333/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # ── 3. ollama (embedding model host) ───────────────────────────────────────
+  # Serves mxbai-embed-large (1024 dims) for trajectory store embeddings (A6).
+  # Only mcp needs it; accessed on db_net so it stays off app_net.
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    networks:
+      - db_net
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # ── 4. mcp ─────────────────────────────────────────────────────────────────
+  # Sole credential holder. Bridges db_net (to reach postgres/qdrant/ollama)
+  # and app_net (to accept calls from orchestrator/evaluator).
+  mcp:
+    build:
+      context: ./mcp
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - db_net
+      - app_net
+    environment:
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=8080
+      - POSTGRES_DSN=postgresql://statesync_reader:READER_PLACEHOLDER@postgres:5432/statesync
+      - QDRANT_URL=http://qdrant:6333
+      - OLLAMA_URL=http://ollama:11434
+      - CONFIG_DIR=/app/config
+    volumes:
+      - ./config:/app/config:ro
+    secrets:
+      - pg_reader_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── 5. orchestrator ────────────────────────────────────────────────────────
+  # Graph, agents, model API keys. ONLY on app_net — cannot reach db_net (B-V3).
+  orchestrator:
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - app_net         # app_net ONLY — intentionally not on db_net
+    environment:
+      - ORCHESTRATOR_HOST=0.0.0.0
+      - ORCHESTRATOR_PORT=8090
+      - MCP_URL=http://mcp:8080
+      - ANTHROPIC_API_KEY_FILE=/run/secrets/anthropic_api_key
+      - CONFIG_DIR=/app/config
+    volumes:
+      - ./config:/app/config:ro
+    secrets:
+      - anthropic_api_key
+    depends_on:
+      mcp:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8090/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── 6. frontend ────────────────────────────────────────────────────────────
+  # Stateless nginx server; renders Vega-Lite via vega-interpreter (A7).
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - app_net
+    ports:
+      - "3000:80"
+    environment:
+      - ORCHESTRATOR_URL=http://orchestrator:8090
+    depends_on:
+      orchestrator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:80/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── 7. evaluator ───────────────────────────────────────────────────────────
+  # Continuous evaluation pipeline (full impl in Phase F; stub here).
+  evaluator:
+    build:
+      context: ./evaluator
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - app_net
+    environment:
+      - ORCHESTRATOR_URL=http://orchestrator:8090
+      - MCP_URL=http://mcp:8080
+      - CONFIG_DIR=/app/config
+    volumes:
+      - ./config:/app/config:ro
+      - ./fixtures:/app/fixtures:ro
+    depends_on:
+      orchestrator:
+        condition: service_healthy
+      mcp:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8095/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+# ─── Secrets ─────────────────────────────────────────────────────────────────
+# In production replace with Docker Swarm / Vault secrets.
+# For local dev, create these files before running:
+#   echo "changeme" > secrets/pg_migrator_password
+#   echo "changeme" > secrets/pg_reader_password
+#   echo "sk-ant-..." > secrets/anthropic_api_key
+secrets:
+  pg_migrator_password:
+    file: ./secrets/pg_migrator_password
+  pg_reader_password:
+    file: ./secrets/pg_reader_password
+  anthropic_api_key:
+    file: ./secrets/anthropic_api_key

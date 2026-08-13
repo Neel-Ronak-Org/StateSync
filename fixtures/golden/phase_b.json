@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "phase": "b",
+  "generated_at": "2026-08-12T00:00:00Z",
+  "note": "10 English golden queries for B-V1. expected_row_count is frozen from first verified run. Do not adjust fixtures to match output — record measured counts honestly (B-V1 spec).",
+  "queries": [
+    {
+      "id": "b_001",
+      "lang": "en",
+      "text": "How many orders were placed in Mumbai last month?",
+      "expected_route": "sql",
+      "expected_min_rows": 1,
+      "expected_row_count": null,
+      "notes": "Counts orders where ship_to_location_id references a Mumbai location. expected_row_count frozen after first B-V1 run."
+    },
+    {
+      "id": "b_002",
+      "lang": "en",
+      "text": "Which sellers have the highest average order value?",
+      "expected_route": "sql",
+      "expected_min_rows": 1,
+      "expected_row_count": null,
+      "notes": "Aggregation over orders joined to sellers. Returns top sellers by AVG(order_value)."
+    },
+    {
+      "id": "b_003",
+      "lang": "en",
+      "text": "List all logistics providers and their total number of fulfillments.",
+      "expected_route": "sql",
+      "expected_min_rows": 8,
+      "expected_row_count": null,
+      "notes": "All 10 seeded logistics providers should appear. >= 8 required (Deliverable 4 minimum)."
+    },
+    {
+      "id": "b_004",
+      "lang": "en",
+      "text": "How many disputes have been raised in the last 90 days?",
+      "expected_route": "sql",
+      "expected_min_rows": 1,
+      "expected_row_count": null,
+      "notes": "COUNT of disputes with raised_at within 90 days. All 80 seeded disputes qualify."
+    },
+    {
+      "id": "b_005",
+      "lang": "en",
+      "text": "What are the top 5 cities by total number of orders?",
+      "expected_route": "sql",
+      "expected_min_rows": 5,
+      "expected_row_count": 5,
+      "notes": "Joins orders to locations via ship_to_location_id, groups by city, LIMIT 5. Row count is fixed at 5."
+    },
+    {
+      "id": "b_006",
+      "lang": "en",
+      "text": "Show me all sellers in the grocery category.",
+      "expected_route": "sql",
+      "expected_min_rows": 1,
+      "expected_row_count": null,
+      "notes": "Filters sellers by category = 'grocery'. Count depends on rng; expected >= 1."
+    },
+    {
+      "id": "b_007",
+      "lang": "en",
+      "text": "How many orders have been fulfilled successfully?",
+      "expected_route": "sql",
+      "expected_min_rows": 1,
+      "expected_row_count": null,
+      "notes": "COUNT of fulfillments WHERE status = 'delivered'."
+    },
+    {
+      "id": "b_008",
+      "lang": "en",
+      "text": "Which logistics provider has the most delivery events?",
+      "expected_route": "sql",
+      "expected_min_rows": 1,
+      "expected_row_count": 1,
+      "notes": "Aggregation: providers -> fulfillments -> delivery_events. Returns one top provider. Fixed at 1 row (LIMIT 1 expected in generated SQL)."
+    },
+    {
+      "id": "b_009",
+      "lang": "en",
+      "text": "List the 10 most recent orders with their seller names.",
+      "expected_route": "sql",
+      "expected_min_rows": 10,
+      "expected_row_count": 10,
+      "notes": "JOIN orders to sellers, ORDER BY placed_at DESC, LIMIT 10. Fixed at 10 rows."
+    },
+    {
+      "id": "b_010",
+      "lang": "en",
+      "text": "What is the average number of delivery events per fulfillment?",
+      "expected_route": "sql",
+      "expected_min_rows": 1,
+      "expected_row_count": 1,
+      "notes": "Scalar aggregation. Returns one row with the average. Fixed at 1 row."
+    }
+  ]
+}

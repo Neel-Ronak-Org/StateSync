@@ -1,0 +1,80 @@
+# config/statesync.toml
+# Locked constants (Appendix 1). Changing any value here requires a BD entry (A0.3).
+# Loaded by orchestrator/config_loader.py — never read inline in agent source.
+
+[mcp]
+tool_ceiling              = 15      # Strategy: 10–15; 9 in use, headroom deliberate
+statement_timeout_ms      = 15000
+max_rows_default          = 1000
+max_rows_hard_cap         = 5000
+sample_rows_hard_cap      = 20
+session_idle_timeout_ms   = 60000
+network_overhead_s        = 5       # added to statement_timeout for client-side timeout
+connect_timeout_s         = 10      # httpx connect timeout to MCP service
+pool_min_size             = 2       # psycopg3 AsyncConnectionPool minimum connections
+pool_max_size             = 10      # psycopg3 AsyncConnectionPool maximum connections
+sample_rows_default_limit = 5       # default row count for data.sample_rows (A4.3)
+sample_rows_max_columns   = 12      # maximum columns in a sample_rows column list
+
+[sql]
+retry_max                 = 3       # attempts after the first; 4 executions maximum
+interrogation_max_samples = 4
+max_sql_length            = 8000
+max_tokens_supervisor     = 128     # enough for {"route":"sql"} classification
+max_tokens_sql            = 1024    # SQL generation
+max_tokens_synthesizer    = 1024    # prose answer generation
+synthesizer_preview_rows  = 50      # rows shown to synthesizer LLM (context window budget)
+answer_max_chars          = 4000    # A7 answer_text character cap
+chart_max_data_rows       = 5000    # A7 data.values maxItems
+chart_max_transforms      = 8       # A7 transform maxItems
+chart_min_dimension       = 100     # A7 chart width/height minimum (px)
+chart_max_width           = 1600    # A7 chart width maximum (px)
+chart_max_height          = 1200    # A7 chart height maximum (px)
+
+[memory]
+provider                  = "qdrant"
+collection                = "agentsm_trajectories"
+embedding_dim             = 1024
+similarity_threshold      = 0.82    # below this, treated as a miss
+top_k                     = 3
+insight_max_chars         = 1200
+
+[normalization]
+provider                  = "prompt"
+detect_confidence_min     = 0.70    # below this, treat as "other" and pass through
+
+[spatial]
+provider                  = "digipin"
+default_radius_m          = 5000
+srid                      = 4326
+roundtrip_tolerance_m     = 4.0
+roundtrip_sample_size     = 200
+roundtrip_rng_seed        = 20260807
+
+[retrieval]
+chunk_target_tokens       = 512
+chunk_overlap_tokens      = 64
+semantic_top_k            = 8
+decomposition_max_hops    = 3
+
+[scoring]
+recall_weight             = 0.70    # spec score; recall over precision per VegaChat
+precision_weight          = 0.30
+mark_weight               = 0.40
+encoding_weight           = 0.45
+transform_weight          = 0.15
+
+[evaluation]
+scorers                   = ["spec", "execution"]
+golden_run_schedule_cron  = "0 * * * *"
+history_retention_runs    = 200
+
+[tenancy]
+default_tenant            = "t_capstone_default"
+enforced                  = false   # D6; threading is mandatory even when false
+
+[models]
+temperature               = 0.0
+seed                      = 20260807
+# LLM provider choice is set in flags.toml; model name is also there.
+ollama_timeout_s          = 120     # generous — local inference can be slow

@@ -1,0 +1,182 @@
+# StateSync — Multi-Agent Analytics Infrastructure for ONDC
+
+StateSync is an enterprise-grade multi-agent analytics platform for open network (ONDC) e-commerce data. It provides natural language analytics, schema-guided SQL generation, deterministic security guarantees, and interactive Vega-Lite visualizations.
+
+---
+
+## 🚀 Development Quick Start
+
+### 1. Prerequisites
+- **Docker Desktop** (with Compose v2)
+- **Python 3.12+** (for running migration & seeding tools locally)
+- *(Optional)* **Anthropic API Key** (only needed if running in `anthropic` provider mode; local dev runs fully offline using Ollama)
+
+---
+
+### 2. Set Up Environment & Local Secrets
+Create local secrets files (ignored by Git):
+```bash
+mkdir -p secrets
+echo "statesync_migrator_pass" > secrets/pg_migrator_password
+echo "statesync_reader_pass"   > secrets/pg_reader_password
+echo "statesync_ingest_pass"   > secrets/pg_ingest_password
+
+# Optional: Only needed if config/flags.toml sets provider = "anthropic"
+echo "sk-ant-your-key-here"    > secrets/anthropic_api_key
+```
+
+---
+
+### 3. Choose Your LLM Provider Mode
+StateSync features a **D2 Provider Seam** allowing seamless switching between local open-weight models (Ollama) and cloud APIs (Anthropic Claude).
+
+Edit `config/flags.toml`:
+```toml
+[llm]
+provider = "local" # "local" for offline dev, "anthropic" for production metrics & evaluation runs
+ollama_url = "http://ollama:11434"
+```
+
+> 💡 **Developer Note:** When `provider = "local"`, no Anthropic API key is required and the system starts completely offline.
+
+---
+
+### 4. Pull Local LLM & Embedding Models (First Time Only)
+```bash
+# Bring up Ollama
+docker compose up -d ollama
+
+# Pull local embedding and instruct models
+docker compose exec ollama ollama pull mxbai-embed-large
+docker compose exec ollama ollama pull qwen2.5:7b
+```
+
+---
+
+### 5. Launch StateSync Stack & Seed Database
+```bash
+# 1. Start all 7 microservices
+docker compose up -d
+
+# 2. Run Database Migrations & Fingerprint Calculation
+bash scripts/migrate.sh
+
+# 3. Seed Database with Frozen Synthetic ONDC Fixtures
+python scripts/seed.py
+```
+
+---
+
+### 6. Access Applications & Dashboards
+- **Frontend Dashboard:** [http://localhost:3000](http://localhost:3000)
+- **Orchestrator API:** [http://localhost:8090/health](http://localhost:8090/health)
+- **MCP Service API:** [http://localhost:8080](http://localhost:8080)
+
+---
+
+### 7. Run Complete Verification Suite
+```bash
+# Run B-V1 through B-V9 verification suite
+bash scripts/verify_b.sh
+
+# Run Config Discipline & Literal Lint
+bash scripts/lint-no-literals.sh
+```
+
+---
+
+## 🏗️ System Architecture & Service Network Isolation
+
+StateSync strictly isolates database infrastructure (`db_net`) from public-facing/app services (`app_net`). The **Model Context Protocol (MCP)** service bridges the network boundary as the single credential-holding data gateway.
+
+```
+┌─────────────────── db_net (internal, non-routable) ───────────────────┐
+│  postgres:5432       qdrant:6333        ollama:11434                  │
+└───────────────────────────────────────────────────────────────────────┘
+                                ▲
+                                │ (MCP bridges network boundary)
+                                ▼
+┌─────────────────── app_net (application network) ────────────────────┐
+│  mcp:8080    orchestrator:8090    frontend:3000    evaluator:8095     │
+└───────────────────────────────────────────────────────────────────────┘
+```
+
+### Microservice Directory
+
+| Service | Port | Description |
+|---|---|---|
+| `postgres` | `5432` | PostgreSQL + PostGIS spatial extension + pgvector |
+| `qdrant` | `6333` | Vector database storing AgentSM execution trajectories |
+| `ollama` | `11434` | Local LLM host (`mxbai-embed-large` embeddings & `qwen2.5:7b` instruct) |
+| `mcp` | `8080` | Model Context Protocol server — sole database credential holder |
+| `orchestrator` | `8090` | LangGraph multi-agent pipeline (`supervisor`, `sql_agent`, `synthesizer`) |
+| `frontend` | `3000` | Nginx-served stateless UI with Vega-Embed & Vega-Interpreter (CSP compliant) |
+| `evaluator` | `8095` | Continuous evaluation engine & metric calculation service |
+
+---
+
+## 🛡️ 3-Layer SELECT Security Model (A4.5)
+
+StateSync enforces absolute `SELECT`-only execution to prevent data modification or exfiltration:
+
+| Layer | Component | Mechanism |
+|---|---|---|
+| **Layer 1: Parser Gate** | MCP Service | Parses raw SQL AST with `pglast` (PostgreSQL parser engine). Rejects multi-statement queries, data-modifying CTEs (`WITH x AS (INSERT...)`), and non-SELECT statements prior to DB dispatch. |
+| **Layer 2: Session Guards** | MCP Connection Pool | Configures connection session with `SET TRANSACTION READ ONLY`, `statement_timeout = 15000ms`, and mandatory transaction rollback on release. |
+| **Layer 3: PostgreSQL Role** | Postgres Engine | Connects as restricted `statesync_reader` role possessing `GRANT SELECT` privileges exclusively. Any write attempt causes PostgreSQL error `SQLSTATE 42501 (permission denied)`. |
+
+---
+
+## 📊 Current Progress & Phase B Deliverables Status
+
+All Phase B core deliverables and D2 provider seam refactorings are **fully implemented, tested, and verified**:
+
+- [x] **Deliverable 1:** Docker Compose orchestration across 7 isolated containers.
+- [x] **Deliverable 2:** Configuration system (`config/statesync.toml`, `config/flags.toml`, `config/error_taxonomy.json`) with zero hardcoded code literals.
+- [x] **Deliverable 3:** Schema migrations, role privileges (`statesync_reader`, `statesync_ingest`), and dynamic schema fingerprint computation.
+- [x] **Deliverable 4:** Frozen synthetic ONDC data fixtures (50 locations, 30 sellers, 10 LPs, 550 orders, 1,917 delivery events, 80 disputes).
+- [x] **Deliverable 5:** Model Context Protocol (MCP) JSON-RPC 2.0 service with 3-layer security enforcement.
+- [x] **Deliverable 6:** LangGraph Orchestrator pipeline with Entry, Supervisor, Specialist SQL Agent, and Synthesizer nodes.
+- [x] **Deliverable 7:** D2 LLM Provider Seam (`orchestrator/llm/provider.py`) supporting local Ollama models and cloud Anthropic APIs.
+- [x] **Deliverable 8:** Stateless frontend UI with strict CSP headers (no `unsafe-eval`) and Vega-Interpreter support.
+- [x] **Deliverable 9:** Evaluator service stub for phase transition readiness.
+- [x] **Deliverable 10:** Comprehensive verification suite (`scripts/verify_b.sh`) validating tests B-V1 through B-V9.
+
+---
+
+## 🤝 Developer Partner Collaboration Guide
+
+### 1. Code & Configuration Discipline (A0.2)
+- **No Hardcoded Literals:** Never place numeric constants, model names, or timeouts inside Python application code. Add them to `config/statesync.toml` or `config/flags.toml` and load them via `config_loader.py`.
+- **Run Literal Lint:** Verify compliance anytime you touch orchestrator or MCP code:
+  ```bash
+  bash scripts/lint-no-literals.sh
+  ```
+
+### 2. Working on LLM Nodes
+- All nodes (`supervisor.py`, `sql_agent.py`, `synthesizer.py`) call the LLM factory:
+  ```python
+  from llm.provider import get_agent_llm
+  llm = get_agent_llm("sql")
+  response = await llm.complete(system=..., messages=..., max_tokens=...)
+  ```
+- **Never import `anthropic` or vendor SDKs directly in nodes.** Keep provider logic inside `orchestrator/llm/adapters/`.
+
+### 3. Testing Local Changes
+1. Run local stack with `provider = "local"`.
+2. Run `bash scripts/verify_b.sh` to verify end-to-end routing, database isolation, security enforcement, and schema compliance.
+3. Check `walkthrough.md` or `docs/spec-gaps.md` for specification details or open questions.
+
+---
+
+## 📅 Roadmap & Upcoming Development Phases
+
+- 🔄 **Phase C:** AgentSM Memory (Qdrant trajectory storage), schema fingerprint caching, active interrogation, and C2 correction loop.
+- 🗺️ **Phase D:** Spatial analytics engine, PostGIS queries, and DigiPin reference integration.
+- 📈 **Phase E:** Vega-Lite chart synthesis engine and malicious spec sanitizer.
+- 🎯 **Phase F:** Evaluator metrics calculation engine and automated benchmark reporting.
+
+---
+
+## 📄 License & Project Standards
+Internal project repository for ONDC multi-agent analytics development. All contributions must adhere to specification guidelines defined in `statesync_phase_B.md`.

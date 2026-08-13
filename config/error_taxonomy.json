@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "match": { "sqlstate": "42601" },
+      "category": "syntax",
+      "hint": "Statement failed to parse. Re-emit valid PostgreSQL; do not change the query's intent."
+    },
+    {
+      "match": { "sqlstate": "42703" },
+      "category": "unknown_column",
+      "hint": "Referenced column does not exist. Call schema.describe_table for the tables in FROM before re-emitting."
+    },
+    {
+      "match": { "sqlstate": "42P01" },
+      "category": "unknown_table",
+      "hint": "Referenced table does not exist. Call schema.list_tables and re-select the target table."
+    },
+    {
+      "match": { "sqlstate": "42702" },
+      "category": "ambiguous_column",
+      "hint": "Column is ambiguous across joined tables. Qualify every column with its table alias."
+    },
+    {
+      "match": { "sqlstate": "42883" },
+      "category": "type_mismatch",
+      "hint": "Operator/function does not exist for these operand types. Call data.sample_rows to confirm the stored representation before casting."
+    },
+    {
+      "match": { "sqlstate": "22P02" },
+      "category": "type_mismatch",
+      "hint": "Invalid input syntax for type. Confirm the literal format against sampled rows."
+    },
+    {
+      "match": { "sqlstate": "42501" },
+      "category": "permission_denied",
+      "hint": "TERMINAL. The connection is SELECT-only by design (D15). Do not retry; do not attempt an alternative write formulation."
+    },
+    {
+      "match": { "sqlstate": "57014" },
+      "category": "timeout",
+      "hint": "Query exceeded the statement timeout. Reduce scanned rows by adding a selective predicate or a LIMIT."
+    },
+    {
+      "match": {
+        "sqlstate": "XX000",
+        "message_regex": "(?i)geometry|srid|postgis"
+      },
+      "category": "spatial_invalid",
+      "hint": "Spatial predicate invalid. Confirm SRID 4326 and that the geography cast is applied to both operands."
+    },
+    {
+      "match": { "message_regex": "(?i)expected \\d+ dimensions" },
+      "category": "vector_dim_mismatch",
+      "hint": "Embedding dimensionality mismatch. Use the configured embedding model; do not re-embed with a different one."
+    },
+    {
+      "match": { "empty_result": true },
+      "category": "empty_result",
+      "hint": "Query was valid but returned zero rows. Verify filter literals against sampled values before concluding the answer is empty."
+    }
+  ],
+  "fallback": {
+    "category": "unclassified",
+    "hint": "Unrecognized failure. Surface the engine message verbatim and do not guess at a repair."
+  }
+}
