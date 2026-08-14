@@ -38,21 +38,36 @@ PG_PORT="${POSTGRES_PORT:-5432}"
 PG_DB="${POSTGRES_DB:-statesync}"
 
 export PGPASSWORD="${MIGRATOR_PASSWORD}"
-PSQL="psql -h ${PG_HOST} -p ${PG_PORT} -U statesync_migrator -d ${PG_DB}"
+# Detect psql: prefer homebrew libpq on macOS, fall back to PATH
+if [[ -x "/opt/homebrew/opt/libpq/bin/psql" ]]; then
+  PSQL_BIN="/opt/homebrew/opt/libpq/bin/psql"
+elif [[ -x "/usr/local/opt/libpq/bin/psql" ]]; then
+  PSQL_BIN="/usr/local/opt/libpq/bin/psql"
+else
+  PSQL_BIN="psql"
+fi
+PSQL="${PSQL_BIN} -h ${PG_HOST} -p ${PG_PORT} -U statesync_migrator -d ${PG_DB}"
 
 echo "==> Waiting for postgres to be ready..."
-for i in $(seq 1 30); do
+USE_DOCKER_EXEC=0
+for i in $(seq 1 10); do
   if ${PSQL} -c "SELECT 1" > /dev/null 2>&1; then
-    echo "    postgres ready."
+    echo "    postgres ready (via host psql)."
     break
   fi
-  echo "    Attempt ${i}/30 — waiting..."
-  sleep 2
+  if docker compose exec -T -e PGPASSWORD="${PGPASSWORD}" postgres psql -U statesync_migrator -d statesync -c "SELECT 1" > /dev/null 2>&1; then
+    echo "    postgres ready (via docker compose exec)."
+    USE_DOCKER_EXEC=1
+    PSQL="docker compose exec -T -e PGPASSWORD=${PGPASSWORD} postgres psql -U statesync_migrator -d statesync"
+    break
+  fi
+  echo "    Attempt ${i}/10 — waiting..."
+  sleep 1
 done
 
 # ── Migration 001: roles ───────────────────────────────────────────────────────
 echo "==> Running 001_roles.sql..."
-${PSQL} -f "${MIGRATIONS_DIR}/001_roles.sql"
+${PSQL} < "${MIGRATIONS_DIR}/001_roles.sql"
 
 # Set passwords for reader and ingest roles
 ${PSQL} -c "ALTER ROLE statesync_reader PASSWORD '${READER_PASSWORD}'"
@@ -61,12 +76,17 @@ echo "    Roles created and passwords set."
 
 # ── Migration 002: schema ─────────────────────────────────────────────────────
 echo "==> Running 002_schema.sql..."
-${PSQL} -f "${MIGRATIONS_DIR}/002_schema.sql"
+${PSQL} < "${MIGRATIONS_DIR}/002_schema.sql"
 echo "    Schema applied."
 
 # ── Migration 003: fingerprint (computed + inserted) ─────────────────────────
 echo "==> Computing schema fingerprint..."
-FINGERPRINT=$(python3 - <<'PYEOF'
+if [[ ${USE_DOCKER_EXEC} -eq 1 ]]; then
+  PY_EXEC="docker compose exec -T -e POSTGRES_HOST=postgres -e PGPASSWORD=${PGPASSWORD} mcp python"
+else
+  PY_EXEC="python3"
+fi
+FINGERPRINT=$(${PY_EXEC} - <<'PYEOF'
 import asyncio
 import os
 import sys

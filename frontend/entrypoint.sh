@@ -8,7 +8,7 @@ set -e
 ORCH_URL="${ORCHESTRATOR_URL:-http://localhost:8090}"
 
 # Replace the placeholder in the HTML file
-sed -i "s|window.__ORCHESTRATOR_URL__ || 'http://localhost:8090'|window.__ORCHESTRATOR_URL__ = '${ORCH_URL}'; window.__ORCHESTRATOR_URL__|g" \
+sed -i "s#window.__ORCHESTRATOR_URL__ || 'http://localhost:8090'#window.__ORCHESTRATOR_URL__ = '${ORCH_URL}'#g" \
     /usr/share/nginx/html/index.html
 
 echo "Frontend configured. Orchestrator URL: ${ORCH_URL}"

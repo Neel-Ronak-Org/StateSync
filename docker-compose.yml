@@ -22,8 +22,13 @@ services:
 
   # ── 1. postgres ────────────────────────────────────────────────────────────
   postgres:
-    image: postgis/postgis:16-3.4
+    container_name: postgres
+    image: statesync-postgres
+    build:
+      context: ./postgres
+      dockerfile: Dockerfile
     restart: unless-stopped
+    command: ["postgres", "-c", "log_statement=all"]
     networks:
       - db_net          # db_net ONLY — no app_net attachment (A1 isolation)
     volumes:
@@ -53,11 +58,11 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:6333/healthz || exit 1"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/6333' 2>/dev/null && exit 0 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 20s
+      start_period: 30s
 
   # ── 3. ollama (embedding model host) ───────────────────────────────────────
   # Serves mxbai-embed-large (1024 dims) for trajectory store embeddings (A6).
@@ -67,14 +72,15 @@ services:
     restart: unless-stopped
     networks:
       - db_net
+      - app_net
     volumes:
       - ollama_data:/root/.ollama
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/11434' 2>/dev/null && exit 0 || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 10
-      start_period: 60s
+      start_period: 90s
 
   # ── 4. mcp ─────────────────────────────────────────────────────────────────
   # Sole credential holder. Bridges db_net (to reach postgres/qdrant/ollama)
@@ -106,7 +112,7 @@ services:
       ollama:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/health')\" || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -135,7 +141,7 @@ services:
       mcp:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8090/health || exit 1"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8090/health')\" || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -186,7 +192,7 @@ services:
       mcp:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8095/health || exit 1"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8095/health')\" || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5

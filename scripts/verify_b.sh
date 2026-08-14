@@ -138,8 +138,8 @@ fi
 # Check postgres log for the SELECT
 QUERY_ID=$(echo "${RESPONSE}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('query_id',''))" 2>/dev/null || echo "")
 echo "  Checking postgres log for SELECT (query_id=${QUERY_ID})..."
-PG_LOG_HIT=$(docker compose logs postgres 2>/dev/null | grep -c "SELECT" || echo "0")
-if [[ "${PG_LOG_HIT}" -gt "0" ]]; then
+PG_LOG_HIT=$(docker compose logs postgres 2>/dev/null | grep -c "SELECT" | tail -n 1 | tr -cd '0-9' || echo "0")
+if [[ "${PG_LOG_HIT:-0}" -gt "0" ]]; then
   pass "B-V2: postgres log contains SELECT statement"
 else
   fail "B-V2: no SELECT found in postgres log — may be a mock"
@@ -166,8 +166,8 @@ echo "Scanning orchestrator container for credential material..."
 CRED_HITS=0
 
 # Check environment
-ENV_HIT=$(docker compose exec -T orchestrator env 2>/dev/null | grep -c "postgres://\|statesync_reader\|PG_PASS\|PGPASSWORD" || echo "0")
-if [[ "${ENV_HIT}" -gt "0" ]]; then
+ENV_HIT=$(docker compose exec -T orchestrator env 2>/dev/null | grep -c "postgres://\|statesync_reader\|PG_PASS\|PGPASSWORD" | tail -n 1 | tr -cd '0-9' || echo "0")
+if [[ "${ENV_HIT:-0}" -gt "0" ]]; then
   fail "B-V4: credential material found in orchestrator environment"
   CRED_HITS=$((CRED_HITS + 1))
 else
@@ -175,8 +175,8 @@ else
 fi
 
 # Check mounted configs for DSN
-CFG_HIT=$(docker compose exec -T orchestrator sh -c "grep -r 'postgres://' /app/config/ 2>/dev/null | wc -l" || echo "0")
-if [[ "${CFG_HIT}" -gt "0" ]]; then
+CFG_HIT=$(docker compose exec -T orchestrator sh -c "grep -r 'postgres://' /app/config/ 2>/dev/null | wc -l" | tail -n 1 | tr -cd '0-9' || echo "0")
+if [[ "${CFG_HIT:-0}" -gt "0" ]]; then
   fail "B-V4: postgres DSN found in orchestrator config mount"
   CRED_HITS=$((CRED_HITS + 1))
 else
@@ -190,7 +190,11 @@ echo "Running write attempts directly as statesync_reader against postgres..."
 echo "  (Bypassing MCP entirely — tests the role grant, not the application gate)"
 
 export PGPASSWORD="${READER_PASSWORD}"
-PSQL_READER="psql -h ${PG_HOST} -p ${PG_PORT} -U statesync_reader -d ${PG_DB} -c"
+if command -v psql &>/dev/null && psql -h "${PG_HOST}" -p "${PG_PORT}" -U statesync_reader -d "${PG_DB}" -c "SELECT 1" &>/dev/null; then
+  PSQL_EXEC="psql -h ${PG_HOST} -p ${PG_PORT} -U statesync_reader -d ${PG_DB} -c"
+else
+  PSQL_EXEC="docker compose exec -T -e PGPASSWORD=${READER_PASSWORD} postgres psql -U statesync_reader -d ${PG_DB} -c"
+fi
 
 WRITE_TESTS=(
   "INSERT INTO disputes VALUES ('v5_test','ORD0001',now(),'test',null,'v5')"
@@ -203,8 +207,8 @@ WRITE_TESTS=(
 )
 
 for stmt in "${WRITE_TESTS[@]}"; do
-  RESULT=$(${PSQL_READER} "${stmt}" 2>&1 || true)
-  if echo "${RESULT}" | grep -q "42501\|permission denied\|ERROR.*permission"; then
+  RESULT=$(${PSQL_EXEC} "${stmt}" 2>&1 || true)
+  if echo "${RESULT}" | grep -qi "42501\|permission denied\|must be owner\|insufficient_privilege\|ERROR.*permission"; then
     pass "B-V5: '${stmt:0:40}...' → 42501 (permission denied)"
   else
     fail "B-V5: '${stmt:0:40}...' did NOT get 42501. Got: ${RESULT:0:80}"

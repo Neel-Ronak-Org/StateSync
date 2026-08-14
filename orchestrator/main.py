@@ -113,7 +113,7 @@ async def run_query(request: QueryRequest) -> QueryResponse:
 
     t0 = time.monotonic()
     try:
-        final_state: StateSyncState = await graph.ainvoke(
+        raw_final = await graph.ainvoke(
             StateSyncState(
                 query_id=initial_input["query_id"],
                 tenant_id=initial_input["tenant_id"],
@@ -122,6 +122,7 @@ async def run_query(request: QueryRequest) -> QueryResponse:
                 flags_snapshot=initial_input["flags_snapshot"],
             )
         )
+        final_state: StateSyncState = StateSyncState(**raw_final) if isinstance(raw_final, dict) else raw_final
     except Exception as exc:
         logger.error("Graph execution failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Graph execution error: {exc}")

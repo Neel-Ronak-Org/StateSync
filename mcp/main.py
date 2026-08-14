@@ -72,6 +72,27 @@ assert len(_REGISTERED_TOOLS) <= TOOL_CEILING, (
 )
 
 
+import datetime
+from decimal import Decimal
+from uuid import UUID
+
+
+def _serialize_json(obj: Any) -> Any:
+    if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
+        return obj.isoformat()
+    if isinstance(obj, Decimal):
+        return float(obj) if obj % 1 else int(obj)
+    if isinstance(obj, UUID):
+        return str(obj)
+    if isinstance(obj, bytes):
+        return obj.hex()
+    if isinstance(obj, dict):
+        return {k: _serialize_json(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_serialize_json(x) for x in obj]
+    return obj
+
+
 def _jsonrpc_error(request_id: Any, code: int, message: str) -> dict:
     return {
         "jsonrpc": "2.0",
@@ -81,7 +102,7 @@ def _jsonrpc_error(request_id: Any, code: int, message: str) -> dict:
 
 
 def _jsonrpc_result(request_id: Any, result: Any) -> dict:
-    return {"jsonrpc": "2.0", "id": request_id, "result": result}
+    return {"jsonrpc": "2.0", "id": request_id, "result": _serialize_json(result)}
 
 
 @app.get("/health", tags=["ops"])

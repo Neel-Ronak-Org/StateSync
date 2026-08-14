@@ -158,7 +158,7 @@ class StateSyncState(BaseModel):
 
     # --- instrumentation (all Parts) ---
     metrics:        Metrics = Field(default_factory=Metrics)
-    flags_snapshot: dict[str, bool | str] = Field(default_factory=dict)
+    flags_snapshot: dict[str, Any] = Field(default_factory=dict)
 
     # --- concurrency tracking (not part of the public state schema) ---
     # Records which node last wrote each LWW field during a merge cycle.

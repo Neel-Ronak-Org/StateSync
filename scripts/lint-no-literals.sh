@@ -37,6 +37,8 @@ for dir in "${SCAN_DIRS[@]}"; do
   while IFS= read -r -d '' file; do
     case "${file}" in
       */__pycache__/*) continue ;;
+      */.venv/*) continue ;;
+      */venv/*) continue ;;
       */test_*) continue ;;
       */tests/*) continue ;;
       *.py) ;;

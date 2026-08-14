@@ -11,7 +11,7 @@
 # any result you intend to show.
 [llm]
 provider = "local"          # change to "anthropic" for graded runs
-ollama_url = "http://ollama:11434"
+ollama_url = "http://host.docker.internal:11434"
 
 [llm.models.local]
 supervisor  = "qwen2.5:7b"
@@ -62,4 +62,4 @@ llm_provider                    = "anthropic"
 llm_model                       = "claude-3-5-sonnet-20241022"
 embedding_provider              = "ollama"
 embedding_model                 = "mxbai-embed-large"
-embedding_url                   = "http://ollama:11434"
+embedding_url                   = "http://host.docker.internal:11434"

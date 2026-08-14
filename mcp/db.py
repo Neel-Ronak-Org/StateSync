@@ -23,6 +23,8 @@ from typing import AsyncIterator
 import psycopg
 from psycopg_pool import AsyncConnectionPool
 
+from config_loader import cfg
+
 logger = logging.getLogger(__name__)
 
 # ── Config (loaded from env vars set by docker-compose, not from literals) ────
@@ -79,6 +81,7 @@ async def _configure_connection(conn: psycopg.AsyncConnection) -> None:
     await conn.execute(
         f"SET idle_in_transaction_session_timeout = {_session_idle_timeout_ms}"
     )
+    await conn.commit()
     logger.debug("Session guards applied to new connection.")
 
 
