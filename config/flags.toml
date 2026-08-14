@@ -55,11 +55,3 @@ enforced                        = false  # D6; threading is mandatory even when 
 # Three registered routes. "docs" and "hybrid" resolve to stub nodes in Phase B.
 # Values are resolver keys that map into the SpecialistNode registry (A8).
 table                           = ["sql", "docs", "hybrid"]
-
-# LLM model selection (resolved at process start)
-[models]
-llm_provider                    = "anthropic"
-llm_model                       = "claude-3-5-sonnet-20241022"
-embedding_provider              = "ollama"
-embedding_model                 = "mxbai-embed-large"
-embedding_url                   = "http://host.docker.internal:11434"
