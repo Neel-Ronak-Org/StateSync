@@ -122,12 +122,24 @@ async def compute():
             )
             columns = [{"column": r[0], "data_type": r[1], "is_nullable": r[2]=="YES"} for r in await cur.fetchall()]
             
+            # pg_catalog, not information_schema.table_constraints -- the latter
+            # only shows constraints to a role that owns the table or holds a
+            # privilege other than SELECT, so it silently returns nothing for
+            # statesync_reader. mcp/fingerprint.py must match this exactly
+            # (same formula, any role) or the two "independent" computations
+            # A5 requires can never agree.
             cur = await conn.execute(
-                "SELECT kcu.column_name, ccu.table_name, ccu.column_name "
-                "FROM information_schema.table_constraints tc "
-                "JOIN information_schema.key_column_usage kcu ON tc.constraint_name=kcu.constraint_name AND tc.table_schema=kcu.table_schema "
-                "JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name=tc.constraint_name AND ccu.table_schema=tc.table_schema "
-                "WHERE tc.constraint_type='FOREIGN KEY' AND tc.table_schema='public' AND tc.table_name=%s ORDER BY kcu.column_name",
+                "SELECT att2.attname, cl.relname, att.attname "
+                "FROM pg_constraint con "
+                "JOIN pg_class rel ON rel.oid = con.conrelid "
+                "JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace "
+                "JOIN pg_class cl ON cl.oid = con.confrelid "
+                "JOIN LATERAL unnest(con.conkey) WITH ORDINALITY AS ck(attnum, ord) ON true "
+                "JOIN LATERAL unnest(con.confkey) WITH ORDINALITY AS cfk(attnum, ord) ON cfk.ord = ck.ord "
+                "JOIN pg_attribute att2 ON att2.attrelid = con.conrelid AND att2.attnum = ck.attnum "
+                "JOIN pg_attribute att ON att.attrelid = con.confrelid AND att.attnum = cfk.attnum "
+                "WHERE con.contype='f' AND nsp.nspname='public' AND rel.relname=%s "
+                "ORDER BY att2.attname",
                 (table,)
             )
             fks = [{"fk_column": r[0], "ref_table": r[1], "ref_column": r[2]} for r in await cur.fetchall()]
@@ -143,12 +155,21 @@ PYEOF
 
 echo "    Fingerprint: ${FINGERPRINT}"
 
+# Retire any existing current row before inserting/reactivating this one --
+# schema_versions_one_current is a partial unique index on is_current, so
+# two TRUE rows at once is a constraint violation, not just bad data. This
+# also makes reverting a migration correctly reactivate the original row
+# (C1-V4: the fingerprint after revert equals the original) instead of
+# leaving a stale duplicate.
 ${PSQL} -c "
+  BEGIN;
+  UPDATE schema_versions SET is_current = FALSE WHERE is_current = TRUE;
   INSERT INTO schema_versions (fingerprint, computed_at, is_current)
   VALUES ('${FINGERPRINT}', now(), TRUE)
-  ON CONFLICT (fingerprint) DO NOTHING;
+  ON CONFLICT (fingerprint) DO UPDATE SET is_current = TRUE, computed_at = now();
+  COMMIT;
 "
-echo "    Fingerprint inserted into schema_versions."
+echo "    Fingerprint inserted into schema_versions (is_current)."
 
 # ── Verify \\dt ────────────────────────────────────────────────────────────────
 echo ""

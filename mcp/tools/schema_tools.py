@@ -15,6 +15,7 @@ import logging
 from typing import Any
 
 from db import get_connection
+from fingerprint import compute_fingerprint
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +30,13 @@ async def list_tables() -> dict[str, Any]:
             "fingerprint": str
         }
 
-    The fingerprint returned here is the live schema fingerprint (same formula
-    as fingerprint.py but computed fresh for schema caching in C1).
+    The fingerprint returned here IS the A5 fingerprint (fingerprint.py's
+    compute_fingerprint, the same function mcp startup verifies against
+    schema_versions) -- not a separate approximation. This is what the SQL
+    Agent passes to memory.get_trajectory/put_trajectory (C1), so D4's
+    stale-trace guarantee depends on this being the real formula: a
+    table-names-only stand-in would never change on a column rename, which
+    is exactly the case C1-V4 exists to test.
     """
     async with get_connection() as conn:
         # Table list with row estimates from pg_stat_user_tables
@@ -58,14 +64,7 @@ async def list_tables() -> dict[str, Any]:
             for row in rows
         ]
 
-        # Compute a lightweight fingerprint from table names + types for this response.
-        # The full A5 fingerprint is computed at startup; this is for cache keying
-        # in C1. For Phase B it mirrors the startup value.
-        fp_input = json.dumps(
-            sorted([t["name"] for t in tables]),
-            separators=(",", ":"),
-        )
-        fingerprint = hashlib.sha256(fp_input.encode()).hexdigest()
+        fingerprint = await compute_fingerprint(conn)
 
         logger.debug("schema.list_tables: %d tables, fingerprint=%s", len(tables), fingerprint)
         return {"tables": tables, "fingerprint": fingerprint}
@@ -121,23 +120,35 @@ async def describe_table(table: str) -> dict[str, Any]:
             for row in col_rows
         ]
 
-        # Foreign keys
+        # Foreign keys.
+        #
+        # Deliberately NOT information_schema.table_constraints /
+        # key_column_usage / constraint_column_usage: per the SQL/PostgreSQL
+        # spec, those views only surface constraints for a role that "owns or
+        # has some privilege OTHER THAN SELECT" on the table. statesync_reader
+        # holds SELECT only (Layer 3, by design) and so silently saw zero
+        # foreign keys through that path -- a latent Phase B bug, invisible
+        # until something actually asserted on foreign_keys content (C1's
+        # fingerprint verification did). pg_constraint/pg_class/pg_attribute
+        # are plain system catalogs with no such privilege-tier restriction,
+        # same as the columns query above.
         fk_query = """
             SELECT
-                kcu.column_name         AS fk_col,
-                ccu.table_name          AS ref_table,
-                ccu.column_name         AS ref_col
-            FROM information_schema.table_constraints tc
-            JOIN information_schema.key_column_usage kcu
-              ON tc.constraint_name = kcu.constraint_name
-             AND tc.table_schema    = kcu.table_schema
-            JOIN information_schema.constraint_column_usage ccu
-              ON ccu.constraint_name = tc.constraint_name
-             AND ccu.table_schema   = tc.table_schema
-            WHERE tc.constraint_type = 'FOREIGN KEY'
-              AND tc.table_schema    = 'public'
-              AND tc.table_name      = %s
-            ORDER BY kcu.column_name
+                att2.attname AS fk_col,
+                cl.relname   AS ref_table,
+                att.attname  AS ref_col
+            FROM pg_catalog.pg_constraint con
+            JOIN pg_catalog.pg_class rel ON rel.oid = con.conrelid
+            JOIN pg_catalog.pg_namespace nsp ON nsp.oid = rel.relnamespace
+            JOIN pg_catalog.pg_class cl ON cl.oid = con.confrelid
+            JOIN LATERAL unnest(con.conkey) WITH ORDINALITY AS ck(attnum, ord) ON true
+            JOIN LATERAL unnest(con.confkey) WITH ORDINALITY AS cfk(attnum, ord) ON cfk.ord = ck.ord
+            JOIN pg_catalog.pg_attribute att2 ON att2.attrelid = con.conrelid AND att2.attnum = ck.attnum
+            JOIN pg_catalog.pg_attribute att ON att.attrelid = con.confrelid AND att.attnum = cfk.attnum
+            WHERE con.contype = 'f'
+              AND nsp.nspname = 'public'
+              AND rel.relname = %s
+            ORDER BY att2.attname
         """
         cur = await conn.execute(fk_query, (table,))
         fk_rows = await cur.fetchall()

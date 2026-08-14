@@ -14,14 +14,16 @@ provider = "local"          # change to "anthropic" for graded runs
 ollama_url = "http://host.docker.internal:11434"
 
 [llm.models.local]
-supervisor  = "qwen2.5:7b"
-sql         = "qwen2.5:7b"
-synthesizer = "qwen2.5:7b"
+supervisor        = "qwen2.5:7b"
+sql               = "qwen2.5:7b"
+synthesizer       = "qwen2.5:7b"
+memory_summarizer = "qwen2.5:7b"   # C1: trajectory insight generation
 
 [llm.models.anthropic]
-supervisor  = "claude-opus-4-5"
-sql         = "claude-sonnet-4-5"
-synthesizer = "claude-sonnet-4-5"
+supervisor        = "claude-opus-4-5"
+sql               = "claude-sonnet-4-5"
+synthesizer       = "claude-sonnet-4-5"
+memory_summarizer = "claude-sonnet-4-5"   # C1: trajectory insight generation
 
 # ─────────────────────────────────────────────────────────────────────────────
 # that is the point of the flag system. Changing the *existence* of a flag

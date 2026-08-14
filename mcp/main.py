@@ -1,12 +1,14 @@
 """
 mcp/main.py
-MCP service — JSON-RPC 2.0 server exposing the 4 Phase-B tools.
+MCP service — JSON-RPC 2.0 server exposing the 6 Phase-B + C1 tools.
 
 Tools exposed (A4):
-  schema.list_tables    (A4.1)
-  schema.describe_table (A4.2)
-  data.sample_rows      (A4.3)
-  data.run_select       (A4.4) — with all 3 SELECT-enforcement layers
+  schema.list_tables      (A4.1)
+  schema.describe_table   (A4.2)
+  data.sample_rows        (A4.3)
+  data.run_select         (A4.4) — with all 3 SELECT-enforcement layers
+  memory.get_trajectory   (A4.8, C1)
+  memory.put_trajectory   (A4.8, C1)
 
 Per A4: tenant_id is bound at session establishment from the X-Tenant-ID header.
 It is not a tool parameter — it is injected server-side by session middleware.
@@ -26,10 +28,14 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from db import init_pool, close_pool
+from db import init_pool, close_pool, get_connection
+from embeddings import close_embeddings_client
+from fingerprint import verify_fingerprint_at_startup
+from qdrant_store import init_qdrant, close_qdrant
 from session import set_session, get_tenant_id
 from tools.schema_tools import list_tables, describe_table
 from tools.data_tools import sample_rows, run_select
+from tools.memory_tools import get_trajectory, put_trajectory
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
@@ -41,8 +47,18 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_pool()
-    logger.info("MCP service ready. Exposing 4 Phase-B tools.")
+
+    # A5: recomputed at mcp startup; mismatch is a startup failure, not a
+    # warning. Uses the ordinary statesync_reader pool (see fingerprint.py).
+    async with get_connection() as conn:
+        await verify_fingerprint_at_startup(conn)
+
+    await init_qdrant()
+
+    logger.info("MCP service ready. Exposing %d tools.", len(_REGISTERED_TOOLS))
     yield
+    await close_qdrant()
+    await close_embeddings_client()
     await close_pool()
     logger.info("MCP service shutdown.")
 
@@ -64,6 +80,8 @@ _REGISTERED_TOOLS: dict[str, Any] = {
     "schema.describe_table": describe_table,
     "data.sample_rows":      sample_rows,
     "data.run_select":       run_select,
+    "memory.get_trajectory": get_trajectory,
+    "memory.put_trajectory": put_trajectory,
 }
 
 assert len(_REGISTERED_TOOLS) <= TOOL_CEILING, (

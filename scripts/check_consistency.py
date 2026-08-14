@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+"""
+scripts/check_consistency.py
+C1-V3 (M2) procedure, written as a reusable script rather than a one-off --
+F-V3 explicitly re-runs "C1-V3 (M2)... unchanged" in Phase F, and F2 Notes
+say not to write a second, looser procedure for that re-check.
+
+Runs the 10 base queries from fixtures/golden/phase_c1.json five times each,
+under both memory.enabled flag states, and compares result sets by
+execution-based dataframe equality: column-set equality plus row-multiset
+equality, column order and row order ignored (same definition as C1-V1's
+reference, C1-V3 spec text).
+
+For each (query, flag state) pair, counts the number of DISTINCT result sets
+seen across the 5 runs. Pass condition (C1-V3): mean distinct-result-set
+count with memory enabled <= control mean, and no query with memory enabled
+produces MORE distinct result sets than it did in control.
+
+Usage:
+    python3 scripts/check_consistency.py
+"""
+
+from __future__ import annotations
+
+import json
+import time
+from pathlib import Path
+
+from bench_memory import (
+    REPO_ROOT,
+    FIXTURE_PATH,
+    restart_orchestrator,
+    reset_trajectory_collection,
+    run_query,
+    set_memory_enabled,
+)
+
+REPORT_PATH = REPO_ROOT / "docs" / "consistency_report.json"
+RUNS_PER_QUERY = 5
+
+
+def _signature(sql_columns: list[str], sql_rows: list[dict]) -> str:
+    """Canonical, order-independent signature for dataframe equality."""
+    col_sig = tuple(sorted(sql_columns))
+    row_tuples = []
+    for row in sql_rows:
+        row_tuples.append(tuple(sorted((k, json.dumps(v, sort_keys=True, default=str)) for k, v in row.items())))
+    row_sig = tuple(sorted(row_tuples))
+    return json.dumps({"columns": col_sig, "rows": row_sig}, default=str)
+
+
+def run_flag_state(base_queries: list[dict], memory_enabled: bool) -> dict[str, dict]:
+    label = "memory.enabled=true" if memory_enabled else "memory.enabled=false"
+    print(f"\n--- {label} ---")
+    set_memory_enabled(memory_enabled)
+    restart_orchestrator()
+    reset_trajectory_collection()
+
+    per_query: dict[str, dict] = {}
+    for q in base_queries:
+        signatures = []
+        hits = []
+        for run_idx in range(RUNS_PER_QUERY):
+            data = run_query(q["text"])
+            trace = data.get("state_trace", {})
+            sig = _signature(trace.get("sql_columns", []), trace.get("sql_rows", []))
+            signatures.append(sig)
+            hits.append(bool(trace.get("memory_hit", False)))
+        distinct = len(set(signatures))
+        per_query[q["id"]] = {
+            "distinct_result_sets": distinct,
+            "runs": RUNS_PER_QUERY,
+            "memory_hit_per_run": hits,
+        }
+        print(f"    [{q['id']}] distinct_result_sets={distinct}/{RUNS_PER_QUERY} hits={hits}")
+    return per_query
+
+
+def main() -> None:
+    print("=== check_consistency.py -- C1-V3 (M2) ===")
+    fixture = json.loads(FIXTURE_PATH.read_text())
+    base_queries = [q for q in fixture["queries"] if q["group"] == "base"]
+    assert len(base_queries) == 10, f"expected 10 base queries, found {len(base_queries)}"
+
+    control = run_flag_state(base_queries, memory_enabled=False)
+    treatment = run_flag_state(base_queries, memory_enabled=True)
+
+    control_mean = sum(v["distinct_result_sets"] for v in control.values()) / len(control)
+    treatment_mean = sum(v["distinct_result_sets"] for v in treatment.values()) / len(treatment)
+
+    worse_queries = [
+        qid for qid in control
+        if treatment[qid]["distinct_result_sets"] > control[qid]["distinct_result_sets"]
+    ]
+
+    report = {
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "runs_per_query": RUNS_PER_QUERY,
+        "control": {"flag": "memory.enabled=false", "per_query": control, "mean_distinct_result_sets": control_mean},
+        "treatment": {"flag": "memory.enabled=true", "per_query": treatment, "mean_distinct_result_sets": treatment_mean},
+        "pass": treatment_mean <= control_mean and not worse_queries,
+        "worse_queries": worse_queries,
+    }
+
+    REPORT_PATH.write_text(json.dumps(report, indent=2))
+    print(f"\nReport written to {REPORT_PATH.relative_to(REPO_ROOT)}")
+    print(json.dumps({
+        "control_mean": control_mean,
+        "treatment_mean": treatment_mean,
+        "pass": report["pass"],
+        "worse_queries": worse_queries,
+    }, indent=2))
+
+
+if __name__ == "__main__":
+    main()

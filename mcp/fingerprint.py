@@ -39,9 +39,14 @@ _EXCLUDED_TABLES = frozenset({"schema_versions"})
 async def compute_fingerprint(conn: psycopg.AsyncConnection) -> str:
     """
     Compute the schema fingerprint using the A5 formula.
-    Must be called with a superuser or migrator connection (not statesync_reader)
-    because it queries information_schema which reader can access but we need
-    explicit schema access to pg_constraint.
+
+    Called with the ordinary statesync_reader pool connection (db.get_connection()).
+    A1 requires migrator credentials to never enter a long-running service, and
+    mcp is one, so this must not need a migrator connection — and it doesn't:
+    information_schema and pg_constraint-derived views are visible to any role
+    with SELECT on the underlying tables, which statesync_reader holds on every
+    application table (Layer 3). mcp/tools/schema_tools.py already queries the
+    same catalogs through this same reader pool on every live request.
 
     Returns:
         64-character lowercase hex SHA-256 string.
@@ -79,23 +84,30 @@ async def compute_fingerprint(conn: psycopg.AsyncConnection) -> str:
             for row in await cur.fetchall()
         ]
 
-        # Foreign keys via pg_constraint
+        # Foreign keys via pg_constraint -- NOT information_schema (see the
+        # matching comment in mcp/tools/schema_tools.py's fk_query: those
+        # views hide constraints from SELECT-only roles, which is exactly
+        # what statesync_reader is by design). pg_constraint has no such
+        # restriction, so this produces the same result under reader or
+        # migrator -- required for the fingerprint to be a pure function of
+        # schema shape (A5), not of which role computed it.
         fk_query = """
             SELECT
-                kcu.column_name AS fk_column,
-                ccu.table_name  AS ref_table,
-                ccu.column_name AS ref_column
-            FROM information_schema.table_constraints tc
-            JOIN information_schema.key_column_usage kcu
-              ON tc.constraint_name = kcu.constraint_name
-              AND tc.table_schema = kcu.table_schema
-            JOIN information_schema.constraint_column_usage ccu
-              ON ccu.constraint_name = tc.constraint_name
-              AND ccu.table_schema = tc.table_schema
-            WHERE tc.constraint_type = 'FOREIGN KEY'
-              AND tc.table_schema = 'public'
-              AND tc.table_name = %s
-            ORDER BY kcu.column_name
+                att2.attname AS fk_column,
+                cl.relname   AS ref_table,
+                att.attname  AS ref_column
+            FROM pg_catalog.pg_constraint con
+            JOIN pg_catalog.pg_class rel ON rel.oid = con.conrelid
+            JOIN pg_catalog.pg_namespace nsp ON nsp.oid = rel.relnamespace
+            JOIN pg_catalog.pg_class cl ON cl.oid = con.confrelid
+            JOIN LATERAL unnest(con.conkey) WITH ORDINALITY AS ck(attnum, ord) ON true
+            JOIN LATERAL unnest(con.confkey) WITH ORDINALITY AS cfk(attnum, ord) ON cfk.ord = ck.ord
+            JOIN pg_catalog.pg_attribute att2 ON att2.attrelid = con.conrelid AND att2.attnum = ck.attnum
+            JOIN pg_catalog.pg_attribute att ON att.attrelid = con.confrelid AND att.attnum = cfk.attnum
+            WHERE con.contype = 'f'
+              AND nsp.nspname = 'public'
+              AND rel.relname = %s
+            ORDER BY att2.attname
         """
         cur = await conn.execute(fk_query, (table,))
         foreign_keys = [
@@ -122,17 +134,21 @@ async def compute_fingerprint(conn: psycopg.AsyncConnection) -> str:
 
 
 async def verify_fingerprint_at_startup(
-    migrator_conn: psycopg.AsyncConnection,
+    conn: psycopg.AsyncConnection,
 ) -> str:
     """
     Compute the current fingerprint and compare against schema_versions.
     Raises RuntimeError on mismatch (startup failure per A5).
 
+    Called by mcp/main.py's lifespan with a connection from the ordinary
+    statesync_reader pool (db.get_connection()) — see compute_fingerprint's
+    docstring for why a migrator connection is neither needed nor permitted.
+
     Returns the verified fingerprint.
     """
-    current_fp = await compute_fingerprint(migrator_conn)
+    current_fp = await compute_fingerprint(conn)
 
-    cur = await migrator_conn.execute(
+    cur = await conn.execute(
         "SELECT fingerprint FROM schema_versions WHERE is_current = TRUE LIMIT 1"
     )
     row = await cur.fetchone()

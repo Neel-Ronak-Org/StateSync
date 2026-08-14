@@ -38,7 +38,12 @@ async def entry_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     session_id: str = state_dict.get("session_id") or str(uuid.uuid4())
 
     return {
-        "query_id": str(uuid.uuid4()),
+        # query_id is generated once by main.py before the graph runs, not
+        # here -- A2 marks it immutable from entry onward, and main.py's
+        # initial StateSyncState construction is that entry point. Passing
+        # it through (not regenerating it) is what makes the immutable-field
+        # assertion in state.merge() a real check rather than a guaranteed
+        # first-node failure.
         "tenant_id": cfg.tenancy.default_tenant,    # A0.6: always config default
         "session_id": session_id,
         "raw_query": raw_query,

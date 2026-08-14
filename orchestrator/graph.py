@@ -69,35 +69,65 @@ def _route_after_supervisor(state: StateSyncState) -> str:
 
 
 # ── Node wrappers (adapt async callables to LangGraph's dict-in/dict-out) ─────
-# LangGraph passes the full state dict to each node and merges the returned
-# dict using our merge() function.
+# LangGraph's own default per-key merge for a plain (non-Annotated-reducer)
+# Pydantic state schema is last-write-wins on every field it sees returned --
+# it has no idea metrics should SUM or errors should APPEND. Each wrapper
+# therefore runs the node's partial update through state.merge() itself
+# (using state.py's A2-correct SUM/APPEND/LWW/immutable dispatch) and returns
+# the FULL resulting state as the "update": since every field is then present,
+# LangGraph's last-write-wins default degenerates into a full replacement
+# with the already-correctly-merged state, rather than a raw per-key
+# overwrite of the node's partial output.
+
+
+def _merge_with_scratch(state: StateSyncState, update: dict[str, Any], node_name: str) -> dict[str, Any]:
+    """
+    Apply state.merge() for the typed A2 fields, then pass through any
+    underscore-prefixed scratch keys (_sql_error, _stub_message) unmerged.
+    merge() deliberately drops these -- they are not part of the A2 typed
+    schema -- but sql_agent_node/stub_node use them to hand a value to the
+    very next node (synthesizer_node reads them). Dropping them here would
+    silently break that handoff.
+    """
+    merged = merge(state, update, node_name=node_name).model_dump()
+    for key, value in update.items():
+        if key.startswith("_"):
+            merged[key] = value
+    return merged
+
 
 async def _entry(state: StateSyncState) -> dict[str, Any]:
-    return await entry_node(state.model_dump())
+    update = await entry_node(state.model_dump())
+    return _merge_with_scratch(state, update, "entry")
 
 
 async def _supervisor(state: StateSyncState) -> dict[str, Any]:
-    return await supervisor_node(state.model_dump())
+    update = await supervisor_node(state.model_dump())
+    return _merge_with_scratch(state, update, "supervisor")
 
 
 async def _sql_specialist(state: StateSyncState) -> dict[str, Any]:
     node_fn = resolve("sql")
     # Reset LWW writer tracking at start of sequential dispatch (not parallel here)
-    return await node_fn(state.model_dump())
+    update = await node_fn(state.model_dump())
+    return _merge_with_scratch(state, update, "sql")
 
 
 async def _docs_specialist(state: StateSyncState) -> dict[str, Any]:
     node_fn = resolve("docs")
-    return await node_fn(state.model_dump())
+    update = await node_fn(state.model_dump())
+    return _merge_with_scratch(state, update, "docs")
 
 
 async def _hybrid_specialist(state: StateSyncState) -> dict[str, Any]:
     node_fn = resolve("hybrid")
-    return await node_fn(state.model_dump())
+    update = await node_fn(state.model_dump())
+    return _merge_with_scratch(state, update, "hybrid")
 
 
 async def _synthesizer(state: StateSyncState) -> dict[str, Any]:
-    return await synthesizer_node(state.model_dump())
+    update = await synthesizer_node(state.model_dump())
+    return _merge_with_scratch(state, update, "synthesizer")
 
 
 # ── Graph builder ─────────────────────────────────────────────────────────────

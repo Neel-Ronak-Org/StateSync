@@ -104,7 +104,7 @@ async def run_query(request: QueryRequest) -> QueryResponse:
 
     # Build the initial state input for the entry node
     initial_input = {
-        "query_id": str(uuid.uuid4()),   # will be overwritten by entry node
+        "query_id": str(uuid.uuid4()),   # A2: set once here, immutable from here on
         "tenant_id": tenant_id,
         "session_id": session_id,
         "raw_query": request.query,
@@ -129,15 +129,23 @@ async def run_query(request: QueryRequest) -> QueryResponse:
 
     latency_ms = int((time.monotonic() - t0) * 1000)  # noqa: literals — ms conversion factor
 
-    # Build state trace for B-V2 log verification
+    # Build state trace for B-V2 log verification and C1 memory verification.
+    # sql_rows/sql_columns are included (not just the count) so C1-V3 can do
+    # execution-based dataframe equality across repeated runs -- this trace
+    # object is verification/debugging-oriented, not the user-facing payload.
     state_trace = {
         "query_id":    final_state.query_id,
         "tenant_id":   final_state.tenant_id,
         "route":       final_state.route,
         "executed_sql": final_state.executed_sql,
         "sql_rows_count": len(final_state.sql_rows),
+        "sql_rows":    final_state.sql_rows,
+        "sql_columns": final_state.sql_columns,
         "attempt":     final_state.attempt,
         "metrics":     final_state.metrics.model_dump(),
+        "memory_hit":       final_state.memory_hit,
+        "memory_trace_id":  final_state.memory_trace_id,
+        "schema_fingerprint": final_state.schema_fingerprint,
     }
 
     logger.info(

@@ -151,3 +151,41 @@ async def data_run_select(
     if max_rows is not None:
         params["max_rows"] = max_rows
     return await session.call("data.run_select", params)
+
+
+async def memory_get_trajectory(
+    session: MCPSession,
+    query_text: str,
+    schema_fingerprint: str,
+    top_k: int | None = None,
+) -> dict[str, Any]:
+    """A4.8 memory.get_trajectory"""
+    params: dict[str, Any] = {
+        "query_text": query_text,
+        "schema_fingerprint": schema_fingerprint,
+    }
+    if top_k is not None:
+        params["top_k"] = top_k
+    return await session.call("memory.get_trajectory", params)
+
+
+async def memory_put_trajectory(
+    session: MCPSession,
+    query_text: str,
+    schema_fingerprint: str,
+    insight: str,
+    tables: list[str],
+    join_path: list[str],
+    dialect_notes: list[str] | None = None,
+) -> dict[str, Any]:
+    """A4.8 memory.put_trajectory"""
+    params: dict[str, Any] = {
+        "query_text": query_text,
+        "schema_fingerprint": schema_fingerprint,
+        "insight": insight,
+        "tables": tables,
+        "join_path": join_path,
+    }
+    if dialect_notes is not None:
+        params["dialect_notes"] = dialect_notes
+    return await session.call("memory.put_trajectory", params)
