@@ -66,9 +66,20 @@ async def supervisor_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     """
     Supervisor node: classifies the query into a route via one LLM call.
     Returns a state update dict with 'route' and metrics contribution.
+
+    Reads normalized_query only -- never raw_query (Phase D Callout 1: this
+    is structural, not conventional). normalize_node runs unconditionally
+    before this node via a direct, non-conditional edge and always sets
+    normalized_query (even normalization.enabled=false sets it to raw_query
+    verbatim, per D1), so it is never None by the time this node runs.
     """
-    raw_query: str = state_dict.get("normalized_query") or state_dict.get("raw_query", "")
     query_id: str = state_dict.get("query_id", "")
+    normalized_query = state_dict.get("normalized_query")
+    assert normalized_query is not None, (
+        "Supervisor reached with normalized_query unset -- normalize_node "
+        "must run before supervisor_node on every path (D1 Callout 1)."
+    )
+    raw_query: str = normalized_query
 
     logger.info("Supervisor routing query_id=%s", query_id)
 

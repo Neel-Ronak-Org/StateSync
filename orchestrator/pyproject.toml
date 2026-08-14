@@ -13,6 +13,7 @@ dependencies = [
     "anthropic>=0.28.0",
     "jsonschema>=4.22.0",
     "tomllib>=2.0.0 ; python_version < '3.11'",
+    "digipin>=2.1.1",
 ]
 
 [tool.uv]

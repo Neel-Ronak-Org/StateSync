@@ -152,6 +152,10 @@ async def run_query(request: QueryRequest) -> QueryResponse:
         "memory_hit":       final_state.memory_hit,
         "memory_trace_id":  final_state.memory_trace_id,
         "schema_fingerprint": final_state.schema_fingerprint,
+        "detected_language":  final_state.detected_language,
+        "normalized_query":   final_state.normalized_query,
+        "preserved_entities": final_state.preserved_entities,
+        "spatial":            final_state.spatial.model_dump(),
     }
 
     logger.info(

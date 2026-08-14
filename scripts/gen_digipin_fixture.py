@@ -9,17 +9,20 @@ Per Appendix 2.3 spec:
   - A mismatch in D-V5 means the library or config drifted — investigate
     before regenerating.
 
-NOTE: This script uses a stub encoder (matching gen_seed_fixture.py's
-_digipin_placeholder) until the real 'digipin' PyPI package is installed.
-When the real library is available, replace _encode() with the library call.
+Uses the real pinned 'digipin' PyPI library (D2 Notes: do not hand-implement
+the grid algorithm).
 """
 
 from __future__ import annotations
 
+import importlib.metadata
 import json
 import math
 import random
 from pathlib import Path
+
+from digipin import decode as digipin_decode
+from digipin import encode as _digipin_encode
 
 RNG_SEED = 20260807  # matches config/statesync.toml [spatial].roundtrip_rng_seed
 rng = random.Random(RNG_SEED)
@@ -28,21 +31,17 @@ rng = random.Random(RNG_SEED)
 SEED_PATH = Path(__file__).parent.parent / "fixtures" / "ondc_seed.json"
 OUT_PATH  = Path(__file__).parent.parent / "fixtures" / "digipin_reference.json"
 
-CHARSET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+LIBRARY_VERSION = importlib.metadata.version("digipin")
 
 
 def _encode(lat: float, lon: float) -> str:
-    """
-    Stub encoder — matches the placeholder in gen_seed_fixture.py.
-    Replace with: from digipin import encode; return encode(lat, lon)
-    when the pinned 'digipin' package is installed.
-    """
-    combined = abs(int(lat * 1000) * 100000 + int(lon * 1000))
-    code = ""
-    for _ in range(10):
-        code = CHARSET[combined % len(CHARSET)] + code
-        combined //= len(CHARSET)
-    return code
+    """Real DIGIPIN encode; strip the library's level-3/6 spaces for the
+    canonical, no-separator form (A5 schema comment, locations.digipin CHAR(10))."""
+    return _digipin_encode(lat, lon).replace(" ", "")
+
+
+def _decode(code: str) -> tuple[float, float]:
+    return digipin_decode(code)
 
 
 def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -85,13 +84,22 @@ def generate() -> dict:
 
     selected = selected[:20]
 
-    # Build pairs
+    # Build pairs. The frozen lat/lon is the DECODE OUTPUT, not the original
+    # seed location's coordinates: decode() returns the center of the grid
+    # cell containing the input point (a lossy quantization -- see D-V4's own
+    # ~2.5m round-trip distance), so decode(encode(orig_lat, orig_lon)) is
+    # almost never bit-identical to (orig_lat, orig_lon) at 6 decimal places.
+    # D-V5 checks "decode(digipin) matches the frozen coordinates" as a
+    # regression baseline on decode() itself (library/config drift), which
+    # only makes sense if the frozen value IS a decode() snapshot.
     pairs = []
     for loc in selected:
-        lat, lon = loc["lat"], loc["lon"]
-        digipin = _encode(lat, lon)
+        orig_lat, orig_lon = loc["lat"], loc["lon"]
+        digipin = _encode(orig_lat, orig_lon)
+        lat, lon = _decode(digipin)
 
-        # Find seeded locations within 2km
+        # Find seeded locations within 2km of the DECODED point (what D-V6
+        # actually queries against at runtime, via DigipinResolver).
         nearby = [
             other["location_id"]
             for other in locations
@@ -107,16 +115,22 @@ def generate() -> dict:
             "nearby_location_ids": nearby,
         })
 
-    # Verify >= 1 pair has >= 3 nearby locations within 2km (D-V6 requirement)
+    # Verify >= 1 pair has >= 3 nearby locations within 2km (D-V6 requirement).
+    # D-V6 reads "the first entry" literally, so a qualifying pair must be
+    # moved to index 0, not merely present somewhere in the list.
     rich_pairs = [p for p in pairs if len(p["nearby_location_ids"]) >= 3]
     if not rich_pairs:
         print("WARNING: No pair has >= 3 nearby locations within 2km. D-V6 will fail.")
         print("Consider adding more locations to the seed fixture in dense cities.")
+    else:
+        first_rich = rich_pairs[0]
+        pairs.remove(first_rich)
+        pairs.insert(0, first_rich)
 
     fixture = {
         "version": 1,
         "library": "digipin",
-        "library_version": "<pinned — replace with actual version when library installed>",
+        "library_version": LIBRARY_VERSION,
         "generated_by": "scripts/gen_digipin_fixture.py",
         "generated_at": "2026-08-12T00:00:00Z",
         "rng_seed": RNG_SEED,

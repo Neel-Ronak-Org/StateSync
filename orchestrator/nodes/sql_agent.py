@@ -42,6 +42,17 @@ treated as an ordinary success, no further ErrorRecord, no further retry.
 
 memory.enabled is read from flags_snapshot (A2: captured once at query
 entry, never re-read mid-query) — not from the live flags singleton.
+
+Phase D additions: DigipinResolver (spatial_resolver.py) runs inline here,
+every attempt (D1 Callout 2 -- it is a deterministic, non-LLM, non-MCP
+pre-step, so unlike memory/interrogation there is no cost reason to gate it
+to attempt 0). When it finds a DIGIPIN token in the normalized query, its
+ready-made ST_DWithin predicate is appended to the prompt context so the
+model doesn't have to get SRID/geography casts right unprompted (C2 already
+showed it doesn't reliably). preserved_entities (D1) is similarly appended
+as a verbatim-literal instruction, including the _local-column redirect for
+Devanagari values -- see language_normalizer.py's module docstring for why
+that column exists.
 """
 
 from __future__ import annotations
@@ -58,6 +69,7 @@ from llm.provider import get_agent_llm
 from mcp_client import MCPSession, data_run_select, data_sample_rows, schema_list_tables
 from memory_store import get_trajectory_store
 from schema_retriever import get_schema_retriever
+from spatial_resolver import get_spatial_resolver
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +179,39 @@ def _format_interrogation_samples(samples: list[dict]) -> str:
     return "\n".join(parts)
 
 
+def _format_entity_hint(preserved_entities: dict[str, str]) -> str:
+    if not preserved_entities:
+        return ""
+    lines = [
+        "Preserved entities -- these are exact-match literals taken verbatim "
+        "from the user's own query (D1). Use them exactly as given in WHERE "
+        "clauses; do not translate, transliterate, or alter them. Check each "
+        "value's own script before choosing a column:",
+        "  - Devanagari script (e.g. विक्रेता 5, मुंबई) -> match against the table's "
+        "_local column (sellers.display_name_local, locations.city_local, "
+        "catalog_items.title_local).",
+        "  - Latin/English script (e.g. Seller Store 5, Mumbai) -> match against "
+        "the table's standard column (sellers.display_name, locations.city, "
+        "catalog_items.title) as usual. Do NOT use a _local column for a "
+        "Latin-script value.",
+        "Values to preserve:",
+    ]
+    for original in preserved_entities.keys():
+        lines.append(f"  '{original}'")
+    return "\n".join(lines)
+
+
+def _format_spatial_hint(spatial: dict[str, Any]) -> str:
+    return (
+        f"Spatial context (D1): the query references location code "
+        f"{spatial['digipin']}, decoded to latitude {spatial['lat']}, "
+        f"longitude {spatial['lon']}. Use exactly this predicate for the "
+        f"spatial filter -- adjust only the table alias to whatever alias "
+        f"you assign to the locations table in this query:\n"
+        f"  {spatial['predicate_hint']}"
+    )
+
+
 def _format_error_history(errors: list[dict]) -> str:
     parts = ["Previous attempt(s) failed. Do not repeat the same mistake:"]
     for e in errors:
@@ -271,6 +316,20 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             trajectory_steps += len(table_names)
             context_block = f"Schema:\n{schema_context}"
 
+        # Phase D: entity-preservation + spatial predicate hints, appended
+        # regardless of which branch above built context_block (memory hit,
+        # memory miss, or retry) -- every attempt, since both are cheap,
+        # deterministic, non-LLM lookups (unlike memory/interrogation, which
+        # stay gated to attempt 0).
+        preserved_entities: dict[str, str] = state_dict.get("preserved_entities", {})
+        entity_hint = _format_entity_hint(preserved_entities)
+        if entity_hint:
+            context_block += "\n\n" + entity_hint
+
+        spatial_resolution = get_spatial_resolver().resolve(raw_query)
+        if spatial_resolution:
+            context_block += "\n\n" + _format_spatial_hint(spatial_resolution)
+
         max_rows = cfg.mcp.max_rows_default
 
         # Step 4: generate SQL -- debug override (attempt 0, test harness
@@ -339,6 +398,13 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         if attempt == 0:
             update["memory_hit"] = memory_hit
             update["memory_trace_id"] = memory_trace_id
+        if spatial_resolution:
+            update["spatial"] = {
+                "digipin": spatial_resolution["digipin"],
+                "lat": spatial_resolution["lat"],
+                "lon": spatial_resolution["lon"],
+                "radius_m": spatial_resolution["radius_m"],
+            }
 
         ok = bool(exec_result.get("ok"))
         rows = exec_result.get("rows", []) if ok else []

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "library": "digipin",
-  "library_version": "<pinned \u2014 replace with actual version when library installed>",
+  "library_version": "2.1.1",
   "generated_by": "scripts/gen_digipin_fixture.py",
   "generated_at": "2026-08-12T00:00:00Z",
   "rng_seed": 20260807,
@@ -9,150 +9,201 @@
   "counts": {
     "pairs": 20,
     "cities": 13,
-    "pairs_with_3_plus_nearby": 0
+    "pairs_with_3_plus_nearby": 2
   },
   "pairs": [
     {
-      "digipin": "2223STPPPT",
-      "lat": 19.05919,
-      "lon": 72.921173,
-      "city": "Mumbai",
-      "nearby_location_ids": []
-    },
-    {
-      "digipin": "2223SUR9UV",
-      "lat": 19.070656,
-      "lon": 72.859019,
-      "city": "Mumbai",
-      "nearby_location_ids": []
-    },
-    {
-      "digipin": "2224P8U8WD",
-      "lat": 28.592823,
-      "lon": 77.195449,
+      "digipin": "39J43799LK",
+      "lat": 28.611807,
+      "lon": 77.207659,
       "city": "Delhi",
-      "nearby_location_ids": []
+      "nearby_location_ids": [
+        "loc_0004",
+        "loc_0005",
+        "loc_0051"
+      ]
     },
     {
-      "digipin": "2224P6U64H",
-      "lat": 28.571647,
-      "lon": 77.167447,
+      "digipin": "4FK596CT37",
+      "lat": 19.074335,
+      "lon": 72.882032,
+      "city": "Mumbai",
+      "nearby_location_ids": [
+        "loc_0002"
+      ]
+    },
+    {
+      "digipin": "4FK5958JJ9",
+      "lat": 19.075468,
+      "lon": 72.875818,
+      "city": "Mumbai",
+      "nearby_location_ids": [
+        "loc_0001"
+      ]
+    },
+    {
+      "digipin": "39J4373FT9",
+      "lat": 28.609678,
+      "lon": 77.204844,
       "city": "Delhi",
-      "nearby_location_ids": []
+      "nearby_location_ids": [
+        "loc_0003",
+        "loc_0005",
+        "loc_0051"
+      ]
     },
     {
-      "digipin": "22238QWQGY",
-      "lat": 12.99,
-      "lon": 77.598428,
+      "digipin": "4P3JK827K5",
+      "lat": 12.973455,
+      "lon": 77.594995,
       "city": "Bengaluru",
-      "nearby_location_ids": []
+      "nearby_location_ids": [
+        "loc_0007"
+      ]
     },
     {
-      "digipin": "22238SZUVK",
-      "lat": 13.012017,
-      "lon": 77.553655,
+      "digipin": "4P3JK8F266",
+      "lat": 12.975653,
+      "lon": 77.590498,
       "city": "Bengaluru",
-      "nearby_location_ids": []
+      "nearby_location_ids": [
+        "loc_0006"
+      ]
     },
     {
-      "digipin": "222395LPC4",
-      "lat": 13.123963,
-      "lon": 80.226553,
+      "digipin": "4T38KT2PJC",
+      "lat": 13.086821,
+      "lon": 80.266287,
       "city": "Chennai",
-      "nearby_location_ids": []
+      "nearby_location_ids": [
+        "loc_0009",
+        "loc_0010"
+      ]
     },
     {
-      "digipin": "22238Z27VQ",
-      "lat": 13.075227,
-      "lon": 80.278129,
+      "digipin": "4T38MFF8C6",
+      "lat": 13.081945,
+      "lon": 80.271437,
       "city": "Chennai",
-      "nearby_location_ids": []
+      "nearby_location_ids": [
+        "loc_0008",
+        "loc_0010"
+      ]
     },
     {
-      "digipin": "2223MT7RPD",
-      "lat": 17.376301,
-      "lon": 78.507289,
+      "digipin": "42259449J8",
+      "lat": 17.384123,
+      "lon": 78.488768,
       "city": "Hyderabad",
-      "nearby_location_ids": []
+      "nearby_location_ids": [
+        "loc_0012"
+      ]
     },
     {
-      "digipin": "2223MXVAUV",
-      "lat": 17.425756,
-      "lon": 78.523199,
+      "digipin": "422593PMJC",
+      "lat": 17.389067,
+      "lon": 78.490347,
       "city": "Hyderabad",
-      "nearby_location_ids": []
+      "nearby_location_ids": [
+        "loc_0011"
+      ]
     },
     {
-      "digipin": "2223RAGZYJ",
-      "lat": 18.543453,
-      "lon": 73.840941,
+      "digipin": "4FP499LP69",
+      "lat": 18.522718,
+      "lon": 73.855112,
       "city": "Pune",
       "nearby_location_ids": [
+        "loc_0014",
         "loc_0015"
       ]
     },
     {
-      "digipin": "2223R4NUX6",
-      "lat": 18.482883,
-      "lon": 73.828309,
+      "digipin": "4FP492KK52",
+      "lat": 18.516642,
+      "lon": 73.853876,
       "city": "Pune",
-      "nearby_location_ids": []
+      "nearby_location_ids": [
+        "loc_0013",
+        "loc_0015"
+      ]
     },
     {
-      "digipin": "2224JXVXCV",
-      "lat": 27.156079,
-      "lon": 78.043131,
-      "city": "Agra",
-      "nearby_location_ids": []
+      "digipin": "3LCL84M64C",
+      "lat": 22.302565,
+      "lon": 73.180792,
+      "city": "Vadodara",
+      "nearby_location_ids": [
+        "loc_0045",
+        "loc_0047"
+      ]
     },
     {
-      "digipin": "2223Z6JYLZ",
-      "lat": 21.186614,
-      "lon": 79.135741,
+      "digipin": "3P6P75F9L4",
+      "lat": 21.149893,
+      "lon": 79.092947,
       "city": "Nagpur",
-      "nearby_location_ids": []
+      "nearby_location_ids": [
+        "loc_0030"
+      ]
     },
     {
-      "digipin": "2222XP7FHR",
-      "lat": 9.952572,
-      "lon": 76.279033,
-      "city": "Kochi",
-      "nearby_location_ids": []
+      "digipin": "32C8K8K39M",
+      "lat": 27.174623,
+      "lon": 78.011618,
+      "city": "Agra",
+      "nearby_location_ids": [
+        "loc_0049",
+        "loc_0050"
+      ]
     },
     {
-      "digipin": "22245QG3G3",
-      "lat": 22.716416,
-      "lon": 75.841695,
-      "city": "Indore",
-      "nearby_location_ids": []
+      "digipin": "35L97226L2",
+      "lat": 23.264795,
+      "lon": 77.410425,
+      "city": "Bhopal",
+      "nearby_location_ids": [
+        "loc_0038"
+      ]
     },
     {
-      "digipin": "22245DHH8J",
-      "lat": 22.601155,
-      "lon": 88.368233,
+      "digipin": "2TFJ8MLJKP",
+      "lat": 22.575472,
+      "lon": 88.364344,
       "city": "Kolkata",
-      "nearby_location_ids": []
+      "nearby_location_ids": [
+        "loc_0019",
+        "loc_0020"
+      ]
     },
     {
-      "digipin": "22244N2AX4",
-      "lat": 22.355698,
-      "lon": 73.154866,
+      "digipin": "3MC88M7MP4",
+      "lat": 22.71929,
+      "lon": 75.8561,
+      "city": "Indore",
+      "nearby_location_ids": [
+        "loc_0036"
+      ]
+    },
+    {
+      "digipin": "3LCL84FMMM",
+      "lat": 22.308367,
+      "lon": 73.177496,
       "city": "Vadodara",
-      "nearby_location_ids": []
+      "nearby_location_ids": [
+        "loc_0045",
+        "loc_0046"
+      ]
     },
     {
-      "digipin": "22244CYDLT",
-      "lat": 22.260803,
-      "lon": 73.17708,
-      "city": "Vadodara",
-      "nearby_location_ids": []
-    },
-    {
-      "digipin": "2223YYTP36",
-      "lat": 21.126973,
-      "lon": 72.804201,
+      "digipin": "3LKP3CCMTC",
+      "lat": 21.165892,
+      "lon": 72.828405,
       "city": "Surat",
-      "nearby_location_ids": []
+      "nearby_location_ids": [
+        "loc_0024",
+        "loc_0026"
+      ]
     }
   ]
 }

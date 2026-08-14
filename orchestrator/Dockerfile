@@ -16,7 +16,8 @@ RUN uv pip install --system --no-cache -r pyproject.toml 2>/dev/null || \
     "langgraph>=0.1.0" \
     "langchain-core>=0.2.0" \
     "anthropic>=0.28.0" \
-    "jsonschema>=4.22.0"
+    "jsonschema>=4.22.0" \
+    "digipin>=2.1.1"
 
 # Copy application source
 COPY . .

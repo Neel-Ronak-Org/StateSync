@@ -24,6 +24,7 @@ max_tokens_supervisor     = 128     # enough for {"route":"sql"} classification
 max_tokens_sql            = 1024    # SQL generation
 max_tokens_synthesizer    = 1024    # prose answer generation
 max_tokens_memory_summary = 256     # C1: insight/tables/join_path JSON, capped by memory.insight_max_chars
+max_tokens_normalizer     = 512     # D: detected_language/confidence/normalized_query/preserved_entities JSON
 synthesizer_preview_rows  = 50      # rows shown to synthesizer LLM (context window budget)
 answer_max_chars          = 4000    # A7 answer_text character cap
 chart_max_data_rows       = 5000    # A7 data.values maxItems

@@ -1,10 +1,17 @@
 """
 orchestrator/graph.py
-LangGraph: entry -> Supervisor -> Specialist (routed) -> [correction loop] -> Synthesizer.
+LangGraph: entry -> Normalize -> Supervisor -> Specialist (routed) ->
+[correction loop] -> Synthesizer.
 
-Graph structure (Phase B + C2):
+Graph structure (Phase B + C2 + D):
   entry_node
       |
+  normalize_node    (D1: language detection + entity-preserving rewrite;
+      |               ALWAYS runs before Supervisor -- Callout 1: Supervisor
+      |               reads normalized_query only, never raw_query. This is
+      |               what makes that guarantee structural: normalize_node
+      |               always sets normalized_query, by a direct (non-
+      |               conditional) edge, before supervisor_node can run.)
   supervisor_node   (LLM classification: sql | docs | hybrid)
       |
   [routing dispatch] -> sql_agent_node  (route = "sql")
@@ -30,6 +37,11 @@ the merged, typed state, not a node's raw scratch-key update dict.
 
 The routing table registry (routing/registry.py) is consulted at graph
 build time and at runtime for dispatch. No if-branches on route names (A8).
+
+Per D1 Callout 2, DigipinResolver (spatial_resolver.py) is NOT a graph node
+and is not registered here -- it is called inline inside sql_agent_node, a
+deterministic pre-step with no LLM/MCP round-trip of its own. The routing
+table below still resolves to exactly 3 routes (D-V7).
 """
 
 from __future__ import annotations
@@ -44,6 +56,7 @@ from classifiers.error_classifier import TERMINAL_CATEGORIES
 from state import StateSyncState, merge, reset_lww_writers
 from nodes.entry import entry_node
 from nodes.error_exit import error_exit_node
+from nodes.normalize import normalize_node
 from nodes.supervisor import supervisor_node
 from nodes.sql_agent import sql_agent_node
 from nodes.stub_node import stub_node
@@ -155,6 +168,11 @@ async def _entry(state: StateSyncState) -> dict[str, Any]:
     return _merge_with_scratch(state, update, "entry")
 
 
+async def _normalize(state: StateSyncState) -> dict[str, Any]:
+    update = await normalize_node(state.model_dump())
+    return _merge_with_scratch(state, update, "normalize")
+
+
 async def _supervisor(state: StateSyncState) -> dict[str, Any]:
     update = await supervisor_node(state.model_dump())
     return _merge_with_scratch(state, update, "supervisor")
@@ -199,6 +217,7 @@ def build_graph() -> StateGraph:
 
     # Add nodes
     builder.add_node("entry", _entry)
+    builder.add_node("normalize", _normalize)
     builder.add_node("supervisor", _supervisor)
     builder.add_node("sql", _sql_specialist)
     builder.add_node("docs", _docs_specialist)
@@ -209,8 +228,10 @@ def build_graph() -> StateGraph:
     # Entry point
     builder.set_entry_point("entry")
 
-    # entry → supervisor
-    builder.add_edge("entry", "supervisor")
+    # entry → normalize → supervisor (D1: gate always runs first, direct
+    # non-conditional edges so normalized_query survives intact -- Callout 1)
+    builder.add_edge("entry", "normalize")
+    builder.add_edge("normalize", "supervisor")
 
     # supervisor → routing dispatch
     builder.add_conditional_edges(

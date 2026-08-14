@@ -6,7 +6,8 @@ LLM calls. Nodes never construct SDK clients directly.
 Public API:
     get_agent_llm(role) -> ChatModel
 
-    role is one of: "supervisor", "sql", "synthesizer", "memory_summarizer"
+    role is one of: "supervisor", "sql", "synthesizer", "memory_summarizer",
+    "normalizer"
 
 The factory:
   1. Reads flags.llm.provider ("local" | "anthropic")
@@ -35,7 +36,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Valid roles — the set of names nodes may request
-_VALID_ROLES = frozenset({"supervisor", "sql", "synthesizer", "memory_summarizer"})
+_VALID_ROLES = frozenset({"supervisor", "sql", "synthesizer", "memory_summarizer", "normalizer"})
 
 
 def _resolve_model(provider: str, role: str) -> str:
