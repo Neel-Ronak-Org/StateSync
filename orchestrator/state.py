@@ -88,6 +88,7 @@ _LAST_WRITE_WINS_FIELDS: frozenset[str] = frozenset({
     "answer_text",
     "vega_spec",
     "flags_snapshot",
+    "debug_candidate_sql",
 })
 
 # Fields whose reducer is "append" (list concatenation)
@@ -151,6 +152,12 @@ class StateSyncState(BaseModel):
     # --- correction loop (Part C2) ---
     errors:  list[ErrorRecord] = Field(default_factory=list)          # ACCUMULATE
     attempt: int = 0                                                   # INCREMENT
+
+    # --- test harness only (C2-V1/V2): seeds the attempt-0 candidate SQL,
+    # bypassing LLM generation, so the classifier+correction path is
+    # deterministically testable. Never set by production request paths.
+    # Consumed once by sql_agent_node at attempt 0; ignored on any retry.
+    debug_candidate_sql: str | None = None
 
     # --- output (Part E2) ---
     answer_text: str | None = None

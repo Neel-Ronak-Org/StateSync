@@ -1,0 +1,283 @@
+{
+  "version": 1,
+  "phase": "c2",
+  "generated_at": "2026-08-14T00:00:00Z",
+  "note": "25 novel queries for C2-V7/C2-V8 (Appendix 2.2, C2 Deliverable 7). Novel relative to phase_b.json/phase_c1.json (no text overlap) so cache-cold vs cache-warm (C2-V8) is a genuine test. expected_row_count is null until verified against a live run and frozen -- do not adjust the fixture to match output (same discipline as phase_b.json). >= 8 requires_join=true, >= 4 requires_shape_hypothesis=true (met: 13 and 8 respectively).",
+  "queries": [
+    {
+      "id": "c2g_01",
+      "lang": "en",
+      "text": "Which sellers have never had a dispute raised against their orders?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT s.seller_id, s.display_name FROM sellers s WHERE NOT EXISTS (SELECT 1 FROM orders o JOIN disputes d ON d.order_id = o.order_id WHERE o.seller_id = s.seller_id) ORDER BY s.seller_id",
+      "expected_row_count": 1,
+      "requires_join": true,
+      "requires_shape_hypothesis": false,
+      "notes": "NOT EXISTS across orders->disputes."
+    },
+    {
+      "id": "c2g_02",
+      "lang": "en",
+      "text": "What is the total order value per logistics provider?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT lp.provider_id, lp.display_name, SUM(o.order_value) AS total_order_value FROM logistics_providers lp JOIN fulfillments f ON f.provider_id = lp.provider_id JOIN orders o ON o.order_id = f.order_id GROUP BY lp.provider_id, lp.display_name ORDER BY total_order_value DESC",
+      "expected_row_count": 10,
+      "requires_join": true,
+      "requires_shape_hypothesis": false,
+      "notes": "3-table join: logistics_providers -> fulfillments -> orders."
+    },
+    {
+      "id": "c2g_03",
+      "lang": "en",
+      "text": "List fulfillments that are still pending with no delivery events recorded.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT f.fulfillment_id, f.order_id FROM fulfillments f WHERE f.status = 'pending' AND NOT EXISTS (SELECT 1 FROM delivery_events de WHERE de.fulfillment_id = f.fulfillment_id) ORDER BY f.fulfillment_id",
+      "expected_row_count": 0,
+      "requires_join": true,
+      "requires_shape_hypothesis": true,
+      "notes": "status is CHECK-constrained lowercase ('pending'); absence-of-row pattern, not a nullable column."
+    },
+    {
+      "id": "c2g_04",
+      "lang": "en",
+      "text": "Which cities have both a seller and a logistics provider hub located in them?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT DISTINCT l.city FROM locations l WHERE EXISTS (SELECT 1 FROM sellers s WHERE s.location_id = l.location_id) AND EXISTS (SELECT 1 FROM logistics_providers lp WHERE lp.hub_location_id = l.location_id) ORDER BY l.city",
+      "expected_row_count": 5,
+      "requires_join": true,
+      "requires_shape_hypothesis": false,
+      "notes": "Double EXISTS against locations."
+    },
+    {
+      "id": "c2g_05",
+      "lang": "en",
+      "text": "What is the average order value for B2B orders versus B2C orders?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT order_channel, AVG(order_value) AS avg_order_value FROM orders GROUP BY order_channel ORDER BY order_channel",
+      "expected_row_count": 2,
+      "requires_join": false,
+      "requires_shape_hypothesis": true,
+      "notes": "order_channel is CHECK-constrained lowercase ('b2b','b2c'); must not filter on 'B2B'/'B2C'."
+    },
+    {
+      "id": "c2g_06",
+      "lang": "en",
+      "text": "How many disputes remain unresolved, with no resolution date?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT COUNT(*) AS unresolved_count FROM disputes WHERE resolved_at IS NULL",
+      "expected_row_count": 1,
+      "requires_join": false,
+      "requires_shape_hypothesis": true,
+      "notes": "resolved_at is nullable; NULL means unresolved, not a missing/invalid value."
+    },
+    {
+      "id": "c2g_07",
+      "lang": "en",
+      "text": "List the top 3 sellers by total number of distinct catalog items sold.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT s.seller_id, s.display_name, COUNT(DISTINCT ci.item_id) AS distinct_items FROM sellers s JOIN catalog_items ci ON ci.seller_id = s.seller_id GROUP BY s.seller_id, s.display_name ORDER BY distinct_items DESC LIMIT 3",
+      "expected_row_count": 3,
+      "requires_join": true,
+      "requires_shape_hypothesis": false,
+      "notes": "sellers -> catalog_items, top-3."
+    },
+    {
+      "id": "c2g_08",
+      "lang": "en",
+      "text": "What percentage of fulfillments were delivered after their promised time?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE delivered_at IS NOT NULL AND delivered_at > promised_at) / NULLIF(COUNT(*) FILTER (WHERE delivered_at IS NOT NULL), 0), 2) AS pct_late FROM fulfillments",
+      "expected_row_count": 1,
+      "requires_join": false,
+      "requires_shape_hypothesis": true,
+      "notes": "delivered_at nullable (NULL = not yet delivered, must be excluded from the denominator, not counted as on-time or late)."
+    },
+    {
+      "id": "c2g_09",
+      "lang": "en",
+      "text": "Which buyer apps have placed orders totalling more than 10000 in value?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT np.participant_id, np.legal_name, SUM(o.order_value) AS total_value FROM network_participants np JOIN orders o ON o.buyer_app_id = np.participant_id GROUP BY np.participant_id, np.legal_name HAVING SUM(o.order_value) > 10000 ORDER BY total_value DESC",
+      "expected_row_count": 5,
+      "requires_join": true,
+      "requires_shape_hypothesis": false,
+      "notes": "network_participants -> orders, HAVING on aggregate."
+    },
+    {
+      "id": "c2g_10",
+      "lang": "en",
+      "text": "List sellers whose contracted SLA hours has not been set.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT seller_id, display_name FROM sellers WHERE contracted_sla_hours IS NULL ORDER BY seller_id",
+      "expected_row_count": 0,
+      "requires_join": false,
+      "requires_shape_hypothesis": true,
+      "notes": "contracted_sla_hours is nullable."
+    },
+    {
+      "id": "c2g_11",
+      "lang": "en",
+      "text": "What is the total number of delivery events per event type?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT event_type, COUNT(*) AS event_count FROM delivery_events GROUP BY event_type ORDER BY event_count DESC",
+      "expected_row_count": 6,
+      "requires_join": false,
+      "requires_shape_hypothesis": false,
+      "notes": "Single-table GROUP BY."
+    },
+    {
+      "id": "c2g_12",
+      "lang": "en",
+      "text": "Which fulfillments required more than one delivery attempt?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT fulfillment_id, order_id, attempt_count FROM fulfillments WHERE attempt_count > 1 ORDER BY attempt_count DESC",
+      "expected_row_count": 362,
+      "requires_join": false,
+      "requires_shape_hypothesis": false,
+      "notes": "Single-table filter."
+    },
+    {
+      "id": "c2g_13",
+      "lang": "en",
+      "text": "List the 5 most recent disputes along with the seller name on the related order.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT d.dispute_id, d.raised_at, s.display_name FROM disputes d JOIN orders o ON o.order_id = d.order_id JOIN sellers s ON s.seller_id = o.seller_id ORDER BY d.raised_at DESC LIMIT 5",
+      "expected_row_count": 5,
+      "requires_join": true,
+      "requires_shape_hypothesis": false,
+      "notes": "disputes -> orders -> sellers."
+    },
+    {
+      "id": "c2g_14",
+      "lang": "en",
+      "text": "How many orders did each buyer app place through the b2b channel?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT np.participant_id, np.legal_name, COUNT(*) AS b2b_order_count FROM network_participants np JOIN orders o ON o.buyer_app_id = np.participant_id WHERE o.order_channel = 'b2b' GROUP BY np.participant_id, np.legal_name ORDER BY b2b_order_count DESC",
+      "expected_row_count": 5,
+      "requires_join": true,
+      "requires_shape_hypothesis": true,
+      "notes": "Join plus the same order_channel casing hypothesis as c2g_05."
+    },
+    {
+      "id": "c2g_15",
+      "lang": "en",
+      "text": "Which sellers have a Devanagari display name recorded?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT seller_id, display_name, display_name_local FROM sellers WHERE display_name_local IS NOT NULL ORDER BY seller_id",
+      "expected_row_count": 30,
+      "requires_join": false,
+      "requires_shape_hypothesis": true,
+      "notes": "display_name_local is nullable; only some seed rows populate it."
+    },
+    {
+      "id": "c2g_16",
+      "lang": "en",
+      "text": "What is the average number of hours between order placement and the fulfillment promise time?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT AVG(EXTRACT(EPOCH FROM (f.promised_at - o.placed_at)) / 3600.0) AS avg_hours FROM orders o JOIN fulfillments f ON f.order_id = o.order_id",
+      "expected_row_count": 1,
+      "requires_join": true,
+      "requires_shape_hypothesis": false,
+      "notes": "orders -> fulfillments, interval arithmetic."
+    },
+    {
+      "id": "c2g_17",
+      "lang": "en",
+      "text": "List logistics providers that are not enabled for B2B.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT provider_id, display_name FROM logistics_providers WHERE b2b_enabled = false ORDER BY provider_id",
+      "expected_row_count": 5,
+      "requires_join": false,
+      "requires_shape_hypothesis": false,
+      "notes": "Single-table boolean filter."
+    },
+    {
+      "id": "c2g_18",
+      "lang": "en",
+      "text": "Which order line items have a quantity greater than 5?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT order_id, item_id, quantity FROM order_items WHERE quantity > 5 ORDER BY quantity DESC",
+      "expected_row_count": 0,
+      "requires_join": false,
+      "requires_shape_hypothesis": false,
+      "notes": "Single-table filter."
+    },
+    {
+      "id": "c2g_19",
+      "lang": "en",
+      "text": "What is the total dispute count broken down by category?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT category, COUNT(*) AS dispute_count FROM disputes GROUP BY category ORDER BY dispute_count DESC",
+      "expected_row_count": 5,
+      "requires_join": false,
+      "requires_shape_hypothesis": false,
+      "notes": "Single-table GROUP BY."
+    },
+    {
+      "id": "c2g_20",
+      "lang": "en",
+      "text": "List orders that have no associated dispute.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT o.order_id FROM orders o WHERE NOT EXISTS (SELECT 1 FROM disputes d WHERE d.order_id = o.order_id) ORDER BY o.order_id LIMIT 1000",
+      "expected_row_count": 470,
+      "requires_join": true,
+      "requires_shape_hypothesis": false,
+      "notes": "NOT EXISTS against disputes; most orders qualify, capped at max_rows_default."
+    },
+    {
+      "id": "c2g_21",
+      "lang": "en",
+      "text": "Which sellers are located in Maharashtra state?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT s.seller_id, s.display_name FROM sellers s JOIN locations l ON l.location_id = s.location_id WHERE l.state = 'Maharashtra' ORDER BY s.seller_id",
+      "expected_row_count": 4,
+      "requires_join": true,
+      "requires_shape_hypothesis": false,
+      "notes": "sellers -> locations."
+    },
+    {
+      "id": "c2g_22",
+      "lang": "en",
+      "text": "What is the maximum order value ever recorded?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT MAX(order_value) AS max_order_value FROM orders",
+      "expected_row_count": 1,
+      "requires_join": false,
+      "requires_shape_hypothesis": false,
+      "notes": "Scalar aggregation."
+    },
+    {
+      "id": "c2g_23",
+      "lang": "en",
+      "text": "List logistics providers together with the city their hub is located in.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT lp.provider_id, lp.display_name, l.city FROM logistics_providers lp JOIN locations l ON l.location_id = lp.hub_location_id ORDER BY lp.provider_id",
+      "expected_row_count": 10,
+      "requires_join": true,
+      "requires_shape_hypothesis": false,
+      "notes": "logistics_providers -> locations."
+    },
+    {
+      "id": "c2g_24",
+      "lang": "en",
+      "text": "How many catalog items does each seller have priced above 1000?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT s.seller_id, s.display_name, COUNT(*) AS item_count FROM sellers s JOIN catalog_items ci ON ci.seller_id = s.seller_id WHERE ci.unit_price > 1000 GROUP BY s.seller_id, s.display_name ORDER BY item_count DESC",
+      "expected_row_count": 29,
+      "requires_join": true,
+      "requires_shape_hypothesis": false,
+      "notes": "sellers -> catalog_items with a price filter."
+    },
+    {
+      "id": "c2g_25",
+      "lang": "en",
+      "text": "Which delivery events are missing a location reference?",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT event_id, fulfillment_id, event_type FROM delivery_events WHERE location_id IS NULL ORDER BY event_id LIMIT 1000",
+      "expected_row_count": 566,
+      "requires_join": false,
+      "requires_shape_hypothesis": true,
+      "notes": "location_id is nullable on delivery_events."
+    }
+  ]
+}

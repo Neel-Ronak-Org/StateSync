@@ -39,6 +39,27 @@ Rules:
 7. answer_text must not exceed 4000 characters."""
 
 
+def _ensure_category_mentioned(answer_text: str, sql_error: dict | None) -> str:
+    """
+    C2-V4: "the user-facing response reports failure with the classified
+    category rather than a hallucinated answer." The system prompt already
+    asks the LLM to name the category, but this repo's own local-model
+    testing has repeatedly shown small models are not reliable at following
+    that kind of instruction (see docs/phase_c1_log.md's B-V1 finding) --
+    so this is enforced deterministically rather than only requested.
+    """
+    if not sql_error:
+        return answer_text
+    category = sql_error.get("category", "unclassified")
+    if category.lower() in answer_text.lower():
+        return answer_text
+    suffix = f" (classified failure: {category})"
+    max_len = cfg.sql.answer_max_chars
+    if len(answer_text) + len(suffix) > max_len:
+        answer_text = answer_text[: max_len - len(suffix)]
+    return answer_text + suffix
+
+
 async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     """
     Synthesizer node. Generates answer_text from SQL results or error info.
@@ -49,8 +70,20 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     sql_rows: list[dict] = state_dict.get("sql_rows", [])
     sql_columns: list[str] = state_dict.get("sql_columns", [])
     executed_sql: str | None = state_dict.get("executed_sql")
-    sql_error: dict | None = state_dict.get("_sql_error")
     stub_message: str | None = state_dict.get("_stub_message")
+
+    # Derived from the typed, reliably-accumulated state.errors/state.attempt
+    # (same test _route_after_sql uses), NOT a scratch key. A conditional
+    # edge (sql -> [_route_after_sql] -> error_exit) sits between
+    # sql_agent_node and this node whenever the loop terminates on failure;
+    # LangGraph must reconstruct a typed StateSyncState to evaluate that
+    # routing function, and an underscore-prefixed scratch key set by
+    # sql_agent_node's return dict does not survive that reconstruction --
+    # only declared A2 fields do. errors/attempt are declared fields, so
+    # this is the reliable way to know "did the last attempt fail."
+    errors: list[dict] = state_dict.get("errors", [])
+    attempt: int = state_dict.get("attempt", 0)
+    sql_error: dict | None = errors[-1] if len(errors) > attempt else None
 
     start_ms = int(time.monotonic() * 1000)
 
@@ -77,11 +110,18 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
 
     # Build context for the LLM
     if sql_error:
+        # Category is C2's classifier output (A3), never LLM-generated.
+        category = sql_error.get("category", "unclassified")
         context = (
-            f"The SQL query failed.\n"
-            f"Error code: {sql_error.get('sqlstate', 'N/A')}\n"
+            f"The SQL query failed after {sql_error.get('attempt', 0) + 1} attempt(s).\n"
+            f"Classified failure category: {category}\n"
+            f"Error code: {sql_error.get('engine_code') or 'N/A'}\n"
             f"Error message: {sql_error.get('message', 'Unknown error')}\n"
-            f"Attempted SQL: {sql_error.get('offending_sql', executed_sql or 'N/A')}"
+            f"Remediation hint (why no further attempt was made): {sql_error.get('remediation_hint', 'N/A')}\n"
+            f"Attempted SQL: {sql_error.get('offending_sql', executed_sql or 'N/A')}\n\n"
+            f"State plainly that the query failed and name the classified failure "
+            f"category ({category}) in your answer -- do not omit it, and do not "
+            f"invent a numeric or factual answer that was never computed."
         )
         citation_ref = sql_error.get("offending_sql") or executed_sql or ""
     else:
@@ -131,6 +171,7 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
 
         # Validate against A7
         safe_out = safe_synthesizer_output(parsed)
+        answer_text = _ensure_category_mentioned(safe_out["answer_text"], sql_error)
 
         logger.info(
             "Synthesizer completed for query_id=%s (tokens_in=%d tokens_out=%d).",
@@ -138,7 +179,7 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         )
 
         return {
-            "answer_text": safe_out["answer_text"],
+            "answer_text": answer_text,
             "vega_spec": None,
             "metrics": {
                 "tokens_in":        result.tokens_in,
@@ -158,8 +199,9 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             "citations": [{"kind": "sql", "ref": citation_ref}],
         }
         safe_out = safe_synthesizer_output(fallback)
+        answer_text = _ensure_category_mentioned(safe_out["answer_text"], sql_error)
         return {
-            "answer_text": safe_out["answer_text"],
+            "answer_text": answer_text,
             "vega_spec": None,
             "metrics": {
                 "tokens_in":        0,

@@ -97,8 +97,11 @@ def reset_trajectory_collection() -> None:
     )
 
 
-def run_query(text: str) -> dict:
-    payload = json.dumps({"query": text}).encode()
+def run_query(text: str, debug_candidate_sql: str | None = None) -> dict:
+    body: dict = {"query": text}
+    if debug_candidate_sql is not None:
+        body["debug_candidate_sql"] = debug_candidate_sql
+    payload = json.dumps(body).encode()
     req = urllib.request.Request(
         f"{ORCH_URL}/query", data=payload,
         headers={"Content-Type": "application/json"}, method="POST",

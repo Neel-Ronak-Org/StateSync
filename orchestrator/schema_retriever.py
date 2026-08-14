@@ -30,8 +30,16 @@ _VALID_PROVIDERS = frozenset({"direct"})
 
 @runtime_checkable
 class SchemaRetriever(Protocol):
-    async def retrieve(self, session: MCPSession, table_names: list[str]) -> str:
-        """Returns a formatted schema-context string describing every given table."""
+    async def retrieve(
+        self, session: MCPSession, table_names: list[str],
+    ) -> tuple[str, list[dict]]:
+        """
+        Returns (formatted schema-context string, raw describe_table
+        responses). The raw responses (one dict per table, each with the
+        A4.2 shape -- table/columns/foreign_keys/fingerprint) let callers
+        pick interrogation targets (C2: nullable columns) without a second
+        round of schema.describe_table calls.
+        """
         ...
 
 
@@ -55,12 +63,16 @@ def _format_table(tname: str, desc: dict) -> str:
 class DirectSchemaRetriever:
     """schema.describe_table for every candidate table — the Phase B path."""
 
-    async def retrieve(self, session: MCPSession, table_names: list[str]) -> str:
+    async def retrieve(
+        self, session: MCPSession, table_names: list[str],
+    ) -> tuple[str, list[dict]]:
         schema_parts: list[str] = []
+        descriptions: list[dict] = []
         for tname in table_names:
             desc = await schema_describe_table(session, tname)
+            descriptions.append(desc)
             schema_parts.append(_format_table(tname, desc))
-        return "\n\n".join(schema_parts)
+        return "\n\n".join(schema_parts), descriptions
 
 
 @lru_cache(maxsize=1)

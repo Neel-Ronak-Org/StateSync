@@ -37,6 +37,21 @@
       "hint": "TERMINAL. The connection is SELECT-only by design (D15). Do not retry; do not attempt an alternative write formulation."
     },
     {
+      "match": { "message_regex": "(?i)^\\[Layer 1 Gate\\] SQL parse error" },
+      "category": "syntax",
+      "hint": "Statement failed to parse before reaching the engine (A4.5 Layer 1). Re-emit valid PostgreSQL; do not change the query's intent."
+    },
+    {
+      "match": { "message_regex": "(?i)^\\[Layer 1 Gate\\] Rejected" },
+      "category": "permission_denied",
+      "hint": "TERMINAL. Rejected before reaching the engine: not a single plain SELECT statement (A4.5 Layer 1). Do not retry; do not attempt an alternative write or multi-statement formulation."
+    },
+    {
+      "match": { "sqlstate": "42803" },
+      "category": "aggregation_misuse",
+      "hint": "Column appears in the SELECT list or HAVING clause without being grouped or aggregated. Wrap it in SUM/AVG/COUNT/MIN/MAX or add it to GROUP BY."
+    },
+    {
       "match": { "sqlstate": "57014" },
       "category": "timeout",
       "hint": "Query exceeded the statement timeout. Reduce scanned rows by adding a selective predicate or a LIMIT."

@@ -1,16 +1,32 @@
 """
 orchestrator/graph.py
-4-node LangGraph: entry → Supervisor → Specialist (routed) → Synthesizer.
+LangGraph: entry -> Supervisor -> Specialist (routed) -> [correction loop] -> Synthesizer.
 
-Graph structure (Phase B):
+Graph structure (Phase B + C2):
   entry_node
-      ↓
+      |
   supervisor_node   (LLM classification: sql | docs | hybrid)
-      ↓
-  [routing dispatch] → sql_agent_node  (route = "sql")
-                     → stub_node       (route = "docs" | "hybrid")
-      ↓
-  synthesizer_node  (always runs; generates answer_text, chart: null)
+      |
+  [routing dispatch] -> sql_agent_node  (route = "sql")
+                     -> stub_node       (route = "docs" | "hybrid")
+      |
+  sql_agent_node -> [check_result, C2] -> success:            synthesizer_node
+                                        -> retriable error:    sql_agent_node (self-loop,
+                                                                bounded by attempt < sql.retry_max)
+                                        -> terminal error, or
+                                           retry_max exhausted: error_exit_node -> synthesizer_node
+      |
+  docs/hybrid (stub_node) -----------------------------------> synthesizer_node
+      |
+  synthesizer_node  (always runs; generates answer_text)
+
+The correction cycle (C2 Deliverable 2) is a real, visible graph edge --
+not a loop or try/except hidden inside sql_agent_node -- so the Supervisor
+(and anyone reading the graph) can see a failing SQL sub-task retry and
+terminate. _route_after_sql() below is that edge's decision function; it
+reads only typed StateSyncState fields (len(state.errors) vs state.attempt,
+and the last error's category) because conditional edge functions receive
+the merged, typed state, not a node's raw scratch-key update dict.
 
 The routing table registry (routing/registry.py) is consulted at graph
 build time and at runtime for dispatch. No if-branches on route names (A8).
@@ -23,8 +39,11 @@ from typing import Any
 
 from langgraph.graph import StateGraph, END
 
+from config_loader import cfg
+from classifiers.error_classifier import TERMINAL_CATEGORIES
 from state import StateSyncState, merge, reset_lww_writers
 from nodes.entry import entry_node
+from nodes.error_exit import error_exit_node
 from nodes.supervisor import supervisor_node
 from nodes.sql_agent import sql_agent_node
 from nodes.stub_node import stub_node
@@ -66,6 +85,41 @@ def _route_after_supervisor(state: StateSyncState) -> str:
 
     # LangGraph node names match route names here by convention.
     return route
+
+
+# ── Routing condition (called by LangGraph after sql_agent_node) — C2 ─────────
+def _route_after_sql(state: StateSyncState) -> str:
+    """
+    Correction-cycle routing decision (C2 Deliverable 2).
+
+    A sql_agent_node invocation always reports `attempt = attempt_on_entry`
+    (the attempt index that just ran) and appends exactly one ErrorRecord
+    when -- and only when -- that invocation failed (including a first
+    empty_result; a repeat empty_result is accepted as success and appends
+    nothing). So `len(state.errors) > state.attempt` is true iff the
+    invocation that just ran failed; there is no scratch-key or extra state
+    field needed to know this.
+    """
+    just_failed = len(state.errors) > state.attempt
+    if not just_failed:
+        return "success"
+
+    last_error = state.errors[-1]
+    if last_error.category in TERMINAL_CATEGORIES:
+        logger.info(
+            "sql_agent terminal category '%s' at attempt=%d — exiting the loop.",
+            last_error.category, state.attempt,
+        )
+        return "terminal"
+
+    if state.attempt >= cfg.sql.retry_max:
+        logger.info(
+            "sql_agent retry bound (sql.retry_max=%d) reached at attempt=%d — exiting the loop.",
+            cfg.sql.retry_max, state.attempt,
+        )
+        return "terminal"
+
+    return "retry"
 
 
 # ── Node wrappers (adapt async callables to LangGraph's dict-in/dict-out) ─────
@@ -130,10 +184,15 @@ async def _synthesizer(state: StateSyncState) -> dict[str, Any]:
     return _merge_with_scratch(state, update, "synthesizer")
 
 
+async def _error_exit(state: StateSyncState) -> dict[str, Any]:
+    update = await error_exit_node(state.model_dump())
+    return _merge_with_scratch(state, update, "error_exit")
+
+
 # ── Graph builder ─────────────────────────────────────────────────────────────
 def build_graph() -> StateGraph:
     """
-    Build and compile the Phase B LangGraph.
+    Build and compile the LangGraph (Phase B skeleton + C2 correction loop).
     Returns the compiled graph ready for .ainvoke().
     """
     builder = StateGraph(StateSyncState)
@@ -144,6 +203,7 @@ def build_graph() -> StateGraph:
     builder.add_node("sql", _sql_specialist)
     builder.add_node("docs", _docs_specialist)
     builder.add_node("hybrid", _hybrid_specialist)
+    builder.add_node("error_exit", _error_exit)
     builder.add_node("synthesizer", _synthesizer)
 
     # Entry point
@@ -163,8 +223,22 @@ def build_graph() -> StateGraph:
         },
     )
 
-    # All specialist paths → synthesizer
-    builder.add_edge("sql",    "synthesizer")
+    # sql → [correction-cycle dispatch] — C2 Deliverable 2, the real graph
+    # edge replacing "no retry at all" (Phase B). "retry" targets "sql"
+    # itself: this is the self-loop, bounded by _route_after_sql checking
+    # attempt < sql.retry_max before ever returning it.
+    builder.add_conditional_edges(
+        "sql",
+        _route_after_sql,
+        {
+            "success":  "synthesizer",
+            "retry":    "sql",
+            "terminal": "error_exit",
+        },
+    )
+    builder.add_edge("error_exit", "synthesizer")
+
+    # docs/hybrid never fail (static stub) → synthesizer directly.
     builder.add_edge("docs",   "synthesizer")
     builder.add_edge("hybrid", "synthesizer")
 

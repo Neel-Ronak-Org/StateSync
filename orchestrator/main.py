@@ -72,6 +72,9 @@ app.add_middleware(
 class QueryRequest(BaseModel):
     query: str
     session_id: str | None = None
+    # Test harness only (C2-V1/V2): seeds the attempt-0 candidate SQL,
+    # bypassing LLM generation. Never sent by the frontend.
+    debug_candidate_sql: str | None = None
 
 
 class QueryResponse(BaseModel):
@@ -120,6 +123,7 @@ async def run_query(request: QueryRequest) -> QueryResponse:
                 session_id=initial_input["session_id"],
                 raw_query=initial_input["raw_query"],
                 flags_snapshot=initial_input["flags_snapshot"],
+                debug_candidate_sql=request.debug_candidate_sql,
             )
         )
         final_state: StateSyncState = StateSyncState(**raw_final) if isinstance(raw_final, dict) else raw_final
@@ -142,6 +146,8 @@ async def run_query(request: QueryRequest) -> QueryResponse:
         "sql_rows":    final_state.sql_rows,
         "sql_columns": final_state.sql_columns,
         "attempt":     final_state.attempt,
+        "errors":      [e.model_dump() for e in final_state.errors],
+        "interrogation_samples": final_state.interrogation_samples,
         "metrics":     final_state.metrics.model_dump(),
         "memory_hit":       final_state.memory_hit,
         "memory_trace_id":  final_state.memory_trace_id,

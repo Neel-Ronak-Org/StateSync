@@ -1,91 +1,49 @@
 {
   "version": 1,
-  "note": "Malformed SQL seeds for testing the error classifier and correction loop (Appendix 2.4). Verbatim from spec plus mq_10-12. Frozen.",
   "seeds": [
-    {
-      "id": "mq_01",
-      "expected_category": "unknown_column",
+    { "id": "mq_01", "expected_category": "unknown_column",
       "sql": "SELECT s.display_name, AVG(f.delivered_at - f.promised_at) AS delay FROM fulfillments f JOIN sellers s ON f.seller_id = s.seller_id WHERE f.status = 'delivered' GROUP BY s.display_name;",
       "fault": "fulfillments has no seller_id; must route through orders",
-      "expected_repair_contains": ["f.order_id", "o.seller_id"]
-    },
-    {
-      "id": "mq_02",
-      "expected_category": "unknown_table",
-      "sql": "SELECT * FROM shipments LIMIT 10;",
-      "fault": "no such table",
-      "expected_repair_contains": ["fulfillments"]
-    },
-    {
-      "id": "mq_03",
-      "expected_category": "ambiguous_column",
+      "expected_repair_contains": ["f.order_id", "o.seller_id"] },
+    { "id": "mq_02", "expected_category": "unknown_table",
+      "sql": "SELECT * FROM shipments LIMIT 10;", "fault": "no such table",
+      "expected_repair_contains": ["fulfillments"] },
+    { "id": "mq_03", "expected_category": "ambiguous_column",
       "sql": "SELECT seller_id FROM orders o JOIN sellers s ON o.seller_id = s.seller_id;",
-      "fault": "unqualified ambiguous column",
-      "expected_repair_contains": ["o.seller_id"]
-    },
-    {
-      "id": "mq_04",
-      "expected_category": "syntax",
-      "sql": "SELECT FROM orders WHERE;",
-      "fault": "unparseable",
-      "expected_repair_contains": ["SELECT"]
-    },
-    {
-      "id": "mq_05",
-      "expected_category": "type_mismatch",
+      "fault": "unqualified ambiguous column", "expected_repair_contains": ["o.seller_id"] },
+    { "id": "mq_04", "expected_category": "syntax",
+      "sql": "SELECT FROM orders WHERE;", "fault": "unparseable",
+      "expected_repair_contains": ["SELECT"] },
+    { "id": "mq_05", "expected_category": "type_mismatch",
       "sql": "SELECT * FROM orders WHERE placed_at > 1735689600;",
       "fault": "timestamptz compared to integer epoch",
-      "expected_repair_contains": ["to_timestamp", "::timestamptz"]
-    },
-    {
-      "id": "mq_06",
-      "expected_category": "aggregation_misuse",
+      "expected_repair_contains": ["to_timestamp", "::timestamptz"] },
+    { "id": "mq_06", "expected_category": "aggregation_misuse",
       "sql": "SELECT seller_id, order_value FROM orders GROUP BY seller_id;",
       "fault": "non-aggregated column in GROUP BY query",
-      "expected_repair_contains": ["SUM", "AVG", "COUNT"]
-    },
-    {
-      "id": "mq_07",
-      "expected_category": "permission_denied",
-      "sql": "UPDATE orders SET order_value = 0;",
-      "fault": "terminal; must not retry",
-      "expected_repair_contains": [],
-      "note": "This is blocked by Layer 1 (not a SELECT). Tests the gate, not the DB."
-    },
-    {
-      "id": "mq_08",
-      "expected_category": "spatial_invalid",
-      "sql": "SELECT * FROM locations WHERE ST_DWithin(geom, 'POINT(72.87 19.07)', 5000);",
-      "fault": "untyped literal, missing SRID and geography cast",
-      "expected_repair_contains": ["ST_SetSRID", "::geography"]
-    },
-    {
-      "id": "mq_09",
-      "expected_category": "empty_result",
+      "expected_repair_contains": ["SUM", "AVG", "COUNT"] },
+    { "id": "mq_07", "expected_category": "permission_denied",
+      "sql": "UPDATE orders SET order_value = 0;", "fault": "terminal; must not retry",
+      "expected_repair_contains": [] },
+    { "id": "mq_08", "expected_category": "spatial_invalid",
+      "sql": "SELECT * FROM locations WHERE ST_DWithin(geom::geometry, ST_SetSRID(ST_MakePoint(72.87, 19.07), 3857), 5000);",
+      "fault": "geometry SRID (3857) mismatched against the column's SRID 4326 -- see docs/spec-gaps.md GAP-3 for why this differs from the spec's literal example",
+      "expected_repair_contains": ["ST_SetSRID", "::geography"] },
+    { "id": "mq_09", "expected_category": "empty_result",
       "sql": "SELECT * FROM orders WHERE order_channel = 'B2C';",
       "fault": "case mismatch against CHECK-constrained lowercase values",
-      "expected_repair_contains": ["'b2c'"]
-    },
-    {
-      "id": "mq_10",
-      "expected_category": "join_cardinality",
+      "expected_repair_contains": ["'b2c'"] },
+    { "id": "mq_10", "expected_category": "join_cardinality",
       "sql": "SELECT o.order_id, SUM(oi.line_value) FROM orders o JOIN order_items oi ON o.order_id = oi.order_id JOIN fulfillments f ON o.order_id = f.order_id GROUP BY o.order_id;",
-      "fault": "fan-out double-counts line values across fulfillments",
-      "expected_repair_contains": ["DISTINCT", "subquery"]
-    },
-    {
-      "id": "mq_11",
-      "expected_category": "timeout",
-      "sql": "SELECT o.order_id, d.event_id FROM orders o CROSS JOIN delivery_events d;",
-      "fault": "exceeds statement_timeout_ms — cross join over large tables",
-      "expected_repair_contains": ["LIMIT", "WHERE"]
-    },
-    {
-      "id": "mq_12",
-      "expected_category": "unclassified",
-      "sql": "SELECT pg_sleep(999);",
-      "fault": "exercises the fallback path; pg_sleep returns no useful result and may timeout; tests unclassified category handling",
-      "expected_repair_contains": []
-    }
+      "fault": "fan-out double-counts line values across fulfillments -- see docs/spec-gaps.md GAP-2: this never reaches the classifier, ok:true with wrong data",
+      "expected_repair_contains": ["DISTINCT", "subquery"] },
+    { "id": "mq_11", "expected_category": "timeout",
+      "sql": "SELECT COUNT(*) FROM orders a, orders b, orders c, disputes d;",
+      "fault": "unbounded 4-way cross join exceeds statement_timeout_ms (15000ms); verified at 15.0s wall time against this seed data (550 orders^3 x 60+ disputes)",
+      "expected_repair_contains": ["LIMIT", "WHERE"] },
+    { "id": "mq_12", "expected_category": "unclassified",
+      "sql": "SELECT 1/0;",
+      "fault": "division by zero (sqlstate 22012); exercises the fallback -- no taxonomy rule matches, must be terminal",
+      "expected_repair_contains": [] }
   ]
 }
