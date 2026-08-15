@@ -322,3 +322,45 @@ remaining ones split into three honest categories:
 - **the model chose `null`** on un-aggregated raw rows (32 dispute rows with
   `narrative`), where a bar chart would have needed a count aggregate. That
   one is a real model-quality limitation (BD6).
+
+### Correction — the JSON fix recovered 1 of the 8 nulls, not 7
+
+The entry above claimed the JSON parse defect "accounted for 7 of the 8
+chart:null results". **That was wrong, and the correction is recorded rather
+than edited away.** It was an extrapolation from two probe queries that showed
+the parse failure, generalised to the whole null set without measuring it. The
+re-run measured it:
+
+| | pre-fix | post-fix |
+|---|---|---|
+| A7-valid | 30/30 | **30/30** |
+| `chart:null` | 8 | **7** |
+| M7 mean spec score | 0.4592 | **0.4850** |
+
+Null set difference: `e2_008` recovered; nothing regressed; the other seven
+were null in both runs. The parse defect was real and is genuinely fixed —
+`e2_008` is the proof — but it was **one** of the eight, not seven.
+
+**Full measured accounting of the 8 original nulls**, by row/column shape of
+the SQL that fed them:
+
+| Cause | Count | Queries | Nature |
+|---|---|---|---|
+| SQL returned **0 rows** | 4 | `e2_009`, `e2_010`, `e2_015`, `e2_022` | upstream text-to-SQL failure (M4 class), not a charting failure |
+| SQL returned **1 wide row** | 1 | `e2_007` | `is_chartable` correctly gates it; the reference expects an `arc` over a long-format result, so the shape mismatch is upstream |
+| **Model declined** despite good data | 2 | `e2_017` (32×5), `e2_030` (360×3) | genuine model-quality limitation (BD6) |
+| **JSON parse defect** | 1 | `e2_008` (10×2) | real code defect, fixed |
+
+**The conclusion that matters, and it is not the one the number suggests:**
+**M7 on the local model is dominated by upstream SQL quality, not by charting
+quality.** Five of eight nulls exist because the SQL returned nothing or the
+wrong shape — the chart layer never got a chance. That is consistent with M4
+sitting at 28–36% on this model, and it means M7's local figure should be read
+as *partly a downstream reflection of M4* rather than as a clean measure of
+the Synthesizer's chart competence. Over the 23 charts actually produced the
+mean is 0.633.
+
+This is exactly why E2-V1 requires the `chart:null` count to be reported
+separately instead of averaged into the mean — the two move for unrelated
+reasons, and collapsing them would have hidden a text-to-SQL problem inside a
+charting metric.
