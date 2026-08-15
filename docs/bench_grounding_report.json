@@ -8,11 +8,11 @@
         "What is the contracted delivery SLA for supplier S014 in Metro NCR?"
       ],
       "metrics": {
-        "tokens_in": 2430,
+        "tokens_in": 3182,
         "tokens_out": 118,
         "llm_calls": 3,
         "trajectory_steps": 5,
-        "latency_ms": 15829
+        "latency_ms": 11424
       },
       "answer_text": "The contracted delivery SLA for supplier S014 in Metro NCR is 36 hours.",
       "citations": [
@@ -187,11 +187,11 @@
         "What is the ONDC network's return window in days for the electronics category, per the returns policy?"
       ],
       "metrics": {
-        "tokens_in": 2235,
-        "tokens_out": 107,
+        "tokens_in": 2987,
+        "tokens_out": 141,
         "llm_calls": 3,
         "trajectory_steps": 5,
-        "latency_ms": 15979
+        "latency_ms": 11419
       },
       "answer_text": "The ONDC network's return window for the electronics category is 10 days, as per the returns policy.",
       "citations": [
@@ -348,11 +348,11 @@
         "What penalty does supplier S001's agreement specify for the Metro NCR zone?"
       ],
       "metrics": {
-        "tokens_in": 2430,
+        "tokens_in": 3182,
         "tokens_out": 119,
         "llm_calls": 3,
         "trajectory_steps": 5,
-        "latency_ms": 17140
+        "latency_ms": 10782
       },
       "answer_text": "Supplier S001's agreement specifies a 3% penalty for the Metro NCR zone.",
       "citations": [
@@ -491,11 +491,11 @@
         "What committed transit time does FastShip 1's SLA annexure specify for the Metro Mumbai zone?"
       ],
       "metrics": {
-        "tokens_in": 2323,
+        "tokens_in": 3075,
         "tokens_out": 121,
         "llm_calls": 3,
         "trajectory_steps": 5,
-        "latency_ms": 17082
+        "latency_ms": 11670
       },
       "answer_text": "FastShip 1's SLA annexure specifies a committed transit time of 29 hours for the Metro Mumbai zone.",
       "citations": [
@@ -652,11 +652,11 @@
         "What is the committed resolution window in business days for a damaged_goods dispute, per the dispute resolution policy?"
       ],
       "metrics": {
-        "tokens_in": 2064,
+        "tokens_in": 2816,
         "tokens_out": 104,
         "llm_calls": 3,
         "trajectory_steps": 5,
-        "latency_ms": 15271
+        "latency_ms": 8732
       },
       "answer_text": "The committed resolution window for a damaged_goods dispute is 5 business days, as per the ONDC Network Dispute Resolution Policy.",
       "citations": [
@@ -813,13 +813,13 @@
         "What action is required when a delivery exception occurs because the recipient is unavailable, per the delivery exception handling SOP?"
       ],
       "metrics": {
-        "tokens_in": 2264,
-        "tokens_out": 123,
+        "tokens_in": 3016,
+        "tokens_out": 126,
         "llm_calls": 3,
         "trajectory_steps": 5,
-        "latency_ms": 17980
+        "latency_ms": 11276
       },
-      "answer_text": "When a delivery exception occurs because the recipient is unavailable, per the delivery exception handling SOP, the required action is to reattempt delivery on the next business day. The escalation window for this exception is 24 hours.",
+      "answer_text": "When a delivery exception occurs because the recipient is unavailable, per the delivery exception handling SOP, the required action is to reattempt the delivery on the next business day. The escalation window for this type of exception is 24 hours.",
       "citations": [
         {
           "kind": "chunk",
@@ -974,11 +974,11 @@
         "What is the maximum transit time in hours for frozen goods, per the cold chain and perishables handling SOP?"
       ],
       "metrics": {
-        "tokens_in": 2181,
+        "tokens_in": 2933,
         "tokens_out": 124,
         "llm_calls": 3,
         "trajectory_steps": 5,
-        "latency_ms": 19378
+        "latency_ms": 10794
       },
       "answer_text": "The maximum transit time for frozen goods, as per the Cold Chain and Perishables Handling SOP, is 24 hours. This can be found in the document passage that lists the maximum transit times for different product categories.",
       "citations": [
@@ -1135,11 +1135,11 @@
         "How often must a seller renew their GST registration compliance, per the seller onboarding and compliance policy?"
       ],
       "metrics": {
-        "tokens_in": 2195,
+        "tokens_in": 2947,
         "tokens_out": 100,
         "llm_calls": 3,
         "trajectory_steps": 5,
-        "latency_ms": 13566
+        "latency_ms": 9080
       },
       "answer_text": "According to the ONDC Network Seller Onboarding and Compliance Policy, a seller must renew their GST registration compliance annually.",
       "citations": [
@@ -1297,13 +1297,13 @@
         "What penalty does a seller's supplier agreement specify for a late delivery?"
       ],
       "metrics": {
-        "tokens_in": 4862,
-        "tokens_out": 421,
+        "tokens_in": 5646,
+        "tokens_out": 429,
         "llm_calls": 5,
         "trajectory_steps": 18,
-        "latency_ms": 50383
+        "latency_ms": 31836
       },
-      "answer_text": "The sellers who breached their contracted delivery SLA last quarter are S010, S008, S030, S021, S024, S025, S018, S005, S006, S016, S023, S027, S009, S015, S002, S011, S019, S004, S029, S020, S017, S014, S007, S026, S012, S028, S022, and S013. The penalty for breaching the SLA varies by zone and is specified in their respective supplier agreements. For example, Seller ID S010 has a 4% penalty for orders shipped to Metro NCR or Metro Mumbai zones, while Seller ID S025 has a 2% penalty for all zones.",
+      "answer_text": "The sellers who breached their contracted delivery SLA last quarter are S010, S008, S030, S021, S024, S025, S018, S005, S006, S016, S023, S027, S009, S015, S002, S011, S019, S004, S029, S020, S017, S014, S007, S026, S012, S028, S022, and S013. Each of these sellers' agreements specify penalties for breaches in the form of a percentage credit against the order value based on the breached zone's SLA commitment. For example, Seller ID S010 has different penalty rates depending on the zone: 4% for Metro NCR, Metro Mumbai, Tier-2 West, and Tier-2 South zones.",
       "citations": [
         {
           "kind": "sql",
@@ -1410,13 +1410,13 @@
         "What is the committed resolution window for disputes per the dispute resolution policy?"
       ],
       "metrics": {
-        "tokens_in": 3498,
-        "tokens_out": 270,
+        "tokens_in": 4281,
+        "tokens_out": 272,
         "llm_calls": 5,
         "trajectory_steps": 18,
-        "latency_ms": 28362
+        "latency_ms": 19610
       },
-      "answer_text": "Seller S014 has had a total of 2 disputes. According to the dispute resolution policy, the committed resolution window for disputes is as follows:\n\n- Metro NCR: 36 hours\n- Metro Mumbai: 44 hours\n- Tier-2 West: 56 hours\n- Rural North: 76 hours",
+      "answer_text": "Seller S014 has had a total of 2 disputes. According to the dispute resolution policy, the committed resolution window for disputes varies by zone as follows:\n\n- Metro NCR: 36 hours\n- Metro Mumbai: 44 hours\n- Tier-2 West: 56 hours\n- Rural North: 76 hours",
       "citations": [
         {
           "kind": "sql",
@@ -1464,13 +1464,13 @@
         "What does S005's supplier agreement specify for the Metro NCR zone?"
       ],
       "metrics": {
-        "tokens_in": 3538,
-        "tokens_out": 240,
+        "tokens_in": 4321,
+        "tokens_out": 255,
         "llm_calls": 5,
         "trajectory_steps": 18,
-        "latency_ms": 24866
+        "latency_ms": 16402
       },
-      "answer_text": "Seller S005's contracted SLA in hours is 36. According to the supplier agreement for Seller ID: S005, their commitment for the Metro NCR zone specifies a service level of 37 hours.",
+      "answer_text": "Seller S005's contracted SLA in hours is 36, as recorded in the database. According to the supplier agreement for Seller Store 5 (S005), the specified SLA for the Metro NCR zone is 37 hours with a 3% penalty applied if breached.",
       "citations": [
         {
           "kind": "sql",
@@ -1518,13 +1518,13 @@
         "What penalty does seller S001's agreement specify for the Metro NCR zone?"
       ],
       "metrics": {
-        "tokens_in": 3501,
-        "tokens_out": 221,
+        "tokens_in": 4284,
+        "tokens_out": 226,
         "llm_calls": 5,
         "trajectory_steps": 18,
-        "latency_ms": 22454
+        "latency_ms": 14878
       },
-      "answer_text": "Seller S001 has placed 17 orders. According to the agreement, for orders shipped to the Metro NCR zone, a 3% penalty applies if the SLA is breached.",
+      "answer_text": "Seller S001 has placed 17 orders. According to the supplier agreement, for orders shipped to the Metro NCR zone, a 3% penalty applies in case of a breach of the committed SLA.",
       "citations": [
         {
           "kind": "sql",
@@ -1572,13 +1572,13 @@
         "What transit time does logistics provider 'FastShip 1' commit to for deliveries in the Metro Mumbai zone?"
       ],
       "metrics": {
-        "tokens_in": 4441,
-        "tokens_out": 311,
+        "tokens_in": 5193,
+        "tokens_out": 309,
         "llm_calls": 5,
         "trajectory_steps": 19,
-        "latency_ms": 33450
+        "latency_ms": 22650
       },
-      "answer_text": "The query failed due to an unknown_column error, specifically because the column 'seller_id' does not exist in the relevant tables. However, based on the provided document passages, FastShip 1 (Provider ID: LP001) commits to a 29-hour transit time for the Metro Mumbai zone.",
+      "answer_text": "The SLA Annexure for FastShip 1 (Provider ID: LP001) specifies a committed transit time of 29 hours for the Metro Mumbai zone. However, the number of fulfillments handled by FastShip 1 is not provided in the available document passages. (classified failure: unknown_column)",
       "citations": [
         {
           "kind": "sql",
@@ -1739,11 +1739,11 @@
         "What is the committed resolution window for disputes in the damaged_goods category?"
       ],
       "metrics": {
-        "tokens_in": 4044,
+        "tokens_in": 4827,
         "tokens_out": 241,
         "llm_calls": 5,
         "trajectory_steps": 19,
-        "latency_ms": 26389
+        "latency_ms": 17554
       },
       "answer_text": "Seller S010 has 1 dispute in the damaged_goods category. The committed resolution window for this category is 5 business days.",
       "citations": [
@@ -1888,13 +1888,13 @@
         "What penalty does seller S020's agreement specify for deliveries in the Rural North zone?"
       ],
       "metrics": {
-        "tokens_in": 3514,
-        "tokens_out": 269,
+        "tokens_in": 4297,
+        "tokens_out": 263,
         "llm_calls": 5,
         "trajectory_steps": 18,
-        "latency_ms": 23947
+        "latency_ms": 16642
       },
-      "answer_text": "Seller S020 is in the 'food' category. According to the agreement, for orders shipped to the Rural North zone, there is no specific penalty mentioned. However, penalties are specified for other zones: Metro NCR has a 3% penalty, Metro Mumbai also has a 3% penalty, Tier-2 West has a 4% penalty, and Tier-2 South has a 4% penalty.",
+      "answer_text": "Seller S020 is in the 'food' category. According to the document, for orders shipped to the Rural North zone, there is no specific penalty mentioned. However, the agreement specifies penalties for other zones such as Metro NCR (3% penalty), Metro Mumbai (3% penalty), Tier-2 West (4% penalty), and Tier-2 South (4% penalty).",
       "citations": [
         {
           "kind": "sql",
@@ -1942,13 +1942,13 @@
         "What penalty does seller S025's supplier agreement specify for the Tier-2 West zone?"
       ],
       "metrics": {
-        "tokens_in": 3511,
-        "tokens_out": 222,
+        "tokens_in": 4294,
+        "tokens_out": 220,
         "llm_calls": 5,
         "trajectory_steps": 18,
-        "latency_ms": 21777
+        "latency_ms": 15154
       },
-      "answer_text": "Seller S025 has placed 11 orders. According to the supplier agreement, for orders shipped to the Tier-2 West zone, a 3% penalty is specified.",
+      "answer_text": "Seller S025 has placed 11 orders. The supplier agreement for Seller S025 specifies a 3% penalty for the Tier-2 West zone.",
       "citations": [
         {
           "kind": "sql",
@@ -1993,17 +1993,17 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 1777,
-        "tokens_out": 137,
-        "llm_calls": 4,
-        "trajectory_steps": 4,
-        "latency_ms": 13961
+        "tokens_in": 5309,
+        "tokens_out": 162,
+        "llm_calls": 5,
+        "trajectory_steps": 18,
+        "latency_ms": 13809
       },
-      "answer_text": "Seller S008 has placed 0 orders.",
+      "answer_text": "Seller S008 has placed 14 orders.",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'seller S008';",
+          "ref": "SELECT COUNT(*) \nFROM orders o \nJOIN sellers s ON o.seller_id = s.seller_id \nWHERE s.seller_id = 'S008'",
           "page": null
         }
       ],
@@ -2015,11 +2015,11 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 4914,
-        "tokens_out": 263,
-        "llm_calls": 6,
+        "tokens_in": 5328,
+        "tokens_out": 187,
+        "llm_calls": 5,
         "trajectory_steps": 18,
-        "latency_ms": 21433
+        "latency_ms": 14873
       },
       "answer_text": "The total order value for seller S012 is $566,769.90.",
       "citations": [
@@ -2037,11 +2037,11 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 4045,
-        "tokens_out": 182,
-        "llm_calls": 6,
+        "tokens_in": 4489,
+        "tokens_out": 117,
+        "llm_calls": 5,
         "trajectory_steps": 17,
-        "latency_ms": 11381
+        "latency_ms": 8174
       },
       "answer_text": "There are 16 disputes categorized as wrong_item.",
       "citations": [
@@ -2059,13 +2059,13 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 4041,
-        "tokens_out": 168,
-        "llm_calls": 6,
+        "tokens_in": 4485,
+        "tokens_out": 112,
+        "llm_calls": 5,
         "trajectory_steps": 17,
-        "latency_ms": 10627
+        "latency_ms": 8200
       },
-      "answer_text": "There are 5 logistics providers that are b2b_enabled.",
+      "answer_text": "There are 5 logistics providers that have the b2b_enabled feature.",
       "citations": [
         {
           "kind": "sql",
@@ -2081,17 +2081,17 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 3693,
-        "tokens_out": 271,
-        "llm_calls": 6,
+        "tokens_in": 5001,
+        "tokens_out": 129,
+        "llm_calls": 5,
         "trajectory_steps": 17,
-        "latency_ms": 20420
+        "latency_ms": 10386
       },
       "answer_text": "There were 269 orders placed via the b2c channel.",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT COUNT(*) AS b2c_orders_count\nFROM orders\nWHERE order_channel = 'b2c'\nLIMIT 1000;",
+          "ref": "SELECT COUNT(*) FROM orders WHERE order_channel = 'b2c'",
           "page": null
         }
       ],
@@ -2103,13 +2103,13 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 4434,
-        "tokens_out": 198,
-        "llm_calls": 6,
+        "tokens_in": 4865,
+        "tokens_out": 140,
+        "llm_calls": 5,
         "trajectory_steps": 17,
-        "latency_ms": 15066
+        "latency_ms": 10675
       },
-      "answer_text": "The average order value across all orders is $25,612.09.",
+      "answer_text": "The average order value across all orders, rounded to 2 decimal places, is $25,612.09.",
       "citations": [
         {
           "kind": "sql",
@@ -2125,13 +2125,13 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 3892,
-        "tokens_out": 185,
-        "llm_calls": 6,
+        "tokens_in": 4333,
+        "tokens_out": 126,
+        "llm_calls": 5,
         "trajectory_steps": 17,
-        "latency_ms": 11699
+        "latency_ms": 8328
       },
-      "answer_text": "There are currently 227 fulfillments pending.",
+      "answer_text": "Currently, there are 227 fulfillments pending.",
       "citations": [
         {
           "kind": "sql",
@@ -2147,11 +2147,11 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 4121,
-        "tokens_out": 178,
-        "llm_calls": 6,
+        "tokens_in": 4567,
+        "tokens_out": 113,
+        "llm_calls": 5,
         "trajectory_steps": 17,
-        "latency_ms": 11043
+        "latency_ms": 8145
       },
       "answer_text": "There are 3 sellers in the electronics category.",
       "citations": [
@@ -2169,17 +2169,17 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 4068,
-        "tokens_out": 296,
-        "llm_calls": 6,
+        "tokens_in": 4372,
+        "tokens_out": 115,
+        "llm_calls": 5,
         "trajectory_steps": 17,
-        "latency_ms": 20608
+        "latency_ms": 8099
       },
       "answer_text": "There are 566 delivery events with a null location_id.",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT de.event_id\nFROM delivery_events de\nLEFT JOIN locations l ON de.location_id = l.location_id\nWHERE l.location_id IS NULL\nLIMIT 1000;",
+          "ref": "SELECT COUNT(*) FROM delivery_events WHERE location_id IS NULL",
           "page": null
         }
       ],
@@ -2192,7 +2192,7 @@
     "non_hybrid_fired": 0,
     "non_hybrid_total": 17,
     "mean_llm_calls_by_route": {
-      "sql": 5.777777777777778,
+      "sql": 5.0,
       "docs": 3.0,
       "hybrid": 5.0
     }
@@ -2320,12 +2320,12 @@
         ],
         "claims": [
           {
-            "claim": "When a delivery exception occurs because the recipient is unavailable, per the delivery exception handling SOP, the required action is to reattempt delivery on the next business day.",
+            "claim": "When a delivery exception occurs because the recipient is unavailable, per the delivery exception handling SOP, the required action is to reattempt the delivery on the next business day.",
             "grounded_in_retrieved_context": true,
             "factually_correct": true
           },
           {
-            "claim": "The escalation window for this exception is 24 hours.",
+            "claim": "The escalation window for this type of exception is 24 hours.",
             "grounded_in_retrieved_context": true,
             "factually_correct": true
           }
@@ -2392,17 +2392,12 @@
             "factually_correct": null
           },
           {
-            "claim": "The penalty for breaching the SLA varies by zone and is specified in their respective supplier agreements.",
+            "claim": "Each of these sellers' agreements specify penalties for breaches in the form of a percentage credit against the order value based on the breached zone's SLA commitment.",
             "grounded_in_retrieved_context": true,
-            "factually_correct": true
-          },
-          {
-            "claim": "Seller ID S010 has a 4% penalty for orders shipped to Metro NCR or Metro Mumbai zones, while Seller ID S025 has a 2% penalty for all zones.",
-            "grounded_in_retrieved_context": false,
             "factually_correct": true
           }
         ],
-        "faithfulness_score": 0.3333333333333333,
+        "faithfulness_score": 0.5,
         "ungrounded_but_true_count": 1
       },
       "e1_hybrid_002": {
@@ -2420,27 +2415,32 @@
             "factually_correct": false
           },
           {
-            "claim": "The committed resolution window for Metro NCR is 36 hours.",
+            "claim": "According to the dispute resolution policy, the committed resolution window for disputes varies by zone as follows:",
             "grounded_in_retrieved_context": true,
             "factually_correct": true
           },
           {
-            "claim": "The committed resolution window for Metro Mumbai is 44 hours.",
+            "claim": "- Metro NCR: 36 hours",
             "grounded_in_retrieved_context": true,
             "factually_correct": true
           },
           {
-            "claim": "The committed resolution window for Tier-2 West is 56 hours.",
+            "claim": "- Metro Mumbai: 44 hours",
             "grounded_in_retrieved_context": true,
             "factually_correct": true
           },
           {
-            "claim": "The committed resolution window for Rural North is 76 hours.",
+            "claim": "- Tier-2 West: 56 hours",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "- Rural North: 76 hours",
             "grounded_in_retrieved_context": true,
             "factually_correct": true
           }
         ],
-        "faithfulness_score": 0.8,
+        "faithfulness_score": 0.5,
         "ungrounded_but_true_count": 1
       },
       "e1_hybrid_003": {
@@ -2456,18 +2456,18 @@
         ],
         "claims": [
           {
-            "claim": "Seller S005's contracted SLA in hours is 36.",
+            "claim": "Seller S005's contracted SLA in hours is 36",
             "grounded_in_retrieved_context": false,
-            "factually_correct": false
+            "factually_correct": true
           },
           {
-            "claim": "According to the supplier agreement for Seller ID: S005, their commitment for the Metro NCR zone specifies a service level of 37 hours.",
+            "claim": "S005's supplier agreement specifies for the Metro NCR zone an SLA of 37 hours with a 3% penalty applied if breached",
             "grounded_in_retrieved_context": true,
             "factually_correct": true
           }
         ],
         "faithfulness_score": 0.5,
-        "ungrounded_but_true_count": 0
+        "ungrounded_but_true_count": 1
       },
       "e1_hybrid_004": {
         "precision": 1.0,
@@ -2484,16 +2484,16 @@
           {
             "claim": "Seller S001 has placed 17 orders.",
             "grounded_in_retrieved_context": false,
-            "factually_correct": true
+            "factually_correct": false
           },
           {
-            "claim": "For orders shipped to the Metro NCR zone, a 3% penalty applies if the SLA is breached.",
+            "claim": "According to the supplier agreement, for orders shipped to the Metro NCR zone, a 3% penalty applies in case of a breach of the committed SLA.",
             "grounded_in_retrieved_context": true,
             "factually_correct": true
           }
         ],
         "faithfulness_score": 0.5,
-        "ungrounded_but_true_count": 1
+        "ungrounded_but_true_count": 0
       },
       "e1_hybrid_005": {
         "precision": 0.0,
@@ -2506,7 +2506,12 @@
         "hit": [],
         "claims": [
           {
-            "claim": "FastShip 1 commits to a 29-hour transit time for the Metro Mumbai zone.",
+            "claim": "The SLA Annexure for FastShip 1 specifies a committed transit time of 29 hours for the Metro Mumbai zone.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "The number of fulfillments handled by FastShip 1 is not provided in the available document passages.",
             "grounded_in_retrieved_context": true,
             "factually_correct": true
           }
@@ -2559,32 +2564,12 @@
             "factually_correct": true
           },
           {
-            "claim": "For orders shipped to the Rural North zone, there is no specific penalty mentioned.",
+            "claim": "There is no specific penalty mentioned for orders shipped to the Rural North zone.",
             "grounded_in_retrieved_context": false,
-            "factually_correct": true
-          },
-          {
-            "claim": "Metro NCR has a 3% penalty.",
-            "grounded_in_retrieved_context": true,
-            "factually_correct": true
-          },
-          {
-            "claim": "Metro Mumbai also has a 3% penalty.",
-            "grounded_in_retrieved_context": true,
-            "factually_correct": true
-          },
-          {
-            "claim": "Tier-2 West has a 4% penalty.",
-            "grounded_in_retrieved_context": true,
-            "factually_correct": true
-          },
-          {
-            "claim": "Tier-2 South has a 4% penalty.",
-            "grounded_in_retrieved_context": true,
             "factually_correct": true
           }
         ],
-        "faithfulness_score": 0.6666666666666666,
+        "faithfulness_score": 0.5,
         "ungrounded_but_true_count": 1
       },
       "e1_hybrid_008": {
@@ -2605,7 +2590,7 @@
             "factually_correct": false
           },
           {
-            "claim": "According to the supplier agreement, for orders shipped to the Tier-2 West zone, a 3% penalty is specified.",
+            "claim": "The supplier agreement for Seller S025 specifies a 3% penalty for the Tier-2 West zone.",
             "grounded_in_retrieved_context": true,
             "factually_correct": true
           }
@@ -2616,7 +2601,7 @@
     },
     "mean_context_precision": 0.6222222222222221,
     "mean_context_recall": 0.8,
-    "mean_faithfulness": 0.83125,
+    "mean_faithfulness": 0.8125,
     "total_ungrounded_but_true": 4
   }
 }
