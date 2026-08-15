@@ -43,6 +43,18 @@ treated as an ordinary success, no further ErrorRecord, no further retry.
 memory.enabled is read from flags_snapshot (A2: captured once at query
 entry, never re-read mid-query) — not from the live flags singleton.
 
+Interrogation targeting (Phase-E gap packet, Task 4): on the miss path the
+agent drafts its query first, parses that draft's own FROM/JOIN tables with
+pglast, and samples only those — replacing the original schema-wide rule,
+which sampled the same first four tables in schema order for every question
+regardless of what the question asked. Strategy §4.2 describes interrogation
+as verifying "its hypotheses about the data's actual shape," which presumes
+a hypothesis; the draft is that hypothesis. Cost: one extra generation call
+on the miss path (none on the memory-hit path, none on retries, and none
+when the test harness injects debug_candidate_sql — that injected SQL is
+reused as the draft). Because the miss path is the M1 control arm, this
+shifts M1's control baseline; see docs/phase_e_gap_log.md.
+
 Phase D additions: DigipinResolver (spatial_resolver.py) runs inline here,
 every attempt (D1 Callout 2 -- it is a deterministic, non-LLM, non-MCP
 pre-step, so unlike memory/interrogation there is no cost reason to gate it
@@ -72,6 +84,23 @@ from schema_retriever import get_schema_retriever
 from spatial_resolver import get_spatial_resolver
 
 logger = logging.getLogger(__name__)
+
+# Same parser the mcp Layer-1 gate uses (A4.5), here for a read-only,
+# non-security-bearing purpose: reading the draft SQL's own FROM/JOIN targets
+# so interrogation samples the right tables. Degrading to the schema-wide
+# fallback if it is unavailable is correct — unlike in mcp, nothing here is a
+# security boundary, so an absent parser costs targeting precision and nothing
+# else.
+try:
+    import pglast
+    from pglast.visitors import Visitor
+    _PGLAST_AVAILABLE = True
+except ImportError:  # pragma: no cover — dependency is pinned in pyproject.toml
+    _PGLAST_AVAILABLE = False
+    Visitor = object  # type: ignore[assignment,misc]
+    logger.warning(
+        "pglast unavailable — interrogation targets fall back to schema-wide selection."
+    )
 
 _SYSTEM_PROMPT = """\
 You are a PostgreSQL query generator for a logistics data analytics system (ONDC network).
@@ -146,26 +175,114 @@ def _format_memory_context(
     return "\n\n".join(parts)
 
 
-def _pick_interrogation_targets(table_descriptions: list[dict], cap: int) -> list[dict]:
-    """
-    Deterministic interrogation-target selection (C2 Scope): tables with at
-    least one nullable column, in schema order, capped at `cap` tables --
-    one data.sample_rows call per selected table (A4.3's own cap is on rows
-    per call, not calls; the "up to interrogation_max_samples" bound in the
-    spec is read here as a bound on the number of sample_rows calls).
+def _strip_sql_fences(text: str) -> str:
+    """Strip Markdown code fences the model sometimes wraps its SQL in."""
+    if text.startswith("```"):
+        return "\n".join(
+            line for line in text.split("\n") if not line.startswith("```")
+        ).strip()
+    return text
 
-    This is schema-wide rather than parsed from a specific planned join/WHERE
-    clause (the spec names that as the ideal target but does not describe a
-    mechanism for identifying it ahead of generating SQL) -- see
-    docs/spec-gaps.md for this simplification, recorded rather than silently
-    assumed.
+
+def _parse_referenced_tables(sql: str) -> list[str]:
     """
-    targets: list[dict] = []
-    for desc in table_descriptions:
+    Extract the table names a SQL statement actually references, in first-seen
+    order, using the same real PostgreSQL parser the mcp Layer-1 gate uses
+    (pglast). Every FROM/JOIN target is a `RangeVar` node in the parse tree, so
+    this catches subquery and CTE-body references too, not just the top-level
+    FROM.
+
+    Returns [] on anything unparseable -- callers treat that as "no targets
+    identified" and fall back to schema-wide selection rather than
+    interrogating nothing.
+
+    CTE *names* also surface as RangeVars where they are referenced. They are
+    harmless here: the caller intersects this list against the real table set
+    from schema.list_tables, so a CTE alias simply never matches.
+    """
+    if not _PGLAST_AVAILABLE or not sql.strip():
+        return []
+    try:
+        tree = pglast.parse_sql(sql)
+    except Exception as exc:  # pglast.Error and anything it wraps
+        logger.debug("Could not parse draft SQL for interrogation targeting: %s", exc)
+        return []
+
+    found: list[str] = []
+
+    class _RangeVarCollector(Visitor):
+        def visit_RangeVar(self, ancestors, node):  # noqa: N802 — pglast visitor naming
+            name = getattr(node, "relname", None)
+            if name and name not in found:
+                found.append(name)
+
+    _RangeVarCollector()(tree)
+    return found
+
+
+def _pick_interrogation_targets(
+    table_descriptions: list[dict],
+    cap: int,
+    referenced_tables: list[str] | None = None,
+) -> list[dict]:
+    """
+    Interrogation-target selection (C2 Scope), capped at `cap` tables -- one
+    data.sample_rows call per selected table (A4.3's own cap is on rows per
+    call, not calls; the "up to interrogation_max_samples" bound in the spec is
+    read here as a bound on the number of sample_rows calls).
+
+    Targets are the tables the planned query actually references, parsed from
+    the draft SQL by `_parse_referenced_tables` and intersected here against
+    the real tables from schema.list_tables -- so sampling verifies the shape
+    of the data the query will really touch. Strategy §4.2 frames interrogation
+    as "verify its hypotheses about the data's actual shape", which presumes a
+    hypothesis exists before sampling; the draft is that hypothesis.
+
+    Fallback (never a regression): if no referenced table can be parsed, or
+    none of them intersect the real schema, this reverts to the original
+    schema-wide rule -- tables with at least one nullable column, in schema
+    order. That path is still exercised whenever the draft call fails or emits
+    something unparseable.
+
+    Column selection within a chosen table prefers nullable columns (the ones
+    whose stored shape is actually in question). A targeted table with no
+    nullable column is still sampled, with `columns` omitted so the server
+    returns all of them -- dropping the target because it happens to be fully
+    NOT NULL would defeat the point of targeting it.
+
+    Each returned target carries `columns` (what is sent to A4.3 -- None means
+    "omit the argument, let the server return every column") and
+    `columns_display` (always concrete, for the prompt and the state record).
+    """
+    by_name = {desc["table"]: desc for desc in table_descriptions}
+
+    def _target_for(desc: dict) -> dict:
+        all_cols = [c["name"] for c in desc.get("columns", [])]
         nullable_cols = [c["name"] for c in desc.get("columns", []) if c.get("nullable")]
-        if not nullable_cols:
+        return {
+            "table": desc["table"],
+            "columns": nullable_cols or None,
+            "columns_display": nullable_cols or all_cols,
+        }
+
+    if referenced_tables:
+        targets: list[dict] = []
+        for name in referenced_tables:
+            desc = by_name.get(name)
+            if desc is None:
+                continue  # CTE alias, or a table the model invented
+            targets.append(_target_for(desc))
+            if len(targets) >= cap:
+                break
+        if targets:
+            return targets
+
+    # Fallback: original schema-wide behavior.
+    targets = []
+    for desc in table_descriptions:
+        if not any(c.get("nullable") for c in desc.get("columns", [])):
             continue
-        targets.append({"table": desc["table"], "columns": nullable_cols})
+        targets.append(_target_for(desc))
         if len(targets) >= cap:
             break
     return targets
@@ -288,10 +405,46 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 retriever = get_schema_retriever()
                 schema_context, table_descriptions = await retriever.retrieve(session, table_names)
                 trajectory_steps += len(table_names)
+                context_block = f"Schema:\n{schema_context}"
 
-                # Step 2/3: active interrogation (miss path, attempt 0 only).
+                # Step 2: draft the query BEFORE interrogating, so interrogation
+                # can target the tables this question actually touches rather
+                # than the first few tables in schema order (which was blind to
+                # the question and sampled the same four tables every time).
+                # This costs one extra generation call on the miss path only --
+                # recorded in docs/phase_e_gap_log.md, since it shifts the M1
+                # control baseline and must not be read as a memory-path win.
+                #
+                # The test harness's injected candidate doubles as the draft
+                # when present, so seeded-SQL tests (C2-V1..V4) get targeted
+                # sampling for free and their call counts are unchanged.
+                draft_sql: str = state_dict.get("debug_candidate_sql") or ""
+                if not draft_sql:
+                    draft_result = await get_agent_llm("sql").complete(
+                        system=_SYSTEM_PROMPT.format(max_rows=cfg.mcp.max_rows_default),
+                        messages=[{"role": "user", "content": (
+                            f"{context_block}\n\nQuestion: {raw_query}\n\n"
+                            f"Write a single PostgreSQL SELECT query to answer this question."
+                        )}],
+                        max_tokens=cfg.sql.max_tokens_sql,
+                    )
+                    tokens_in_total += draft_result.tokens_in
+                    tokens_out_total += draft_result.tokens_out
+                    llm_calls_total += 1
+                    draft_sql = _strip_sql_fences(draft_result.text)
+
+                referenced_tables = _parse_referenced_tables(draft_sql)
+                logger.info(
+                    "SQL Agent interrogation targeting for query_id=%s: draft references %s",
+                    query_id,
+                    referenced_tables or "(nothing parseable -- schema-wide fallback)",
+                )
+
+                # Step 3: active interrogation (miss path, attempt 0 only).
                 targets = _pick_interrogation_targets(
-                    table_descriptions, cfg.sql.interrogation_max_samples,
+                    table_descriptions,
+                    cfg.sql.interrogation_max_samples,
+                    referenced_tables=referenced_tables,
                 )
                 for target in targets:
                     sample_result = await data_sample_rows(
@@ -299,12 +452,11 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                     )
                     new_interrogation_samples.append({
                         "table": target["table"],
-                        "columns_sampled": target["columns"],
+                        "columns_sampled": target["columns_display"],
                         "rows": sample_result.get("rows", []),
                     })
                     trajectory_steps += 1
 
-                context_block = f"Schema:\n{schema_context}"
                 if new_interrogation_samples:
                     context_block += "\n\n" + _format_interrogation_samples(new_interrogation_samples)
         else:
@@ -373,11 +525,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             llm_calls_total += 1
             candidate_sql = sql_result.text
 
-        if candidate_sql.startswith("```"):
-            candidate_sql = "\n".join(
-                line for line in candidate_sql.split("\n")
-                if not line.startswith("```")
-            ).strip()
+        candidate_sql = _strip_sql_fences(candidate_sql)
 
         logger.info(
             "SQL Agent generated SQL for query_id=%s attempt=%d (memory_hit=%s): %.200s...",

@@ -25,6 +25,7 @@ from config_loader import cfg, flags, snapshot_flags
 from graph import graph
 from llm.provider import validate_llm_config
 from nodes.synthesizer import build_citations
+from schemas.synthesizer_output import safe_synthesizer_output
 from state import StateSyncState
 
 logging.basicConfig(
@@ -173,19 +174,39 @@ async def run_query(request: QueryRequest) -> QueryResponse:
     sql_error = final_state.errors[-1].model_dump() if len(final_state.errors) > final_state.attempt else None
     citations = build_citations(final_state.executed_sql, sql_error, state_trace["retrievals"])
 
+    # A7 enforcement, validator 1 of 2: "in the orchestrator before the
+    # response leaves the process". This must run HERE, on the exact object
+    # about to be serialized -- not only inside synthesizer_node. The node
+    # validates its own output, but citations are recomputed above (see the
+    # comment on build_citations), so the payload the node validated is not
+    # byte-for-byte the payload this endpoint emits. Validating only in the
+    # node would leave the emitted response unchecked, which is precisely what
+    # A7's "before the response leaves the process" wording rules out.
+    #
+    # safe_synthesizer_output never repairs: on failure it returns the same
+    # prose and citations with chart set to null, and logs the failure (A7:
+    # "silent repair would hide M7 regressions"). The frontend then validates
+    # again, independently (E2-V6).
+    validated = safe_synthesizer_output({
+        "answer_text": final_state.answer_text or "",
+        "chart": final_state.vega_spec,
+        "citations": citations,
+    })
+
     logger.info(
-        "Query completed: query_id=%s route=%s rows=%d latency_ms=%d",
+        "Query completed: query_id=%s route=%s rows=%d latency_ms=%d chart=%s",
         final_state.query_id,
         final_state.route,
         len(final_state.sql_rows),
         latency_ms,
+        "present" if validated["chart"] is not None else "null",
     )
 
     return QueryResponse(
         query_id=final_state.query_id,
-        answer_text=final_state.answer_text or "",
-        chart=final_state.vega_spec,
-        citations=citations,
+        answer_text=validated["answer_text"],
+        chart=validated["chart"],
+        citations=validated["citations"],
         state_trace=state_trace,
         latency_ms=latency_ms,
     )

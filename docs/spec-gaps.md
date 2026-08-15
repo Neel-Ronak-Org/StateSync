@@ -145,3 +145,58 @@ reported failure) and fixed before this gap was recorded. Not a BD -- this
 is an implementation choice for an unaddressed case, not a reopening of a
 locked D-numbered decision.
 ---
+
+---
+GAP-6 | Part A | A5 schema fingerprint / A4.1 | build agent | 2026-08-15
+A5 defines the fingerprint over "each table in the application schema" and
+lists what it excludes (indexes, comments, row counts, sequence values,
+schema_versions) -- but never says what "the application schema" means when a
+Postgres EXTENSION installs its own table into the same namespace. PostGIS
+creates spatial_ref_sys in `public`, so both A4.1's schema.list_tables and A5's
+fingerprint query (`information_schema.tables WHERE table_schema='public' AND
+table_type='BASE TABLE'`) surface it alongside the 12 real A5 tables.
+Verified empirically under BOTH statesync_migrator and statesync_reader: 14
+base tables in public = 12 A5 application tables + schema_versions +
+spatial_ref_sys. So `mcp/fingerprint.py` IS currently hashing spatial_ref_sys's
+columns into the A5 fingerprint.
+Resolution (partial, deliberately): FIXED on the A4.1 side only.
+schema.list_tables now excludes extension-owned tables (pg_depend deptype 'e'
+-- ownership, not a name denylist), which stops the SchemaRetriever from
+spending a describe_table call on spatial_ref_sys for every miss-path query on
+both the control and treatment arms. list_tables now returns exactly the 12 A5
+application tables. NOT FIXED on the fingerprint side, and not silently
+absorbed either: changing the fingerprint formula changes the fingerprint
+value, which under D4's validate-on-read invalidates every stored trajectory
+and requires re-stamping schema_versions -- that is a decision about D4's
+blast radius, not a cleanup, so it is flagged here per A0.1 rather than made.
+Note the practical impact today is nil: spatial_ref_sys's shape is fixed by the
+PostGIS version, so the fingerprint is stable; it would only move on a PostGIS
+upgrade, and invalidating trajectories on a PostGIS upgrade is arguably the
+conservative behavior anyway. Escalated for the team to decide.
+(The Agent Task Packet's Task 5 predicted the opposite -- "the fingerprint
+already excludes system tables by operating on the application schema" -- and
+instructed STOP if the fingerprint changed. It did not change, because Task 5's
+edit touches only schema_tools.py's own separate query; the packet's premise
+about fingerprint.py is what turned out to be wrong. Also recording that the
+packet's expected count of 17 application tables does not match this schema:
+the live count is 12.)
+---
+
+---
+NOTE-1 (not a gap) | Appendix 3 | flags.memory.enabled default | build agent | 2026-08-15
+Recording a shipped feature-flag DEFAULT change, which flags.toml's own header
+says is explicitly not a BD ("Changing the *existence* of a flag ... does
+require a BD entry" -- changing a default does not). Logged here only so the
+change is traceable rather than silent.
+`memory.enabled` default flipped true -> false. On the local model,
+memory-on measurably regresses M2 (C1-V3: treatment mean distinct-result-sets
+1.5 vs control 1.0) and drops the verify_b golden rate from ~10/10 to 7/10 --
+the hit path's compact insight is less reliable than the miss path's full
+schema read. See BD6 (docs/phase_b_amendment.md) for the recorded disposition
+of the underlying cause.
+This changes only the SHIPPED DEFAULT. The flag remains a first-class D13
+control: bench_memory.py and check_consistency.py both set it explicitly per
+run, so C1-V1/C1-V3's A/B is unaffected, and flags_snapshot still captures it
+at query entry (A2). Reversible by editing one line; the re-baseline runbook
+(docs/rebaseline_runbook.md, step 4) re-decides it on the graded model.
+---

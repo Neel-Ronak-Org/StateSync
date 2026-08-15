@@ -1,0 +1,1161 @@
+{
+  "version": 1,
+  "phase": "e2",
+  "generated_by": "scripts/gen_phase_e2_fixture.py",
+  "note": "30 chart-warranting queries with frozen A7-conformant reference Vega-Lite specs (E2 Deliverable 6). Reference specs are authored, not observed -- see the generator docstring. data.values is illustrative only and is not scored by SpecScorer.",
+  "queries": [
+    {
+      "id": "e2_001",
+      "lang": "en",
+      "text": "How many orders did each seller place last quarter?",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "bar",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "k",
+            "type": "nominal",
+            "title": "Seller"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "count"
+          }
+        },
+        "title": "Orders per seller"
+      }
+    },
+    {
+      "id": "e2_002",
+      "lang": "en",
+      "text": "Show total order value per month.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "line",
+        "data": {
+          "values": [
+            {
+              "t": "2026-01-01",
+              "v": 5
+            },
+            {
+              "t": "2026-02-01",
+              "v": 9
+            },
+            {
+              "t": "2026-03-01",
+              "v": 14
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "t",
+            "type": "temporal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "sum"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_003",
+      "lang": "en",
+      "text": "Plot delivery delay against order value.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "point",
+        "data": {
+          "values": [
+            {
+              "x": 1,
+              "y": 2
+            },
+            {
+              "x": 3,
+              "y": 5
+            },
+            {
+              "x": 6,
+              "y": 4
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "x",
+            "type": "quantitative"
+          },
+          "y": {
+            "field": "y",
+            "type": "quantitative"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_004",
+      "lang": "en",
+      "text": "What is the cumulative dispute count over time?",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "area",
+        "data": {
+          "values": [
+            {
+              "t": "2026-01-01",
+              "v": 5
+            },
+            {
+              "t": "2026-02-01",
+              "v": 9
+            },
+            {
+              "t": "2026-03-01",
+              "v": 14
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "t",
+            "type": "temporal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "sum"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_005",
+      "lang": "en",
+      "text": "Show the distribution of fulfillment attempt counts.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "tick",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "v",
+            "type": "quantitative"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_006",
+      "lang": "en",
+      "text": "Break down order volume by city and channel.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "rect",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "k",
+            "type": "nominal"
+          },
+          "y": {
+            "field": "k",
+            "type": "nominal"
+          },
+          "color": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "sum"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_007",
+      "lang": "en",
+      "text": "What share of orders is B2B versus B2C?",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "arc",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "theta": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "sum"
+          },
+          "color": {
+            "field": "k",
+            "type": "nominal"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_008",
+      "lang": "en",
+      "text": "Average order value per logistics provider.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "bar",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "k",
+            "type": "nominal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "mean"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_009",
+      "lang": "en",
+      "text": "Median delivery time by seller category.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "bar",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "k",
+            "type": "nominal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "median"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_010",
+      "lang": "en",
+      "text": "Trend of late deliveries per month.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "line",
+        "data": {
+          "values": [
+            {
+              "t": "2026-01-01",
+              "v": 5
+            },
+            {
+              "t": "2026-02-01",
+              "v": 9
+            },
+            {
+              "t": "2026-03-01",
+              "v": 14
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "t",
+            "type": "temporal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "count"
+          }
+        },
+        "title": "Late deliveries"
+      }
+    },
+    {
+      "id": "e2_011",
+      "lang": "en",
+      "text": "Minimum contracted SLA hours per seller category.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "bar",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "k",
+            "type": "nominal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "min"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_012",
+      "lang": "en",
+      "text": "Maximum order value per buyer app.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "bar",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "k",
+            "type": "nominal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "max"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_013",
+      "lang": "en",
+      "text": "Order count by event type, sorted descending.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "bar",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "k",
+            "type": "nominal",
+            "sort": "-y"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "count"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_014",
+      "lang": "en",
+      "text": "Delivery events over time by provider.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "line",
+        "data": {
+          "values": [
+            {
+              "t": "2026-01-01",
+              "v": 5
+            },
+            {
+              "t": "2026-02-01",
+              "v": 9
+            },
+            {
+              "t": "2026-03-01",
+              "v": 14
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "t",
+            "type": "temporal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "count"
+          },
+          "color": {
+            "field": "t",
+            "type": "nominal"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_015",
+      "lang": "en",
+      "text": "Scatter of promised versus actual delivery hours.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "point",
+        "data": {
+          "values": [
+            {
+              "x": 1,
+              "y": 2
+            },
+            {
+              "x": 3,
+              "y": 5
+            },
+            {
+              "x": 6,
+              "y": 4
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "x",
+            "type": "quantitative",
+            "title": "Promised"
+          },
+          "y": {
+            "field": "y",
+            "type": "quantitative",
+            "title": "Actual"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_016",
+      "lang": "en",
+      "text": "Total line value per item category.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "bar",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "k",
+            "type": "nominal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "sum"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_017",
+      "lang": "en",
+      "text": "Unresolved disputes by category.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "bar",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "y": {
+            "field": "k",
+            "type": "nominal"
+          },
+          "x": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "count"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_018",
+      "lang": "en",
+      "text": "Fulfillment status mix.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "arc",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "theta": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "count"
+          },
+          "color": {
+            "field": "k",
+            "type": "nominal"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_019",
+      "lang": "en",
+      "text": "Order value distribution across locations.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "tick",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "v",
+            "type": "quantitative"
+          },
+          "y": {
+            "field": "k",
+            "type": "nominal"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_020",
+      "lang": "en",
+      "text": "Monthly average order value with a filter on delivered orders.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "line",
+        "data": {
+          "values": [
+            {
+              "t": "2026-01-01",
+              "v": 5
+            },
+            {
+              "t": "2026-02-01",
+              "v": 9
+            },
+            {
+              "t": "2026-03-01",
+              "v": 14
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "t",
+            "type": "temporal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "mean"
+          }
+        },
+        "transform": [
+          {
+            "filter": {
+              "field": "k",
+              "equal": "delivered"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "e2_021",
+      "lang": "en",
+      "text": "Seller count per state.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "bar",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "k",
+            "type": "nominal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "count"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_022",
+      "lang": "en",
+      "text": "Heatmap of delays by city and month.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "rect",
+        "data": {
+          "values": [
+            {
+              "t": "2026-01-01",
+              "v": 5
+            },
+            {
+              "t": "2026-02-01",
+              "v": 9
+            },
+            {
+              "t": "2026-03-01",
+              "v": 14
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "t",
+            "type": "temporal"
+          },
+          "y": {
+            "field": "k",
+            "type": "nominal"
+          },
+          "color": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "mean"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_023",
+      "lang": "en",
+      "text": "Cumulative order value by channel over time.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "area",
+        "data": {
+          "values": [
+            {
+              "t": "2026-01-01",
+              "v": 5
+            },
+            {
+              "t": "2026-02-01",
+              "v": 9
+            },
+            {
+              "t": "2026-03-01",
+              "v": 14
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "t",
+            "type": "temporal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "sum"
+          },
+          "color": {
+            "field": "k",
+            "type": "nominal"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_024",
+      "lang": "en",
+      "text": "Top catalog items by quantity sold.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "bar",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "k",
+            "type": "nominal",
+            "sort": "-y"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "sum"
+          }
+        },
+        "title": "Top items"
+      }
+    },
+    {
+      "id": "e2_025",
+      "lang": "en",
+      "text": "Dispute resolution latency per category.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "bar",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "k",
+            "type": "nominal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "mean"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_026",
+      "lang": "en",
+      "text": "Orders per hub location.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "point",
+        "data": {
+          "values": [
+            {
+              "lat": 19.07,
+              "lon": 72.87,
+              "v": 3
+            },
+            {
+              "lat": 28.61,
+              "lon": 77.2,
+              "v": 8
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "lon",
+            "type": "quantitative"
+          },
+          "y": {
+            "field": "lat",
+            "type": "quantitative"
+          },
+          "size": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "sum"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_027",
+      "lang": "en",
+      "text": "Attempt counts across fulfillments.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "bar",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "v",
+            "type": "ordinal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "count"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_028",
+      "lang": "en",
+      "text": "Order value trend with an aggregate transform.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "line",
+        "data": {
+          "values": [
+            {
+              "t": "2026-01-01",
+              "v": 5
+            },
+            {
+              "t": "2026-02-01",
+              "v": 9
+            },
+            {
+              "t": "2026-03-01",
+              "v": 14
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "t",
+            "type": "temporal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative"
+          }
+        },
+        "transform": [
+          {
+            "aggregate": [
+              {
+                "op": "sum",
+                "field": "v",
+                "as": "v"
+              }
+            ],
+            "groupby": [
+              "t"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "e2_029",
+      "lang": "en",
+      "text": "B2B share of value per seller.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "bar",
+        "data": {
+          "values": [
+            {
+              "k": "A",
+              "v": 12
+            },
+            {
+              "k": "B",
+              "v": 7
+            },
+            {
+              "k": "C",
+              "v": 19
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "k",
+            "type": "nominal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "sum"
+          },
+          "color": {
+            "field": "k",
+            "type": "nominal"
+          }
+        }
+      }
+    },
+    {
+      "id": "e2_030",
+      "lang": "en",
+      "text": "Delivery event volume by type over time.",
+      "expected_chart": true,
+      "reference_spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "area",
+        "data": {
+          "values": [
+            {
+              "t": "2026-01-01",
+              "v": 5
+            },
+            {
+              "t": "2026-02-01",
+              "v": 9
+            },
+            {
+              "t": "2026-03-01",
+              "v": 14
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "t",
+            "type": "temporal"
+          },
+          "y": {
+            "field": "v",
+            "type": "quantitative",
+            "aggregate": "count"
+          }
+        }
+      }
+    }
+  ]
+}

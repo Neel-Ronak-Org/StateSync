@@ -10,11 +10,30 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
-  <!-- Vega-Lite (Phase E2 readiness) — vega-interpreter only, NOT the default
-       expression compiler, so unsafe-eval is never required (A7 spec). -->
-  <script src="https://cdn.jsdelivr.net/npm/vega@5/build/vega-interpreter.min.js"></script>
+  <!-- Vega stack, CSP-safe (A7 / E2-V4).
+       Expressions are evaluated by `vega-interpreter`, handed to vega-embed as
+       `expr` alongside `ast: true`, so the default expression COMPILER — which
+       builds functions via `Function(...)` and would require `unsafe-eval` —
+       is never invoked. The CSP in nginx.conf omits unsafe-eval, so if the
+       compiler path were ever taken the render would fail loudly rather than
+       silently succeed. That is what makes E2-V4 a real test.
+
+       Three load-order/packaging facts, each established by testing this page
+       in a browser rather than assumed:
+         - vega-embed@6 bundles neither vega nor vega-lite; it needs both as
+           globals, so they must load first.
+         - `vega@5/build/vega-interpreter.min.js` does not exist (404). The
+           interpreter is its own package, `vega-interpreter@1`, and it
+           defines the bare global `expressionInterpreter`.
+         - `vega-core.min.js` is not standalone — it omits bundled d3
+           dependencies and throws on load, leaving `window.vega` empty. The
+           full `vega@5` build is the one to use. It ships the compiler code,
+           but `ast: true` + `expr` means that code is never reached; the CSP
+           is what proves it. -->
+  <script src="https://cdn.jsdelivr.net/npm/vega@5/build/vega.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-interpreter@1/build/vega-interpreter.min.js"></script>
 
   <style>
     :root {
@@ -413,18 +432,203 @@
     traceCard.classList.add('visible');
   }
 
-  // ── Chart renderer (Phase E2 readiness) ───────────────────────────────────
+  // ── A7 validator, validator 2 of 2 (E2, A7 enforcement) ───────────────────
+  // Deliberately hand-written rather than a JSON-Schema library port. A7 asks
+  // for "two independent validations, because the guarantee must not depend on
+  // one component being correct" -- two copies of the same implementation
+  // share the same bugs and are therefore one validation wearing two hats.
+  // This is a direct structural transcription of the A7 contract; the
+  // orchestrator side runs jsonschema over the declared schema. E2-V6 tests
+  // that either alone suffices.
+  //
+  // Never repairs. Returns [] when valid, or a list of reasons when not; the
+  // caller drops the chart and logs. Mirrors the orchestrator's BD7
+  // expression-string audit over `transform`, which A7's own schema leaves
+  // open (additionalProperties: true on transform items).
+  const A7 = {
+    MARKS: ['bar', 'line', 'point', 'area', 'tick', 'rect', 'arc'],
+    ENCODING_PROPS: ['field', 'type', 'aggregate', 'title', 'sort'],
+    ENCODING_TYPES: ['quantitative', 'nominal', 'ordinal', 'temporal'],
+    AGGREGATES: ['sum', 'mean', 'count', 'min', 'max', 'median'],
+    TOP_LEVEL: ['$schema', 'mark', 'data', 'encoding', 'transform', 'title', 'width', 'height'],
+    REQUIRED: ['mark', 'encoding', 'data'],
+    SCHEMA_URL: 'https://vega.github.io/schema/vega-lite/v5.json',
+    // Always expression strings, wherever they appear.
+    EXPRESSION_KEYS: ['expr', 'signal', 'calculate', 'test', 'init', 'update', 'on'],
+    // Dual-form: `filter` takes either an expression string or a
+    // non-executable predicate object. Only the string form is an expression.
+    DUAL_FORM_EXPRESSION_KEYS: ['filter'],
+    MAX_VALUES: 5000,
+    MAX_TRANSFORMS: 8,
+    MIN_DIM: 100,
+    MAX_WIDTH: 1600,
+    MAX_HEIGHT: 1200,
+  };
+
+  function isPlainObject(v) {
+    return v !== null && typeof v === 'object' && !Array.isArray(v);
+  }
+
+  // Recursive scan for expression-bearing keys (BD7).
+  function auditExpressions(node, path, out) {
+    if (Array.isArray(node)) {
+      node.forEach((item, i) => auditExpressions(item, `${path}/${i}`, out));
+    } else if (isPlainObject(node)) {
+      for (const [k, v] of Object.entries(node)) {
+        if (A7.EXPRESSION_KEYS.includes(k)) {
+          out.push(`${path}/${k}: expression-bearing property is not permitted (BD7)`);
+        } else if (A7.DUAL_FORM_EXPRESSION_KEYS.includes(k) && typeof v === 'string') {
+          out.push(`${path}/${k}: string form is an expression; use the predicate-object form instead (BD7)`);
+        }
+        auditExpressions(v, `${path}/${k}`, out);
+      }
+    }
+  }
+
+  function validateA7Chart(chart) {
+    const errs = [];
+    if (chart === null || chart === undefined) return errs;   // chart:null is valid
+    if (!isPlainObject(chart)) { errs.push('chart: must be an object or null'); return errs; }
+
+    for (const key of A7.REQUIRED) {
+      if (!(key in chart)) errs.push(`chart: missing required property '${key}'`);
+    }
+    for (const key of Object.keys(chart)) {
+      if (!A7.TOP_LEVEL.includes(key)) errs.push(`chart/${key}: unknown top-level property`);
+    }
+
+    if ('$schema' in chart && chart.$schema !== A7.SCHEMA_URL) {
+      errs.push(`chart/$schema: must be exactly ${A7.SCHEMA_URL}`);
+    }
+
+    // mark: primitive string from the enum. Object-form marks are the path
+    // where mark properties smuggle expressions, so they are rejected here.
+    if ('mark' in chart) {
+      if (typeof chart.mark !== 'string') errs.push('chart/mark: must be a string enum value, not an object');
+      else if (!A7.MARKS.includes(chart.mark)) errs.push(`chart/mark: '${chart.mark}' is not in the permitted enum`);
+    }
+
+    // data: { values: [...] } only. No url, no name, no format.
+    if ('data' in chart) {
+      if (!isPlainObject(chart.data)) errs.push('chart/data: must be an object');
+      else {
+        if (!('values' in chart.data)) errs.push("chart/data: missing required property 'values'");
+        for (const key of Object.keys(chart.data)) {
+          if (key !== 'values') errs.push(`chart/data/${key}: unknown property (only 'values' is permitted)`);
+        }
+        if ('values' in chart.data) {
+          if (!Array.isArray(chart.data.values)) errs.push('chart/data/values: must be an array');
+          else if (chart.data.values.length > A7.MAX_VALUES) {
+            errs.push(`chart/data/values: ${chart.data.values.length} items exceeds maximum of ${A7.MAX_VALUES}`);
+          }
+        }
+      }
+    }
+
+    // encoding: channel objects restricted to the property allowlist.
+    if ('encoding' in chart) {
+      if (!isPlainObject(chart.encoding)) errs.push('chart/encoding: must be an object');
+      else {
+        for (const [channel, def] of Object.entries(chart.encoding)) {
+          if (!isPlainObject(def)) { errs.push(`chart/encoding/${channel}: must be an object`); continue; }
+          for (const key of Object.keys(def)) {
+            if (!A7.ENCODING_PROPS.includes(key)) {
+              errs.push(`chart/encoding/${channel}/${key}: unknown encoding property`);
+            }
+          }
+          if ('type' in def && !A7.ENCODING_TYPES.includes(def.type)) {
+            errs.push(`chart/encoding/${channel}/type: '${def.type}' is not a permitted type`);
+          }
+          if ('aggregate' in def && !A7.AGGREGATES.includes(def.aggregate)) {
+            errs.push(`chart/encoding/${channel}/aggregate: '${def.aggregate}' is not a permitted aggregate`);
+          }
+          if ('field' in def && typeof def.field !== 'string') {
+            errs.push(`chart/encoding/${channel}/field: must be a string`);
+          }
+        }
+      }
+    }
+
+    if ('transform' in chart) {
+      if (!Array.isArray(chart.transform)) errs.push('chart/transform: must be an array');
+      else if (chart.transform.length > A7.MAX_TRANSFORMS) {
+        errs.push(`chart/transform: ${chart.transform.length} items exceeds maximum of ${A7.MAX_TRANSFORMS}`);
+      }
+      auditExpressions(chart.transform, 'chart/transform', errs);
+    }
+
+    if ('title' in chart && typeof chart.title !== 'string') errs.push('chart/title: must be a string');
+    for (const [dim, max] of [['width', A7.MAX_WIDTH], ['height', A7.MAX_HEIGHT]]) {
+      if (dim in chart) {
+        const v = chart[dim];
+        if (!Number.isInteger(v)) errs.push(`chart/${dim}: must be an integer`);
+        else if (v < A7.MIN_DIM || v > max) errs.push(`chart/${dim}: ${v} outside [${A7.MIN_DIM}, ${max}]`);
+      }
+    }
+
+    return errs;
+  }
+  // Exposed so E2-V3/E2-V6 can drive this validator directly, independently of
+  // the orchestrator, which is the whole point of the "either alone suffices"
+  // guarantee. Not used by the render path itself.
+  window.validateA7Chart = validateA7Chart;
+
+  // Resolve the CSP-safe expression interpreter. Different builds expose it
+  // under different globals, so probe rather than assume; if none is present
+  // we must NOT silently fall through to the default compiler (that needs
+  // unsafe-eval and would make E2-V4 pass only because nothing rendered).
+  function expressionInterpreter() {
+    // Candidates are checked by SHAPE, not by truthiness. vega-interpreter's
+    // UMD build also defines a bare `window.expressionInterpreter`, but that
+    // one is a plain function with no `.operator` — passing it to vega's
+    // `expr` option throws "this.expr.operator is not a function" and every
+    // render fails. The usable object is `vega.expressionInterpreter`, which
+    // implements {operator, parameter, event, handler, encode}. Verified
+    // in-browser; a truthiness check silently picks the wrong one.
+    const usable = c => c && typeof c.operator === 'function';
+    const interp = [
+      window.vega && window.vega.expressionInterpreter,
+      window.vegaInterpreter && window.vegaInterpreter.expressionInterpreter,
+      window.expressionInterpreter,
+    ].find(usable);
+    if (!interp) {
+      console.error('[A7] vega-interpreter unavailable — refusing to render via the eval-based compiler.');
+    }
+    return interp;
+  }
+
+  // ── Chart renderer ────────────────────────────────────────────────────────
   async function renderChart(spec) {
     if (!spec) return;
+
+    // Validator 2 of 2 — runs BEFORE render, independently of whatever the
+    // orchestrator concluded. No repair path: an invalid spec is dropped, the
+    // prose answer stays, and the failure is logged.
+    const violations = validateA7Chart(spec);
+    if (violations.length > 0) {
+      console.error('[A7 validation failure] chart rejected before render, not repaired:', violations);
+      chartCont.classList.remove('visible');
+      chartCont.innerHTML = '';
+      return;
+    }
+
+    const interp = expressionInterpreter();
+    if (!interp) { chartCont.classList.remove('visible'); return; }
+
     try {
       chartCont.classList.add('visible');
-      // Use vega-interpreter (CSP-safe, no Function construction) as required by A7.
+      // CSP-safe rendering (A7): parse to an AST and evaluate expressions with
+      // vega-interpreter, never the default compiler, which builds functions
+      // via `Function(...)` and would need `unsafe-eval`. The CSP in
+      // frontend/nginx.conf omits unsafe-eval, so the compiler path would
+      // throw rather than silently work — that is what makes E2-V4 a real
+      // test instead of a cosmetic one.
       await vegaEmbed(chartCont, spec, {
         renderer: 'canvas',
         actions: false,
         config: { background: '#111827', view: { stroke: 'transparent' } },
-        // Explicitly use the safe interpreter (not the default expression compiler)
-        expressionFunctions: window.vegaInterpreter,
+        ast: true,
+        expr: interp,
       });
     } catch (err) {
       console.error('Chart render error (A7 violation or vega error):', err);

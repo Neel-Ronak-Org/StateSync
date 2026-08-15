@@ -35,8 +35,12 @@ judge             = "claude-opus-4-5"     # E1: bench_grounding.py context preci
 # that is the point of the flag system. Changing the *existence* of a flag
 # (adding or removing) does require a BD entry.
 
+# BD6/readiness call: default false until graded re-baseline; memory-on regresses
+# M2 + golden rate on the local model. A/B still run by toggling.
+# NB: keep `enabled` on the line directly below [memory] -- bench_memory.py's
+# set_memory_enabled() matches exactly that shape and refuses to guess otherwise.
 [memory]
-enabled                         = true   # D13 control path for M1/M2
+enabled                         = false  # D13 control path for M1/M2; see comment above
 
 [normalization]
 enabled                         = true   # D13 control path for M3

@@ -14,6 +14,10 @@ dependencies = [
     "jsonschema>=4.22.0",
     "tomllib>=2.0.0 ; python_version < '3.11'",
     "digipin>=2.1.1",
+    # Same parser the mcp Layer-1 gate uses (A4.5). Here it is read-only and
+    # non-security-bearing: sql_agent parses its own draft SQL to learn which
+    # tables to interrogate. Version-matched to mcp/pyproject.toml on purpose.
+    "pglast>=6.2",
 ]
 
 [tool.uv]

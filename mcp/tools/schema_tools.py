@@ -39,7 +39,25 @@ async def list_tables() -> dict[str, Any]:
     is exactly the case C1-V4 exists to test.
     """
     async with get_connection() as conn:
-        # Table list with row estimates from pg_stat_user_tables
+        # Table list with row estimates from pg_stat_user_tables.
+        #
+        # Extension-owned tables are excluded. PostGIS installs spatial_ref_sys
+        # into `public` alongside the application's own tables, so a plain
+        # nspname='public' filter surfaces it as if it were part of the A5
+        # schema -- and the SchemaRetriever then spends a describe_table call on
+        # it for every miss-path query, on both the control and treatment arms.
+        # The filter is on extension OWNERSHIP (pg_depend deptype 'e'), not on
+        # the name 'spatial_ref_sys': anything an installed extension creates in
+        # public (PostGIS, pgvector) is by definition not part of the
+        # application schema, and denylisting one name would silently let the
+        # next one through.
+        #
+        # This deliberately does NOT touch fingerprint.py. The A5 fingerprint is
+        # computed by a separate query there, so it is unchanged by this edit --
+        # see docs/spec-gaps.md GAP-6 for the separate, pre-existing question of
+        # whether spatial_ref_sys belongs in the fingerprint at all. Changing
+        # that would invalidate every stored trajectory (D4), which is a
+        # decision, not a cleanup.
         query = """
             SELECT
                 c.relname                          AS name,
@@ -50,6 +68,14 @@ async def list_tables() -> dict[str, Any]:
             WHERE n.nspname = 'public'
               AND c.relkind = 'r'
               AND c.relname != 'schema_versions'
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM pg_catalog.pg_depend d
+                  JOIN pg_catalog.pg_extension e ON e.oid = d.refobjid
+                  WHERE d.classid = 'pg_class'::regclass
+                    AND d.objid   = c.oid
+                    AND d.deptype = 'e'
+              )
             ORDER BY c.relname
         """
         cur = await conn.execute(query)
