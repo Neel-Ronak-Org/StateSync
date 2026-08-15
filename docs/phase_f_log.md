@@ -546,3 +546,70 @@ layer further out, where nothing had been checking.
 
 **Not claimed as an F-V1 result.** F-V1's suite and pass condition are
 unchanged; this is a separately-found defect, fixed and recorded here.
+
+---
+
+## F-V3 — Full metric re-verification, post-fix run (2026-08-15)
+
+Run as one sequenced pass via `scripts/verify_fv3.sh`, flags reset to shipped
+defaults before every step. **9/9 steps PASS.**
+
+| Step | Metric | Time | Result |
+|---|---|---|---|
+| B-V1 | M10 | 435s | PASS |
+| C1-V1 | M1 | 1299s | −24.2% tokens, −34.6% trajectory steps |
+| C1-V3 | M2 | 1850s | treatment 1.8 vs control 1.0 — metric still FAILS (BD6) |
+| C2-V2 | M5 | 290s | 11/12 classified (was 10/12) |
+| C2-V8 | M4 | 2137s | cold 28.0%, warm 32.0%; golden recovery `still_failing: []` |
+| D-V1/D-V2 | M3 | 1664s | control 40.0% → treatment 65.0%, +25.0pp; D-V2 **81.25%** |
+| E1-V3 | M6 | 519s | precision 0.622, recall 0.80, faithfulness 0.8125 |
+| E2-V1 generate+A7 | M7 | 808s | **A7 30/30 valid**, 0 invalid, 0 errors |
+| E2-V1 score | M7 | 0s | **0.4850**, 7 `chart:null` |
+
+**E2-V1 now runs inside F-V3.** It was previously skipped for a sound reason
+that expired: the Synthesizer emitted `chart: null` everywhere, so a quality
+number would have measured an unbuilt feature. Task 10 changed that, and
+F-V3's own wording ("Execute, unchanged: … E2-V1 (M7)") applies normally now.
+Generated specs are written to a per-run stamped path so a re-verification
+never overwrites an earlier run's artifact.
+
+**Reproducibility is the quiet result.** E2-V1 inside F-V3 returned M7 0.4850
+with 7 nulls — identical to the standalone post-fix run earlier the same day.
+M2 reproduced 1.8 exactly. M6 landed within noise of its previous value. These
+are model-sensitive metrics on a local 7B model, and they are repeating; the
+numbers are low in places but they are not noisy, which is what makes the BD6
+"model ceiling, not implementation defect" attribution credible rather than
+convenient.
+
+### Regressions and recoveries, per F-V3's reporting rule
+
+- **M3 D-V2 recovered**: 56.2% → **81.25%** (record 84.4%). Closed.
+- **M3 D-V1 treatment above record**: 65.0% vs 62.5%. The lift stays +25.0pp
+  because control rose by exactly the same 3 queries — routing is upstream of
+  normalization and cannot move the difference between the arms. Full analysis:
+  `docs/phase_d_log.md`.
+- **M5 improved**: 10/12 → 11/12.
+- **M4 warm regressed slightly**: 36.0% → 32.0% (cold unchanged at 28.0%).
+  Reported, not smoothed. Offsetting it, golden recovery went from having
+  failures to `still_failing: []`.
+- **M2 unchanged and still failing** — the one metric that is simply worse than
+  its C1 record, unchanged in that judgement since the first Phase F run.
+
+### One finding that came out of chasing a score, not a bug
+
+`c2g_10` — the query whose misrouting this session fixed — still scores 0 on
+M4. Investigated rather than assumed: it now routes to `sql`, generates
+`SELECT … FROM sellers WHERE contracted_sla_hours IS NULL` (semantically the
+ground truth), and returns the expected 0 rows. It scores 0 because C2-V8's
+signature includes the column *count*, and the model projected 4 columns where
+the reference projected 2. With zero rows on both sides the values are
+trivially identical, so the miss is provably projection width alone.
+
+Across the run, **15 of 18 cold misses return exactly the expected row count**;
+3 of those are zero-row-both-sides and therefore projection-only. For the other
+12 the cause was not determined and is not asserted.
+
+**The scorer was left alone.** Loosening it after seeing the results, to raise
+M4, would be editing the instrument to fit the number — the exact thing A0.4
+forbids. Recorded in `docs/limitations.md` as a property of the measurement:
+**M4 is a lower bound on semantic correctness.**
