@@ -63,8 +63,11 @@ The complete **Phase B Walking Skeleton** for StateSync — all 10 deliverables,
 | [orchestrator/nodes/entry.py](../orchestrator/nodes/entry.py) | uuid4 query_id, tenant_id from config, flags_snapshot |
 | [orchestrator/nodes/supervisor.py](../orchestrator/nodes/supervisor.py) | 1 LLM call via `get_agent_llm("supervisor")` → sql/docs/hybrid classification |
 | [orchestrator/nodes/sql_agent.py](../orchestrator/nodes/sql_agent.py) | Schema → SQL via `get_agent_llm("sql")` → execution; error as data, no retry |
-| [orchestrator/nodes/synthesizer.py](../orchestrator/nodes/synthesizer.py) | answer_text + chart:null via `get_agent_llm("synthesizer")`, validated against A7 |
-| [orchestrator/nodes/stub_node.py](../orchestrator/nodes/stub_node.py) | Explicit "not implemented in Phase 1" for docs/hybrid (A0.5) |
+| [orchestrator/nodes/synthesizer.py](../orchestrator/nodes/synthesizer.py) | answer_text + chart via `get_agent_llm("synthesizer")`, validated against A7. Task 10: the model proposes the chart SHAPE, `build_chart()` attaches `data.values` from the real rows |
+| ~~orchestrator/nodes/stub_node.py~~ | Phase B's explicit "not implemented" node for docs/hybrid (A0.5). **Removed once those routes were built** — see the two rows below |
+| [orchestrator/nodes/unstructured_knowledge.py](../orchestrator/nodes/unstructured_knowledge.py) | E1: retrieval + decomposition for the docs and hybrid routes — what replaced the stub |
+| [orchestrator/nodes/normalize.py](../orchestrator/nodes/normalize.py) | D: LanguageNormalizer gate, runs unconditionally before the Supervisor |
+| [orchestrator/nodes/error_exit.py](../orchestrator/nodes/error_exit.py) | Terminal error path — failures surface as data, never as a silent empty answer |
 | [orchestrator/main.py](../orchestrator/main.py) | FastAPI `/query` + `/health` (exposes `llm_provider`); `validate_llm_config()` at startup |
 
 ### Scripts & Verification
