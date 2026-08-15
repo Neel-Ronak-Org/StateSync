@@ -124,12 +124,47 @@ verification was actually carried out:
   Any host-side script needing a real LLM completion (not just an embedding)
   must run inside a container.
 - **F-V7 (clean-machine reproducibility) was verified by document audit, not
-  literal re-provisioning.** `README.md` was read end-to-end against
-  everything this build actually requires and found stale (still describing
-  Phase B only) and incomplete (missing the E1 document-ingestion step and
-  the Phase F adversarial-seeding step entirely) — both fixed. A full
-  from-scratch bring-up on a genuinely separate machine was not performed
-  this session, since doing so from the current machine would require
-  destroying already-seeded, verification-relevant state
-  (`docker compose down -v`) that this session's own results depend on.
-  Recorded honestly rather than claimed as done.
+  literal re-provisioning.** A full from-scratch bring-up on a genuinely
+  separate machine has **not** been performed, because doing it here would
+  require `docker compose down -v`, destroying the seeded state that F-V1's
+  adversarial payloads and F-V3's results depend on. Recorded honestly rather
+  than claimed as done. **This remains the single outstanding verification
+  step in the whole build.**
+
+  Two audit passes were done instead, and both found real defects — which is
+  itself evidence the literal test is worth running:
+
+  *Pass 1 (Phase F):* README described Phase B only, and omitted the E1
+  document-ingestion step and the Phase F adversarial-seeding step entirely.
+  A clean-machine operator would have had a stack that could not answer
+  `docs`/`hybrid` queries and could not run the security suite.
+
+  *Pass 2 (post-freeze handoff):* a line-by-line cross-check of every README
+  claim against the repo found three more, all now fixed:
+  1. **`ollama_url` mismatch (the serious one).** README's config snippet
+     showed `http://ollama:11434` while the shipped `config/flags.toml` has
+     `http://host.docker.internal:11434`, and README step 4 told the operator
+     to pull **both** models into the Dockerized `ollama` container. Following
+     the README exactly on a clean machine would put the models in the
+     container while the shipped config pointed at a native host Ollama that
+     does not exist there — every LLM call would fail with a connection error
+     at first query, not at startup. README now documents both topologies,
+     states which value ships, and says explicitly which to change.
+     (The committed value is left as `host.docker.internal` because this
+     development machine genuinely runs a native Ollama; the container here
+     holds only `mxbai-embed-large`, not `qwen2.5:7b`.)
+  2. **Architecture diagram wrong.** It placed `ollama` on `db_net` only; it
+     is on both `db_net` and `app_net`. Corrected, with a note on why that is
+     not an A1 isolation concern (ollama holds no credentials, fronts no data,
+     is absent from A1's topology table, and does not route between networks —
+     `postgres`/`qdrant` stay db_net-only and B-V3 is unaffected).
+  3. **`docker-compose.yml` contradicted itself.** The comment above the
+     `ollama` service read "only mcp needs it; accessed on db_net so it stays
+     off app_net" while the three lines directly below listed both networks.
+     Comment rewritten to match, and to explain why both are required
+     (orchestrator is app_net-only, so it can only reach a container-hosted
+     Ollama on app_net).
+
+  Everything else checked out: all 13 referenced scripts exist, all four
+  secrets files are named correctly, and all four published ports
+  (3000/8080/8090/8095) match `docker-compose*.yml`.

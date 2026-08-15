@@ -33,22 +33,48 @@ StateSync features a **D2 Provider Seam** allowing seamless switching between lo
 Edit `config/flags.toml`:
 ```toml
 [llm]
-provider = "local" # "local" for offline dev, "anthropic" for production metrics & evaluation runs
-ollama_url = "http://ollama:11434"
+provider = "local"    # "local" for offline dev, "anthropic" for graded metrics & evaluation runs
+ollama_url = "http://host.docker.internal:11434"
 ```
+
+> ⚠️ **`ollama_url` must point at wherever the models actually live — check this before your first query.** There are two valid topologies and the wrong one fails every LLM call with a connection error:
+>
+> | You are running… | Set `ollama_url` to | Pull models with |
+> |---|---|---|
+> | The Dockerized `ollama` service (the default in `docker-compose.yml`, and what step 4 below sets up) | `http://ollama:11434` | `docker compose exec ollama ollama pull …` |
+> | A **native** Ollama app on the host (macOS/Windows desktop install) | `http://host.docker.internal:11434` | `ollama pull …` on the host |
+>
+> **The value currently committed is `http://host.docker.internal:11434`**, because this repo's development machine runs a native Ollama app. **If you follow step 4 below and pull into the container, change it to `http://ollama:11434`.** `host.docker.internal` resolves only from inside a container — it is never reachable from the host itself, so host-side scripts needing a real completion must run via `docker compose exec orchestrator …`.
 
 > 💡 **Developer Note:** When `provider = "local"`, no Anthropic API key is required and the system starts completely offline.
 
 ---
 
 ### 4. Pull Local LLM & Embedding Models (First Time Only)
-```bash
-# Bring up Ollama
-docker compose up -d ollama
 
-# Pull local embedding and instruct models
+Pull into whichever Ollama your `ollama_url` points at (see the table in step 3).
+Both models are required: `mxbai-embed-large` for embeddings, `qwen2.5:7b` for
+generation.
+
+**Dockerized Ollama** (`ollama_url = "http://ollama:11434"`):
+```bash
+docker compose up -d ollama
 docker compose exec ollama ollama pull mxbai-embed-large
 docker compose exec ollama ollama pull qwen2.5:7b
+```
+
+**Native host Ollama** (`ollama_url = "http://host.docker.internal:11434"`):
+```bash
+ollama pull mxbai-embed-large
+ollama pull qwen2.5:7b
+```
+
+Confirm both are present where you expect them — a missing generation model
+surfaces as an HTTP 404 (`model ... not found`) on the first query, not at
+startup:
+```bash
+docker compose exec ollama ollama list   # dockerized
+ollama list                              # native host
 ```
 
 ---
@@ -142,14 +168,20 @@ StateSync strictly isolates database infrastructure (`db_net`) from public-facin
 
 ```
 ┌─────────────────── db_net (internal, non-routable) ───────────────────┐
-│  postgres:5432       qdrant:6333        ollama:11434                  │
+│  postgres:5432            qdrant:6333                                 │
 └───────────────────────────────────────────────────────────────────────┘
                                 ▲
-                                │ (MCP bridges network boundary)
+                                │ (MCP is the ONLY bridge; sole credential holder)
                                 ▼
 ┌─────────────────── app_net (application network) ────────────────────┐
 │  mcp:8080    orchestrator:8090    frontend:3000    evaluator:8095     │
 └───────────────────────────────────────────────────────────────────────┘
+
+        ollama:11434 sits on BOTH networks (it holds no credentials
+        and fronts no data): db_net so mcp can embed, app_net so the
+        orchestrator can generate. postgres and qdrant remain
+        db_net-only — an orchestrator process attempting a direct
+        database connection fails at the network layer (B-V3).
 ```
 
 ### Microservice Directory

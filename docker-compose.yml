@@ -65,9 +65,20 @@ services:
       retries: 10
       start_period: 30s
 
-  # ── 3. ollama (embedding model host) ───────────────────────────────────────
-  # Serves mxbai-embed-large (1024 dims) for trajectory store embeddings (A6).
-  # Only mcp needs it; accessed on db_net so it stays off app_net.
+  # ── 3. ollama (local model host) ───────────────────────────────────────────
+  # Serves mxbai-embed-large (1024 dims) for trajectory/document embeddings
+  # (A6, E1) to mcp on db_net, AND qwen2.5:7b for generation to orchestrator
+  # on app_net when flags.llm.ollama_url points here.
+  #
+  # On BOTH networks, deliberately, and the comment that used to sit here
+  # ("only mcp needs it; stays off app_net") was stale — it contradicted the
+  # two lines directly below it. orchestrator is app_net-only (A1), so it can
+  # only reach a container-hosted Ollama if that container is on app_net too.
+  # This is not an A1 isolation concern: A1's topology table covers postgres,
+  # qdrant, mcp, orchestrator, frontend and evaluator, and ollama holds no
+  # credentials and fronts no data. postgres/qdrant remain db_net-only, and
+  # B-V3 (orchestrator cannot reach postgres) is unaffected — ollama does not
+  # route between the two networks.
   ollama:
     image: ollama/ollama:latest
     restart: unless-stopped
