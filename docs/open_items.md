@@ -13,7 +13,7 @@ as the historical record and do not edit them to match this summary.
 | [F-V1 Class 1 & Class 4](#f-v1-class-1--class-4) | Both classes pass structurally on the local model/this browser now, but each rests on something worth re-confirming under different conditions later: Class 4's CSP claim on a browser that actually enforces CSP; Class 1's prompt-injection resistance on the graded model | Passing now; each has a distinct residual condition to re-confirm | No (see entry — deliberately not folded into BD6) | Part F, `F-V1` (run as part of Phase F; re-confirm Class 4 in an enforcing browser, Class 1 informally under the graded model) |
 | [c2g_10 routing](#c2g_10-routing) | "List sellers whose contracted SLA hours has not been set" routes to `docs` instead of `sql` — the word "SLA" pulls a plainly relational question toward the document route | Open, unpatched | No | Part F, `F-V2` (M9 routing determinism) |
 | [Task 10 / E2-V1 — M7 quality](#task-10--e2-v1--m7-quality) | Synthesizer still emits `chart: null` on every route; M7 chart-quality score cannot be measured until it's taught to populate `chart` | Blocked on Synthesizer work, not yet started | **Yes** | Part F, `F-V3` (M7 row); graded number per `rebaseline_runbook.md` |
-| [M3 regression](#m3-regression) | D-V1 lift halved (+47.5pp → +25.0pp) and D-V2 entity preservation dropped (84.4% → 56.2%) since Phase D; the English reference line fell 80% → 45%, proving the cause is upstream of normalization. Two deliberate Phase-E-gap changes are candidates, not yet separated | Open — regression confirmed, cause not isolated | Partly (the graded re-baseline re-measures M3 anyway, but the cause here is a config/build change, not a model ceiling) | One controlled run separates the two causes; then Part F / re-baseline |
+| [M3 regression](#m3-regression) | D-V1 lift halved and D-V2 entity preservation dropped since Phase D. **Separation run done:** memory-flip candidate REFUTED; ~20 of the 35 lost English points traced to `c2g_10` misrouting; residual ~15 points still unattributed | Partly closed — one cause identified and shared with `c2g_10`, residual open | No for the identified cause (a routing defect, fixable now); the residual is re-measured by the graded re-baseline anyway | Routing half → fix with `c2g_10`; residual → needs a draft-first toggle that does not yet exist |
 
 ---
 
@@ -174,8 +174,32 @@ actual instrument for this class of problem and belongs to Part F.
 principle, but this item tracks a specific observed miscategorization to fix
 or re-measure, not a number to defer.
 
-Full write-up: [`docs/phase_e_gap_log.md`](phase_e_gap_log.md) ("Observed in
-passing, out of this packet's scope") · spec step:
+**Upgraded from "one observed query" to a measured, deterministic defect
+(2026-08-15).** The M3 separation run found this is not an isolated case:
+it costs **~20 of the 35 percentage points** M3 lost on its English
+reference line, reproducibly, in both arms of a controlled experiment. Two
+distinct query classes misroute, both asking for values that are **A5
+columns on `sellers`**:
+
+| Query class | Column it actually needs | Route taken |
+|---|---|---|
+| "What is Seller Store *N*'s contracted **SLA** in hours?" | `sellers.contracted_sla_hours` | `docs` ✗ |
+| "What **category** is Seller Store *N* in?" | `sellers.category` | `docs` ✗ |
+
+Verified live against the orchestrator, not inferred from row counts.
+
+**Why M9 still scored 60/60.** `fixtures/golden/phase_f_routing.json` was
+authored fresh in Phase F with unambiguous phrasing, so it contains no query
+of this class. M9's 100% is real for its own fixture but does **not** mean
+routing is defect-free — the D fixture, written earlier and independently,
+exposes a class the F fixture never probes. Worth adding such cases to the
+routing fixture when this is fixed, so M9 can catch a regression here.
+
+**This now shares a root cause with the [M3 regression](#m3-regression)
+item** — one fix closes the routing half of both.
+
+Full write-up: [`docs/phase_d_log.md`](phase_d_log.md) (§ M3 separation run) ·
+[`docs/phase_e_gap_log.md`](phase_e_gap_log.md) · spec step:
 `docs/StateSync_Build_Spec.md` §F-V2.
 
 ## M3 regression
@@ -207,20 +231,44 @@ Phase-E-gap packet are the candidates:
    generation — and with memory off, every query is a miss-path query, so
    this change now applies universally rather than only on cache misses.
 
-**Not yet separated, and deliberately not guessed at.** One controlled run
-(`bench_multilingual.py` with `memory.enabled=true`, everything else held
-constant) distinguishes them: if the number returns toward +47.5pp, cause 1
-dominates and the regression is a known, accepted trade of the memory
-default flip; if it stays near +25pp, cause 2 is implicated and Task 4's
-interrogation change needs review against multilingual queries specifically.
+### Separation run performed (2026-08-15) — results
 
-**Not a BD6-style model-ceiling item** — both candidate causes are config or
-code changes made in this repo, not properties of the local model. The
-graded re-baseline will re-measure M3 regardless, but it will not by itself
-answer which change caused this.
+`bench_multilingual.py` run twice back to back, unmodified, changing only
+`memory.enabled`. Full write-up: **`docs/phase_d_log.md` § "M3 separation run"**.
 
-Full write-up: [`docs/metrics-report.md`](metrics-report.md) (M3 regression
-section) · [`docs/phase_f_log.md`](phase_f_log.md) (F-V3 section).
+| | control | treatment | delta | English ref | entity pres. |
+|---|---|---|---|---|---|
+| Phase D (record) | 15.0% | 62.5% | +47.5pp | **80%** | 84.4% |
+| memory=OFF (shipped) | 32.5% | 57.5% | +25.0pp | **45%** | 56.2% |
+| memory=ON (pre-gap) | 12.5% | 42.5% | +30.0pp | **25%** | 43.8% |
+
+**Candidate 1 REFUTED.** Memory ON does not recover the numbers — it makes
+every absolute measure worse. **Decision recorded: `memory.enabled` stays
+`false`** (runbook §4), re-decided again on the graded model.
+(The `+30.0pp` delta is higher only because the *control* degraded faster;
+delta is the right measure for D-V1's pass condition but the wrong one for
+diagnosing a regression.)
+
+**~20 of the 35 lost English points are `c2g_10`, confirmed deterministic.**
+The same four English queries produced no `executed_sql` in *both* arms —
+`d_ml_005/006_en` ("What category is Seller Store *N* in?") and
+`d_ml_009/010_en` ("...contracted **SLA** in hours?"). Verified live:
+both return `route="docs"`. Both are plainly relational —
+`sellers.category` and `sellers.contracted_sla_hours` are A5 columns, and
+neither value exists in any document. **This is the same defect as
+`c2g_10`, so the two items share a root cause and a fix.**
+
+**Residual ~15 points remain unattributed.** Those queries routed correctly
+and produced wrong SQL. Candidate 2 (draft-first interrogation, Task 4) is
+now the only live hypothesis, and separating it needs a third condition —
+miss path *without* draft-first — which requires a code toggle that does
+not exist. **Not guessed at.**
+
+**Not a BD6-style model-ceiling item** — the identified cause is a prompt
+regression in this repo, fixable without waiting for the graded model.
+
+Full write-up: [`docs/phase_d_log.md`](phase_d_log.md) (§ M3 separation run) ·
+[`docs/metrics-report.md`](metrics-report.md) · [`docs/phase_f_log.md`](phase_f_log.md).
 
 ## Task 10 / E2-V1 — M7 quality
 

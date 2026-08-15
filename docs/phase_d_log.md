@@ -208,3 +208,110 @@ rebuilt image with `memory.enabled=true` and `normalization.enabled=true`
 run-to-run variance already documented in the C1/C2 logs (this local
 model's baseline has ranged 7/10-10/10 across runs previously), not a new
 regression introduced by Phase D.
+
+---
+
+# M3 separation run (post-Phase-F, 2026-08-15)
+
+**Appended, not edited.** Everything above is the Phase D record as measured
+at the time and stands unchanged. This section records a controlled experiment
+run after the `v1.0.0-phase-f` freeze to identify why M3 regressed between
+Phase D and Phase F's F-V3 re-verification.
+
+## The question
+
+F-V3 measured M3 lower than Phase D on both halves, with the **English
+reference line** — queries the normalization gate provably leaves byte-identical
+(D-V3: 20/20 unchanged in every run) — falling 80% → 45%. An English-only drop
+cannot originate in the multilingual path, so the cause had to be upstream of
+or beneath normalization. Two candidates were carried in `docs/open_items.md`:
+
+- **Candidate 1** — the `memory.enabled` default flip `true`→`false`
+  (gap-packet Task 3). Phase D measured M3 with memory ON.
+- **Candidate 2** — draft-first interrogation targeting (gap-packet Task 4),
+  which added an LLM call and changed which tables get sampled on the miss path.
+
+## Method
+
+`scripts/bench_multilingual.py` run twice, unmodified, back to back on the same
+machine, changing exactly one thing: `memory.enabled`. Everything else — fixture,
+seed data, model (`qwen2.5:7b`), image, `normalization.enabled` toggling (the
+script does that itself) — held constant. Flags were explicitly reset before
+each run rather than inherited, which is the bug that contaminated the original
+F-V3 measurement (see `docs/phase_f_log.md`).
+
+## Result
+
+| | control | treatment | delta | English ref | entity pres. | English no-SQL | English wrong-SQL |
+|---|---|---|---|---|---|---|---|
+| **Phase D (on record)** | 6/40 (15.0%) | 25/40 (62.5%) | **+47.5pp** | **16/20 (80%)** | **27/32 (84.4%)** | — | — |
+| memory=OFF (shipped default) | 13/40 (32.5%) | 23/40 (57.5%) | +25.0pp | 9/20 (45%) | 18/32 (56.2%) | 4 | 7 |
+| memory=ON (pre-gap default) | 5/40 (12.5%) | 17/40 (42.5%) | +30.0pp | 5/20 (25%) | 14/32 (43.8%) | 4 | 11 |
+
+## Conclusions
+
+**Candidate 1 is REFUTED.** Restoring `memory.enabled=true` does not recover the
+numbers — it makes every absolute measure *worse*: English reference 45%→25%,
+treatment accuracy 57.5%→42.5%, entity preservation 56.2%→43.8%. The memory
+default flip is not the cause of the M3 regression, and the shipped default
+(`false`) is the better of the two configurations on this model. This
+independently re-confirms BD6's own finding that hit-path SQL is less reliable
+than miss-path SQL here.
+
+**Read the delta with care.** The `+30.0pp` figure for memory=ON is *higher*
+than memory=OFF's `+25.0pp`, which looks like an improvement and is not: the
+control arm degraded faster (32.5%→12.5%) than the treatment arm
+(57.5%→42.5%). A control-vs-treatment delta is the right measure for D-V1's own
+pass condition, but it is the wrong measure for diagnosing a regression —
+absolute treatment accuracy and the English reference line are what matter here.
+
+**A third cause was found that neither candidate covers, and it is confirmed
+deterministic.** In *both* arms, the same four English queries produced no
+`executed_sql` at all — meaning they never took the `sql` route:
+
+- `d_ml_005_en` / `d_ml_006_en` — "What category is Seller Store *N* in?"
+- `d_ml_009_en` / `d_ml_010_en` — "What is Seller Store *N*'s contracted SLA in hours?"
+
+Verified directly against the live orchestrator: both classes return
+`route="docs"`, `executed_sql=None`. Both are plainly relational — `category`
+and `contracted_sla_hours` are **columns on the `sellers` table** (A5), and
+neither value exists in any document. This is the **same defect already tracked
+as `c2g_10`**: E1's Supervisor prompt rewrite removed Phase B's "default to sql"
+bias, and document-flavoured vocabulary ("SLA", "category") now pulls plainly
+relational questions to the document route.
+
+4 of 20 English queries = **20 percentage points of the 35-point English drop**,
+attributable to routing alone, in both arms, identically. The remaining ~15
+points are SQL-generation quality on queries that *did* route correctly (7
+wrong-SQL with memory off).
+
+**Candidate 2 remains unresolved and is now the only live hypothesis for the
+residual.** Separating it requires a third condition (miss path *without*
+draft-first targeting), which needs a code-level toggle that does not exist.
+Not guessed at here.
+
+## Decision: keep `memory.enabled = false`
+
+Per `docs/rebaseline_runbook.md` §4, the shipped default is re-decided when
+evidence arrives. Evidence arrived: memory ON is worse on this model across
+every absolute measure. **The default stays `false`.** Recorded as a decision
+rather than left implicit — and it is still only a *local-model* decision; the
+runbook re-decides it again on the graded model, where BD6 may resolve
+differently.
+
+## Artifacts
+
+- `docs/bench_multilingual_report.json` — the memory=OFF run (shipped config;
+  canonical).
+- `docs/m3_separation_memory_on_report.json` — the memory=ON run, preserved
+  for comparison.
+
+## Caveat recorded honestly
+
+The qdrant trajectory store has accumulated trajectories from many hours of
+runs, including failed ones. The memory=ON arm retrieves from that store, so it
+is not a clean replication of Phase D's memory=ON conditions — it is a
+measurement of *what flipping the default would do today*, which is exactly the
+question §4 asks. A cleaner replication would reset the collection first; that
+was not done, because the decision it informs (don't flip the default) is
+unchanged either way.

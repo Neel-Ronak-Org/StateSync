@@ -87,12 +87,21 @@ changes are the candidates, and they are not yet separated:
    `docs/phase_e_gap_log.md`) changed miss-path SQL generation — and with
    memory off, *every* query is now a miss-path query.
 
-Both are legitimate, recorded build changes, so the fresh number is the
-honest current measurement of the current system — not a contaminated
-reading. Which of the two dominates is **not yet determined**; separating
-them needs a single controlled run (`bench_multilingual.py` with
-`memory.enabled=true`, everything else held constant). Tracked in
-`docs/open_items.md` rather than guessed at here.
+**Separation run completed 2026-08-15 — see `docs/phase_d_log.md` §"M3
+separation run" for the full experiment.** Outcome:
+
+- **Candidate 1 (memory flip) is REFUTED.** Re-running with
+  `memory.enabled=true` made every absolute measure *worse* (English
+  45%→25%, treatment 57.5%→42.5%, entity preservation 56.2%→43.8%).
+  **Decision: the shipped default stays `false`** (runbook §4).
+- **~20 of the 35 lost English points are a routing defect**, the same one
+  tracked as `c2g_10`: four English queries (`sellers.category` and
+  `sellers.contracted_sla_hours` lookups) deterministically route to `docs`
+  and never execute SQL — identically in both arms, verified live.
+- **Residual ~15 points remain unattributed.** Candidate 2 (draft-first
+  interrogation) is the only live hypothesis; isolating it needs a
+  miss-path-without-draft-first condition that has no toggle today. Not
+  guessed at.
 
 *(A first F-V3 run produced worse numbers still — +20.0pp / 43.8% / 25%
 English — from a genuine harness bug in `scripts/verify_fv3.sh`: the
