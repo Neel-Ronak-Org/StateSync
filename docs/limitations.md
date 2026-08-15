@@ -91,6 +91,35 @@ matter just as much: a number is only as trustworthy as the thing producing it.
   channel naming a column absent from the result set, so the wrong column must
   at least be a column that genuinely exists in the query output.
 
+- **M4 (C2-V8) measures exact frame equality, not "did it answer the
+  question".** The signature is `{n_columns, sorted row-multiset}`. Column
+  *names* are deliberately ignored (independently authored SQL aliases
+  differ), but the column *count* is not, so a generated query that returns a
+  correct superset projection scores as a miss. Measured on the F-V3 run: **15
+  of the 18 cold misses have a row count exactly equal to the expected row
+  count**, and **3 of those return zero rows on both sides** — where the row
+  values are trivially identical, so the miss is caused by projection width
+  alone. `c2g_10` is the worked example: it routes correctly, generates
+  `SELECT ... FROM sellers WHERE contracted_sla_hours IS NULL` (semantically
+  the ground truth), returns the expected 0 rows, and scores 0 because it
+  projected 4 columns where the reference projected 2.
+
+  **The scorer was NOT changed.** Loosening it after seeing the results, to
+  raise M4, would be editing the instrument to fit the number — precisely what
+  A0.4 forbids. The strictness is defensible on its own terms (a different
+  projection *is* a different answer frame). What is recorded here is that
+  **M4 is a lower bound on semantic correctness**, and the gap is not small:
+  for the remaining 12 same-row-count misses the cause (projection width,
+  differing values, or both) was not determined and is not asserted.
+
+- **`empty_result` is classified as a retryable error even when empty is the
+  correct answer.** `c2g_10`'s true answer is zero rows, and the correction
+  loop still spent a retry on it (`attempt=1`, `category: empty_result`).
+  Costs latency and one LLM call on every legitimately-empty query. Not
+  changed here: the taxonomy entry is shared with genuinely-wrong queries that
+  return nothing, and distinguishing them needs a signal the system does not
+  currently have.
+
 - **M9's routing fixture only measures what it contains.** F-V2 scored 60/60
   for the whole of Phase F while a deterministic routing defect was live in
   production (`c2g_10`), because every `sql` query in the fixture had been

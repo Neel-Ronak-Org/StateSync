@@ -1,0 +1,6105 @@
+{
+  "e2_001": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "bar",
+    "data": {
+      "values": [
+        {
+          "seller_id": "S010",
+          "order_count": 11
+        },
+        {
+          "seller_id": "S030",
+          "order_count": 18
+        },
+        {
+          "seller_id": "S021",
+          "order_count": 14
+        },
+        {
+          "seller_id": "S024",
+          "order_count": 10
+        },
+        {
+          "seller_id": "S025",
+          "order_count": 8
+        },
+        {
+          "seller_id": "S005",
+          "order_count": 17
+        },
+        {
+          "seller_id": "S006",
+          "order_count": 7
+        },
+        {
+          "seller_id": "S016",
+          "order_count": 15
+        },
+        {
+          "seller_id": "S027",
+          "order_count": 12
+        },
+        {
+          "seller_id": "S015",
+          "order_count": 14
+        },
+        {
+          "seller_id": "S011",
+          "order_count": 23
+        },
+        {
+          "seller_id": "S019",
+          "order_count": 10
+        },
+        {
+          "seller_id": "S004",
+          "order_count": 14
+        },
+        {
+          "seller_id": "S029",
+          "order_count": 12
+        },
+        {
+          "seller_id": "S014",
+          "order_count": 10
+        },
+        {
+          "seller_id": "S026",
+          "order_count": 16
+        },
+        {
+          "seller_id": "S022",
+          "order_count": 15
+        },
+        {
+          "seller_id": "S013",
+          "order_count": 16
+        },
+        {
+          "seller_id": "S003",
+          "order_count": 14
+        },
+        {
+          "seller_id": "S001",
+          "order_count": 5
+        },
+        {
+          "seller_id": "S008",
+          "order_count": 11
+        },
+        {
+          "seller_id": "S018",
+          "order_count": 8
+        },
+        {
+          "seller_id": "S023",
+          "order_count": 13
+        },
+        {
+          "seller_id": "S009",
+          "order_count": 14
+        },
+        {
+          "seller_id": "S002",
+          "order_count": 15
+        },
+        {
+          "seller_id": "S020",
+          "order_count": 9
+        },
+        {
+          "seller_id": "S017",
+          "order_count": 13
+        },
+        {
+          "seller_id": "S007",
+          "order_count": 10
+        },
+        {
+          "seller_id": "S012",
+          "order_count": 19
+        },
+        {
+          "seller_id": "S028",
+          "order_count": 10
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "seller_id",
+        "type": "nominal"
+      },
+      "y": {
+        "field": "order_count",
+        "type": "quantitative"
+      }
+    },
+    "title": "Orders per Seller Last Quarter"
+  },
+  "e2_002": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "line",
+    "data": {
+      "values": [
+        {
+          "order_month": "2026-04-01T00:00:00+00:00",
+          "total_order_value": 2188407.42
+        },
+        {
+          "order_month": "2026-05-01T00:00:00+00:00",
+          "total_order_value": 4792306.82
+        },
+        {
+          "order_month": "2026-06-01T00:00:00+00:00",
+          "total_order_value": 4657476.37
+        },
+        {
+          "order_month": "2026-07-01T00:00:00+00:00",
+          "total_order_value": 2448458.08
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "order_month",
+        "type": "temporal"
+      },
+      "y": {
+        "field": "total_order_value",
+        "type": "quantitative"
+      }
+    },
+    "title": "Total Order Value per Month"
+  },
+  "e2_003": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "point",
+    "data": {
+      "values": [
+        {
+          "order_value": 33969.36,
+          "delivery_delay": 143748.170709
+        },
+        {
+          "order_value": 9799.23,
+          "delivery_delay": 181065.411271
+        },
+        {
+          "order_value": 34200.45,
+          "delivery_delay": 333328.160529
+        },
+        {
+          "order_value": 43891.69,
+          "delivery_delay": 363452.956079
+        },
+        {
+          "order_value": 25536.67,
+          "delivery_delay": 231925.540114
+        },
+        {
+          "order_value": 26648.47,
+          "delivery_delay": 266562.068511
+        },
+        {
+          "order_value": 16459.93,
+          "delivery_delay": 387094.981054
+        },
+        {
+          "order_value": 26142.88,
+          "delivery_delay": 238125.707615
+        },
+        {
+          "order_value": 13562.47,
+          "delivery_delay": 121316.653215
+        },
+        {
+          "order_value": 15570.31,
+          "delivery_delay": 209210.381814
+        },
+        {
+          "order_value": 10544.99,
+          "delivery_delay": 305534.335872
+        },
+        {
+          "order_value": 47507.92,
+          "delivery_delay": 294923.157052
+        },
+        {
+          "order_value": 33614.04,
+          "delivery_delay": 133679.148643
+        },
+        {
+          "order_value": 48463.68,
+          "delivery_delay": 190621.020366
+        },
+        {
+          "order_value": 38636.61,
+          "delivery_delay": 221242.367218
+        },
+        {
+          "order_value": 37816.71,
+          "delivery_delay": 202689.410063
+        },
+        {
+          "order_value": 31818.85,
+          "delivery_delay": 246210.342412
+        },
+        {
+          "order_value": 46675.18,
+          "delivery_delay": 89061.078422
+        },
+        {
+          "order_value": 46413.9,
+          "delivery_delay": 269563.782451
+        },
+        {
+          "order_value": 26527.64,
+          "delivery_delay": 158878.205464
+        },
+        {
+          "order_value": 18113.79,
+          "delivery_delay": 204710.393135
+        },
+        {
+          "order_value": 44261.6,
+          "delivery_delay": 295238.585262
+        },
+        {
+          "order_value": 20835.34,
+          "delivery_delay": 322621.052822
+        },
+        {
+          "order_value": 11925.49,
+          "delivery_delay": 252604.302558
+        },
+        {
+          "order_value": 11588.57,
+          "delivery_delay": 46084.259158
+        },
+        {
+          "order_value": 11812.1,
+          "delivery_delay": 251903.53477
+        },
+        {
+          "order_value": 35770.13,
+          "delivery_delay": 155169.713603
+        },
+        {
+          "order_value": 3277.12,
+          "delivery_delay": 235052.51476
+        },
+        {
+          "order_value": 25869.8,
+          "delivery_delay": 99039.989194
+        },
+        {
+          "order_value": 21857.34,
+          "delivery_delay": 120130.108796
+        },
+        {
+          "order_value": 11235.71,
+          "delivery_delay": 52913.841286
+        },
+        {
+          "order_value": 39702.37,
+          "delivery_delay": 361081.33682
+        },
+        {
+          "order_value": 45165.16,
+          "delivery_delay": 302067.787028
+        },
+        {
+          "order_value": 28283.93,
+          "delivery_delay": 136278.512458
+        },
+        {
+          "order_value": 8074.48,
+          "delivery_delay": 217387.568705
+        },
+        {
+          "order_value": 48761.91,
+          "delivery_delay": 153835.397984
+        },
+        {
+          "order_value": 38526.72,
+          "delivery_delay": 176601.338806
+        },
+        {
+          "order_value": 24058.09,
+          "delivery_delay": 161186.392589
+        },
+        {
+          "order_value": 48619.94,
+          "delivery_delay": 186864.137172
+        },
+        {
+          "order_value": 22762.84,
+          "delivery_delay": 180156.897639
+        },
+        {
+          "order_value": 49674.82,
+          "delivery_delay": 50549.790335
+        },
+        {
+          "order_value": 37186.53,
+          "delivery_delay": 69570.251456
+        },
+        {
+          "order_value": 785.77,
+          "delivery_delay": 349707.89199
+        },
+        {
+          "order_value": 1466.19,
+          "delivery_delay": 162207.869559
+        },
+        {
+          "order_value": 42588.22,
+          "delivery_delay": 257984.09737
+        },
+        {
+          "order_value": 41482.19,
+          "delivery_delay": 143981.836512
+        },
+        {
+          "order_value": 45820.53,
+          "delivery_delay": 192774.355021
+        },
+        {
+          "order_value": 28946.01,
+          "delivery_delay": 129834.780904
+        },
+        {
+          "order_value": 18206.14,
+          "delivery_delay": 166222.563826
+        },
+        {
+          "order_value": 30067.4,
+          "delivery_delay": 247346.770805
+        },
+        {
+          "order_value": 17542.04,
+          "delivery_delay": 147976.929588
+        },
+        {
+          "order_value": 13324.31,
+          "delivery_delay": 165777.649599
+        },
+        {
+          "order_value": 46534.76,
+          "delivery_delay": 381049.143438
+        },
+        {
+          "order_value": 9418.24,
+          "delivery_delay": 99131.20201
+        },
+        {
+          "order_value": 43047.63,
+          "delivery_delay": 265408.974136
+        },
+        {
+          "order_value": 2583.95,
+          "delivery_delay": 53450.298003
+        },
+        {
+          "order_value": 29558.97,
+          "delivery_delay": 189119.309646
+        },
+        {
+          "order_value": 26859.68,
+          "delivery_delay": 266636.654873
+        },
+        {
+          "order_value": 27179.85,
+          "delivery_delay": 147445.188891
+        },
+        {
+          "order_value": 34430.41,
+          "delivery_delay": 103863.390883
+        },
+        {
+          "order_value": 42533.08,
+          "delivery_delay": 61565.143462
+        },
+        {
+          "order_value": 5120.51,
+          "delivery_delay": 172259.085887
+        },
+        {
+          "order_value": 1118.24,
+          "delivery_delay": 185060.908546
+        },
+        {
+          "order_value": 1781.78,
+          "delivery_delay": 144645.250622
+        },
+        {
+          "order_value": 14931.09,
+          "delivery_delay": 354151.193495
+        },
+        {
+          "order_value": 26896.25,
+          "delivery_delay": 275007.777768
+        },
+        {
+          "order_value": 6392.31,
+          "delivery_delay": 45324.844509
+        },
+        {
+          "order_value": 41410.11,
+          "delivery_delay": 304396.941843
+        },
+        {
+          "order_value": 28908.53,
+          "delivery_delay": 186712.064164
+        },
+        {
+          "order_value": 22745.9,
+          "delivery_delay": 129706.424831
+        },
+        {
+          "order_value": 32252.2,
+          "delivery_delay": 243707.321132
+        },
+        {
+          "order_value": 14886.77,
+          "delivery_delay": 333444.250033
+        },
+        {
+          "order_value": 7543.45,
+          "delivery_delay": 150166.233092
+        },
+        {
+          "order_value": 6331.39,
+          "delivery_delay": 150637.890266
+        },
+        {
+          "order_value": 39077.65,
+          "delivery_delay": 96363.594307
+        },
+        {
+          "order_value": 12445.8,
+          "delivery_delay": 139155.838801
+        },
+        {
+          "order_value": 7395.8,
+          "delivery_delay": 155509.399474
+        },
+        {
+          "order_value": 11762.5,
+          "delivery_delay": 214888.845702
+        },
+        {
+          "order_value": 35832.46,
+          "delivery_delay": 163328.902779
+        },
+        {
+          "order_value": 13515.44,
+          "delivery_delay": 358475.554008
+        },
+        {
+          "order_value": 31907.46,
+          "delivery_delay": 221356.227648
+        },
+        {
+          "order_value": 35309.7,
+          "delivery_delay": 223648.895626
+        },
+        {
+          "order_value": 18332.54,
+          "delivery_delay": 62145.418966
+        },
+        {
+          "order_value": 39291.34,
+          "delivery_delay": 174124.35381
+        },
+        {
+          "order_value": 11933.41,
+          "delivery_delay": 186350.071971
+        },
+        {
+          "order_value": 16864.91,
+          "delivery_delay": 148861.575996
+        },
+        {
+          "order_value": 41277.54,
+          "delivery_delay": 373676.473395
+        },
+        {
+          "order_value": 7626.24,
+          "delivery_delay": 145649.33798
+        },
+        {
+          "order_value": 31190.56,
+          "delivery_delay": 179367.808235
+        },
+        {
+          "order_value": 9351.02,
+          "delivery_delay": 47904.255327
+        },
+        {
+          "order_value": 21745.96,
+          "delivery_delay": 219101.201421
+        },
+        {
+          "order_value": 35792.5,
+          "delivery_delay": 110795.253721
+        },
+        {
+          "order_value": 26999.07,
+          "delivery_delay": 243173.784942
+        },
+        {
+          "order_value": 48454.54,
+          "delivery_delay": 136999.705295
+        },
+        {
+          "order_value": 14168.7,
+          "delivery_delay": 224941.169331
+        },
+        {
+          "order_value": 22280.2,
+          "delivery_delay": 199425.844234
+        },
+        {
+          "order_value": 39329.6,
+          "delivery_delay": 46653.390927
+        },
+        {
+          "order_value": 42993.69,
+          "delivery_delay": 178160.599285
+        },
+        {
+          "order_value": 49133.06,
+          "delivery_delay": 167085.165543
+        },
+        {
+          "order_value": 14384.58,
+          "delivery_delay": 276921.691834
+        },
+        {
+          "order_value": 25760.1,
+          "delivery_delay": 89820.620347
+        },
+        {
+          "order_value": 27178.21,
+          "delivery_delay": 203108.85427
+        },
+        {
+          "order_value": 31279.72,
+          "delivery_delay": 245057.214546
+        },
+        {
+          "order_value": 8734.27,
+          "delivery_delay": 99004.976258
+        },
+        {
+          "order_value": 42945.85,
+          "delivery_delay": 245079.751026
+        },
+        {
+          "order_value": 14799.96,
+          "delivery_delay": 173061.66603
+        },
+        {
+          "order_value": 38996.31,
+          "delivery_delay": 250536.388306
+        },
+        {
+          "order_value": 14542.74,
+          "delivery_delay": 221642.536906
+        },
+        {
+          "order_value": 27575.81,
+          "delivery_delay": 217889.191897
+        },
+        {
+          "order_value": 49345.71,
+          "delivery_delay": 183230.840206
+        },
+        {
+          "order_value": 49499.95,
+          "delivery_delay": 113751.263189
+        },
+        {
+          "order_value": 35876.9,
+          "delivery_delay": 266361.163197
+        },
+        {
+          "order_value": 40801.99,
+          "delivery_delay": 221438.596731
+        },
+        {
+          "order_value": 28648.29,
+          "delivery_delay": 230144.735029
+        },
+        {
+          "order_value": 49772.4,
+          "delivery_delay": 196808.926969
+        },
+        {
+          "order_value": 31501.48,
+          "delivery_delay": 127050.918901
+        },
+        {
+          "order_value": 49150.44,
+          "delivery_delay": 234982.89967
+        },
+        {
+          "order_value": 27261.93,
+          "delivery_delay": 373725.434519
+        },
+        {
+          "order_value": 4498.67,
+          "delivery_delay": 140859.657839
+        },
+        {
+          "order_value": 1775.91,
+          "delivery_delay": 236841.994597
+        },
+        {
+          "order_value": 16880.37,
+          "delivery_delay": 282952.345889
+        },
+        {
+          "order_value": 31621.65,
+          "delivery_delay": 234809.446766
+        },
+        {
+          "order_value": 49627.22,
+          "delivery_delay": 376741.164969
+        },
+        {
+          "order_value": 17921.09,
+          "delivery_delay": 226032.243933
+        },
+        {
+          "order_value": 40266.48,
+          "delivery_delay": 223222.063508
+        },
+        {
+          "order_value": 10361.05,
+          "delivery_delay": 245831.907785
+        },
+        {
+          "order_value": 45835.57,
+          "delivery_delay": 261863.687259
+        },
+        {
+          "order_value": 42894.26,
+          "delivery_delay": 190146.742592
+        },
+        {
+          "order_value": 12000.49,
+          "delivery_delay": 142859.24067
+        },
+        {
+          "order_value": 5035.29,
+          "delivery_delay": 91282.070617
+        },
+        {
+          "order_value": 8309.03,
+          "delivery_delay": 170096.464784
+        },
+        {
+          "order_value": 25843.21,
+          "delivery_delay": 276896.549933
+        },
+        {
+          "order_value": 22534.33,
+          "delivery_delay": 208963.825006
+        },
+        {
+          "order_value": 12725.92,
+          "delivery_delay": 199998.316939
+        },
+        {
+          "order_value": 25882.98,
+          "delivery_delay": 45000.461729
+        },
+        {
+          "order_value": 24673.78,
+          "delivery_delay": 214526.027475
+        },
+        {
+          "order_value": 1020.67,
+          "delivery_delay": 248356.438772
+        },
+        {
+          "order_value": 41529.71,
+          "delivery_delay": 126764.647439
+        },
+        {
+          "order_value": 35763.55,
+          "delivery_delay": 176758.040178
+        },
+        {
+          "order_value": 14071.58,
+          "delivery_delay": 125205.520595
+        },
+        {
+          "order_value": 14701.65,
+          "delivery_delay": 229045.58201
+        },
+        {
+          "order_value": 47471.31,
+          "delivery_delay": 337903.233342
+        },
+        {
+          "order_value": 14468.16,
+          "delivery_delay": 192520.666945
+        },
+        {
+          "order_value": 3556.64,
+          "delivery_delay": 113696.316331
+        },
+        {
+          "order_value": 23804,
+          "delivery_delay": 210382.260827
+        },
+        {
+          "order_value": 7476.5,
+          "delivery_delay": 296365.68146
+        },
+        {
+          "order_value": 15003.78,
+          "delivery_delay": 249596.711902
+        },
+        {
+          "order_value": 46903.83,
+          "delivery_delay": 353078.456718
+        },
+        {
+          "order_value": 46921.8,
+          "delivery_delay": 317501.63689
+        },
+        {
+          "order_value": 13838.95,
+          "delivery_delay": 191761.290591
+        },
+        {
+          "order_value": 31695.65,
+          "delivery_delay": 180814.607387
+        },
+        {
+          "order_value": 9097.18,
+          "delivery_delay": 207785.68353
+        },
+        {
+          "order_value": 19565.02,
+          "delivery_delay": 321604.287479
+        },
+        {
+          "order_value": 35200.89,
+          "delivery_delay": 145249.506904
+        },
+        {
+          "order_value": 44699.86,
+          "delivery_delay": 249631.348468
+        },
+        {
+          "order_value": 11951.87,
+          "delivery_delay": 107928.5526
+        },
+        {
+          "order_value": 30297.7,
+          "delivery_delay": 235369.064022
+        },
+        {
+          "order_value": 11729.44,
+          "delivery_delay": 127943.18799
+        },
+        {
+          "order_value": 9869.03,
+          "delivery_delay": 114800.51398
+        },
+        {
+          "order_value": 38088.66,
+          "delivery_delay": 273839.034826
+        },
+        {
+          "order_value": 31971.62,
+          "delivery_delay": 337280.534448
+        },
+        {
+          "order_value": 21027.33,
+          "delivery_delay": 232921.552535
+        },
+        {
+          "order_value": 26015.03,
+          "delivery_delay": 108706.188164
+        },
+        {
+          "order_value": 5330.61,
+          "delivery_delay": 318015.806839
+        },
+        {
+          "order_value": 7275.05,
+          "delivery_delay": 211117.580785
+        },
+        {
+          "order_value": 23610.79,
+          "delivery_delay": 322027.269044
+        },
+        {
+          "order_value": 42068.64,
+          "delivery_delay": 244816.65876
+        },
+        {
+          "order_value": 46277.72,
+          "delivery_delay": 50303.971187
+        },
+        {
+          "order_value": 33764,
+          "delivery_delay": 276743.265029
+        },
+        {
+          "order_value": 32829.19,
+          "delivery_delay": 264185.614018
+        },
+        {
+          "order_value": 32602.19,
+          "delivery_delay": 239627.011106
+        },
+        {
+          "order_value": 15559.75,
+          "delivery_delay": 287446.585455
+        },
+        {
+          "order_value": 40343,
+          "delivery_delay": 70960.14806
+        },
+        {
+          "order_value": 14698.5,
+          "delivery_delay": 44384.258512
+        },
+        {
+          "order_value": 16381.8,
+          "delivery_delay": 301513.353049
+        },
+        {
+          "order_value": 25940.88,
+          "delivery_delay": 383881.454409
+        },
+        {
+          "order_value": 27153.39,
+          "delivery_delay": 190106.833933
+        },
+        {
+          "order_value": 3610.7,
+          "delivery_delay": 387412.201248
+        },
+        {
+          "order_value": 15469.64,
+          "delivery_delay": 125954.240595
+        },
+        {
+          "order_value": 23234.77,
+          "delivery_delay": 247091.331137
+        },
+        {
+          "order_value": 43716.29,
+          "delivery_delay": 177189.087713
+        },
+        {
+          "order_value": 9422.79,
+          "delivery_delay": 257003.081529
+        },
+        {
+          "order_value": 31353.94,
+          "delivery_delay": 252417.446558
+        },
+        {
+          "order_value": 43237.47,
+          "delivery_delay": 188611.388952
+        },
+        {
+          "order_value": 273.1,
+          "delivery_delay": 292733.456541
+        },
+        {
+          "order_value": 2988.59,
+          "delivery_delay": 285357.712848
+        },
+        {
+          "order_value": 43903.04,
+          "delivery_delay": 184192.733214
+        },
+        {
+          "order_value": 47651.87,
+          "delivery_delay": 102378.246459
+        },
+        {
+          "order_value": 1432.02,
+          "delivery_delay": 226148.064194
+        },
+        {
+          "order_value": 48939.48,
+          "delivery_delay": 152520.778254
+        },
+        {
+          "order_value": 6848.84,
+          "delivery_delay": 89327.064776
+        },
+        {
+          "order_value": 3138.98,
+          "delivery_delay": 189619.04591
+        },
+        {
+          "order_value": 42554.19,
+          "delivery_delay": 113060.540022
+        },
+        {
+          "order_value": 31999.99,
+          "delivery_delay": 137237.972494
+        },
+        {
+          "order_value": 41542.41,
+          "delivery_delay": 231816.117785
+        },
+        {
+          "order_value": 13436.47,
+          "delivery_delay": 362580.888555
+        },
+        {
+          "order_value": 30003.08,
+          "delivery_delay": 281148.534433
+        },
+        {
+          "order_value": 42915.6,
+          "delivery_delay": 93296.091686
+        },
+        {
+          "order_value": 15903.31,
+          "delivery_delay": 156274.002702
+        },
+        {
+          "order_value": 22790.25,
+          "delivery_delay": 146128.308513
+        },
+        {
+          "order_value": 36914.17,
+          "delivery_delay": 247605.021104
+        },
+        {
+          "order_value": 6246.36,
+          "delivery_delay": 315097.724543
+        },
+        {
+          "order_value": 24374.96,
+          "delivery_delay": 145088.619515
+        },
+        {
+          "order_value": 42902.39,
+          "delivery_delay": 103950.16814
+        },
+        {
+          "order_value": 4011.3,
+          "delivery_delay": 109474.029378
+        },
+        {
+          "order_value": 40883.42,
+          "delivery_delay": 219406.725055
+        },
+        {
+          "order_value": 3741.58,
+          "delivery_delay": 117876.609565
+        },
+        {
+          "order_value": 34504.67,
+          "delivery_delay": 148331.796503
+        },
+        {
+          "order_value": 40064.26,
+          "delivery_delay": 376689.575442
+        },
+        {
+          "order_value": 43363.71,
+          "delivery_delay": 163686.275819
+        },
+        {
+          "order_value": 30320.49,
+          "delivery_delay": 280033.205421
+        },
+        {
+          "order_value": 39488.17,
+          "delivery_delay": 180402.747447
+        },
+        {
+          "order_value": 46877.96,
+          "delivery_delay": 257070.383919
+        },
+        {
+          "order_value": 32640.96,
+          "delivery_delay": 152764.365754
+        },
+        {
+          "order_value": 41687.08,
+          "delivery_delay": 257861.780795
+        },
+        {
+          "order_value": 22600.68,
+          "delivery_delay": 146360.187877
+        },
+        {
+          "order_value": 31502.75,
+          "delivery_delay": 172289.117994
+        },
+        {
+          "order_value": 863.48,
+          "delivery_delay": 63057.073098
+        },
+        {
+          "order_value": 17582.15,
+          "delivery_delay": 147178.245597
+        },
+        {
+          "order_value": 4344.73,
+          "delivery_delay": 284502.643392
+        },
+        {
+          "order_value": 6483.04,
+          "delivery_delay": 230943.168639
+        },
+        {
+          "order_value": 46807.56,
+          "delivery_delay": 347397.325157
+        },
+        {
+          "order_value": 20892.18,
+          "delivery_delay": 321708.412968
+        },
+        {
+          "order_value": 8802.37,
+          "delivery_delay": 253032.907011
+        },
+        {
+          "order_value": 30441,
+          "delivery_delay": 256622.456128
+        },
+        {
+          "order_value": 10040.37,
+          "delivery_delay": 370957.903483
+        },
+        {
+          "order_value": 46431.4,
+          "delivery_delay": 121512.888254
+        },
+        {
+          "order_value": 40572.9,
+          "delivery_delay": 270106.312202
+        },
+        {
+          "order_value": 38667.32,
+          "delivery_delay": 105463.461225
+        },
+        {
+          "order_value": 44407.16,
+          "delivery_delay": 179913.780569
+        },
+        {
+          "order_value": 22103.13,
+          "delivery_delay": 259090.354683
+        },
+        {
+          "order_value": 20285.74,
+          "delivery_delay": 234771.646062
+        },
+        {
+          "order_value": 23341.67,
+          "delivery_delay": 155936.341011
+        },
+        {
+          "order_value": 5359.83,
+          "delivery_delay": 198409.014105
+        },
+        {
+          "order_value": 1994.56,
+          "delivery_delay": 108826.899707
+        },
+        {
+          "order_value": 2588.61,
+          "delivery_delay": 357783.609878
+        },
+        {
+          "order_value": 35899.37,
+          "delivery_delay": 100305.307236
+        },
+        {
+          "order_value": 18957.11,
+          "delivery_delay": 253476.577081
+        },
+        {
+          "order_value": 35492.14,
+          "delivery_delay": 123693.933301
+        },
+        {
+          "order_value": 2326.63,
+          "delivery_delay": 106520.489091
+        },
+        {
+          "order_value": 8416.97,
+          "delivery_delay": 207889.329045
+        },
+        {
+          "order_value": 1873.43,
+          "delivery_delay": 289385.109287
+        },
+        {
+          "order_value": 49144.26,
+          "delivery_delay": 112185.53972
+        },
+        {
+          "order_value": 24108.41,
+          "delivery_delay": 43817.403007
+        },
+        {
+          "order_value": 4978.13,
+          "delivery_delay": 162965.805817
+        },
+        {
+          "order_value": 34810.38,
+          "delivery_delay": 276256.602335
+        },
+        {
+          "order_value": 7192.77,
+          "delivery_delay": 138682.157425
+        },
+        {
+          "order_value": 9581.81,
+          "delivery_delay": 135890.242841
+        },
+        {
+          "order_value": 25573.65,
+          "delivery_delay": 205413.908066
+        },
+        {
+          "order_value": 19402.26,
+          "delivery_delay": 296224.902814
+        },
+        {
+          "order_value": 40807.87,
+          "delivery_delay": 350167.7602
+        },
+        {
+          "order_value": 13740.06,
+          "delivery_delay": 106459.231505
+        },
+        {
+          "order_value": 20464.05,
+          "delivery_delay": 175783.154236
+        },
+        {
+          "order_value": 12933.85,
+          "delivery_delay": 213798.578415
+        },
+        {
+          "order_value": 32230.95,
+          "delivery_delay": 239561.003428
+        },
+        {
+          "order_value": 1613.99,
+          "delivery_delay": 184587.502807
+        },
+        {
+          "order_value": 23299.98,
+          "delivery_delay": 193864.020975
+        },
+        {
+          "order_value": 19302.65,
+          "delivery_delay": 238716.399924
+        },
+        {
+          "order_value": 19418.21,
+          "delivery_delay": 161291.213066
+        },
+        {
+          "order_value": 35828.32,
+          "delivery_delay": 205242.80002
+        },
+        {
+          "order_value": 11872.95,
+          "delivery_delay": 193240.827091
+        },
+        {
+          "order_value": 30388.17,
+          "delivery_delay": 168767.775002
+        },
+        {
+          "order_value": 28477.1,
+          "delivery_delay": 58501.446702
+        },
+        {
+          "order_value": 4356.02,
+          "delivery_delay": 130128.908666
+        },
+        {
+          "order_value": 20190.96,
+          "delivery_delay": 178575.302499
+        },
+        {
+          "order_value": 49333.53,
+          "delivery_delay": 382448.863508
+        },
+        {
+          "order_value": 24981.55,
+          "delivery_delay": 192204.410226
+        },
+        {
+          "order_value": 27260.12,
+          "delivery_delay": 210408.782179
+        },
+        {
+          "order_value": 29777.78,
+          "delivery_delay": 209952.529537
+        },
+        {
+          "order_value": 27853.88,
+          "delivery_delay": 288156.483197
+        },
+        {
+          "order_value": 12320.66,
+          "delivery_delay": 226220.733478
+        },
+        {
+          "order_value": 38226.61,
+          "delivery_delay": 361732.231987
+        },
+        {
+          "order_value": 42507.35,
+          "delivery_delay": 271789.286454
+        },
+        {
+          "order_value": 16210.25,
+          "delivery_delay": 155305.257291
+        },
+        {
+          "order_value": 38837.9,
+          "delivery_delay": 240462.792721
+        },
+        {
+          "order_value": 4834.72,
+          "delivery_delay": 145594.901771
+        },
+        {
+          "order_value": 34444.39,
+          "delivery_delay": 89835.318543
+        },
+        {
+          "order_value": 12567.29,
+          "delivery_delay": 250666.68874
+        },
+        {
+          "order_value": 46454.2,
+          "delivery_delay": 242422.352202
+        },
+        {
+          "order_value": 14490.6,
+          "delivery_delay": 199527.850557
+        },
+        {
+          "order_value": 26332.95,
+          "delivery_delay": 332271.210126
+        },
+        {
+          "order_value": 42429.51,
+          "delivery_delay": 172966.50185
+        },
+        {
+          "order_value": 47757.86,
+          "delivery_delay": 276526.913556
+        },
+        {
+          "order_value": 36425.3,
+          "delivery_delay": 205448.257922
+        },
+        {
+          "order_value": 44420.9,
+          "delivery_delay": 103961.808545
+        },
+        {
+          "order_value": 43364.38,
+          "delivery_delay": 217732.57123
+        },
+        {
+          "order_value": 33510.18,
+          "delivery_delay": 192517.954241
+        },
+        {
+          "order_value": 47434.36,
+          "delivery_delay": 174212.012836
+        },
+        {
+          "order_value": 13787.13,
+          "delivery_delay": 322981.681306
+        },
+        {
+          "order_value": 5133.63,
+          "delivery_delay": 231788.421164
+        },
+        {
+          "order_value": 41146.75,
+          "delivery_delay": 264954.3812
+        },
+        {
+          "order_value": 46948.7,
+          "delivery_delay": 228782.436198
+        },
+        {
+          "order_value": 25847.67,
+          "delivery_delay": 380405.863866
+        },
+        {
+          "order_value": 42497.54,
+          "delivery_delay": 147033.052007
+        },
+        {
+          "order_value": 1623.89,
+          "delivery_delay": 245546.333232
+        },
+        {
+          "order_value": 25940.57,
+          "delivery_delay": 286083.628994
+        },
+        {
+          "order_value": 10345.79,
+          "delivery_delay": 140068.329507
+        },
+        {
+          "order_value": 11828.9,
+          "delivery_delay": 163487.244114
+        },
+        {
+          "order_value": 28224.59,
+          "delivery_delay": 323695.109719
+        },
+        {
+          "order_value": 31634.37,
+          "delivery_delay": 188175.315722
+        },
+        {
+          "order_value": 2911.48,
+          "delivery_delay": 257710.817363
+        },
+        {
+          "order_value": 45456.69,
+          "delivery_delay": 303993.742156
+        },
+        {
+          "order_value": 32003.24,
+          "delivery_delay": 360050.137915
+        },
+        {
+          "order_value": 20204.49,
+          "delivery_delay": 146473.378539
+        },
+        {
+          "order_value": 45411.2,
+          "delivery_delay": 297019.368832
+        },
+        {
+          "order_value": 22127.72,
+          "delivery_delay": 225892.541854
+        },
+        {
+          "order_value": 1873.81,
+          "delivery_delay": 127857.649713
+        },
+        {
+          "order_value": 41160.61,
+          "delivery_delay": 176624.791658
+        },
+        {
+          "order_value": 1774.2,
+          "delivery_delay": 225286.933012
+        },
+        {
+          "order_value": 35004.31,
+          "delivery_delay": 363093.983525
+        },
+        {
+          "order_value": 28412.58,
+          "delivery_delay": 383179.866591
+        },
+        {
+          "order_value": 30603.78,
+          "delivery_delay": 129990.94136
+        },
+        {
+          "order_value": 48360.32,
+          "delivery_delay": 60117.980755
+        },
+        {
+          "order_value": 19300.97,
+          "delivery_delay": 98538.802256
+        },
+        {
+          "order_value": 9703.03,
+          "delivery_delay": 253111.240849
+        },
+        {
+          "order_value": 44497.85,
+          "delivery_delay": 173604.080395
+        },
+        {
+          "order_value": 42549.72,
+          "delivery_delay": 292117.956755
+        },
+        {
+          "order_value": 9875.81,
+          "delivery_delay": 127198.81969
+        },
+        {
+          "order_value": 27583.13,
+          "delivery_delay": 216762.013986
+        },
+        {
+          "order_value": 26994.02,
+          "delivery_delay": 154110.051737
+        },
+        {
+          "order_value": 36254.2,
+          "delivery_delay": 259850.118205
+        },
+        {
+          "order_value": 12165.97,
+          "delivery_delay": 115538.099546
+        },
+        {
+          "order_value": 30782.21,
+          "delivery_delay": 268371.730353
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "order_value",
+        "type": "quantitative"
+      },
+      "y": {
+        "field": "delivery_delay",
+        "type": "quantitative"
+      }
+    },
+    "title": "Delivery Delay vs. Order Value"
+  },
+  "e2_004": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "line",
+    "data": {
+      "values": [
+        {
+          "dispute_date": "2026-05-16",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-05-18",
+          "dispute_count": 2
+        },
+        {
+          "dispute_date": "2026-05-20",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-05-21",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-05-22",
+          "dispute_count": 2
+        },
+        {
+          "dispute_date": "2026-05-23",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-05-25",
+          "dispute_count": 2
+        },
+        {
+          "dispute_date": "2026-05-26",
+          "dispute_count": 3
+        },
+        {
+          "dispute_date": "2026-05-27",
+          "dispute_count": 2
+        },
+        {
+          "dispute_date": "2026-05-28",
+          "dispute_count": 2
+        },
+        {
+          "dispute_date": "2026-05-29",
+          "dispute_count": 2
+        },
+        {
+          "dispute_date": "2026-05-30",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-06-01",
+          "dispute_count": 2
+        },
+        {
+          "dispute_date": "2026-06-02",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-06-03",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-06-04",
+          "dispute_count": 5
+        },
+        {
+          "dispute_date": "2026-06-05",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-06-06",
+          "dispute_count": 5
+        },
+        {
+          "dispute_date": "2026-06-08",
+          "dispute_count": 2
+        },
+        {
+          "dispute_date": "2026-06-10",
+          "dispute_count": 2
+        },
+        {
+          "dispute_date": "2026-06-11",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-06-13",
+          "dispute_count": 2
+        },
+        {
+          "dispute_date": "2026-06-15",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-06-16",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-06-17",
+          "dispute_count": 2
+        },
+        {
+          "dispute_date": "2026-06-18",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-06-19",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-06-20",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-06-21",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-06-22",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-06-24",
+          "dispute_count": 2
+        },
+        {
+          "dispute_date": "2026-06-25",
+          "dispute_count": 2
+        },
+        {
+          "dispute_date": "2026-06-26",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-06-30",
+          "dispute_count": 3
+        },
+        {
+          "dispute_date": "2026-07-02",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-07-04",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-07-05",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-07-06",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-07-07",
+          "dispute_count": 4
+        },
+        {
+          "dispute_date": "2026-07-08",
+          "dispute_count": 2
+        },
+        {
+          "dispute_date": "2026-07-09",
+          "dispute_count": 2
+        },
+        {
+          "dispute_date": "2026-07-10",
+          "dispute_count": 1
+        },
+        {
+          "dispute_date": "2026-07-12",
+          "dispute_count": 3
+        },
+        {
+          "dispute_date": "2026-07-13",
+          "dispute_count": 4
+        },
+        {
+          "dispute_date": "2026-07-14",
+          "dispute_count": 1
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "dispute_date",
+        "type": "temporal"
+      },
+      "y": {
+        "field": "dispute_count",
+        "type": "quantitative"
+      }
+    },
+    "title": "Cumulative Dispute Count Over Time"
+  },
+  "e2_005": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "bar",
+    "data": {
+      "values": [
+        {
+          "attempt_count": 1,
+          "count": 188
+        },
+        {
+          "attempt_count": 2,
+          "count": 176
+        },
+        {
+          "attempt_count": 3,
+          "count": 186
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "attempt_count",
+        "type": "ordinal"
+      },
+      "y": {
+        "field": "count",
+        "type": "quantitative"
+      }
+    },
+    "title": "Distribution of Fulfillment Attempt Counts"
+  },
+  "e2_006": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "bar",
+    "data": {
+      "values": [
+        {
+          "city": "Mumbai",
+          "order_channel": "b2b",
+          "order_volume": 16
+        },
+        {
+          "city": "Lucknow",
+          "order_channel": "b2c",
+          "order_volume": 14
+        },
+        {
+          "city": "Hyderabad",
+          "order_channel": "b2b",
+          "order_volume": 7
+        },
+        {
+          "city": "Delhi",
+          "order_channel": "b2c",
+          "order_volume": 21
+        },
+        {
+          "city": "Pune",
+          "order_channel": "b2c",
+          "order_volume": 17
+        },
+        {
+          "city": "Agra",
+          "order_channel": "b2c",
+          "order_volume": 12
+        },
+        {
+          "city": "Chennai",
+          "order_channel": "b2c",
+          "order_volume": 21
+        },
+        {
+          "city": "Kochi",
+          "order_channel": "b2c",
+          "order_volume": 10
+        },
+        {
+          "city": "Surat",
+          "order_channel": "b2c",
+          "order_volume": 11
+        },
+        {
+          "city": "Surat",
+          "order_channel": "b2b",
+          "order_volume": 20
+        },
+        {
+          "city": "Indore",
+          "order_channel": "b2c",
+          "order_volume": 10
+        },
+        {
+          "city": "Hyderabad",
+          "order_channel": "b2c",
+          "order_volume": 12
+        },
+        {
+          "city": "Indore",
+          "order_channel": "b2b",
+          "order_volume": 14
+        },
+        {
+          "city": "Kolkata",
+          "order_channel": "b2b",
+          "order_volume": 17
+        },
+        {
+          "city": "Bhopal",
+          "order_channel": "b2b",
+          "order_volume": 10
+        },
+        {
+          "city": "Patna",
+          "order_channel": "b2c",
+          "order_volume": 15
+        },
+        {
+          "city": "Mumbai",
+          "order_channel": "b2c",
+          "order_volume": 11
+        },
+        {
+          "city": "Ahmedabad",
+          "order_channel": "b2c",
+          "order_volume": 12
+        },
+        {
+          "city": "Nagpur",
+          "order_channel": "b2b",
+          "order_volume": 15
+        },
+        {
+          "city": "Coimbatore",
+          "order_channel": "b2c",
+          "order_volume": 11
+        },
+        {
+          "city": "Chennai",
+          "order_channel": "b2b",
+          "order_volume": 15
+        },
+        {
+          "city": "Bengaluru",
+          "order_channel": "b2c",
+          "order_volume": 12
+        },
+        {
+          "city": "Bengaluru",
+          "order_channel": "b2b",
+          "order_volume": 8
+        },
+        {
+          "city": "Vadodara",
+          "order_channel": "b2c",
+          "order_volume": 17
+        },
+        {
+          "city": "Kolkata",
+          "order_channel": "b2c",
+          "order_volume": 14
+        },
+        {
+          "city": "Vadodara",
+          "order_channel": "b2b",
+          "order_volume": 20
+        },
+        {
+          "city": "Visakhapatnam",
+          "order_channel": "b2b",
+          "order_volume": 13
+        },
+        {
+          "city": "Visakhapatnam",
+          "order_channel": "b2c",
+          "order_volume": 7
+        },
+        {
+          "city": "Pune",
+          "order_channel": "b2b",
+          "order_volume": 9
+        },
+        {
+          "city": "Agra",
+          "order_channel": "b2b",
+          "order_volume": 17
+        },
+        {
+          "city": "Lucknow",
+          "order_channel": "b2b",
+          "order_volume": 14
+        },
+        {
+          "city": "Coimbatore",
+          "order_channel": "b2b",
+          "order_volume": 13
+        },
+        {
+          "city": "Ahmedabad",
+          "order_channel": "b2b",
+          "order_volume": 17
+        },
+        {
+          "city": "Patna",
+          "order_channel": "b2b",
+          "order_volume": 12
+        },
+        {
+          "city": "Jaipur",
+          "order_channel": "b2b",
+          "order_volume": 15
+        },
+        {
+          "city": "Kochi",
+          "order_channel": "b2b",
+          "order_volume": 9
+        },
+        {
+          "city": "Jaipur",
+          "order_channel": "b2c",
+          "order_volume": 7
+        },
+        {
+          "city": "Bhopal",
+          "order_channel": "b2c",
+          "order_volume": 15
+        },
+        {
+          "city": "Delhi",
+          "order_channel": "b2b",
+          "order_volume": 20
+        },
+        {
+          "city": "Nagpur",
+          "order_channel": "b2c",
+          "order_volume": 20
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "city",
+        "type": "nominal"
+      },
+      "y": {
+        "field": "order_volume",
+        "type": "quantitative"
+      },
+      "color": {
+        "field": "order_channel",
+        "type": "nominal"
+      }
+    },
+    "title": "Order Volume by City and Channel"
+  },
+  "e2_007": null,
+  "e2_008": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "bar",
+    "data": {
+      "values": [
+        {
+          "display_name": "FastShip 7",
+          "avg_order_value": 25436.925666666666
+        },
+        {
+          "display_name": "FastShip 3",
+          "avg_order_value": 25554.762280701754
+        },
+        {
+          "display_name": "FastShip 9",
+          "avg_order_value": 24746.585185185184
+        },
+        {
+          "display_name": "FastShip 1",
+          "avg_order_value": 26454.56924528302
+        },
+        {
+          "display_name": "FastShip 5",
+          "avg_order_value": 28119.621136363636
+        },
+        {
+          "display_name": "FastShip 6",
+          "avg_order_value": 25217.63653846154
+        },
+        {
+          "display_name": "FastShip 2",
+          "avg_order_value": 24992.955538461538
+        },
+        {
+          "display_name": "FastShip 8",
+          "avg_order_value": 22241.44102040816
+        },
+        {
+          "display_name": "FastShip 10",
+          "avg_order_value": 25587.332333333332
+        },
+        {
+          "display_name": "FastShip 4",
+          "avg_order_value": 27985.907857142858
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "display_name",
+        "type": "nominal"
+      },
+      "y": {
+        "field": "avg_order_value",
+        "type": "quantitative"
+      }
+    },
+    "title": "Average Order Value per Logistics Provider"
+  },
+  "e2_009": null,
+  "e2_010": null,
+  "e2_011": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "bar",
+    "data": {
+      "values": [
+        {
+          "category": "fashion",
+          "min_contracted_sla_hours": 24
+        },
+        {
+          "category": "food",
+          "min_contracted_sla_hours": 24
+        },
+        {
+          "category": "home_decor",
+          "min_contracted_sla_hours": 24
+        },
+        {
+          "category": "sports",
+          "min_contracted_sla_hours": 48
+        },
+        {
+          "category": "grocery",
+          "min_contracted_sla_hours": 72
+        },
+        {
+          "category": "pharma",
+          "min_contracted_sla_hours": 24
+        },
+        {
+          "category": "electronics",
+          "min_contracted_sla_hours": 24
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "category",
+        "type": "nominal"
+      },
+      "y": {
+        "field": "min_contracted_sla_hours",
+        "type": "quantitative"
+      }
+    },
+    "title": "Minimum Contracted SLA Hours per Seller Category"
+  },
+  "e2_012": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "bar",
+    "data": {
+      "values": [
+        {
+          "buyer_app_id": "BA001",
+          "max_order_value": 49499.95
+        },
+        {
+          "buyer_app_id": "BA004",
+          "max_order_value": 49627.22
+        },
+        {
+          "buyer_app_id": "BA003",
+          "max_order_value": 49772.4
+        },
+        {
+          "buyer_app_id": "BA005",
+          "max_order_value": 49704.79
+        },
+        {
+          "buyer_app_id": "BA002",
+          "max_order_value": 49333.53
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "buyer_app_id",
+        "type": "nominal"
+      },
+      "y": {
+        "field": "max_order_value",
+        "type": "quantitative"
+      }
+    },
+    "title": "Maximum Order Value per Buyer App"
+  },
+  "e2_013": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "bar",
+    "data": {
+      "values": [
+        {
+          "event_type": "picked_up",
+          "order_count": 325
+        },
+        {
+          "event_type": "attempted",
+          "order_count": 323
+        },
+        {
+          "event_type": "in_transit",
+          "order_count": 322
+        },
+        {
+          "event_type": "returned",
+          "order_count": 319
+        },
+        {
+          "event_type": "delivered",
+          "order_count": 317
+        },
+        {
+          "event_type": "out_for_delivery",
+          "order_count": 311
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "event_type",
+        "type": "nominal"
+      },
+      "y": {
+        "field": "order_count",
+        "type": "quantitative"
+      }
+    },
+    "title": "Order Count by Event Type"
+  },
+  "e2_014": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "line",
+    "data": {
+      "values": [
+        {
+          "provider_id": "LP002",
+          "display_name": "FastShip 2",
+          "delivery_count": 235,
+          "first_delivery_event": "2026-05-15T16:08:10.380602+00:00",
+          "last_delivery_event": "2026-07-14T15:59:58.528470+00:00"
+        },
+        {
+          "provider_id": "LP003",
+          "display_name": "FastShip 3",
+          "delivery_count": 178,
+          "first_delivery_event": "2026-05-15T19:41:46.159104+00:00",
+          "last_delivery_event": "2026-07-13T22:51:35.634880+00:00"
+        },
+        {
+          "provider_id": "LP001",
+          "display_name": "FastShip 1",
+          "delivery_count": 199,
+          "first_delivery_event": "2026-05-15T21:21:08.906085+00:00",
+          "last_delivery_event": "2026-07-15T04:02:39.907790+00:00"
+        },
+        {
+          "provider_id": "LP007",
+          "display_name": "FastShip 7",
+          "delivery_count": 205,
+          "first_delivery_event": "2026-05-15T23:27:34.598158+00:00",
+          "last_delivery_event": "2026-07-15T04:37:43.608575+00:00"
+        },
+        {
+          "provider_id": "LP010",
+          "display_name": "FastShip 10",
+          "delivery_count": 214,
+          "first_delivery_event": "2026-05-16T00:31:32.237822+00:00",
+          "last_delivery_event": "2026-07-14T12:17:34.822901+00:00"
+        },
+        {
+          "provider_id": "LP009",
+          "display_name": "FastShip 9",
+          "delivery_count": 185,
+          "first_delivery_event": "2026-05-16T08:05:29.805729+00:00",
+          "last_delivery_event": "2026-07-14T16:36:21.285288+00:00"
+        },
+        {
+          "provider_id": "LP006",
+          "display_name": "FastShip 6",
+          "delivery_count": 172,
+          "first_delivery_event": "2026-05-16T09:14:15.709646+00:00",
+          "last_delivery_event": "2026-07-14T22:20:28.563799+00:00"
+        },
+        {
+          "provider_id": "LP005",
+          "display_name": "FastShip 5",
+          "delivery_count": 160,
+          "first_delivery_event": "2026-05-16T09:48:37.249088+00:00",
+          "last_delivery_event": "2026-07-14T01:07:12.341944+00:00"
+        },
+        {
+          "provider_id": "LP008",
+          "display_name": "FastShip 8",
+          "delivery_count": 190,
+          "first_delivery_event": "2026-05-16T10:45:48.052455+00:00",
+          "last_delivery_event": "2026-07-15T03:52:05.183395+00:00"
+        },
+        {
+          "provider_id": "LP004",
+          "display_name": "FastShip 4",
+          "delivery_count": 179,
+          "first_delivery_event": "2026-05-16T18:11:11.166782+00:00",
+          "last_delivery_event": "2026-07-14T07:42:31.844350+00:00"
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "first_delivery_event",
+        "type": "temporal"
+      },
+      "y": {
+        "field": "delivery_count",
+        "type": "quantitative"
+      }
+    },
+    "title": "Delivery Events Over Time by Provider"
+  },
+  "e2_015": null,
+  "e2_016": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "bar",
+    "data": {
+      "values": [
+        {
+          "category": "electronics",
+          "total_line_value": 1964823.23
+        },
+        {
+          "category": "pharma",
+          "total_line_value": 985718.77
+        },
+        {
+          "category": "fashion",
+          "total_line_value": 1018241.44
+        },
+        {
+          "category": "sports",
+          "total_line_value": 1733339.48
+        },
+        {
+          "category": "food",
+          "total_line_value": 858070.28
+        },
+        {
+          "category": "grocery",
+          "total_line_value": 1531443.88
+        },
+        {
+          "category": "home_decor",
+          "total_line_value": 1079860.42
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "category",
+        "type": "nominal"
+      },
+      "y": {
+        "field": "total_line_value",
+        "type": "quantitative"
+      }
+    },
+    "title": "Total Line Value per Item Category"
+  },
+  "e2_017": null,
+  "e2_018": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "bar",
+    "data": {
+      "values": [
+        {
+          "status": "in_transit",
+          "count": 85
+        },
+        {
+          "status": "returned",
+          "count": 63
+        },
+        {
+          "status": "failed",
+          "count": 60
+        },
+        {
+          "status": "pending",
+          "count": 19
+        },
+        {
+          "status": "delivered",
+          "count": 323
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "status",
+        "type": "nominal"
+      },
+      "y": {
+        "field": "count",
+        "type": "quantitative"
+      }
+    },
+    "title": "Fulfillment Status Mix"
+  },
+  "e2_019": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "bar",
+    "data": {
+      "values": [
+        {
+          "city_local": "\u0926\u093f\u0932\u094d\u0932\u0940",
+          "total_order_value": 1081086.73
+        },
+        {
+          "city_local": "\u0915\u094b\u0932\u0915\u093e\u0924\u093e",
+          "total_order_value": 933701.9
+        },
+        {
+          "city_local": "\u0928\u093e\u0917\u092a\u0941\u0930",
+          "total_order_value": 917641.38
+        },
+        {
+          "city_local": "\u0938\u0942\u0930\u0924",
+          "total_order_value": 913408.65
+        },
+        {
+          "city_local": "\u091a\u0947\u0928\u094d\u0928\u0908",
+          "total_order_value": 819189.45
+        },
+        {
+          "city_local": "\u092e\u0941\u0902\u092c\u0908",
+          "total_order_value": 798962.81
+        },
+        {
+          "city_local": "\u0935\u0921\u094b\u0926\u0930\u093e",
+          "total_order_value": 782016.35
+        },
+        {
+          "city_local": "\u0905\u0939\u092e\u0926\u093e\u092c\u093e\u0926",
+          "total_order_value": 741306.3
+        },
+        {
+          "city_local": "\u0906\u0917\u0930\u093e",
+          "total_order_value": 723855.57
+        },
+        {
+          "city_local": "\u0932\u0916\u0928\u090a",
+          "total_order_value": 691838.26
+        },
+        {
+          "city_local": "\u0915\u094b\u092f\u0902\u092c\u091f\u0942\u0930",
+          "total_order_value": 654323.15
+        },
+        {
+          "city_local": "\u0907\u0902\u0926\u094c\u0930",
+          "total_order_value": 651855.71
+        },
+        {
+          "city_local": "\u092a\u091f\u0928\u093e",
+          "total_order_value": 628746.18
+        },
+        {
+          "city_local": "\u092c\u0947\u0902\u0917\u0932\u0941\u0930\u0941",
+          "total_order_value": 611949.14
+        },
+        {
+          "city_local": "\u091c\u092f\u092a\u0941\u0930",
+          "total_order_value": 605703.73
+        },
+        {
+          "city_local": "\u092a\u0941\u0923\u0947",
+          "total_order_value": 566618.78
+        },
+        {
+          "city_local": "\u0935\u093f\u0936\u093e\u0916\u093e\u092a\u091f\u094d\u091f\u0928\u092e",
+          "total_order_value": 535464.64
+        },
+        {
+          "city_local": "\u092d\u094b\u092a\u093e\u0932",
+          "total_order_value": 499483.22
+        },
+        {
+          "city_local": "\u0939\u0948\u0926\u0930\u093e\u092c\u093e\u0926",
+          "total_order_value": 467612.2
+        },
+        {
+          "city_local": "\u0915\u094b\u091a\u094d\u091a\u093f",
+          "total_order_value": 461884.54
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "city_local",
+        "type": "nominal"
+      },
+      "y": {
+        "field": "total_order_value",
+        "type": "quantitative"
+      }
+    },
+    "title": "Total Order Value Distribution Across Locations"
+  },
+  "e2_020": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "line",
+    "data": {
+      "values": [
+        {
+          "month": "2026-05-01T00:00:00+00:00",
+          "avg_order_value": 24888.975867768597
+        },
+        {
+          "month": "2026-04-01T00:00:00+00:00",
+          "avg_order_value": 24713.63576923077
+        },
+        {
+          "month": "2026-06-01T00:00:00+00:00",
+          "avg_order_value": 26332.280206185565
+        },
+        {
+          "month": "2026-07-01T00:00:00+00:00",
+          "avg_order_value": 27928.592641509433
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "month",
+        "type": "temporal"
+      },
+      "y": {
+        "field": "avg_order_value",
+        "type": "quantitative"
+      }
+    },
+    "title": "Monthly Average Order Value for Delivered Orders"
+  },
+  "e2_021": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "bar",
+    "data": {
+      "values": [
+        {
+          "location_id": "loc_0029",
+          "state": "Uttar Pradesh",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0027",
+          "state": "Uttar Pradesh",
+          "seller_count": 2
+        },
+        {
+          "location_id": "loc_0007",
+          "state": "Karnataka",
+          "seller_count": 3
+        },
+        {
+          "location_id": "loc_0008",
+          "state": "Tamil Nadu",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0035",
+          "state": "Madhya Pradesh",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0016",
+          "state": "Gujarat",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0015",
+          "state": "Maharashtra",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0049",
+          "state": "Uttar Pradesh",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0037",
+          "state": "Madhya Pradesh",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0036",
+          "state": "Madhya Pradesh",
+          "seller_count": 2
+        },
+        {
+          "location_id": "loc_0043",
+          "state": "Kerala",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0004",
+          "state": "Delhi",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0033",
+          "state": "Bihar",
+          "seller_count": 2
+        },
+        {
+          "location_id": "loc_0006",
+          "state": "Karnataka",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0012",
+          "state": "Telangana",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0001",
+          "state": "Maharashtra",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0040",
+          "state": "Andhra Pradesh",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0014",
+          "state": "Maharashtra",
+          "seller_count": 2
+        },
+        {
+          "location_id": "loc_0020",
+          "state": "West Bengal",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0009",
+          "state": "Tamil Nadu",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0022",
+          "state": "Rajasthan",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0011",
+          "state": "Telangana",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0028",
+          "state": "Uttar Pradesh",
+          "seller_count": 1
+        },
+        {
+          "location_id": "loc_0005",
+          "state": "Delhi",
+          "seller_count": 1
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "state",
+        "type": "nominal"
+      },
+      "y": {
+        "field": "seller_count",
+        "type": "quantitative"
+      }
+    },
+    "title": "Seller Count per State"
+  },
+  "e2_022": null,
+  "e2_023": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "line",
+    "data": {
+      "values": [
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-16T00:00:00+00:00",
+          "cumulative_order_value": 12000.49
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-16T00:00:00+00:00",
+          "cumulative_order_value": 40946.5
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-18T00:00:00+00:00",
+          "cumulative_order_value": 29713.16
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-18T00:00:00+00:00",
+          "cumulative_order_value": 58255.35
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-19T00:00:00+00:00",
+          "cumulative_order_value": 35290.94
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-19T00:00:00+00:00",
+          "cumulative_order_value": 75279.04
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-19T00:00:00+00:00",
+          "cumulative_order_value": 111562.29
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-20T00:00:00+00:00",
+          "cumulative_order_value": 31279.72
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-20T00:00:00+00:00",
+          "cumulative_order_value": 58175.97
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-20T00:00:00+00:00",
+          "cumulative_order_value": 87953.75
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-21T00:00:00+00:00",
+          "cumulative_order_value": 9097.18
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-22T00:00:00+00:00",
+          "cumulative_order_value": 17191.35
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-22T00:00:00+00:00",
+          "cumulative_order_value": 29758.64
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-22T00:00:00+00:00",
+          "cumulative_order_value": 45228.28
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-22T00:00:00+00:00",
+          "cumulative_order_value": 86330.61
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-23T00:00:00+00:00",
+          "cumulative_order_value": 29725.11
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-23T00:00:00+00:00",
+          "cumulative_order_value": 31349
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-24T00:00:00+00:00",
+          "cumulative_order_value": 23341.67
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-24T00:00:00+00:00",
+          "cumulative_order_value": 46104.51
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-24T00:00:00+00:00",
+          "cumulative_order_value": 89006.9
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-24T00:00:00+00:00",
+          "cumulative_order_value": 91699.56
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-24T00:00:00+00:00",
+          "cumulative_order_value": 133386.64
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-24T00:00:00+00:00",
+          "cumulative_order_value": 146112.56
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-24T00:00:00+00:00",
+          "cumulative_order_value": 186920.43
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-25T00:00:00+00:00",
+          "cumulative_order_value": 48360.32
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-25T00:00:00+00:00",
+          "cumulative_order_value": 98132.72
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-25T00:00:00+00:00",
+          "cumulative_order_value": 124147.75
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-25T00:00:00+00:00",
+          "cumulative_order_value": 169244.63
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-26T00:00:00+00:00",
+          "cumulative_order_value": 3761.95
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-26T00:00:00+00:00",
+          "cumulative_order_value": 5228.14
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-27T00:00:00+00:00",
+          "cumulative_order_value": 45676.98
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-27T00:00:00+00:00",
+          "cumulative_order_value": 74154.08
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-27T00:00:00+00:00",
+          "cumulative_order_value": 97081.35
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-28T00:00:00+00:00",
+          "cumulative_order_value": 46903.83
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-28T00:00:00+00:00",
+          "cumulative_order_value": 60269.7
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-29T00:00:00+00:00",
+          "cumulative_order_value": 5129.22
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-29T00:00:00+00:00",
+          "cumulative_order_value": 44634.5
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-29T00:00:00+00:00",
+          "cumulative_order_value": 83472.4
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-29T00:00:00+00:00",
+          "cumulative_order_value": 88189.85
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-30T00:00:00+00:00",
+          "cumulative_order_value": 42588.22
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-30T00:00:00+00:00",
+          "cumulative_order_value": 77721.75
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-04-30T00:00:00+00:00",
+          "cumulative_order_value": 88082.8
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-01T00:00:00+00:00",
+          "cumulative_order_value": 15840.16
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-01T00:00:00+00:00",
+          "cumulative_order_value": 37943.29
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-01T00:00:00+00:00",
+          "cumulative_order_value": 51262.62
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-01T00:00:00+00:00",
+          "cumulative_order_value": 93792.75
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-02T00:00:00+00:00",
+          "cumulative_order_value": 9418.24
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-03T00:00:00+00:00",
+          "cumulative_order_value": 3789.77
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-04T00:00:00+00:00",
+          "cumulative_order_value": 9703.03
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-04T00:00:00+00:00",
+          "cumulative_order_value": 41204.51
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-04T00:00:00+00:00",
+          "cumulative_order_value": 69617.09
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-05T00:00:00+00:00",
+          "cumulative_order_value": 36425.3
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-05T00:00:00+00:00",
+          "cumulative_order_value": 83896.61
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-06T00:00:00+00:00",
+          "cumulative_order_value": 18515.78
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-06T00:00:00+00:00",
+          "cumulative_order_value": 52954.49
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-06T00:00:00+00:00",
+          "cumulative_order_value": 66516.96
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-06T00:00:00+00:00",
+          "cumulative_order_value": 78962.76
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-06T00:00:00+00:00",
+          "cumulative_order_value": 123460.61
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-07T00:00:00+00:00",
+          "cumulative_order_value": 841.73
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-08T00:00:00+00:00",
+          "cumulative_order_value": 27178.21
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-09T00:00:00+00:00",
+          "cumulative_order_value": 28443.41
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-10T00:00:00+00:00",
+          "cumulative_order_value": 15517.17
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-10T00:00:00+00:00",
+          "cumulative_order_value": 36409.35
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-11T00:00:00+00:00",
+          "cumulative_order_value": 32662.71
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-12T00:00:00+00:00",
+          "cumulative_order_value": 42988.52
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-12T00:00:00+00:00",
+          "cumulative_order_value": 65734.42
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-12T00:00:00+00:00",
+          "cumulative_order_value": 77607.37
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-12T00:00:00+00:00",
+          "cumulative_order_value": 103455.04
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-13T00:00:00+00:00",
+          "cumulative_order_value": 48939.48
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-13T00:00:00+00:00",
+          "cumulative_order_value": 65149.73
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-13T00:00:00+00:00",
+          "cumulative_order_value": 104227.38
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-13T00:00:00+00:00",
+          "cumulative_order_value": 118066.33
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-13T00:00:00+00:00",
+          "cumulative_order_value": 148848.54
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-14T00:00:00+00:00",
+          "cumulative_order_value": 28232.97
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-14T00:00:00+00:00",
+          "cumulative_order_value": 30821.58
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-14T00:00:00+00:00",
+          "cumulative_order_value": 46999.1
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-15T00:00:00+00:00",
+          "cumulative_order_value": 12165.97
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-15T00:00:00+00:00",
+          "cumulative_order_value": 19709.42
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-15T00:00:00+00:00",
+          "cumulative_order_value": 35612.73
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-16T00:00:00+00:00",
+          "cumulative_order_value": 43903.04
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-16T00:00:00+00:00",
+          "cumulative_order_value": 50751.88
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-16T00:00:00+00:00",
+          "cumulative_order_value": 54763.18
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-17T00:00:00+00:00",
+          "cumulative_order_value": 28224.59
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-17T00:00:00+00:00",
+          "cumulative_order_value": 58558.85
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-17T00:00:00+00:00",
+          "cumulative_order_value": 60485.49
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-18T00:00:00+00:00",
+          "cumulative_order_value": 17621.08
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-19T00:00:00+00:00",
+          "cumulative_order_value": 14473.33
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-19T00:00:00+00:00",
+          "cumulative_order_value": 57467.02
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-19T00:00:00+00:00",
+          "cumulative_order_value": 99169.29
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-20T00:00:00+00:00",
+          "cumulative_order_value": 12339.17
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-20T00:00:00+00:00",
+          "cumulative_order_value": 40834.6
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-20T00:00:00+00:00",
+          "cumulative_order_value": 79471.21
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-20T00:00:00+00:00",
+          "cumulative_order_value": 98979.88
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-21T00:00:00+00:00",
+          "cumulative_order_value": 19302.65
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-21T00:00:00+00:00",
+          "cumulative_order_value": 55556.85
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-22T00:00:00+00:00",
+          "cumulative_order_value": 36068.44
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-22T00:00:00+00:00",
+          "cumulative_order_value": 45419.46
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-22T00:00:00+00:00",
+          "cumulative_order_value": 75318.57
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-23T00:00:00+00:00",
+          "cumulative_order_value": 14931.09
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-23T00:00:00+00:00",
+          "cumulative_order_value": 26856.58
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-24T00:00:00+00:00",
+          "cumulative_order_value": 14949.72
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-24T00:00:00+00:00",
+          "cumulative_order_value": 16563.71
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-24T00:00:00+00:00",
+          "cumulative_order_value": 60825.31
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-24T00:00:00+00:00",
+          "cumulative_order_value": 109445.25
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-24T00:00:00+00:00",
+          "cumulative_order_value": 144937.39
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-24T00:00:00+00:00",
+          "cumulative_order_value": 193401.07
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-25T00:00:00+00:00",
+          "cumulative_order_value": 39208.93
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-25T00:00:00+00:00",
+          "cumulative_order_value": 50990.78
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-25T00:00:00+00:00",
+          "cumulative_order_value": 73591.46
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-26T00:00:00+00:00",
+          "cumulative_order_value": 46413.9
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-26T00:00:00+00:00",
+          "cumulative_order_value": 93592.11
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-26T00:00:00+00:00",
+          "cumulative_order_value": 107663.69
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-26T00:00:00+00:00",
+          "cumulative_order_value": 137666.77
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-26T00:00:00+00:00",
+          "cumulative_order_value": 176193.49
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-27T00:00:00+00:00",
+          "cumulative_order_value": 9282.86
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-27T00:00:00+00:00",
+          "cumulative_order_value": 11058.77
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-27T00:00:00+00:00",
+          "cumulative_order_value": 55479.67
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-28T00:00:00+00:00",
+          "cumulative_order_value": 9869.03
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-28T00:00:00+00:00",
+          "cumulative_order_value": 37130.96
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-28T00:00:00+00:00",
+          "cumulative_order_value": 80046.56
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-28T00:00:00+00:00",
+          "cumulative_order_value": 101792.52
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-28T00:00:00+00:00",
+          "cumulative_order_value": 118657.43
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-29T00:00:00+00:00",
+          "cumulative_order_value": 24372.46
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-29T00:00:00+00:00",
+          "cumulative_order_value": 73999.68
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-29T00:00:00+00:00",
+          "cumulative_order_value": 119529.59
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-29T00:00:00+00:00",
+          "cumulative_order_value": 132966.06
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-30T00:00:00+00:00",
+          "cumulative_order_value": 28625.3
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-30T00:00:00+00:00",
+          "cumulative_order_value": 77092.41
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-30T00:00:00+00:00",
+          "cumulative_order_value": 91941.72
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-30T00:00:00+00:00",
+          "cumulative_order_value": 138863.52
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-30T00:00:00+00:00",
+          "cumulative_order_value": 167147.45
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-31T00:00:00+00:00",
+          "cumulative_order_value": 42533.08
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-31T00:00:00+00:00",
+          "cumulative_order_value": 90041
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-05-31T00:00:00+00:00",
+          "cumulative_order_value": 122681.96
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-01T00:00:00+00:00",
+          "cumulative_order_value": 41410.11
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-01T00:00:00+00:00",
+          "cumulative_order_value": 79695.34
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-01T00:00:00+00:00",
+          "cumulative_order_value": 124395.2
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-01T00:00:00+00:00",
+          "cumulative_order_value": 158595.65
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-01T00:00:00+00:00",
+          "cumulative_order_value": 205473.61
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-02T00:00:00+00:00",
+          "cumulative_order_value": 35526.17
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-02T00:00:00+00:00",
+          "cumulative_order_value": 68320.62
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-02T00:00:00+00:00",
+          "cumulative_order_value": 88201.03
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-03T00:00:00+00:00",
+          "cumulative_order_value": 4034.07
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-03T00:00:00+00:00",
+          "cumulative_order_value": 44300.55
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-03T00:00:00+00:00",
+          "cumulative_order_value": 45256.55
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-03T00:00:00+00:00",
+          "cumulative_order_value": 51358.39
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-03T00:00:00+00:00",
+          "cumulative_order_value": 84868.57
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-03T00:00:00+00:00",
+          "cumulative_order_value": 103588.83
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-04T00:00:00+00:00",
+          "cumulative_order_value": 8734.27
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-04T00:00:00+00:00",
+          "cumulative_order_value": 24304.58
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-05T00:00:00+00:00",
+          "cumulative_order_value": 15771.97
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-05T00:00:00+00:00",
+          "cumulative_order_value": 18355.92
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-05T00:00:00+00:00",
+          "cumulative_order_value": 33206.07
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-05T00:00:00+00:00",
+          "cumulative_order_value": 74720.08
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-05T00:00:00+00:00",
+          "cumulative_order_value": 117217.62
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-06T00:00:00+00:00",
+          "cumulative_order_value": 29720.57
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-06T00:00:00+00:00",
+          "cumulative_order_value": 78853.63
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-06T00:00:00+00:00",
+          "cumulative_order_value": 110475.28
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-07T00:00:00+00:00",
+          "cumulative_order_value": 49704.79
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-07T00:00:00+00:00",
+          "cumulative_order_value": 79224.5
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-08T00:00:00+00:00",
+          "cumulative_order_value": 49129.44
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-08T00:00:00+00:00",
+          "cumulative_order_value": 79570.44
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-08T00:00:00+00:00",
+          "cumulative_order_value": 81969.33
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-09T00:00:00+00:00",
+          "cumulative_order_value": 1118.24
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-09T00:00:00+00:00",
+          "cumulative_order_value": 6096.37
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-10T00:00:00+00:00",
+          "cumulative_order_value": 27726.98
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-10T00:00:00+00:00",
+          "cumulative_order_value": 39315.55
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-10T00:00:00+00:00",
+          "cumulative_order_value": 39588.65
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-10T00:00:00+00:00",
+          "cumulative_order_value": 66848.77
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-10T00:00:00+00:00",
+          "cumulative_order_value": 113262.95
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-11T00:00:00+00:00",
+          "cumulative_order_value": 3138.98
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-11T00:00:00+00:00",
+          "cumulative_order_value": 21471.52
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-11T00:00:00+00:00",
+          "cumulative_order_value": 34449.32
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-12T00:00:00+00:00",
+          "cumulative_order_value": 33943.38
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-12T00:00:00+00:00",
+          "cumulative_order_value": 65782.23
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-13T00:00:00+00:00",
+          "cumulative_order_value": 25544.9
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-14T00:00:00+00:00",
+          "cumulative_order_value": 8038.58
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-14T00:00:00+00:00",
+          "cumulative_order_value": 44952.75
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-14T00:00:00+00:00",
+          "cumulative_order_value": 71601.22
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-14T00:00:00+00:00",
+          "cumulative_order_value": 113669.86
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-14T00:00:00+00:00",
+          "cumulative_order_value": 148174.53
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-15T00:00:00+00:00",
+          "cumulative_order_value": 7395.8
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-15T00:00:00+00:00",
+          "cumulative_order_value": 23777.6
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-16T00:00:00+00:00",
+          "cumulative_order_value": 22280.2
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-16T00:00:00+00:00",
+          "cumulative_order_value": 23143.68
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-16T00:00:00+00:00",
+          "cumulative_order_value": 43429.42
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-16T00:00:00+00:00",
+          "cumulative_order_value": 89249.95
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-17T00:00:00+00:00",
+          "cumulative_order_value": 21857.34
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-17T00:00:00+00:00",
+          "cumulative_order_value": 43257.17
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-18T00:00:00+00:00",
+          "cumulative_order_value": 15559.75
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-18T00:00:00+00:00",
+          "cumulative_order_value": 18306.21
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-18T00:00:00+00:00",
+          "cumulative_order_value": 51830.77
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-18T00:00:00+00:00",
+          "cumulative_order_value": 83184.71
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-18T00:00:00+00:00",
+          "cumulative_order_value": 108828.69
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-19T00:00:00+00:00",
+          "cumulative_order_value": 46431.4
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-19T00:00:00+00:00",
+          "cumulative_order_value": 94083.27
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-19T00:00:00+00:00",
+          "cumulative_order_value": 110827.67
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-19T00:00:00+00:00",
+          "cumulative_order_value": 149494.99
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-19T00:00:00+00:00",
+          "cumulative_order_value": 171715.86
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-20T00:00:00+00:00",
+          "cumulative_order_value": 1451.18
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-20T00:00:00+00:00",
+          "cumulative_order_value": 46682.43
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-20T00:00:00+00:00",
+          "cumulative_order_value": 54155.73
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-20T00:00:00+00:00",
+          "cumulative_order_value": 80488.68
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-21T00:00:00+00:00",
+          "cumulative_order_value": 28261.2
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-21T00:00:00+00:00",
+          "cumulative_order_value": 64093.66
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-21T00:00:00+00:00",
+          "cumulative_order_value": 104067.78
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-21T00:00:00+00:00",
+          "cumulative_order_value": 114413.57
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-21T00:00:00+00:00",
+          "cumulative_order_value": 158820.73
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-22T00:00:00+00:00",
+          "cumulative_order_value": 14862.37
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-22T00:00:00+00:00",
+          "cumulative_order_value": 38970.78
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-22T00:00:00+00:00",
+          "cumulative_order_value": 73162.93
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-23T00:00:00+00:00",
+          "cumulative_order_value": 21056.69
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-23T00:00:00+00:00",
+          "cumulative_order_value": 52335.03
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-24T00:00:00+00:00",
+          "cumulative_order_value": 9478.46
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-24T00:00:00+00:00",
+          "cumulative_order_value": 18901.25
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-24T00:00:00+00:00",
+          "cumulative_order_value": 24696.78
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-26T00:00:00+00:00",
+          "cumulative_order_value": 49040.01
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-26T00:00:00+00:00",
+          "cumulative_order_value": 59080.38
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-26T00:00:00+00:00",
+          "cumulative_order_value": 71671.28
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-27T00:00:00+00:00",
+          "cumulative_order_value": 11951.87
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-27T00:00:00+00:00",
+          "cumulative_order_value": 57227.62
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-27T00:00:00+00:00",
+          "cumulative_order_value": 69568.45
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-28T00:00:00+00:00",
+          "cumulative_order_value": 15003.78
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-29T00:00:00+00:00",
+          "cumulative_order_value": 17004.62
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-29T00:00:00+00:00",
+          "cumulative_order_value": 56000.93
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-29T00:00:00+00:00",
+          "cumulative_order_value": 99892.62
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-30T00:00:00+00:00",
+          "cumulative_order_value": 4237.07
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-30T00:00:00+00:00",
+          "cumulative_order_value": 48736.02
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-30T00:00:00+00:00",
+          "cumulative_order_value": 97183.97
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-30T00:00:00+00:00",
+          "cumulative_order_value": 129187.21
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-30T00:00:00+00:00",
+          "cumulative_order_value": 171616.72
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-30T00:00:00+00:00",
+          "cumulative_order_value": 179292.95
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-06-30T00:00:00+00:00",
+          "cumulative_order_value": 196044.62
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-01T00:00:00+00:00",
+          "cumulative_order_value": 37513.94
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-01T00:00:00+00:00",
+          "cumulative_order_value": 80561.57
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-01T00:00:00+00:00",
+          "cumulative_order_value": 84118.21
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-01T00:00:00+00:00",
+          "cumulative_order_value": 98816.71
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-01T00:00:00+00:00",
+          "cumulative_order_value": 125815.78
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-02T00:00:00+00:00",
+          "cumulative_order_value": 35435.79
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-03T00:00:00+00:00",
+          "cumulative_order_value": 19402.26
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-04T00:00:00+00:00",
+          "cumulative_order_value": 27339.47
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-04T00:00:00+00:00",
+          "cumulative_order_value": 62245.85
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-04T00:00:00+00:00",
+          "cumulative_order_value": 85036.1
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-04T00:00:00+00:00",
+          "cumulative_order_value": 134381.81
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-04T00:00:00+00:00",
+          "cumulative_order_value": 136708.44
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-04T00:00:00+00:00",
+          "cumulative_order_value": 172536.76
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-04T00:00:00+00:00",
+          "cumulative_order_value": 184365.66
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-04T00:00:00+00:00",
+          "cumulative_order_value": 193204.75
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-05T00:00:00+00:00",
+          "cumulative_order_value": 23234.77
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-05T00:00:00+00:00",
+          "cumulative_order_value": 61323.43
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-05T00:00:00+00:00",
+          "cumulative_order_value": 108766.06
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-05T00:00:00+00:00",
+          "cumulative_order_value": 118475.2
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-06T00:00:00+00:00",
+          "cumulative_order_value": 16463.71
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-06T00:00:00+00:00",
+          "cumulative_order_value": 35420.82
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-07T00:00:00+00:00",
+          "cumulative_order_value": 8676.9
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-07T00:00:00+00:00",
+          "cumulative_order_value": 40869.12
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-07T00:00:00+00:00",
+          "cumulative_order_value": 66810
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-07T00:00:00+00:00",
+          "cumulative_order_value": 87645.34
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-07T00:00:00+00:00",
+          "cumulative_order_value": 128243.84
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-08T00:00:00+00:00",
+          "cumulative_order_value": 31999.99
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-08T00:00:00+00:00",
+          "cumulative_order_value": 78454.19
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-08T00:00:00+00:00",
+          "cumulative_order_value": 87267.03
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-09T00:00:00+00:00",
+          "cumulative_order_value": 43097.52
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-10T00:00:00+00:00",
+          "cumulative_order_value": 45642.1
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-10T00:00:00+00:00",
+          "cumulative_order_value": 65833.06
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-10T00:00:00+00:00",
+          "cumulative_order_value": 84499.64
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-11T00:00:00+00:00",
+          "cumulative_order_value": 30297.7
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-11T00:00:00+00:00",
+          "cumulative_order_value": 66174.6
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-11T00:00:00+00:00",
+          "cumulative_order_value": 80933.62
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-12T00:00:00+00:00",
+          "cumulative_order_value": 33969.36
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-12T00:00:00+00:00",
+          "cumulative_order_value": 40452.4
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-12T00:00:00+00:00",
+          "cumulative_order_value": 85617.56
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-12T00:00:00+00:00",
+          "cumulative_order_value": 120299.52
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-12T00:00:00+00:00",
+          "cumulative_order_value": 161577.06
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-12T00:00:00+00:00",
+          "cumulative_order_value": 209011.42
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-13T00:00:00+00:00",
+          "cumulative_order_value": 31818.85
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-13T00:00:00+00:00",
+          "cumulative_order_value": 58998.7
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-13T00:00:00+00:00",
+          "cumulative_order_value": 83034.62
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-13T00:00:00+00:00",
+          "cumulative_order_value": 118804.75
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-14T00:00:00+00:00",
+          "cumulative_order_value": 19300.97
+        },
+        {
+          "order_channel": "b2b",
+          "placed_date": "2026-07-14T00:00:00+00:00",
+          "cumulative_order_value": 46884.1
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-16T00:00:00+00:00",
+          "cumulative_order_value": 39291.34
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-16T00:00:00+00:00",
+          "cumulative_order_value": 43636.07
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-17T00:00:00+00:00",
+          "cumulative_order_value": 1994.56
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-17T00:00:00+00:00",
+          "cumulative_order_value": 49002.9
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-18T00:00:00+00:00",
+          "cumulative_order_value": 3748.31
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-18T00:00:00+00:00",
+          "cumulative_order_value": 26270.42
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-19T00:00:00+00:00",
+          "cumulative_order_value": 31502.75
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-19T00:00:00+00:00",
+          "cumulative_order_value": 59988.89
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-19T00:00:00+00:00",
+          "cumulative_order_value": 66961.42
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-19T00:00:00+00:00",
+          "cumulative_order_value": 111652.61
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-19T00:00:00+00:00",
+          "cumulative_order_value": 129766.4
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-20T00:00:00+00:00",
+          "cumulative_order_value": 7476.5
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-20T00:00:00+00:00",
+          "cumulative_order_value": 20410.35
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-20T00:00:00+00:00",
+          "cumulative_order_value": 34794.93
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-21T00:00:00+00:00",
+          "cumulative_order_value": 6392.31
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-22T00:00:00+00:00",
+          "cumulative_order_value": 26527.64
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-22T00:00:00+00:00",
+          "cumulative_order_value": 73202.82
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-22T00:00:00+00:00",
+          "cumulative_order_value": 108403.71
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-22T00:00:00+00:00",
+          "cumulative_order_value": 132207.71
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-22T00:00:00+00:00",
+          "cumulative_order_value": 133466.51
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-23T00:00:00+00:00",
+          "cumulative_order_value": 43237.47
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-23T00:00:00+00:00",
+          "cumulative_order_value": 92571
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-23T00:00:00+00:00",
+          "cumulative_order_value": 104383.1
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-24T00:00:00+00:00",
+          "cumulative_order_value": 20464.05
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-24T00:00:00+00:00",
+          "cumulative_order_value": 32784.71
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-24T00:00:00+00:00",
+          "cumulative_order_value": 79742.32
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-24T00:00:00+00:00",
+          "cumulative_order_value": 94249.44
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-24T00:00:00+00:00",
+          "cumulative_order_value": 111958.3
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-24T00:00:00+00:00",
+          "cumulative_order_value": 157059.24
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-25T00:00:00+00:00",
+          "cumulative_order_value": 1275.94
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-25T00:00:00+00:00",
+          "cumulative_order_value": 44677.34
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-25T00:00:00+00:00",
+          "cumulative_order_value": 47665.93
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-25T00:00:00+00:00",
+          "cumulative_order_value": 96810.19
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-25T00:00:00+00:00",
+          "cumulative_order_value": 105612.56
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-25T00:00:00+00:00",
+          "cumulative_order_value": 144794.8
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-26T00:00:00+00:00",
+          "cumulative_order_value": 37816.71
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-26T00:00:00+00:00",
+          "cumulative_order_value": 63686.51
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-27T00:00:00+00:00",
+          "cumulative_order_value": 49674.82
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-27T00:00:00+00:00",
+          "cumulative_order_value": 86459.34
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-27T00:00:00+00:00",
+          "cumulative_order_value": 112219.44
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-27T00:00:00+00:00",
+          "cumulative_order_value": 117339.95
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-28T00:00:00+00:00",
+          "cumulative_order_value": 25843.21
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-30T00:00:00+00:00",
+          "cumulative_order_value": 3610.7
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-04-30T00:00:00+00:00",
+          "cumulative_order_value": 31459.49
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-01T00:00:00+00:00",
+          "cumulative_order_value": 36451.45
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-01T00:00:00+00:00",
+          "cumulative_order_value": 83142.5
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-02T00:00:00+00:00",
+          "cumulative_order_value": 11729.44
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-02T00:00:00+00:00",
+          "cumulative_order_value": 37885.96
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-02T00:00:00+00:00",
+          "cumulative_order_value": 73464.93
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-02T00:00:00+00:00",
+          "cumulative_order_value": 91006.97
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-03T00:00:00+00:00",
+          "cumulative_order_value": 14948.78
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-03T00:00:00+00:00",
+          "cumulative_order_value": 60405.47
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-03T00:00:00+00:00",
+          "cumulative_order_value": 101935.18
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-03T00:00:00+00:00",
+          "cumulative_order_value": 150750.31
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-04T00:00:00+00:00",
+          "cumulative_order_value": 21027.33
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-05T00:00:00+00:00",
+          "cumulative_order_value": 45835.57
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-05T00:00:00+00:00",
+          "cumulative_order_value": 51372.27
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-05T00:00:00+00:00",
+          "cumulative_order_value": 87271.64
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-06T00:00:00+00:00",
+          "cumulative_order_value": 7192.77
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-07T00:00:00+00:00",
+          "cumulative_order_value": 9799.23
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-07T00:00:00+00:00",
+          "cumulative_order_value": 11836.14
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-07T00:00:00+00:00",
+          "cumulative_order_value": 34162.23
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-07T00:00:00+00:00",
+          "cumulative_order_value": 67926.23
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-08T00:00:00+00:00",
+          "cumulative_order_value": 3277.12
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-09T00:00:00+00:00",
+          "cumulative_order_value": 17921.09
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-09T00:00:00+00:00",
+          "cumulative_order_value": 64931.88
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-09T00:00:00+00:00",
+          "cumulative_order_value": 100724.38
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-10T00:00:00+00:00",
+          "cumulative_order_value": 3580.94
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-10T00:00:00+00:00",
+          "cumulative_order_value": 8079.61
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-10T00:00:00+00:00",
+          "cumulative_order_value": 18624.6
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-10T00:00:00+00:00",
+          "cumulative_order_value": 28876.08
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-11T00:00:00+00:00",
+          "cumulative_order_value": 2013.46
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-11T00:00:00+00:00",
+          "cumulative_order_value": 25624.25
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-12T00:00:00+00:00",
+          "cumulative_order_value": 14886.77
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-12T00:00:00+00:00",
+          "cumulative_order_value": 33092.91
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-12T00:00:00+00:00",
+          "cumulative_order_value": 39424.3
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-12T00:00:00+00:00",
+          "cumulative_order_value": 70028.08
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-13T00:00:00+00:00",
+          "cumulative_order_value": 11762.5
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-13T00:00:00+00:00",
+          "cumulative_order_value": 38502.88
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-13T00:00:00+00:00",
+          "cumulative_order_value": 40376.31
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-14T00:00:00+00:00",
+          "cumulative_order_value": 30741.44
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-14T00:00:00+00:00",
+          "cumulative_order_value": 73864.71
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-14T00:00:00+00:00",
+          "cumulative_order_value": 97164.69
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-15T00:00:00+00:00",
+          "cumulative_order_value": 28103.04
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-15T00:00:00+00:00",
+          "cumulative_order_value": 31014.52
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-15T00:00:00+00:00",
+          "cumulative_order_value": 56551.19
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-15T00:00:00+00:00",
+          "cumulative_order_value": 67664.37
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-15T00:00:00+00:00",
+          "cumulative_order_value": 117164.32
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-16T00:00:00+00:00",
+          "cumulative_order_value": 20204.49
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-16T00:00:00+00:00",
+          "cumulative_order_value": 57566.92
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-16T00:00:00+00:00",
+          "cumulative_order_value": 79694.64
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-16T00:00:00+00:00",
+          "cumulative_order_value": 80480.41
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-16T00:00:00+00:00",
+          "cumulative_order_value": 105419.46
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-16T00:00:00+00:00",
+          "cumulative_order_value": 154131.27
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-18T00:00:00+00:00",
+          "cumulative_order_value": 5330.61
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-19T00:00:00+00:00",
+          "cumulative_order_value": 49150.44
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-19T00:00:00+00:00",
+          "cumulative_order_value": 70359.63
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-19T00:00:00+00:00",
+          "cumulative_order_value": 94734.59
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-19T00:00:00+00:00",
+          "cumulative_order_value": 141899.83
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-19T00:00:00+00:00",
+          "cumulative_order_value": 173090.39
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-19T00:00:00+00:00",
+          "cumulative_order_value": 200084.41
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-19T00:00:00+00:00",
+          "cumulative_order_value": 234514.82
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-20T00:00:00+00:00",
+          "cumulative_order_value": 6246.36
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-20T00:00:00+00:00",
+          "cumulative_order_value": 9987.94
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-21T00:00:00+00:00",
+          "cumulative_order_value": 16880.37
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-21T00:00:00+00:00",
+          "cumulative_order_value": 31370.97
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-21T00:00:00+00:00",
+          "cumulative_order_value": 60116.34
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-21T00:00:00+00:00",
+          "cumulative_order_value": 74916.3
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-21T00:00:00+00:00",
+          "cumulative_order_value": 92498.45
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-21T00:00:00+00:00",
+          "cumulative_order_value": 113357.21
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-21T00:00:00+00:00",
+          "cumulative_order_value": 155911.4
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-22T00:00:00+00:00",
+          "cumulative_order_value": 5035.29
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-22T00:00:00+00:00",
+          "cumulative_order_value": 31186.19
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-22T00:00:00+00:00",
+          "cumulative_order_value": 73735.91
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-22T00:00:00+00:00",
+          "cumulative_order_value": 94454.57
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-22T00:00:00+00:00",
+          "cumulative_order_value": 143021.9
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-22T00:00:00+00:00",
+          "cumulative_order_value": 165556.23
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-22T00:00:00+00:00",
+          "cumulative_order_value": 214010.77
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-23T00:00:00+00:00",
+          "cumulative_order_value": 42571
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-23T00:00:00+00:00",
+          "cumulative_order_value": 43287.55
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-23T00:00:00+00:00",
+          "cumulative_order_value": 77141.46
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-24T00:00:00+00:00",
+          "cumulative_order_value": 10116.69
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-24T00:00:00+00:00",
+          "cumulative_order_value": 19581.92
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-24T00:00:00+00:00",
+          "cumulative_order_value": 33321.98
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-24T00:00:00+00:00",
+          "cumulative_order_value": 73386.24
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-24T00:00:00+00:00",
+          "cumulative_order_value": 102034.53
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-25T00:00:00+00:00",
+          "cumulative_order_value": 16635.48
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-25T00:00:00+00:00",
+          "cumulative_order_value": 48331.13
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-25T00:00:00+00:00",
+          "cumulative_order_value": 85517.66
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-25T00:00:00+00:00",
+          "cumulative_order_value": 132325.22
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-26T00:00:00+00:00",
+          "cumulative_order_value": 13649.37
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-26T00:00:00+00:00",
+          "cumulative_order_value": 40802.76
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-26T00:00:00+00:00",
+          "cumulative_order_value": 65476.54
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-26T00:00:00+00:00",
+          "cumulative_order_value": 67258.32
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-27T00:00:00+00:00",
+          "cumulative_order_value": 16080.01
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-28T00:00:00+00:00",
+          "cumulative_order_value": 39329.6
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-28T00:00:00+00:00",
+          "cumulative_order_value": 80490.21
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-28T00:00:00+00:00",
+          "cumulative_order_value": 103339.11
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-29T00:00:00+00:00",
+          "cumulative_order_value": 39243.31
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-29T00:00:00+00:00",
+          "cumulative_order_value": 77469.92
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-29T00:00:00+00:00",
+          "cumulative_order_value": 103352.9
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-29T00:00:00+00:00",
+          "cumulative_order_value": 127410.99
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-30T00:00:00+00:00",
+          "cumulative_order_value": 8416.97
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-05-31T00:00:00+00:00",
+          "cumulative_order_value": 19565.02
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-01T00:00:00+00:00",
+          "cumulative_order_value": 30278.06
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-01T00:00:00+00:00",
+          "cumulative_order_value": 37553.11
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-02T00:00:00+00:00",
+          "cumulative_order_value": 13515.44
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-02T00:00:00+00:00",
+          "cumulative_order_value": 58833.04
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-02T00:00:00+00:00",
+          "cumulative_order_value": 99266.08
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-02T00:00:00+00:00",
+          "cumulative_order_value": 142629.79
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-04T00:00:00+00:00",
+          "cumulative_order_value": 4922.9
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-04T00:00:00+00:00",
+          "cumulative_order_value": 39927.21
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-05T00:00:00+00:00",
+          "cumulative_order_value": 41146.75
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-05T00:00:00+00:00",
+          "cumulative_order_value": 84863.04
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-06T00:00:00+00:00",
+          "cumulative_order_value": 40801.99
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-06T00:00:00+00:00",
+          "cumulative_order_value": 56518.31
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-06T00:00:00+00:00",
+          "cumulative_order_value": 84094.12
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-06T00:00:00+00:00",
+          "cumulative_order_value": 121533.41
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-06T00:00:00+00:00",
+          "cumulative_order_value": 150441.94
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-07T00:00:00+00:00",
+          "cumulative_order_value": 46973.08
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-07T00:00:00+00:00",
+          "cumulative_order_value": 78607.45
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-07T00:00:00+00:00",
+          "cumulative_order_value": 86233.69
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-08T00:00:00+00:00",
+          "cumulative_order_value": 27191.35
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-09T00:00:00+00:00",
+          "cumulative_order_value": 24771.88
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-09T00:00:00+00:00",
+          "cumulative_order_value": 68262.62
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-09T00:00:00+00:00",
+          "cumulative_order_value": 82431.32
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-09T00:00:00+00:00",
+          "cumulative_order_value": 95755.63
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-09T00:00:00+00:00",
+          "cumulative_order_value": 118405.22
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-10T00:00:00+00:00",
+          "cumulative_order_value": 3030.58
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-11T00:00:00+00:00",
+          "cumulative_order_value": 27853.88
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-12T00:00:00+00:00",
+          "cumulative_order_value": 25940.57
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-12T00:00:00+00:00",
+          "cumulative_order_value": 67422.76
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-12T00:00:00+00:00",
+          "cumulative_order_value": 108087.33
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-13T00:00:00+00:00",
+          "cumulative_order_value": 39488.17
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-13T00:00:00+00:00",
+          "cumulative_order_value": 40920.19
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-13T00:00:00+00:00",
+          "cumulative_order_value": 58062.39
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-13T00:00:00+00:00",
+          "cumulative_order_value": 66136.87
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-13T00:00:00+00:00",
+          "cumulative_order_value": 74445.9
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-14T00:00:00+00:00",
+          "cumulative_order_value": 5399.08
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-14T00:00:00+00:00",
+          "cumulative_order_value": 40790.28
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-14T00:00:00+00:00",
+          "cumulative_order_value": 64453.46
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-15T00:00:00+00:00",
+          "cumulative_order_value": 3713.28
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-15T00:00:00+00:00",
+          "cumulative_order_value": 46220.63
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-17T00:00:00+00:00",
+          "cumulative_order_value": 43364.38
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-17T00:00:00+00:00",
+          "cumulative_order_value": 92316.72
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-17T00:00:00+00:00",
+          "cumulative_order_value": 133200.14
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-18T00:00:00+00:00",
+          "cumulative_order_value": 25573.65
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-18T00:00:00+00:00",
+          "cumulative_order_value": 42033.58
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-18T00:00:00+00:00",
+          "cumulative_order_value": 43054.25
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-19T00:00:00+00:00",
+          "cumulative_order_value": 5133.63
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-19T00:00:00+00:00",
+          "cumulative_order_value": 14715.44
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-19T00:00:00+00:00",
+          "cumulative_order_value": 53190.72
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-19T00:00:00+00:00",
+          "cumulative_order_value": 90244.78
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-20T00:00:00+00:00",
+          "cumulative_order_value": 46277.72
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-20T00:00:00+00:00",
+          "cumulative_order_value": 84810.51
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-21T00:00:00+00:00",
+          "cumulative_order_value": 19418.21
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-21T00:00:00+00:00",
+          "cumulative_order_value": 53862.6
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-22T00:00:00+00:00",
+          "cumulative_order_value": 1873.81
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-22T00:00:00+00:00",
+          "cumulative_order_value": 42216.81
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-22T00:00:00+00:00",
+          "cumulative_order_value": 56003.94
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-23T00:00:00+00:00",
+          "cumulative_order_value": 35763.55
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-24T00:00:00+00:00",
+          "cumulative_order_value": 46948.7
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-24T00:00:00+00:00",
+          "cumulative_order_value": 93483.46
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-24T00:00:00+00:00",
+          "cumulative_order_value": 103359.27
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-25T00:00:00+00:00",
+          "cumulative_order_value": 30559.63
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-25T00:00:00+00:00",
+          "cumulative_order_value": 45102.37
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-25T00:00:00+00:00",
+          "cumulative_order_value": 78949.71
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-25T00:00:00+00:00",
+          "cumulative_order_value": 112563.75
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-26T00:00:00+00:00",
+          "cumulative_order_value": 42239.06
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-26T00:00:00+00:00",
+          "cumulative_order_value": 74210.68
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-26T00:00:00+00:00",
+          "cumulative_order_value": 102180.65
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-27T00:00:00+00:00",
+          "cumulative_order_value": 18696.9
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-27T00:00:00+00:00",
+          "cumulative_order_value": 24056.73
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-27T00:00:00+00:00",
+          "cumulative_order_value": 49038.28
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-28T00:00:00+00:00",
+          "cumulative_order_value": 23345.81
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-28T00:00:00+00:00",
+          "cumulative_order_value": 25915.5
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-28T00:00:00+00:00",
+          "cumulative_order_value": 67457.91
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-28T00:00:00+00:00",
+          "cumulative_order_value": 110352.17
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-29T00:00:00+00:00",
+          "cumulative_order_value": 33244.98
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-29T00:00:00+00:00",
+          "cumulative_order_value": 73938.52
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-29T00:00:00+00:00",
+          "cumulative_order_value": 106169.47
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-29T00:00:00+00:00",
+          "cumulative_order_value": 132312.35
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-29T00:00:00+00:00",
+          "cumulative_order_value": 156596.91
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-06-30T00:00:00+00:00",
+          "cumulative_order_value": 32829.19
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-01T00:00:00+00:00",
+          "cumulative_order_value": 23451.37
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-01T00:00:00+00:00",
+          "cumulative_order_value": 30406.74
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-01T00:00:00+00:00",
+          "cumulative_order_value": 79199.45
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-01T00:00:00+00:00",
+          "cumulative_order_value": 103773.35
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-01T00:00:00+00:00",
+          "cumulative_order_value": 108608.07
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-02T00:00:00+00:00",
+          "cumulative_order_value": 18648.39
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-02T00:00:00+00:00",
+          "cumulative_order_value": 30581.8
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-02T00:00:00+00:00",
+          "cumulative_order_value": 62834
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-02T00:00:00+00:00",
+          "cumulative_order_value": 75781.22
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-03T00:00:00+00:00",
+          "cumulative_order_value": 7510.86
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-03T00:00:00+00:00",
+          "cumulative_order_value": 42321.24
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-03T00:00:00+00:00",
+          "cumulative_order_value": 85944.29
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-03T00:00:00+00:00",
+          "cumulative_order_value": 115271.99
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-04T00:00:00+00:00",
+          "cumulative_order_value": 14701.65
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-04T00:00:00+00:00",
+          "cumulative_order_value": 58812.18
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-04T00:00:00+00:00",
+          "cumulative_order_value": 98514.55
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-04T00:00:00+00:00",
+          "cumulative_order_value": 102870.57
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-05T00:00:00+00:00",
+          "cumulative_order_value": 15889.1
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-05T00:00:00+00:00",
+          "cumulative_order_value": 51198.8
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-05T00:00:00+00:00",
+          "cumulative_order_value": 52973
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-06T00:00:00+00:00",
+          "cumulative_order_value": 47757.86
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-07T00:00:00+00:00",
+          "cumulative_order_value": 30067.4
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-07T00:00:00+00:00",
+          "cumulative_order_value": 44535.56
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-07T00:00:00+00:00",
+          "cumulative_order_value": 45596.1
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-08T00:00:00+00:00",
+          "cumulative_order_value": 47328.64
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-08T00:00:00+00:00",
+          "cumulative_order_value": 74188.32
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-08T00:00:00+00:00",
+          "cumulative_order_value": 92115.54
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-08T00:00:00+00:00",
+          "cumulative_order_value": 121674.51
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-09T00:00:00+00:00",
+          "cumulative_order_value": 30320.49
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-09T00:00:00+00:00",
+          "cumulative_order_value": 74905.39
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-10T00:00:00+00:00",
+          "cumulative_order_value": 31692.88
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-10T00:00:00+00:00",
+          "cumulative_order_value": 52503.3
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-10T00:00:00+00:00",
+          "cumulative_order_value": 62130.99
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-10T00:00:00+00:00",
+          "cumulative_order_value": 102703.89
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-11T00:00:00+00:00",
+          "cumulative_order_value": 346.62
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-11T00:00:00+00:00",
+          "cumulative_order_value": 32948.81
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-11T00:00:00+00:00",
+          "cumulative_order_value": 44184.52
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-11T00:00:00+00:00",
+          "cumulative_order_value": 87130.37
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-12T00:00:00+00:00",
+          "cumulative_order_value": 30388.17
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-12T00:00:00+00:00",
+          "cumulative_order_value": 62295.63
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-12T00:00:00+00:00",
+          "cumulative_order_value": 107706.83
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-12T00:00:00+00:00",
+          "cumulative_order_value": 123700.39
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-14T00:00:00+00:00",
+          "cumulative_order_value": 7183.31
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-14T00:00:00+00:00",
+          "cumulative_order_value": 55945.22
+        },
+        {
+          "order_channel": "b2c",
+          "placed_date": "2026-07-15T00:00:00+00:00",
+          "cumulative_order_value": 7042.98
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "placed_date",
+        "type": "temporal"
+      },
+      "y": {
+        "field": "cumulative_order_value",
+        "type": "quantitative"
+      },
+      "color": {
+        "field": "order_channel",
+        "type": "nominal"
+      }
+    },
+    "title": "Cumulative Order Value by Channel Over Time"
+  },
+  "e2_024": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "bar",
+    "data": {
+      "values": [
+        {
+          "item_id": "ITM0020",
+          "total_quantity_sold": 70
+        },
+        {
+          "item_id": "ITM0080",
+          "total_quantity_sold": 67
+        },
+        {
+          "item_id": "ITM0074",
+          "total_quantity_sold": 62
+        },
+        {
+          "item_id": "ITM0022",
+          "total_quantity_sold": 62
+        },
+        {
+          "item_id": "ITM0073",
+          "total_quantity_sold": 59
+        },
+        {
+          "item_id": "ITM0045",
+          "total_quantity_sold": 57
+        },
+        {
+          "item_id": "ITM0086",
+          "total_quantity_sold": 54
+        },
+        {
+          "item_id": "ITM0048",
+          "total_quantity_sold": 54
+        },
+        {
+          "item_id": "ITM0017",
+          "total_quantity_sold": 53
+        },
+        {
+          "item_id": "ITM0064",
+          "total_quantity_sold": 53
+        },
+        {
+          "item_id": "ITM0084",
+          "total_quantity_sold": 51
+        },
+        {
+          "item_id": "ITM0093",
+          "total_quantity_sold": 49
+        },
+        {
+          "item_id": "ITM0083",
+          "total_quantity_sold": 48
+        },
+        {
+          "item_id": "ITM0087",
+          "total_quantity_sold": 47
+        },
+        {
+          "item_id": "ITM0057",
+          "total_quantity_sold": 47
+        },
+        {
+          "item_id": "ITM0070",
+          "total_quantity_sold": 46
+        },
+        {
+          "item_id": "ITM0032",
+          "total_quantity_sold": 46
+        },
+        {
+          "item_id": "ITM0088",
+          "total_quantity_sold": 46
+        },
+        {
+          "item_id": "ITM0031",
+          "total_quantity_sold": 46
+        },
+        {
+          "item_id": "ITM0077",
+          "total_quantity_sold": 45
+        },
+        {
+          "item_id": "ITM0063",
+          "total_quantity_sold": 44
+        },
+        {
+          "item_id": "ITM0066",
+          "total_quantity_sold": 44
+        },
+        {
+          "item_id": "ITM0100",
+          "total_quantity_sold": 44
+        },
+        {
+          "item_id": "ITM0016",
+          "total_quantity_sold": 43
+        },
+        {
+          "item_id": "ITM0008",
+          "total_quantity_sold": 43
+        },
+        {
+          "item_id": "ITM0036",
+          "total_quantity_sold": 42
+        },
+        {
+          "item_id": "ITM0037",
+          "total_quantity_sold": 41
+        },
+        {
+          "item_id": "ITM0090",
+          "total_quantity_sold": 41
+        },
+        {
+          "item_id": "ITM0039",
+          "total_quantity_sold": 40
+        },
+        {
+          "item_id": "ITM0094",
+          "total_quantity_sold": 40
+        },
+        {
+          "item_id": "ITM0006",
+          "total_quantity_sold": 40
+        },
+        {
+          "item_id": "ITM0062",
+          "total_quantity_sold": 39
+        },
+        {
+          "item_id": "ITM0046",
+          "total_quantity_sold": 39
+        },
+        {
+          "item_id": "ITM0065",
+          "total_quantity_sold": 38
+        },
+        {
+          "item_id": "ITM0011",
+          "total_quantity_sold": 38
+        },
+        {
+          "item_id": "ITM0069",
+          "total_quantity_sold": 37
+        },
+        {
+          "item_id": "ITM0018",
+          "total_quantity_sold": 36
+        },
+        {
+          "item_id": "ITM0076",
+          "total_quantity_sold": 36
+        },
+        {
+          "item_id": "ITM0051",
+          "total_quantity_sold": 36
+        },
+        {
+          "item_id": "ITM0099",
+          "total_quantity_sold": 36
+        },
+        {
+          "item_id": "ITM0047",
+          "total_quantity_sold": 36
+        },
+        {
+          "item_id": "ITM0010",
+          "total_quantity_sold": 35
+        },
+        {
+          "item_id": "ITM0035",
+          "total_quantity_sold": 34
+        },
+        {
+          "item_id": "ITM0021",
+          "total_quantity_sold": 34
+        },
+        {
+          "item_id": "ITM0096",
+          "total_quantity_sold": 34
+        },
+        {
+          "item_id": "ITM0098",
+          "total_quantity_sold": 34
+        },
+        {
+          "item_id": "ITM0005",
+          "total_quantity_sold": 33
+        },
+        {
+          "item_id": "ITM0043",
+          "total_quantity_sold": 33
+        },
+        {
+          "item_id": "ITM0023",
+          "total_quantity_sold": 32
+        },
+        {
+          "item_id": "ITM0012",
+          "total_quantity_sold": 32
+        },
+        {
+          "item_id": "ITM0040",
+          "total_quantity_sold": 32
+        },
+        {
+          "item_id": "ITM0095",
+          "total_quantity_sold": 31
+        },
+        {
+          "item_id": "ITM0056",
+          "total_quantity_sold": 31
+        },
+        {
+          "item_id": "ITM0085",
+          "total_quantity_sold": 31
+        },
+        {
+          "item_id": "ITM0092",
+          "total_quantity_sold": 31
+        },
+        {
+          "item_id": "ITM0014",
+          "total_quantity_sold": 31
+        },
+        {
+          "item_id": "ITM0091",
+          "total_quantity_sold": 31
+        },
+        {
+          "item_id": "ITM0004",
+          "total_quantity_sold": 31
+        },
+        {
+          "item_id": "ITM0030",
+          "total_quantity_sold": 30
+        },
+        {
+          "item_id": "ITM0072",
+          "total_quantity_sold": 30
+        },
+        {
+          "item_id": "ITM0028",
+          "total_quantity_sold": 30
+        },
+        {
+          "item_id": "ITM0071",
+          "total_quantity_sold": 29
+        },
+        {
+          "item_id": "ITM0053",
+          "total_quantity_sold": 29
+        },
+        {
+          "item_id": "ITM0009",
+          "total_quantity_sold": 29
+        },
+        {
+          "item_id": "ITM0075",
+          "total_quantity_sold": 29
+        },
+        {
+          "item_id": "ITM0029",
+          "total_quantity_sold": 29
+        },
+        {
+          "item_id": "ITM0001",
+          "total_quantity_sold": 28
+        },
+        {
+          "item_id": "ITM0097",
+          "total_quantity_sold": 28
+        },
+        {
+          "item_id": "ITM0044",
+          "total_quantity_sold": 28
+        },
+        {
+          "item_id": "ITM0052",
+          "total_quantity_sold": 28
+        },
+        {
+          "item_id": "ITM0061",
+          "total_quantity_sold": 28
+        },
+        {
+          "item_id": "ITM0089",
+          "total_quantity_sold": 27
+        },
+        {
+          "item_id": "ITM0019",
+          "total_quantity_sold": 27
+        },
+        {
+          "item_id": "ITM0013",
+          "total_quantity_sold": 27
+        },
+        {
+          "item_id": "ITM0042",
+          "total_quantity_sold": 27
+        },
+        {
+          "item_id": "ITM0050",
+          "total_quantity_sold": 27
+        },
+        {
+          "item_id": "ITM0024",
+          "total_quantity_sold": 26
+        },
+        {
+          "item_id": "ITM0060",
+          "total_quantity_sold": 26
+        },
+        {
+          "item_id": "ITM0015",
+          "total_quantity_sold": 25
+        },
+        {
+          "item_id": "ITM0059",
+          "total_quantity_sold": 24
+        },
+        {
+          "item_id": "ITM0081",
+          "total_quantity_sold": 24
+        },
+        {
+          "item_id": "ITM0025",
+          "total_quantity_sold": 24
+        },
+        {
+          "item_id": "ITM0026",
+          "total_quantity_sold": 24
+        },
+        {
+          "item_id": "ITM0054",
+          "total_quantity_sold": 24
+        },
+        {
+          "item_id": "ITM0027",
+          "total_quantity_sold": 23
+        },
+        {
+          "item_id": "ITM0058",
+          "total_quantity_sold": 23
+        },
+        {
+          "item_id": "ITM0034",
+          "total_quantity_sold": 23
+        },
+        {
+          "item_id": "ITM0055",
+          "total_quantity_sold": 22
+        },
+        {
+          "item_id": "ITM0033",
+          "total_quantity_sold": 21
+        },
+        {
+          "item_id": "ITM0079",
+          "total_quantity_sold": 21
+        },
+        {
+          "item_id": "ITM0049",
+          "total_quantity_sold": 21
+        },
+        {
+          "item_id": "ITM0068",
+          "total_quantity_sold": 20
+        },
+        {
+          "item_id": "ITM0003",
+          "total_quantity_sold": 19
+        },
+        {
+          "item_id": "ITM0007",
+          "total_quantity_sold": 17
+        },
+        {
+          "item_id": "ITM0002",
+          "total_quantity_sold": 17
+        },
+        {
+          "item_id": "ITM0041",
+          "total_quantity_sold": 17
+        },
+        {
+          "item_id": "ITM0082",
+          "total_quantity_sold": 17
+        },
+        {
+          "item_id": "ITM0078",
+          "total_quantity_sold": 15
+        },
+        {
+          "item_id": "ITM0038",
+          "total_quantity_sold": 10
+        },
+        {
+          "item_id": "ITM0067",
+          "total_quantity_sold": 7
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "item_id",
+        "type": "nominal"
+      },
+      "y": {
+        "field": "total_quantity_sold",
+        "type": "quantitative",
+        "aggregate": "sum"
+      }
+    },
+    "title": "Top Catalog Items by Quantity Sold"
+  },
+  "e2_025": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "bar",
+    "data": {
+      "values": [
+        {
+          "category": "wrong_item",
+          "avg_resolution_latency_seconds": 322859.42396555556
+        },
+        {
+          "category": "not_delivered",
+          "avg_resolution_latency_seconds": 407858.5825887273
+        },
+        {
+          "category": "refund_delay",
+          "avg_resolution_latency_seconds": 346579.9300808571
+        },
+        {
+          "category": "late_delivery",
+          "avg_resolution_latency_seconds": 311509.598640625
+        },
+        {
+          "category": "damaged_goods",
+          "avg_resolution_latency_seconds": 312506.5806826154
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "category",
+        "type": "nominal"
+      },
+      "y": {
+        "field": "avg_resolution_latency_seconds",
+        "type": "quantitative"
+      }
+    },
+    "title": "Average Resolution Latency per Dispute Category"
+  },
+  "e2_026": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "bar",
+    "data": {
+      "values": [
+        {
+          "hub_location_id": "loc_0003",
+          "orders_count": 44
+        },
+        {
+          "hub_location_id": "loc_0010",
+          "orders_count": 57
+        },
+        {
+          "hub_location_id": "loc_0012",
+          "orders_count": 65
+        },
+        {
+          "hub_location_id": "loc_0020",
+          "orders_count": 52
+        },
+        {
+          "hub_location_id": "loc_0028",
+          "orders_count": 56
+        },
+        {
+          "hub_location_id": "loc_0035",
+          "orders_count": 60
+        },
+        {
+          "hub_location_id": "loc_0036",
+          "orders_count": 60
+        },
+        {
+          "hub_location_id": "loc_0040",
+          "orders_count": 107
+        },
+        {
+          "hub_location_id": "loc_0048",
+          "orders_count": 49
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "hub_location_id",
+        "type": "nominal"
+      },
+      "y": {
+        "field": "orders_count",
+        "type": "quantitative"
+      }
+    },
+    "title": "Orders per Hub Location"
+  },
+  "e2_027": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "bar",
+    "data": {
+      "values": [
+        {
+          "attempt_count": 1,
+          "fulfillment_count": 188
+        },
+        {
+          "attempt_count": 2,
+          "fulfillment_count": 176
+        },
+        {
+          "attempt_count": 3,
+          "fulfillment_count": 186
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "attempt_count",
+        "type": "ordinal"
+      },
+      "y": {
+        "field": "fulfillment_count",
+        "type": "quantitative"
+      }
+    },
+    "title": "Fulfillment Attempts vs Count"
+  },
+  "e2_028": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "line",
+    "data": {
+      "values": [
+        {
+          "month": "2026-04-01T00:00:00+00:00",
+          "total_order_value": 2188407.42
+        },
+        {
+          "month": "2026-05-01T00:00:00+00:00",
+          "total_order_value": 4792306.82
+        },
+        {
+          "month": "2026-06-01T00:00:00+00:00",
+          "total_order_value": 4657476.37
+        },
+        {
+          "month": "2026-07-01T00:00:00+00:00",
+          "total_order_value": 2448458.08
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "month",
+        "type": "temporal"
+      },
+      "y": {
+        "field": "total_order_value",
+        "type": "quantitative"
+      }
+    },
+    "title": "Total Order Value Trend"
+  },
+  "e2_029": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "mark": "bar",
+    "data": {
+      "values": [
+        {
+          "seller_id": "S010",
+          "display_name": "Seller Store 10",
+          "b2b_order_value": 163402.89
+        },
+        {
+          "seller_id": "S030",
+          "display_name": "Seller Store 30",
+          "b2b_order_value": 244993.03
+        },
+        {
+          "seller_id": "S021",
+          "display_name": "Seller Store 21",
+          "b2b_order_value": 154101.6
+        },
+        {
+          "seller_id": "S024",
+          "display_name": "Seller Store 24",
+          "b2b_order_value": 249699.48
+        },
+        {
+          "seller_id": "S025",
+          "display_name": "Seller Store 25",
+          "b2b_order_value": 133864.33
+        },
+        {
+          "seller_id": "S005",
+          "display_name": "Seller Store 5",
+          "b2b_order_value": 267509.67
+        },
+        {
+          "seller_id": "S006",
+          "display_name": "Seller Store 6",
+          "b2b_order_value": 122429.01
+        },
+        {
+          "seller_id": "S016",
+          "display_name": "Seller Store 16",
+          "b2b_order_value": 303135.98
+        },
+        {
+          "seller_id": "S027",
+          "display_name": "Seller Store 27",
+          "b2b_order_value": 255488.06
+        },
+        {
+          "seller_id": "S015",
+          "display_name": "Seller Store 15",
+          "b2b_order_value": 223071.94
+        },
+        {
+          "seller_id": "S011",
+          "display_name": "Seller Store 11",
+          "b2b_order_value": 435394.58
+        },
+        {
+          "seller_id": "S019",
+          "display_name": "Seller Store 19",
+          "b2b_order_value": 226149.98
+        },
+        {
+          "seller_id": "S004",
+          "display_name": "Seller Store 4",
+          "b2b_order_value": 332333.19
+        },
+        {
+          "seller_id": "S029",
+          "display_name": "Seller Store 29",
+          "b2b_order_value": 242396.75
+        },
+        {
+          "seller_id": "S014",
+          "display_name": "Seller Store 14",
+          "b2b_order_value": 276709.87
+        },
+        {
+          "seller_id": "S026",
+          "display_name": "Seller Store 26",
+          "b2b_order_value": 239717.33
+        },
+        {
+          "seller_id": "S022",
+          "display_name": "Seller Store 22",
+          "b2b_order_value": 282901.14
+        },
+        {
+          "seller_id": "S013",
+          "display_name": "Seller Store 13",
+          "b2b_order_value": 194744.76
+        },
+        {
+          "seller_id": "S003",
+          "display_name": "Seller Store 3",
+          "b2b_order_value": 365356.23
+        },
+        {
+          "seller_id": "S001",
+          "display_name": "Seller Store 1",
+          "b2b_order_value": 121327.74
+        },
+        {
+          "seller_id": "S008",
+          "display_name": "Seller Store 8",
+          "b2b_order_value": 299859.6
+        },
+        {
+          "seller_id": "S018",
+          "display_name": "Seller Store 18",
+          "b2b_order_value": 231964.07
+        },
+        {
+          "seller_id": "S023",
+          "display_name": "Seller Store 23",
+          "b2b_order_value": 188578.77
+        },
+        {
+          "seller_id": "S009",
+          "display_name": "Seller Store 9",
+          "b2b_order_value": 232070.28
+        },
+        {
+          "seller_id": "S002",
+          "display_name": "Seller Store 2",
+          "b2b_order_value": 274665.76
+        },
+        {
+          "seller_id": "S020",
+          "display_name": "Seller Store 20",
+          "b2b_order_value": 266310.85
+        },
+        {
+          "seller_id": "S017",
+          "display_name": "Seller Store 17",
+          "b2b_order_value": 270204.34
+        },
+        {
+          "seller_id": "S007",
+          "display_name": "Seller Store 7",
+          "b2b_order_value": 262778.62
+        },
+        {
+          "seller_id": "S012",
+          "display_name": "Seller Store 12",
+          "b2b_order_value": 194461.55
+        },
+        {
+          "seller_id": "S028",
+          "display_name": "Seller Store 28",
+          "b2b_order_value": 246961.35
+        }
+      ]
+    },
+    "encoding": {
+      "x": {
+        "field": "display_name",
+        "type": "nominal"
+      },
+      "y": {
+        "field": "b2b_order_value",
+        "type": "quantitative"
+      }
+    },
+    "title": "B2B Order Value per Seller"
+  },
+  "e2_030": null
+}
