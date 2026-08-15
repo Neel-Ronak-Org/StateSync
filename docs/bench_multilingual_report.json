@@ -1,24 +1,24 @@
 {
   "dv1_control": {
-    "correct": 13,
+    "correct": 16,
     "total": 40,
-    "accuracy": 0.325
+    "accuracy": 0.4
   },
   "dv1_treatment": {
-    "correct": 23,
+    "correct": 26,
     "total": 40,
-    "accuracy": 0.575
+    "accuracy": 0.65
   },
-  "dv1_delta_pp": 24.999999999999993,
+  "dv1_delta_pp": 25.0,
   "english_reference": {
-    "correct": 9,
+    "correct": 12,
     "total": 20,
-    "accuracy": 0.45
+    "accuracy": 0.6
   },
   "dv2_entity_preservation": {
-    "preserved": 18,
+    "preserved": 26,
     "scored": 32,
-    "rate": 0.5625,
+    "rate": 0.8125,
     "detail": {
       "d_ml_001": {
         "all_preserved": true,
@@ -61,22 +61,22 @@
         ]
       },
       "d_ml_005": {
-        "all_preserved": false,
+        "all_preserved": true,
         "detail": [
           {
             "noun": "विक्रेता 5",
             "in_preserved_entities": true,
-            "in_generated_sql": false
+            "in_generated_sql": true
           }
         ]
       },
       "d_ml_006": {
-        "all_preserved": false,
+        "all_preserved": true,
         "detail": [
           {
             "noun": "विक्रेता 6",
             "in_preserved_entities": true,
-            "in_generated_sql": false
+            "in_generated_sql": true
           }
         ]
       },
@@ -101,22 +101,22 @@
         ]
       },
       "d_ml_009": {
-        "all_preserved": false,
+        "all_preserved": true,
         "detail": [
           {
             "noun": "विक्रेता 1",
             "in_preserved_entities": true,
-            "in_generated_sql": false
+            "in_generated_sql": true
           }
         ]
       },
       "d_ml_010": {
-        "all_preserved": false,
+        "all_preserved": true,
         "detail": [
           {
             "noun": "विक्रेता 3",
             "in_preserved_entities": true,
-            "in_generated_sql": false
+            "in_generated_sql": true
           }
         ]
       },
@@ -221,22 +221,22 @@
         ]
       },
       "d_ml_025": {
-        "all_preserved": false,
+        "all_preserved": true,
         "detail": [
           {
             "noun": "Seller Store 13",
             "in_preserved_entities": true,
-            "in_generated_sql": false
+            "in_generated_sql": true
           }
         ]
       },
       "d_ml_026": {
-        "all_preserved": false,
+        "all_preserved": true,
         "detail": [
           {
             "noun": "Seller Store 14",
             "in_preserved_entities": true,
-            "in_generated_sql": false
+            "in_generated_sql": true
           }
         ]
       },
@@ -261,22 +261,22 @@
         ]
       },
       "d_ml_029": {
-        "all_preserved": false,
+        "all_preserved": true,
         "detail": [
           {
             "noun": "Seller Store 9",
             "in_preserved_entities": true,
-            "in_generated_sql": false
+            "in_generated_sql": true
           }
         ]
       },
       "d_ml_030": {
-        "all_preserved": false,
+        "all_preserved": true,
         "detail": [
           {
             "noun": "Seller Store 11",
             "in_preserved_entities": true,
-            "in_generated_sql": false
+            "in_generated_sql": true
           }
         ]
       },
@@ -368,12 +368,12 @@
       "d_ml_005_en": {
         "normalized_query_unchanged": true,
         "control_rows": 0,
-        "treatment_rows": 0
+        "treatment_rows": 1
       },
       "d_ml_006_en": {
         "normalized_query_unchanged": true,
         "control_rows": 0,
-        "treatment_rows": 0
+        "treatment_rows": 2
       },
       "d_ml_007_en": {
         "normalized_query_unchanged": true,
@@ -388,12 +388,12 @@
       "d_ml_009_en": {
         "normalized_query_unchanged": true,
         "control_rows": 0,
-        "treatment_rows": 0
+        "treatment_rows": 1
       },
       "d_ml_010_en": {
         "normalized_query_unchanged": true,
         "control_rows": 0,
-        "treatment_rows": 0
+        "treatment_rows": 1
       },
       "d_ml_011_en": {
         "normalized_query_unchanged": true,
@@ -490,23 +490,23 @@
     },
     "d_ml_005": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "en",
       "normalized_query": "विक्रेता 5 की श्रेणी क्या है?",
       "preserved_entities": {},
-      "executed_sql": null,
+      "executed_sql": "SELECT sellers.category \nFROM sellers \nWHERE sellers.display_name_local = 'विक्रेता 5' LIMIT 1;",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 1
     },
     "d_ml_006": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "en",
       "normalized_query": "विक्रेता 6 की श्रेणी क्या है?",
       "preserved_entities": {},
-      "executed_sql": null,
+      "executed_sql": "SELECT sellers.category \nFROM sellers \nWHERE sellers.display_name_local = 'विक्रेता 6' LIMIT 1;",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 1
     },
     "d_ml_007": {
       "ok": true,
@@ -530,13 +530,13 @@
     },
     "d_ml_009": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "en",
       "normalized_query": "विक्रेता 1 की अनुबंधित SLA कितने घंटे की है?",
       "preserved_entities": {},
-      "executed_sql": null,
+      "executed_sql": "SELECT sellers.contracted_sla_hours \nFROM sellers \nWHERE sellers.display_name_local = 'विक्रेता 1';",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 1
     },
     "d_ml_010": {
       "ok": true,
@@ -544,7 +544,7 @@
       "detected_language": "en",
       "normalized_query": "विक्रेता 3 की अनुबंधित SLA कितने घंटे की है?",
       "preserved_entities": {},
-      "executed_sql": null,
+      "executed_sql": "SELECT sellers.contracted_sla_hours \nFROM sellers \nWHERE sellers.display_name_local = 'अनुबंधित स्ला 3' \nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 0
     },
@@ -704,7 +704,7 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 14 ki category kya hai?",
       "preserved_entities": {},
-      "executed_sql": null,
+      "executed_sql": "SELECT s.display_name_local, c.category\nFROM sellers s\nJOIN catalog_items c ON s.seller_id = c.seller_id\nWHERE s.display_name_local ILIKE '%14 ki%'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 0
     },
@@ -734,7 +734,7 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 9 ka contracted SLA kitne hours ka hai?",
       "preserved_entities": {},
-      "executed_sql": null,
+      "executed_sql": "SELECT s.display_name_local, s.contracted_sla_hours\nFROM sellers s\nJOIN orders o ON s.seller_id = o.seller_id\nWHERE s.display_name_local = 'कॉर्नल स्टोर 9'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 0
     },
@@ -744,7 +744,7 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 11 ka contracted SLA kitne hours ka hai?",
       "preserved_entities": {},
-      "executed_sql": null,
+      "executed_sql": "SELECT s.seller_id, s.display_name_local, s.contracted_sla_hours \nFROM sellers s\nJOIN orders o ON s.seller_id = o.seller_id\nWHERE s.display_name_local = 'स्टोर 11'::text AND s.contracted_sla_hours IS NOT NULL\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 0
     },
@@ -894,7 +894,7 @@
       "detected_language": "en",
       "normalized_query": "What category is Seller Store 5 in?",
       "preserved_entities": {},
-      "executed_sql": null,
+      "executed_sql": "SELECT s.category\nFROM sellers s\nWHERE s.display_name_local = 'पेड़ 5';",
       "candidate_sql": null,
       "row_count": 0
     },
@@ -904,7 +904,7 @@
       "detected_language": "en",
       "normalized_query": "What category is Seller Store 6 in?",
       "preserved_entities": {},
-      "executed_sql": null,
+      "executed_sql": "SELECT s.category\nFROM sellers s\nJOIN catalog_items ci ON s.seller_id = ci.seller_id\nWHERE s.display_name_local = 'Seller Store 6'\nLIMIT 1;",
       "candidate_sql": null,
       "row_count": 0
     },
@@ -934,7 +934,7 @@
       "detected_language": "en",
       "normalized_query": "What is Seller Store 1's contracted SLA in hours?",
       "preserved_entities": {},
-      "executed_sql": null,
+      "executed_sql": "SELECT s.contracted_sla_hours\nFROM sellers s\nWHERE s.display_name_local = 'सेलर स्टोर 1'\nLIMIT 1;",
       "candidate_sql": null,
       "row_count": 0
     },
@@ -944,7 +944,7 @@
       "detected_language": "en",
       "normalized_query": "What is Seller Store 3's contracted SLA in hours?",
       "preserved_entities": {},
-      "executed_sql": null,
+      "executed_sql": "SELECT s.contracted_sla_hours \nFROM sellers s \nWHERE s.display_name_local = 'सिलेड स्टोर 3' \nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 0
     },
@@ -1106,9 +1106,9 @@
       "preserved_entities": {
         "विक्रेता 5": "विक्रेता 5"
       },
-      "executed_sql": null,
+      "executed_sql": "SELECT ci.category \nFROM catalog_items ci\nJOIN sellers s ON ci.seller_id = s.seller_id\nJOIN locations l ON s.location_id = l.location_id\nWHERE s.display_name_local = 'विक्रेता 5' LIMIT 1000;",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 4
     },
     "d_ml_006": {
       "ok": true,
@@ -1118,9 +1118,9 @@
       "preserved_entities": {
         "विक्रेता 6": "विक्रेता 6"
       },
-      "executed_sql": null,
+      "executed_sql": "SELECT ci.category \nFROM catalog_items ci\nJOIN sellers s ON ci.seller_id = s.seller_id\nJOIN locations l ON s.location_id = l.location_id\nWHERE s.display_name_local = 'विक्रेता 6' LIMIT 1000;",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 2
     },
     "d_ml_007": {
       "ok": true,
@@ -1148,27 +1148,27 @@
     },
     "d_ml_009": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "hi",
       "normalized_query": "How many hours is the SLA for seller 1?",
       "preserved_entities": {
         "विक्रेता 1": "विक्रेता 1"
       },
-      "executed_sql": null,
+      "executed_sql": "SELECT sellers.contracted_sla_hours \nFROM sellers \nWHERE sellers.display_name_local = 'विक्रेता 1' LIMIT 1000;",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 1
     },
     "d_ml_010": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "hi",
       "normalized_query": "How many hours is the SLA for seller 3?",
       "preserved_entities": {
         "विक्रेता 3": "विक्रेता 3"
       },
-      "executed_sql": null,
+      "executed_sql": "SELECT sellers.contracted_sla_hours \nFROM sellers \nWHERE sellers.display_name_local = 'विक्रेता 3' LIMIT 1000;",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 1
     },
     "d_ml_011": {
       "ok": true,
@@ -1346,9 +1346,9 @@
       "preserved_entities": {
         "Seller Store 13": "Seller Store 13"
       },
-      "executed_sql": null,
+      "executed_sql": "SELECT ci.category \nFROM sellers s \nJOIN catalog_items ci ON s.seller_id = ci.seller_id \nWHERE s.display_name = 'Seller Store 13' LIMIT 1000;",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 2
     },
     "d_ml_026": {
       "ok": true,
@@ -1358,9 +1358,9 @@
       "preserved_entities": {
         "Seller Store 14": "Seller Store 14"
       },
-      "executed_sql": null,
+      "executed_sql": "SELECT ci.category \nFROM sellers s\nJOIN catalog_items ci ON s.seller_id = ci.seller_id\nWHERE s.display_name = 'Seller Store 14' LIMIT 1000;",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 3
     },
     "d_ml_027": {
       "ok": true,
@@ -1388,15 +1388,15 @@
     },
     "d_ml_029": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "hinglish",
       "normalized_query": "What is the contracted SLA of Seller Store 9 in hours?",
       "preserved_entities": {
         "Seller Store 9": "Seller Store 9"
       },
-      "executed_sql": null,
+      "executed_sql": "SELECT sellers.contracted_sla_hours\nFROM sellers\nWHERE sellers.display_name = 'Seller Store 9'\nLIMIT 1000;",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 1
     },
     "d_ml_030": {
       "ok": true,
@@ -1406,9 +1406,9 @@
       "preserved_entities": {
         "Seller Store 11": "Seller Store 11"
       },
-      "executed_sql": null,
+      "executed_sql": "SELECT sellers.contracted_sla_hours \nFROM sellers \nJOIN orders ON sellers.seller_id = orders.seller_id \nWHERE sellers.display_name = 'Seller Store 11' \nLIMIT 1000;",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 29
     },
     "d_ml_031": {
       "ok": true,
@@ -1576,15 +1576,15 @@
     },
     "d_ml_005_en": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "en",
       "normalized_query": "What category is Seller Store 5 in?",
       "preserved_entities": {
         "Seller Store 5": "Seller Store 5"
       },
-      "executed_sql": null,
+      "executed_sql": "SELECT sellers.category \nFROM sellers \nJOIN locations ON sellers.location_id = locations.location_id \nWHERE sellers.display_name = 'Seller Store 5'::text;",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 1
     },
     "d_ml_006_en": {
       "ok": true,
@@ -1594,9 +1594,9 @@
       "preserved_entities": {
         "Seller Store 6": "Seller Store 6"
       },
-      "executed_sql": null,
+      "executed_sql": "SELECT ci.category \nFROM sellers s\nJOIN catalog_items ci ON s.seller_id = ci.seller_id\nWHERE s.display_name = 'Seller Store 6' LIMIT 1000;",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 2
     },
     "d_ml_007_en": {
       "ok": true,
@@ -1624,27 +1624,27 @@
     },
     "d_ml_009_en": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "en",
       "normalized_query": "What is Seller Store 1's contracted SLA in hours?",
       "preserved_entities": {
         "Seller Store 1": "Seller Store 1"
       },
-      "executed_sql": null,
+      "executed_sql": "SELECT sellers.contracted_sla_hours\nFROM sellers\nWHERE sellers.display_name = 'Seller Store 1' LIMIT 1000;",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 1
     },
     "d_ml_010_en": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "en",
       "normalized_query": "What is Seller Store 3's contracted SLA in hours?",
       "preserved_entities": {
         "Seller Store 3": "Seller Store 3"
       },
-      "executed_sql": null,
+      "executed_sql": "SELECT sellers.contracted_sla_hours\nFROM sellers\nWHERE sellers.display_name = 'Seller Store 3' LIMIT 1000;",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 1
     },
     "d_ml_011_en": {
       "ok": true,

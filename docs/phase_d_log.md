@@ -315,3 +315,72 @@ measurement of *what flipping the default would do today*, which is exactly the
 question §4 asks. A cleaner replication would reset the collection first; that
 was not done, because the decision it informs (don't flip the default) is
 unchanged either way.
+
+---
+
+## M3 re-measurement after the Supervisor routing fix (2026-08-15, F-V3 run)
+
+Run as part of the full F-V3 sequence (flags reset to shipped defaults before
+the step, so no leakage from `check_c2v8.py` — the bug that invalidated an
+earlier run).
+
+| | Phase D (record) | Phase F (pre-fix) | **Post-fix** |
+|---|---|---|---|
+| D-V1 control | 6/40 (15.0%) | 13/40 (32.5%) | **16/40 (40.0%)** |
+| D-V1 treatment | 25/40 (62.5%) | 23/40 (57.5%) | **26/40 (65.0%)** |
+| D-V1 lift | +47.5pp | +25.0pp | **+25.0pp** |
+| D-V2 entity preservation | 27/32 (84.4%) | 18/32 (56.2%) | **26/32 (81.25%)** |
+| English reference line | 16/20 (80.0%) | 9/20 (45.0%) | **12/20 (60.0%)** |
+| D-V3 English untouched | 20/20 | 20/20 | **20/20** |
+
+### The prediction, and how it did
+
+Recorded in `docs/open_items.md` **before** this run, so it could be wrong:
+the `c2g_10` routing defect was costing ~20 of the 35 lost English points, so
+the English line should go 9/20 → roughly 13/20.
+
+**Actual: 12/20.** Directionally right, slightly optimistic. Routing was worth
+**~15pp**, not ~20pp; the unattributed residual is therefore ~20pp rather than
+the ~15pp previously estimated. The estimate is corrected here rather than
+quietly restated.
+
+### D-V2's regression is closed
+
+56.2% → **81.25%**, within run-to-run noise of the 84.4% on record. This was
+the more alarming half of the regression (entity preservation is what D's
+whole normalization design exists to protect) and it is effectively recovered.
+
+### Why the lift stayed at +25pp — and why that is not a failure
+
+The obvious reading is "the fix didn't restore the lift". The data says
+something more specific:
+
+    control    13 → 16   (+3 queries)
+    treatment  23 → 26   (+3 queries)
+
+**Exactly +3 in each arm.** Routing happens *upstream of* normalization —
+`normalize_node` runs before `supervisor_node`, and the routing decision is
+independent of which arm is active — so a routing fix necessarily helps both
+arms equally and leaves the *difference* between them untouched. The lift
+metric was never what the routing bug damaged; the absolute accuracies were.
+
+Following that through changes the interpretation of the "M3 regression"
+itself. Comparing post-fix against the Phase D record:
+
+- **treatment 65.0% > 62.5%** — the arm that actually ships is at its highest
+  measured value, above Phase D;
+- **control 40.0% >> 15.0%** — the no-normalization baseline improved by 25
+  points since Phase D;
+- the lift is smaller **because the control arm got better, not because the
+  treatment arm got worse.**
+
+A shrinking lift over a rising baseline is not the same defect as a falling
+treatment arm, and reporting it as "M3 regressed" without that distinction
+would be misleading. What legitimately remains below the Phase D record is the
+**English reference line (60% vs 80%)**, and that is the residual worth
+chasing — it is unaffected by normalization (D-V3: 20/20 unchanged), so it
+sits in SQL generation, not in the multilingual path.
+
+Candidate 2 (draft-first interrogation) remains the only live hypothesis for
+that residual, and isolating it still needs a miss-path-without-draft-first
+condition that has no toggle today. Not guessed at.

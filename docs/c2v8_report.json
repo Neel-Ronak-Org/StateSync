@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-08-15T11:41:36Z",
+  "generated_at": "2026-08-15T22:14:30Z",
   "novel_path_cache_cold": {
     "correct": 7,
     "scored": 25,
     "accuracy": 0.28
   },
   "cache_hit_path_warm": {
-    "correct": 9,
+    "correct": 8,
     "scored": 25,
-    "accuracy": 0.36
+    "accuracy": 0.32
   },
   "golden_recovery": {
     "results": {
@@ -64,8 +64,8 @@
       }
     },
     "recovered": [
-      "b_008",
-      "b_007"
+      "b_007",
+      "b_008"
     ],
     "still_failing": []
   },
@@ -91,7 +91,7 @@
     "c2g_04": {
       "match": false,
       "memory_hit": false,
-      "row_count": 5,
+      "row_count": 0,
       "expected_row_count": 5
     },
     "c2g_05": {
@@ -241,9 +241,9 @@
       "expected_row_count": 0
     },
     "c2g_04": {
-      "match": true,
-      "memory_hit": true,
-      "row_count": 5,
+      "match": false,
+      "memory_hit": false,
+      "row_count": 0,
       "expected_row_count": 5
     },
     "c2g_05": {
@@ -278,7 +278,7 @@
     },
     "c2g_10": {
       "match": false,
-      "memory_hit": false,
+      "memory_hit": true,
       "row_count": 0,
       "expected_row_count": 0
     },
