@@ -11,8 +11,9 @@ as the historical record and do not edit them to match this summary.
 | [GAP-6](#gap-6) | A5 schema fingerprint hashes PostGIS's `spatial_ref_sys` alongside the 12 real application tables | Open, escalated | No | Team decision (no Part owns this — see below) |
 | [BD7](#bd7) | A7's `transform` items allow `additionalProperties: true`, so a `calculate` transform (ms_05) satisfies the schema; closed by a separate expression audit, not a schema edit | Closed as a decision, not a defect | No | — (recorded; the two-file sync it depends on is the residual risk) |
 | [F-V1 Class 1 & Class 4](#f-v1-class-1--class-4) | Both classes pass structurally on the local model/this browser now, but each rests on something worth re-confirming under different conditions later: Class 4's CSP claim on a browser that actually enforces CSP; Class 1's prompt-injection resistance on the graded model | Passing now; each has a distinct residual condition to re-confirm | No (see entry — deliberately not folded into BD6) | Part F, `F-V1` (run as part of Phase F; re-confirm Class 4 in an enforcing browser, Class 1 informally under the graded model) |
-| [c2g_10 routing](#c2g_10-routing) | "List sellers whose contracted SLA hours has not been set" routes to `docs` instead of `sql` — the word "SLA" pulls a plainly relational question toward the document route | Open, unpatched | No | Part F, `F-V2` (M9 routing determinism) |
-| [Task 10 / E2-V1 — M7 quality](#task-10--e2-v1--m7-quality) | Synthesizer still emits `chart: null` on every route; M7 chart-quality score cannot be measured until it's taught to populate `chart` | Blocked on Synthesizer work, not yet started | **Yes** | Part F, `F-V3` (M7 row); graded number per `rebaseline_runbook.md` |
+| [c2g_10 routing](#c2g_10-routing) | "List sellers whose contracted SLA hours has not been set" routes to `docs` instead of `sql` — the word "SLA" pulls a plainly relational question toward the document route | **Fixed 2026-08-15** (`c735457`); M9 sql now 1.000 incl. 6 new overlap cases. Open only for the M3-recovery measurement | No | Part F, `F-V2` (M9 routing determinism) |
+| [Task 10 / E2-V1 — M7 quality](#task-10--e2-v1--m7-quality) | Synthesizer still emits `chart: null` on every route; M7 chart-quality score cannot be measured until it's taught to populate `chart` | **Built and measured 2026-08-15** (`a00d0d1`). A7 30/30 (binary PASS); M7 0.4850 local provisional. Graded number still owed | **Yes** (graded number only) | Part F, `F-V3` (M7 row); graded number per `rebaseline_runbook.md` |
+| [CSP `unsafe-inline`](#csp-unsafe-inline-in-script-src-raised-by-the-trace-renderer-xss-fix) | `script-src` still allows `'unsafe-inline'` because the app is one inline `<script>`; this is what would have made the (now-fixed) trace-renderer sink executable | Open, deliberately deferred — needs its own change + browser re-verify | No | Beyond F1 Scope; improvement, not a spec requirement |
 | [M3 regression](#m3-regression) | D-V1 lift halved and D-V2 entity preservation dropped since Phase D. **Separation run done:** memory-flip candidate REFUTED; ~20 of the 35 lost English points traced to `c2g_10` misrouting; residual ~15 points still unattributed | Partly closed — one cause identified and shared with `c2g_10`, residual open | No for the identified cause (a routing defect, fixable now); the residual is re-measured by the graded re-baseline anyway | Routing half → fix with `c2g_10`; residual → needs a draft-first toggle that does not yet exist |
 
 ---
@@ -327,3 +328,31 @@ Full write-up: [`docs/phase_e2_log.md`](phase_e2_log.md) ("Not covered,
 deliberately (Task 10)") · packet source:
 [`docs/AGENT_TASKS_phase_e_gap.md`](AGENT_TASKS_phase_e_gap.md) (Task 10) ·
 graded procedure: [`docs/rebaseline_runbook.md`](rebaseline_runbook.md).
+
+## CSP `'unsafe-inline'` in script-src (raised by the trace-renderer XSS fix)
+
+**Status: open, deliberately not fixed in place.** Raised while fixing the
+`renderTrace()` XSS sink (`docs/phase_f_log.md`).
+
+The frontend CSP is strong where E2-V4 requires it — no `'unsafe-eval'`, so
+`Function()` construction is blocked and Vega renders through the AST
+interpreter. But `script-src` still carries `'unsafe-inline'`, because the
+whole application is a single inline `<script>` in `frontend/index.html`.
+
+**Why it matters.** `'unsafe-inline'` is what would have turned the trace
+renderer's `innerHTML` sink into script execution. The sink is fixed, so this
+is no longer a live path — but it is the difference between "one bug away from
+execution" and "not exploitable even with a bug". Defence in depth, in a
+component that renders untrusted database content by design.
+
+**The fix, and why it is not being done blind:** extract the inline script to
+`frontend/app.js`, serve it same-origin, drop `'unsafe-inline'` from
+`script-src`. That is a small change with a real regression surface — E2-V4
+and E2-V6 verify CSP contents and the in-browser A7 validator
+(`window.validateA7Chart`), and both are currently passing. It should be done
+as its own change with the browser half of E2-V3/V4/V6 re-run immediately
+after, not folded into unrelated work.
+
+**Not claimed as a Part F requirement.** F1 Scope asks for CSP without
+`unsafe-eval`, which is satisfied and verified. This is an improvement beyond
+the spec's bar, recorded so it is a decision rather than an oversight.
