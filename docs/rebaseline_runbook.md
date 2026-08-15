@@ -25,14 +25,26 @@ Run in this order and record each result next to its local baseline:
 
 | Check | Metric | Local baseline on record | Graded result |
 |---|---|---|---|
-| C1-V1 | M1 direction | −39.2% tokens, −73.1% steps | ___ |
+| C1-V1 | M1 direction | −39.2% tokens, −73.1% steps (pre-Phase-F; re-run at F-V3 adds one miss-path draft call to the control arm — see `docs/phase_e_gap_log.md` Task 4 — so the fresh number is not directly comparable to this one; diff against the F-V3 re-run's own value, not this row) | ___ |
 | C1-V3 | M2 consistency | FAIL (treat 1.5 vs ctrl 1.0) | ___ |
+| C2-V2 | M5 repair rate | see `docs/phase_f_log.md` F-V3 section for the Phase-F re-run figure (added here; not previously tracked in this table — GAP-8-adjacent completeness gap, closed in Part F) | ___ |
 | C2-V8 | M4 cold / warm | 29.2% / 32.0% | ___ |
 | C2-V1 | 2-hop join redirect | cond 3–4 FAIL | ___ |
 | D-V1 | M3 lift | +47.5pp (15%→62.5%) | ___ |
+| D-V2 | M3 entity preservation | 27/32 (84.4%) — same `bench_multilingual.py` run as D-V1, not a separate script | ___ |
 | D-V6 | spatial exact count | FAIL (41 vs 30) | ___ |
 | E1-V3 | M6 prec/recall/faith | 0.622 / 0.80 / 0.769 | ___ |
-| E2 (Task 10) | M7 chart quality | pending | ___ |
+| E2 (Task 10) | M7 chart quality | pending — Synthesizer does not yet populate `chart` on any route | ___ |
+
+**M9 (F-V2 routing determinism) is intentionally NOT a row above.** Strategy
+§7.0 classifies M9 as model-independent ("a classification property... stand
+as measured on any model") — unlike M2/M4/M6/M7, an M9 number measured on the
+local model is not provisional pending a graded re-run; it is reported as
+final in `docs/metrics-report.md` and `docs/phase_f_log.md` directly. Re-run
+it under the graded model anyway for completeness once the key lands (the
+routing PROMPT could still perform differently under a different model, even
+though the design property being tested does not require re-verification),
+but do not gate anything on that re-run the way BD6 gates M2/M4's checks.
 
 Use the existing scripts unchanged: `bench_memory.py`, `check_consistency.py`,
 `bench_correction.py` / `check_c2v8.py`, `bench_multilingual.py`,

@@ -1,24 +1,24 @@
 {
   "dv1_control": {
-    "correct": 6,
+    "correct": 13,
     "total": 40,
-    "accuracy": 0.15
+    "accuracy": 0.325
   },
   "dv1_treatment": {
-    "correct": 25,
+    "correct": 23,
     "total": 40,
-    "accuracy": 0.625
+    "accuracy": 0.575
   },
-  "dv1_delta_pp": 47.5,
+  "dv1_delta_pp": 24.999999999999993,
   "english_reference": {
-    "correct": 16,
+    "correct": 9,
     "total": 20,
-    "accuracy": 0.8
+    "accuracy": 0.45
   },
   "dv2_entity_preservation": {
-    "preserved": 27,
+    "preserved": 18,
     "scored": 32,
-    "rate": 0.84375,
+    "rate": 0.5625,
     "detail": {
       "d_ml_001": {
         "all_preserved": true,
@@ -61,22 +61,22 @@
         ]
       },
       "d_ml_005": {
-        "all_preserved": true,
+        "all_preserved": false,
         "detail": [
           {
             "noun": "विक्रेता 5",
             "in_preserved_entities": true,
-            "in_generated_sql": true
+            "in_generated_sql": false
           }
         ]
       },
       "d_ml_006": {
-        "all_preserved": true,
+        "all_preserved": false,
         "detail": [
           {
             "noun": "विक्रेता 6",
             "in_preserved_entities": true,
-            "in_generated_sql": true
+            "in_generated_sql": false
           }
         ]
       },
@@ -101,22 +101,22 @@
         ]
       },
       "d_ml_009": {
-        "all_preserved": true,
+        "all_preserved": false,
         "detail": [
           {
             "noun": "विक्रेता 1",
             "in_preserved_entities": true,
-            "in_generated_sql": true
+            "in_generated_sql": false
           }
         ]
       },
       "d_ml_010": {
-        "all_preserved": true,
+        "all_preserved": false,
         "detail": [
           {
             "noun": "विक्रेता 3",
             "in_preserved_entities": true,
-            "in_generated_sql": true
+            "in_generated_sql": false
           }
         ]
       },
@@ -221,22 +221,22 @@
         ]
       },
       "d_ml_025": {
-        "all_preserved": true,
+        "all_preserved": false,
         "detail": [
           {
             "noun": "Seller Store 13",
             "in_preserved_entities": true,
-            "in_generated_sql": true
+            "in_generated_sql": false
           }
         ]
       },
       "d_ml_026": {
-        "all_preserved": true,
+        "all_preserved": false,
         "detail": [
           {
             "noun": "Seller Store 14",
             "in_preserved_entities": true,
-            "in_generated_sql": true
+            "in_generated_sql": false
           }
         ]
       },
@@ -261,22 +261,22 @@
         ]
       },
       "d_ml_029": {
-        "all_preserved": true,
+        "all_preserved": false,
         "detail": [
           {
             "noun": "Seller Store 9",
             "in_preserved_entities": true,
-            "in_generated_sql": true
+            "in_generated_sql": false
           }
         ]
       },
       "d_ml_030": {
-        "all_preserved": true,
+        "all_preserved": false,
         "detail": [
           {
             "noun": "Seller Store 11",
             "in_preserved_entities": true,
-            "in_generated_sql": true
+            "in_generated_sql": false
           }
         ]
       },
@@ -286,7 +286,7 @@
           {
             "noun": "Jaipur",
             "in_preserved_entities": false,
-            "in_generated_sql": true
+            "in_generated_sql": false
           }
         ]
       },
@@ -306,17 +306,17 @@
           {
             "noun": "Lucknow",
             "in_preserved_entities": false,
-            "in_generated_sql": true
+            "in_generated_sql": false
           }
         ]
       },
       "d_ml_034": {
-        "all_preserved": true,
+        "all_preserved": false,
         "detail": [
           {
             "noun": "Nagpur",
             "in_preserved_entities": true,
-            "in_generated_sql": true
+            "in_generated_sql": false
           }
         ]
       },
@@ -326,7 +326,7 @@
           {
             "noun": "Patna",
             "in_preserved_entities": false,
-            "in_generated_sql": true
+            "in_generated_sql": false
           }
         ]
       },
@@ -336,7 +336,7 @@
           {
             "noun": "Indore",
             "in_preserved_entities": false,
-            "in_generated_sql": true
+            "in_generated_sql": false
           }
         ]
       }
@@ -367,13 +367,13 @@
       },
       "d_ml_005_en": {
         "normalized_query_unchanged": true,
-        "control_rows": 1,
-        "treatment_rows": 1
+        "control_rows": 0,
+        "treatment_rows": 0
       },
       "d_ml_006_en": {
         "normalized_query_unchanged": true,
-        "control_rows": 1,
-        "treatment_rows": 1
+        "control_rows": 0,
+        "treatment_rows": 0
       },
       "d_ml_007_en": {
         "normalized_query_unchanged": true,
@@ -387,13 +387,13 @@
       },
       "d_ml_009_en": {
         "normalized_query_unchanged": true,
-        "control_rows": 1,
-        "treatment_rows": 1
+        "control_rows": 0,
+        "treatment_rows": 0
       },
       "d_ml_010_en": {
         "normalized_query_unchanged": true,
-        "control_rows": 1,
-        "treatment_rows": 1
+        "control_rows": 0,
+        "treatment_rows": 0
       },
       "d_ml_011_en": {
         "normalized_query_unchanged": true,
@@ -417,8 +417,8 @@
       },
       "d_ml_015_en": {
         "normalized_query_unchanged": true,
-        "control_rows": 0,
-        "treatment_rows": 0
+        "control_rows": 1,
+        "treatment_rows": 1
       },
       "d_ml_016_en": {
         "normalized_query_unchanged": true,
@@ -450,11 +450,11 @@
   "control_detail": {
     "d_ml_001": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "en",
       "normalized_query": "विक्रेता 1 ने कितने ऑर्डर प्राप्त किए हैं?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM sellers s\nJOIN orders o ON s.seller_id = o.seller_id\nWHERE s.seller_id = '1'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local ILIKE 'विक्रेता 1';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -464,7 +464,7 @@
       "detected_language": "en",
       "normalized_query": "विक्रेता 2 ने कितने ऑर्डर प्राप्त किए हैं?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM sellers s\nJOIN orders o ON s.seller_id = o.seller_id\nWHERE s.seller_id = 'S002' LIMIT 1000;",
+      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local ILIKE 'विक्रेता 2';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -474,17 +474,17 @@
       "detected_language": "en",
       "normalized_query": "विक्रेता 3 के ऑर्डर का कुल मूल्य कितना है?",
       "preserved_entities": {},
-      "executed_sql": "SELECT SUM(order_items.line_value) AS total_order_value\nFROM sellers\nJOIN orders ON sellers.seller_id = orders.seller_id::text\nJOIN order_items ON orders.order_id = order_items.order_id\nWHERE sellers.seller_id = '3'::text;",
+      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'अरब 3'::text;",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_004": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "en",
       "normalized_query": "विक्रेता 4 के ऑर्डर का कुल मूल्य कितना है?",
       "preserved_entities": {},
-      "executed_sql": "SELECT SUM(order_items.line_value) AS total_order_value\nFROM sellers\nJOIN orders ON sellers.seller_id = orders.seller_id\nJOIN order_items ON orders.order_id = order_items.order_id\nWHERE sellers.seller_id::text = '4'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'विक्रेता 4'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -494,7 +494,7 @@
       "detected_language": "en",
       "normalized_query": "विक्रेता 5 की श्रेणी क्या है?",
       "preserved_entities": {},
-      "executed_sql": "SELECT s.category \nFROM sellers s \nWHERE s.seller_id = '5' \nLIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
       "row_count": 0
     },
@@ -504,27 +504,27 @@
       "detected_language": "en",
       "normalized_query": "विक्रेता 6 की श्रेणी क्या है?",
       "preserved_entities": {},
-      "executed_sql": "SELECT s.category \nFROM sellers s \nWHERE s.seller_id = '6' \nLIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
       "row_count": 0
     },
     "d_ml_007": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "en",
       "normalized_query": "विक्रेता 7 के लिए कितने विवाद दर्ज हुए हैं?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(d.dispute_id) AS dispute_count\nFROM sellers s\nJOIN orders o ON s.seller_id = o.seller_id\nJOIN disputes d ON o.order_id = d.order_id\nWHERE s.seller_id = '7';",
+      "executed_sql": "SELECT COUNT(*) \nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.seller_id = 'S007';",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_008": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "en",
       "normalized_query": "विक्रेता 8 के लिए कितने विवाद दर्ज हुए हैं?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(disputes.dispute_id) AS dispute_count \nFROM sellers \nJOIN orders ON sellers.seller_id = orders.seller_id\nJOIN disputes ON orders.order_id = disputes.order_id\nWHERE sellers.seller_id = '8' LIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) \nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.seller_id = 'S008';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -534,7 +534,7 @@
       "detected_language": "en",
       "normalized_query": "विक्रेता 1 की अनुबंधित SLA कितने घंटे की है?",
       "preserved_entities": {},
-      "executed_sql": "SELECT sellers.contracted_sla_hours \nFROM sellers \nWHERE seller_id = '1'::text \nLIMIT 1;",
+      "executed_sql": null,
       "candidate_sql": null,
       "row_count": 0
     },
@@ -544,7 +544,7 @@
       "detected_language": "en",
       "normalized_query": "विक्रेता 3 की अनुबंधित SLA कितने घंटे की है?",
       "preserved_entities": {},
-      "executed_sql": "SELECT s.contracted_sla_hours \nFROM sellers s \nWHERE s.seller_id = '3';",
+      "executed_sql": null,
       "candidate_sql": null,
       "row_count": 0
     },
@@ -554,7 +554,7 @@
       "detected_language": "en",
       "normalized_query": "मुंबई में कितने ऑर्डर डिलीवर हुए हैं?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city = 'Mumbai'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city_local = 'मुंबई';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -564,27 +564,27 @@
       "detected_language": "en",
       "normalized_query": "दिल्ली में कितने ऑर्डर डिलीवर हुए हैं?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city_local = 'Dilli';",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city_local = 'दिल्ली';",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_013": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "बेंगलुरु में कितने विक्रेता स्थित हैं?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(s.seller_id) \nFROM sellers s \nJOIN locations l ON s.location_id = l.location_id \nWHERE l.city = 'Bengaluru' LIMIT 1000;",
+      "executed_sql": "SELECT COUNT(DISTINCT s.seller_id) AS seller_count\nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city_local = ' Bengaluru ';",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_014": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "चेन्नई में कितने विक्रेता स्थित हैं?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(s.seller_id) \nFROM sellers s \nJOIN locations l ON s.location_id = l.location_id \nWHERE l.city = 'Chennai'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(DISTINCT s.seller_id) AS seller_count\nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city_local = ' Chennai ';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -594,9 +594,9 @@
       "detected_language": "en",
       "normalized_query": "हैदराबाद के ऑर्डर के लिए औसत डिलीवरी देरी कितने घंटे की है?",
       "preserved_entities": {},
-      "executed_sql": "SELECT \n    EXTRACT(EPOCH FROM (de.occurred_at - o.placed_at)) / 3600 AS average_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    delivery_events de ON f.fulfillment_id = de.fulfillment_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = 'HAIDARABAD'\nLIMIT 1000;",
+      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (e.occurred_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    delivery_events e ON f.fulfillment_id = e.fulfillment_id AND e.event_type = 'DELIVERED'\nWHERE \n    l.city_local = 'हैदराबाद';",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 1
     },
     "d_ml_016": {
       "ok": true,
@@ -604,19 +604,19 @@
       "detected_language": "en",
       "normalized_query": "पुणे के ऑर्डर के लिए औसत डिलीवरी देरी कितने घंटे की है?",
       "preserved_entities": {},
-      "executed_sql": "SELECT AVG(EXTRACT(EPOCH FROM (de.occurred_at - o.placed_at)) / 3600) AS avg_delivery_delay_in_hours\nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nLEFT JOIN fulfillments f ON o.order_id = f.order_id\nLEFT JOIN delivery_events de ON f.fulfillment_id = de.fulfillment_id\nWHERE l.city_local = 'पुणे'\nLIMIT 1000;",
+      "executed_sql": "SELECT \n    (MAX(e.occurred_at) - MIN(f.promised_at))::interval / COUNT(DISTINCT f.order_id) AS avg_delivery_delay_hours\nFROM \n    fulfillments f\nJOIN \n    delivery_events e ON f.fulfillment_id = e.fulfillment_id\nJOIN \n    orders o ON f.order_id = o.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = 'पुणे';",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_017": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "en",
       "normalized_query": "पिछले 30 दिनों में कितने ऑर्डर असफल या वापस हुए हैं?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(fulfillments.fulfillment_id)\nFROM orders\nJOIN fulfillments ON orders.order_id = fulfillments.order_id\nJOIN delivery_events ON fulfillments.fulfillment_id = delivery_events.fulfillment_id\nWHERE fulfillments.status IN ('failed', 'returned')\n  AND delivery_events_occurred_at::timestamptz >= NOW() - INTERVAL '30 days';",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN disputes d ON o.order_id = d.order_id\nWHERE d.raised_at >= NOW() - INTERVAL '30 days';",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 1
     },
     "d_ml_018": {
       "ok": true,
@@ -624,7 +624,7 @@
       "detected_language": "en",
       "normalized_query": "पिछले 60 दिनों में कितने विवाद दर्ज हुए हैं?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(*) \nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nWHERE d.raised_at::timestamptz > NOW() - INTERVAL '60 days'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) AS dispute_count\nFROM disputes\nWHERE raised_at > NOW() - INTERVAL '60 days';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -634,17 +634,17 @@
       "detected_language": "en",
       "normalized_query": "कितने ऑर्डर b2b चैनल के हैं?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) AS b2b_order_count\nFROM orders o\nJOIN network_participants np ON o.buyer_app_id = np.participant_id\nWHERE np.participant_type = 'B2B'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders \nWHERE order_channel = 'b2b' AND placed_at::date >= 'now' - INTERVAL '1 month';",
       "candidate_sql": null,
-      "row_count": 1
+      "row_count": 0
     },
     "d_ml_020": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "en",
       "normalized_query": "कितने ऑर्डर b2c चैनल के हैं?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(*) \nFROM orders o \nJOIN network_participants np ON o.buyer_app_id = np.participant_id \nWHERE np.participant_type = 'C2C';",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders \nWHERE order_channel = 'b2c';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -654,7 +654,7 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 9 ne kitne orders receive kiye hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) AS total_orders\nFROM sellers s\nJOIN orders o ON s.seller_id = o.seller_id\nWHERE LOWER(s.display_name_local) LIKE '%store 9%';",
+      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local ILIKE 'स्टोर 9';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -664,7 +664,7 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 10 ne kitne orders receive kiye hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM sellers s\nJOIN orders o ON s.seller_id = o.seller_id\nWHERE LOWER(s.display_name_local) LIKE '%store 10%';",
+      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM sellers s\nJOIN orders o ON s.seller_id = o.seller_id\nWHERE s.display_name_local ILIKE 'स्टोर 10';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -674,7 +674,7 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 11 ke orders ki total value kitni hai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM sellers JOIN orders ON sellers.seller_id = orders.seller_id\nWHERE LOWER(sellers.display_name_local) LIKE '%store 11%' LIMIT 1000;",
+      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name_local ILIKE '卖家11%';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -684,7 +684,7 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 12 ke orders ki total value kitni hai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM sellers JOIN orders ON sellers.seller_id = orders.seller_id\nWHERE LOWER(sellers.display_name_local) LIKE '%store 12%' LIMIT 1000;",
+      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name_local ILIKE 'स्टोर 12%';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -694,7 +694,7 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 13 ki category kya hai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT s.display_name AS seller_name, c.category\nFROM sellers s\nJOIN catalog_items c ON s.seller_id = c.seller_id\nWHERE s.display_name LIKE '13 ki%'\nLIMIT 1000;",
+      "executed_sql": "SELECT s.display_name_local AS seller_display_name, c.category AS item_category\nFROM sellers s\nJOIN catalog_items c ON s.seller_id = c.seller_id\nWHERE s.display_name_local ILIKE '13%'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 0
     },
@@ -704,7 +704,7 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 14 ki category kya hai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT ci.category\nFROM sellers s\nJOIN catalog_items ci ON s.seller_id = ci.seller_id\nWHERE s.display_name LIKE '14 ki%'\nLIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
       "row_count": 0
     },
@@ -714,7 +714,7 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 15 ke against kitne disputes file hue hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT s.seller_id, o.order_id, di.dispute_id\nFROM sellers s\nJOIN orders o ON s.seller_id = o.seller_id\nJOIN order_items oi ON o.order_id = oi.order_id\nJOIN catalog_items ci ON oi.item_id = ci.item_id\nJOIN disputes di ON o.order_id = di.order_id\nWHERE s.seller_id = 'Seller Store 15'\nLIMIT 1000;",
+      "executed_sql": "SELECT \n    s.display_name,\n    COUNT(d.dispute_id) AS dispute_count\nFROM \n    sellers s\nLEFT JOIN \n    orders o ON s.seller_id = o.seller_id\nLEFT JOIN \n    order_items oi ON o.order_id = oi.order_id\nLEFT JOIN \n    catalog_items ci ON oi.item_id = ci.item_id\nLEFT JOIN \n    disputes d ON o.order_id = d.order_id\nWHERE \n    s.display_name_local ILIKE 'कितने दुकानदार स्टोर 15 के अनुसार'\nGROUP BY \n    s.display_name\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 0
     },
@@ -724,9 +724,9 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 16 ke against kitne disputes file hue hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT ci.seller_id, COUNT(d.dispute_id) AS dispute_count\nFROM catalog_items ci\nJOIN orders o ON ci.order_id = o.order_id\nLEFT JOIN disputes d ON o.order_id = d.order_id\nWHERE ci.seller_id = 'Seller Store 16'\nGROUP BY ci.seller_id\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) AS dispute_count\nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local ILIKE 'Seller Store 16';",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 1
     },
     "d_ml_029": {
       "ok": true,
@@ -734,7 +734,7 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 9 ka contracted SLA kitne hours ka hai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT s.contracted_sla_hours\nFROM sellers s\nWHERE s.display_name = 'स्टोर 9'\nLIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
       "row_count": 0
     },
@@ -744,7 +744,7 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 11 ka contracted SLA kitne hours ka hai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT s.contracted_sla_hours\nFROM sellers s\nWHERE s.display_name = 'स्टोर 11' AND s.contracted_sla_hours IS NOT NULL\nLIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
       "row_count": 0
     },
@@ -754,9 +754,9 @@
       "detected_language": "en",
       "normalized_query": "Jaipur mein kitne orders deliver hue hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT o.order_id\nFROM orders o\nJOIN locations l ON l.location_id = o.ship_to_location_id\nJOIN fulfillments f ON f.order_id = o.order_id\nWHERE l.city = 'Jaipur'::text AND f.delivered_at IS NOT NULL\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city_local = 'जयपुर';",
       "candidate_sql": null,
-      "row_count": 11
+      "row_count": 1
     },
     "d_ml_032": {
       "ok": true,
@@ -764,9 +764,9 @@
       "detected_language": "en",
       "normalized_query": "Surat mein kitne orders deliver hue hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT o.order_id\nFROM orders o\nJOIN locations l ON l.location_id = o.ship_to_location_id\nJOIN fulfillments f ON f.order_id = o.order_id\nWHERE l.city = 'Surat'::text AND f.delivered_at IS NOT NULL\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE l.city_local = 'Surat';",
       "candidate_sql": null,
-      "row_count": 15
+      "row_count": 1
     },
     "d_ml_033": {
       "ok": true,
@@ -774,7 +774,7 @@
       "detected_language": "en",
       "normalized_query": "Lucknow mein kitne sellers located hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(s.seller_id) AS number_of_sellers\nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city_local = 'Lucknow';",
+      "executed_sql": "SELECT COUNT(*) \nFROM locations l\nJOIN sellers s ON l.location_id = s.location_id\nWHERE l.city_local = 'उख्लौंग'::text;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -784,7 +784,7 @@
       "detected_language": "en",
       "normalized_query": "Nagpur mein kitne sellers located hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(s.seller_id) AS number_of_sellers\nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city_local = 'Nagpur';",
+      "executed_sql": "SELECT COUNT(*) \nFROM locations l\nJOIN sellers s ON l.location_id = s.location_id\nWHERE l.city_local = 'नगपुर';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -794,9 +794,9 @@
       "detected_language": "en",
       "normalized_query": "Patna ke orders ke liye average delivery delay kitne hours ki hai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600 AS avg_delivery_delay_hours\nFROM orders o\nJOIN fulfillments f ON o.order_id = f.order_id\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city = 'Patna'\nLIMIT 1000;",
+      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nWHERE \n    l.city_local ILIKE 'पटना%' \nLIMIT 1000;",
       "candidate_sql": null,
-      "row_count": 27
+      "row_count": 1
     },
     "d_ml_036": {
       "ok": true,
@@ -804,19 +804,19 @@
       "detected_language": "en",
       "normalized_query": "Indore ke orders ke liye average delivery delay kitne hours ki hai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600 AS avg_delivery_delay_hours\nFROM orders o\nJOIN fulfillments f ON o.order_id = f.order_id\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city = 'Indore'\nLIMIT 1000;",
+      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nWHERE \n    l.city_local = 'इंदौर';",
       "candidate_sql": null,
-      "row_count": 24
+      "row_count": 1
     },
     "d_ml_037": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "en",
       "normalized_query": "Pichhle 30 dino mein kitne orders fail ya return hue hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(de.order_id)\nFROM delivery_events de\nJOIN fulfillments f ON de.fulfillment_id = f.fulfillment_id\nJOIN orders o ON f.order_id = o.order_id\nWHERE de.event_type IN ('fail', 'return')\n  AND de.occurred_at::timestamptz >= NOW()::timestamptz - INTERVAL '30 days'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN order_items oi ON o.order_id = oi.order_id\nWHERE o.placed_at >= NOW() - INTERVAL '30 days'\nAND EXISTS (\n    SELECT 1 \n    FROM delivery_events de \n    WHERE de.fulfillment_id = o.order_id \n      AND de.event_type IN ('return', 'failure')\n      AND de.occurred_at >= o.placed_at\n)\nLIMIT 1000;",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 1
     },
     "d_ml_038": {
       "ok": true,
@@ -824,27 +824,27 @@
       "detected_language": "en",
       "normalized_query": "Pichhle 60 dino mein kitne disputes file hue hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(*) AS number_of_disputes\nFROM disputes\nWHERE raised_at::date >= NOW()::date - INTERVAL '60 days';",
+      "executed_sql": "SELECT COUNT(*) AS dispute_count\nFROM disputes\nWHERE raised_at >= NOW() - INTERVAL '60 days';",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_039": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "en",
       "normalized_query": "Kitne orders b2b channel ke hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(*) AS b2b_orders_count\nFROM orders o\nJOIN network_participants np ON o.buyer_app_id = np.participant_id\nWHERE o.order_channel = 'B2B'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) FROM orders WHERE order_channel = 'b2b' LIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_040": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "en",
       "normalized_query": "Kitne orders b2c channel ke hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(*) AS b2c_orders_count\nFROM orders o\nJOIN network_participants np ON o.buyer_app_id = np.participant_id\nWHERE o.order_channel = 'B2C'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) FROM orders WHERE order_channel = 'b2c'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -854,7 +854,7 @@
       "detected_language": "en",
       "normalized_query": "How many orders has Seller Store 1 received?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(orders.order_id) AS order_count\nFROM sellers JOIN orders ON sellers.seller_id = orders.seller_id\nWHERE sellers.seller_id = 'Seller Store 1'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'सिलेन्डर स्टोर 1';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -864,57 +864,57 @@
       "detected_language": "en",
       "normalized_query": "How many orders has Seller Store 2 received?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(orders.order_id) AS order_count\nFROM sellers JOIN orders ON sellers.seller_id = orders.seller_id\nWHERE sellers.seller_id = 'Seller Store 2'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o \nJOIN sellers s ON o.seller_id = s.seller_id \nWHERE s.display_name_local = 'Seller Store 2';",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_003_en": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "What is the total order value for Seller Store 3?",
       "preserved_entities": {},
-      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 3';",
+      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'सिलेन्डर स्टोर 3';",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_004_en": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "What is the total order value for Seller Store 4?",
       "preserved_entities": {},
-      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name = 'Seller Store 4'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = '\\u0935\\u093f\\u0915\\u094d\\u0930\\u0947\\u0924\\u093e 4'\nLIMIT 1;",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_005_en": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "What category is Seller Store 5 in?",
       "preserved_entities": {},
-      "executed_sql": "SELECT category FROM sellers WHERE display_name = 'Seller Store 5' LIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
-      "row_count": 1
+      "row_count": 0
     },
     "d_ml_006_en": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "What category is Seller Store 6 in?",
       "preserved_entities": {},
-      "executed_sql": "SELECT category FROM sellers WHERE display_name = 'Seller Store 6' LIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
-      "row_count": 1
+      "row_count": 0
     },
     "d_ml_007_en": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "How many disputes have been raised for Seller Store 7?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(d.dispute_id) AS dispute_count\nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 7';",
+      "executed_sql": "SELECT COUNT(*) \nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'Seller Store 7';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -924,7 +924,7 @@
       "detected_language": "en",
       "normalized_query": "How many disputes have been raised for Seller Store 8?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(d.dispute_id) AS dispute_count\nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 8';",
+      "executed_sql": "SELECT COUNT(*) \nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.seller_id = 'S008';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -934,27 +934,27 @@
       "detected_language": "en",
       "normalized_query": "What is Seller Store 1's contracted SLA in hours?",
       "preserved_entities": {},
-      "executed_sql": "SELECT seller_id, contracted_sla_hours\nFROM sellers\nWHERE display_name = 'Seller Store 1'\nLIMIT 1;",
+      "executed_sql": null,
       "candidate_sql": null,
-      "row_count": 1
+      "row_count": 0
     },
     "d_ml_010_en": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "What is Seller Store 3's contracted SLA in hours?",
       "preserved_entities": {},
-      "executed_sql": "SELECT sellers.contracted_sla_hours\nFROM sellers\nWHERE sellers.display_name = 'Seller Store 3'\nLIMIT 1;",
+      "executed_sql": null,
       "candidate_sql": null,
-      "row_count": 1
+      "row_count": 0
     },
     "d_ml_011_en": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "How many orders have been delivered to Mumbai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) \nFROM orders o\nJOIN locations l ON l.location_id = o.ship_to_location_id\nJOIN fulfillments f ON f.order_id = o.order_id\nWHERE l.city_local = 'मुंबई'::text AND f.status = 'delivered'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(o.order_id) AS delivered_orders_count\nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city_local = 'मुंबई';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -964,27 +964,27 @@
       "detected_language": "en",
       "normalized_query": "How many orders have been delivered to Delhi?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id)\nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city = 'Delhi'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city_local = 'दिल्ली';",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_013_en": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "How many sellers are located in Bengaluru?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(s.seller_id)\nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city = 'Bengaluru';",
+      "executed_sql": "SELECT COUNT(DISTINCT s.seller_id)\nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city_local = ' Bengaluru';",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_014_en": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "How many sellers are located in Chennai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(s.seller_id) \nFROM sellers s \nJOIN locations l ON s.location_id = l.location_id \nWHERE l.city = 'Chennai';",
+      "executed_sql": "SELECT COUNT(DISTINCT s.seller_id)\nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city_local = ' Chennai';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -994,9 +994,9 @@
       "detected_language": "en",
       "normalized_query": "What is the average delivery delay in hours for orders to Hyderabad?",
       "preserved_entities": {},
-      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - f.promised_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    fulfillments f\nJOIN \n    orders o ON f.order_id = o.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_name = 'Hyderabad'\nLIMIT 1000;",
+      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nWHERE \n    l.city_local = ' Hyderabad'\nLIMIT 1000;",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 1
     },
     "d_ml_016_en": {
       "ok": true,
@@ -1004,7 +1004,7 @@
       "detected_language": "en",
       "normalized_query": "What is the average delivery delay in hours for orders to Pune?",
       "preserved_entities": {},
-      "executed_sql": "SELECT \n    (avg(EXTRACT(EPOCH FROM (de.occurred_at::timestamptz - o.placed_at::timestamptz)) / 3600)::numeric(10,2)) AS average_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    delivery_events de ON f.fulfillment_id = de.fulfillment_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city = 'Pune';",
+      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    fulfillments f\nJOIN \n    orders o ON f.order_id = o.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = 'पुणे';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1014,7 +1014,7 @@
       "detected_language": "en",
       "normalized_query": "How many orders failed or were returned in the last 30 days?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) \nFROM orders o \nJOIN fulfillments f ON o.order_id = f.order_id \nWHERE f.status IN ('failed', 'returned') \nAND f.delivered_at :: timestamptz >= NOW() - INTERVAL '30 days';",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nLEFT JOIN disputes d ON o.order_id = d.order_id\nWHERE o.placed_at >= NOW() - INTERVAL '30 days'\nAND (d.resolved_at IS NULL OR d.category IN ('return', 'failure'));",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1024,17 +1024,17 @@
       "detected_language": "en",
       "normalized_query": "How many disputes have been raised in the last 60 days?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(*) AS dispute_count\nFROM disputes\nWHERE raised_at > NOW() - INTERVAL '60 days';",
+      "executed_sql": "SELECT COUNT(*) \nFROM disputes \nWHERE raised_at > NOW() - INTERVAL '60 days';",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_019_en": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "en",
       "normalized_query": "How many orders are on the b2b channel?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(*) AS b2b_order_count\nFROM orders\nWHERE order_channel = 'B2B';",
+      "executed_sql": "SELECT COUNT(*) AS b2b_order_count\nFROM orders\nWHERE order_channel = 'b2b';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1044,7 +1044,7 @@
       "detected_language": "en",
       "normalized_query": "How many orders are on the b2c channel?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(*) AS b2c_orders_count\nFROM orders\nWHERE order_channel = 'b2c';",
+      "executed_sql": "SELECT COUNT(*) AS b2c_order_count\nFROM orders\nWHERE order_channel = 'b2c';",
       "candidate_sql": null,
       "row_count": 1
     }
@@ -1058,7 +1058,7 @@
       "preserved_entities": {
         "विक्रेता 1": "विक्रेता 1"
       },
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'विक्रेता 1'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'विक्रेता 1'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1070,7 +1070,7 @@
       "preserved_entities": {
         "विक्रेता 2": "विक्रेता 2"
       },
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'विक्रेता 2'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'विक्रेता 2'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1082,7 +1082,7 @@
       "preserved_entities": {
         "विक्रेता 3": "विक्रेता 3"
       },
-      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name_local = 'विक्रेता 3'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'विक्रेता 3'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1094,7 +1094,7 @@
       "preserved_entities": {
         "विक्रेता 4": "विक्रेता 4"
       },
-      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name_local = 'विक्रेता 4'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'विक्रेता 4'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1106,9 +1106,9 @@
       "preserved_entities": {
         "विक्रेता 5": "विक्रेता 5"
       },
-      "executed_sql": "SELECT ci.category\nFROM catalog_items ci\nJOIN sellers s ON ci.seller_id = s.seller_id\nWHERE s.display_name_local = 'विक्रेता 5'\nLIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
-      "row_count": 4
+      "row_count": 0
     },
     "d_ml_006": {
       "ok": true,
@@ -1118,9 +1118,9 @@
       "preserved_entities": {
         "विक्रेता 6": "विक्रेता 6"
       },
-      "executed_sql": "SELECT ci.category\nFROM catalog_items ci\nJOIN sellers s ON ci.seller_id = s.seller_id\nWHERE s.display_name_local = 'विक्रेता 6'\nLIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
-      "row_count": 2
+      "row_count": 0
     },
     "d_ml_007": {
       "ok": true,
@@ -1130,7 +1130,7 @@
       "preserved_entities": {
         "विक्रेता 7": "विक्रेता 7"
       },
-      "executed_sql": "SELECT COUNT(d.dispute_id) AS dispute_count\nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'विक्रेता 7';",
+      "executed_sql": "SELECT COUNT(*) \nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'विक्रेता 7'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1142,7 +1142,7 @@
       "preserved_entities": {
         "विक्रेता 8": "विक्रेता 8"
       },
-      "executed_sql": "SELECT COUNT(disputes.dispute_id) AS dispute_count\nFROM disputes\nJOIN orders ON disputes.order_id = orders.order_id\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name_local = 'विक्रेता 8';",
+      "executed_sql": "SELECT COUNT(*) \nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'विक्रेता 8'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1154,9 +1154,9 @@
       "preserved_entities": {
         "विक्रेता 1": "विक्रेता 1"
       },
-      "executed_sql": "SELECT sellers.contracted_sla_hours\nFROM sellers\nJOIN orders ON sellers.seller_id = orders.seller_id\nWHERE sellers.display_name_local = 'विक्रेता 1'\nLIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
-      "row_count": 17
+      "row_count": 0
     },
     "d_ml_010": {
       "ok": true,
@@ -1166,9 +1166,9 @@
       "preserved_entities": {
         "विक्रेता 3": "विक्रेता 3"
       },
-      "executed_sql": "SELECT sellers.contracted_sla_hours\nFROM sellers\nJOIN orders ON sellers.seller_id = orders.seller_id\nWHERE sellers.display_name_local = 'विक्रेता 3'\nLIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
-      "row_count": 17
+      "row_count": 0
     },
     "d_ml_011": {
       "ok": true,
@@ -1178,7 +1178,7 @@
       "preserved_entities": {
         "मुंबई": "मुंबई"
       },
-      "executed_sql": "SELECT COUNT(o.order_id)\nFROM orders o\nJOIN locations l ON l.location_id = o.ship_to_location_id\nJOIN fulfillments f ON f.order_id = o.order_id\nWHERE l.city_local = 'मुंबई' AND f.status = 'delivered'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(DISTINCT o.order_id) \nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nJOIN fulfillments f ON o.order_id = f.order_id\nWHERE l.city_local = 'मुंबई' AND f.delivered_at IS NOT NULL;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1190,7 +1190,7 @@
       "preserved_entities": {
         "दिल्ली": "दिल्ली"
       },
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city_local = 'दिल्ली';",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city_local = 'दिल्ली';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1202,7 +1202,7 @@
       "preserved_entities": {
         "बेंगलुरु": "बेंगलुरु"
       },
-      "executed_sql": "SELECT COUNT(s.seller_id)\nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city_local = 'बेंगलुरु';",
+      "executed_sql": "SELECT COUNT(DISTINCT s.seller_id)\nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city_local = 'बेंगलुरु' LIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1214,7 +1214,7 @@
       "preserved_entities": {
         "चेन्नई": " Chennai"
       },
-      "executed_sql": "SELECT COUNT(s.seller_id) \nFROM sellers s \nJOIN locations l ON s.location_id = l.location_id \nWHERE l.city_local = 'चेन्नई';",
+      "executed_sql": "SELECT COUNT(*) \nFROM sellers s \nJOIN locations l ON s.location_id = l.location_id \nWHERE l.city_local = 'चेन्नई'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1226,9 +1226,9 @@
       "preserved_entities": {
         "हैदराबाद": "हैदराबाद"
       },
-      "executed_sql": "SELECT \n    EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600 AS delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = 'हैदराबाद'\nGROUP BY \n    EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600\nLIMIT 1000;",
+      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nWHERE \n    l.city_local = 'हैदराबाद';",
       "candidate_sql": null,
-      "row_count": 13
+      "row_count": 1
     },
     "d_ml_016": {
       "ok": true,
@@ -1238,9 +1238,9 @@
       "preserved_entities": {
         "पुणे": "पुणे"
       },
-      "executed_sql": "SELECT \n    EXTRACT(EPOCH FROM (f.delivered_at::timestamptz - o.placed_at::timestamptz)) / 3600 AS delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = 'पुणे'\nGROUP BY \n    EXTRACT(EPOCH FROM (f.delivered_at::timestamptz - o.placed_at::timestamptz)) / 3600\nLIMIT 1000;",
+      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = 'पुणे';",
       "candidate_sql": null,
-      "row_count": 18
+      "row_count": 1
     },
     "d_ml_017": {
       "ok": true,
@@ -1250,7 +1250,7 @@
       "preserved_entities": {
         "पिछले 30 दिनों में": "पिछले 30 दिनों में"
       },
-      "executed_sql": "SELECT COUNT(o.order_id) \nFROM orders o \nJOIN fulfillments f ON o.order_id = f.order_id \nWHERE f.status IN ('failed', 'returned') \nAND f.delivered_at::timestamptz > NOW() - INTERVAL '30 days' \nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN order_items oi ON o.order_id = oi.order_id\nWHERE o.placed_at >= NOW() - INTERVAL '30 days';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1262,7 +1262,7 @@
       "preserved_entities": {
         "पिछले 60 दिनों": "पिछले 60 दिनों"
       },
-      "executed_sql": "SELECT COUNT(*) AS dispute_count\nFROM disputes d\nWHERE d.raised_at > NOW() - INTERVAL '60 days' AND d.raised_at < NOW();",
+      "executed_sql": "SELECT COUNT(*) \nFROM disputes \nWHERE raised_at > NOW() - INTERVAL '60 days'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1274,7 +1274,7 @@
       "preserved_entities": {
         "b2b": "b2b"
       },
-      "executed_sql": "SELECT COUNT(*) AS b2b_order_count\nFROM orders\nWHERE order_channel = 'b2b';",
+      "executed_sql": "SELECT COUNT(*) FROM orders WHERE order_channel = 'b2b'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1286,7 +1286,7 @@
       "preserved_entities": {
         "b2c": "b2c"
       },
-      "executed_sql": "SELECT COUNT(*) AS b2c_order_count\nFROM orders\nWHERE order_channel = 'b2c';",
+      "executed_sql": "SELECT COUNT(*) FROM orders WHERE order_channel = 'b2c'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1298,7 +1298,7 @@
       "preserved_entities": {
         "Seller Store 9": "Seller Store 9"
       },
-      "executed_sql": "SELECT COUNT(orders.order_id) AS order_count\nFROM sellers\nJOIN orders ON sellers.seller_id = orders.seller_id\nWHERE sellers.display_name = 'Seller Store 9';",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 9'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1310,7 +1310,7 @@
       "preserved_entities": {
         "Seller Store 10": "Seller Store 10"
       },
-      "executed_sql": "SELECT COUNT(orders.order_id) AS order_count\nFROM sellers\nJOIN orders ON sellers.seller_id = orders.seller_id\nWHERE sellers.display_name = 'Seller Store 10'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 10'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1322,7 +1322,7 @@
       "preserved_entities": {
         "Seller Store 11": "Seller Store 11"
       },
-      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 11'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 11'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1334,7 +1334,7 @@
       "preserved_entities": {
         "Seller Store 12": "Seller Store 12"
       },
-      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 12'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 12'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1346,21 +1346,21 @@
       "preserved_entities": {
         "Seller Store 13": "Seller Store 13"
       },
-      "executed_sql": "SELECT s.category\nFROM sellers s\nJOIN catalog_items ci ON s.seller_id = ci.seller_id\nWHERE s.display_name_local = 'Seller Store 13'\nLIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
       "row_count": 0
     },
     "d_ml_026": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "hinglish",
       "normalized_query": "What is the category of Seller Store 14?",
       "preserved_entities": {
         "Seller Store 14": "Seller Store 14"
       },
-      "executed_sql": "SELECT sellers.category \nFROM sellers \nWHERE sellers.display_name = 'Seller Store 14' \nLIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
-      "row_count": 1
+      "row_count": 0
     },
     "d_ml_027": {
       "ok": true,
@@ -1370,7 +1370,7 @@
       "preserved_entities": {
         "Seller Store 15": "Seller Store 15"
       },
-      "executed_sql": "SELECT COUNT(d.dispute_id) AS dispute_count\nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 15';",
+      "executed_sql": "SELECT COUNT(*) \nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 15';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1382,33 +1382,33 @@
       "preserved_entities": {
         "Seller Store 16": "Seller Store 16"
       },
-      "executed_sql": "SELECT COUNT(d.dispute_id) AS dispute_count\nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 16';",
+      "executed_sql": "SELECT COUNT(*) \nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 16';",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_029": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "hinglish",
       "normalized_query": "What is the contracted SLA of Seller Store 9 in hours?",
       "preserved_entities": {
         "Seller Store 9": "Seller Store 9"
       },
-      "executed_sql": "SELECT sellers.contracted_sla_hours\nFROM sellers\nWHERE sellers.display_name = 'Seller Store 9';",
+      "executed_sql": null,
       "candidate_sql": null,
-      "row_count": 1
+      "row_count": 0
     },
     "d_ml_030": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "hinglish",
       "normalized_query": "How many hours is the contracted SLA for Seller Store 11?",
       "preserved_entities": {
         "Seller Store 11": "Seller Store 11"
       },
-      "executed_sql": "SELECT sellers.contracted_sla_hours\nFROM sellers\nWHERE sellers.display_name = 'Seller Store 11'\nLIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
-      "row_count": 1
+      "row_count": 0
     },
     "d_ml_031": {
       "ok": true,
@@ -1416,9 +1416,9 @@
       "detected_language": "other",
       "normalized_query": "Jaipur mein kitne orders deliver hue hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT o.order_id\nFROM orders o\nJOIN locations l ON l.location_id = o.ship_to_location_id\nJOIN fulfillments f ON f.order_id = o.order_id\nWHERE l.city = 'Jaipur'::text AND f.delivered_at IS NOT NULL\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city_local = 'जयपुर';",
       "candidate_sql": null,
-      "row_count": 11
+      "row_count": 1
     },
     "d_ml_032": {
       "ok": true,
@@ -1428,7 +1428,7 @@
       "preserved_entities": {
         "Surat": "Surat"
       },
-      "executed_sql": "SELECT COUNT(o.order_id)\nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city_local = 'Surat';",
+      "executed_sql": "SELECT COUNT(DISTINCT o.order_id) \nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nJOIN fulfillments f ON o.order_id = f.order_id\nWHERE l.city_local = 'Surat';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1438,7 +1438,7 @@
       "detected_language": "other",
       "normalized_query": "Lucknow mein kitne sellers located hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(s.seller_id) AS number_of_sellers\nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city_local = 'Lucknow';",
+      "executed_sql": "SELECT COUNT(*) \nFROM locations l\nJOIN sellers s ON l.location_id = s.location_id\nWHERE l.city_local = 'उख्लौंग'::text;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1450,7 +1450,7 @@
       "preserved_entities": {
         "Nagpur": "Nagpur"
       },
-      "executed_sql": "SELECT COUNT(sellers.seller_id)\nFROM sellers\nJOIN locations ON sellers.location_id = locations.location_id\nWHERE locations.city_local = 'Nagpur';",
+      "executed_sql": "SELECT COUNT(*) \nFROM sellers \nWHERE location_id IN (SELECT location_id FROM locations WHERE city_local = 'नागपुर')",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1462,7 +1462,7 @@
       "preserved_entities": {
         "Patna": "पतना"
       },
-      "executed_sql": "SELECT \n    AVG(fulfillments.delivered_at - orders.placed_at) AS avg_delivery_delay_hours\nFROM \n    orders\nJOIN \n    fulfillments ON orders.order_id = fulfillments.order_id\nJOIN \n    locations ON orders.ship_to_location_id = locations.location_id\nWHERE \n    locations.city_local = 'Patna'\nLIMIT 1000;",
+      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nJOIN \n    sellers s ON o.seller_id = s.seller_id\nWHERE \n    l.city_local = 'पतन';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1474,9 +1474,9 @@
       "preserved_entities": {
         "Indore": "इंदौर"
       },
-      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (de.occurred_at AT TIME ZONE 'Asia/Kolkata') - o.placed_at) / 3600) AS avg_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    delivery_events de ON f.fulfillment_id = de.fulfillment_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = 'Indore'\nGROUP BY \n    NULL\nLIMIT 1000;",
+      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nJOIN \n    sellers s ON o.seller_id = s.seller_id\nWHERE \n    l.city_local = 'इंदोर';",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 1
     },
     "d_ml_037": {
       "ok": true,
@@ -1486,7 +1486,7 @@
       "preserved_entities": {
         "Pichhle 30 dino mein": "Pichhle 30 dino mein"
       },
-      "executed_sql": "SELECT COUNT(o.order_id) \nFROM orders o \nJOIN fulfillments f ON o.order_id = f.order_id \nWHERE f.status IN ('failed', 'returned') \n  AND f.delivered_at::timestamptz >= NOW() - INTERVAL '30 days';",
+      "executed_sql": "SELECT COUNT(DISTINCT o.order_id) \nFROM orders o\nLEFT JOIN disputes d ON o.order_id = d.order_id\nWHERE d.resolved_at IS NOT NULL AND d.category IN ('return', 'failure')\nAND o.placed_at >= NOW() - INTERVAL '30 days'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1498,19 +1498,19 @@
       "preserved_entities": {
         "Pichhle 60 dino mein": "Pichhle 60 dino mein"
       },
-      "executed_sql": "SELECT COUNT(*) \nFROM disputes d \nWHERE d.raised_at > NOW() - INTERVAL '60 days' AND d.raised_at IS NOT NULL;",
+      "executed_sql": "SELECT COUNT(*) \nFROM disputes \nWHERE raised_at >= NOW() - INTERVAL '60 days'",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_039": {
       "ok": true,
-      "match": false,
+      "match": true,
       "detected_language": "hi",
       "normalized_query": "How many orders are there in b2b channel?",
       "preserved_entities": {
         "Kitne": "Kitne"
       },
-      "executed_sql": "SELECT COUNT(*) AS order_count\nFROM orders o\nWHERE o.order_channel = 'B2B';",
+      "executed_sql": "SELECT COUNT(*) FROM orders WHERE order_channel = 'b2b'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1522,7 +1522,7 @@
       "preserved_entities": {
         "b2c channel": "b2c channel"
       },
-      "executed_sql": "SELECT COUNT(*) AS order_count\nFROM orders\nWHERE order_channel = 'b2c channel';",
+      "executed_sql": "SELECT COUNT(*) FROM orders WHERE order_channel = 'b2c channel'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1534,7 +1534,7 @@
       "preserved_entities": {
         "Seller Store 1": "Seller Store 1"
       },
-      "executed_sql": "SELECT COUNT(orders.order_id) AS order_count\nFROM sellers\nJOIN orders ON sellers.seller_id = orders.seller_id\nWHERE sellers.display_name = 'Seller Store 1'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 1'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1546,7 +1546,7 @@
       "preserved_entities": {
         "Seller Store 2": "Seller Store 2"
       },
-      "executed_sql": "SELECT COUNT(orders.order_id) AS order_count\nFROM sellers\nJOIN orders ON sellers.seller_id = orders.seller_id\nWHERE sellers.display_name = 'Seller Store 2';",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 2'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1558,7 +1558,7 @@
       "preserved_entities": {
         "Seller Store 3": "Seller Store 3"
       },
-      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 3'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 3'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1570,33 +1570,33 @@
       "preserved_entities": {
         "Seller Store 4": "Seller Store 4"
       },
-      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 4'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 4'",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_005_en": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "What category is Seller Store 5 in?",
       "preserved_entities": {
         "Seller Store 5": "Seller Store 5"
       },
-      "executed_sql": "SELECT sellers.category\nFROM sellers\nWHERE sellers.display_name = 'Seller Store 5'\nLIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
-      "row_count": 1
+      "row_count": 0
     },
     "d_ml_006_en": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "What category is Seller Store 6 in?",
       "preserved_entities": {
         "Seller Store 6": "Seller Store 6"
       },
-      "executed_sql": "SELECT sellers.category\nFROM sellers\nWHERE sellers.display_name = 'Seller Store 6'\nLIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
-      "row_count": 1
+      "row_count": 0
     },
     "d_ml_007_en": {
       "ok": true,
@@ -1606,53 +1606,53 @@
       "preserved_entities": {
         "Seller Store 7": "Seller Store 7"
       },
-      "executed_sql": "SELECT COUNT(d.dispute_id) AS dispute_count\nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 7';",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nLEFT JOIN disputes d ON o.order_id = d.order_id\nWHERE s.display_name = 'Seller Store 7' AND d.raised_at IS NOT NULL;",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_008_en": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "How many disputes have been raised for Seller Store 8?",
       "preserved_entities": {
         "Seller Store 8": "Seller Store 8"
       },
-      "executed_sql": "SELECT COUNT(d.dispute_id) AS dispute_count\nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'Seller Store 8';",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN order_items oi ON o.order_id = oi.order_id\nJOIN catalog_items ci ON oi.item_id = ci.item_id\nJOIN sellers s ON o.seller_id = s.seller_id\nLEFT JOIN disputes d ON o.order_id = d.order_id\nWHERE ci.title_local = 'Seller Store 8'::text;",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_009_en": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "What is Seller Store 1's contracted SLA in hours?",
       "preserved_entities": {
         "Seller Store 1": "Seller Store 1"
       },
-      "executed_sql": "SELECT sellers.contracted_sla_hours\nFROM sellers\nWHERE sellers.display_name = 'Seller Store 1';",
+      "executed_sql": null,
       "candidate_sql": null,
-      "row_count": 1
+      "row_count": 0
     },
     "d_ml_010_en": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "What is Seller Store 3's contracted SLA in hours?",
       "preserved_entities": {
         "Seller Store 3": "Seller Store 3"
       },
-      "executed_sql": "SELECT s.contracted_sla_hours \nFROM sellers s \nWHERE s.display_name = 'Seller Store 3' \nLIMIT 1000;",
+      "executed_sql": null,
       "candidate_sql": null,
-      "row_count": 1
+      "row_count": 0
     },
     "d_ml_011_en": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "How many orders have been delivered to Mumbai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) \nFROM orders o\nJOIN locations l ON l.location_id = o.ship_to_location_id\nJOIN fulfillments f ON f.order_id = o.order_id\nWHERE l.city_local = 'मुंबई'::text AND f.status = 'delivered'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(o.order_id) AS delivered_orders_count\nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city_local = 'मुंबई';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1664,7 +1664,7 @@
       "preserved_entities": {
         "Delhi": "Delhi"
       },
-      "executed_sql": "SELECT COUNT(*) \nFROM orders o \nJOIN locations l ON o.ship_to_location_id = l.location_id \nWHERE l.city_local = 'Delhi';",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city_local = 'दिल्ली';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1676,17 +1676,17 @@
       "preserved_entities": {
         "Bengaluru": "Bengaluru"
       },
-      "executed_sql": "SELECT COUNT(s.seller_id)\nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city_local = 'Bengaluru';",
+      "executed_sql": "SELECT COUNT(*) \nFROM sellers s \nJOIN locations l ON s.location_id = l.location_id \nWHERE l.city_local = 'Bengaluru'",
       "candidate_sql": null,
       "row_count": 1
     },
     "d_ml_014_en": {
       "ok": true,
-      "match": true,
+      "match": false,
       "detected_language": "en",
       "normalized_query": "How many sellers are located in Chennai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(s.seller_id) \nFROM sellers s \nJOIN locations l ON s.location_id = l.location_id \nWHERE l.city = 'Chennai';",
+      "executed_sql": "SELECT COUNT(DISTINCT s.seller_id)\nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city_local = ' Chennai';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1698,9 +1698,9 @@
       "preserved_entities": {
         "Hyderabad": "Hyderabad"
       },
-      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.expected_delivery_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    fulfillments f\nJOIN \n    orders o ON f.order_id = o.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = 'Hyderabad';",
+      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = 'Hyderabad';",
       "candidate_sql": null,
-      "row_count": 0
+      "row_count": 1
     },
     "d_ml_016_en": {
       "ok": true,
@@ -1710,7 +1710,7 @@
       "preserved_entities": {
         "Pune": "Pune"
       },
-      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (de.occurred_at::timestamptz - o.placed_at::timestamptz)) / 3600) AS average_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    delivery_events de ON f.fulfillment_id = de.fulfillment_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = 'Pune';",
+      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = 'पुणे';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1720,7 +1720,7 @@
       "detected_language": "en",
       "normalized_query": "How many orders failed or were returned in the last 30 days?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) \nFROM orders o \nJOIN fulfillments f ON o.order_id = f.order_id \nWHERE f.status IN ('failed', 'returned') \nAND f.delivered_at :: timestamptz >= NOW() - INTERVAL '30 days';",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nLEFT JOIN disputes d ON o.order_id = d.order_id\nWHERE o.placed_at >= NOW() - INTERVAL '30 days'\nAND (d.resolved_at IS NULL OR d.category IN ('return', 'failure'));",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1730,7 +1730,7 @@
       "detected_language": "en",
       "normalized_query": "How many disputes have been raised in the last 60 days?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(*) AS dispute_count\nFROM disputes\nWHERE raised_at > NOW() - INTERVAL '60 days';",
+      "executed_sql": "SELECT COUNT(*) \nFROM disputes \nWHERE raised_at > NOW() - INTERVAL '60 days';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1742,7 +1742,7 @@
       "preserved_entities": {
         "b2b": "b2b"
       },
-      "executed_sql": "SELECT COUNT(*) AS b2b_order_count\nFROM orders\nWHERE order_channel = 'b2b';",
+      "executed_sql": "SELECT COUNT(*) FROM orders WHERE order_channel = 'b2b'",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1754,7 +1754,7 @@
       "preserved_entities": {
         "b2c": "b2c"
       },
-      "executed_sql": "SELECT COUNT(*) AS b2c_order_count\nFROM orders\nWHERE order_channel = 'b2c';",
+      "executed_sql": "SELECT COUNT(*) FROM orders WHERE order_channel = 'b2c'",
       "candidate_sql": null,
       "row_count": 1
     }

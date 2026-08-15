@@ -1,0 +1,368 @@
+{
+  "version": 1,
+  "phase": "f",
+  "generated_by": "scripts/gen_phase_f_routing_fixture.py",
+  "note": "F-V2's fixed 60-query routing set (Appendix 2.2). 20 per route, authored fresh (not reused from other phases' golden sets) so routing is tested on questions the Supervisor prompt was never tuned against. Frozen.",
+  "queries": [
+    {
+      "id": "f_sql_001",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "How many orders were placed in the last 90 days?"
+    },
+    {
+      "id": "f_sql_002",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "What is the total order value for seller S014?"
+    },
+    {
+      "id": "f_sql_003",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "List the top 5 logistics providers by number of fulfillments handled."
+    },
+    {
+      "id": "f_sql_004",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "How many disputes are still unresolved?"
+    },
+    {
+      "id": "f_sql_005",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "What is the average delivery delay across all fulfillments?"
+    },
+    {
+      "id": "f_sql_006",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "Which buyer apps have placed more than 50 orders?"
+    },
+    {
+      "id": "f_sql_007",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "How many catalog items does each seller offer?"
+    },
+    {
+      "id": "f_sql_008",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "What percentage of orders are B2B versus B2C?"
+    },
+    {
+      "id": "f_sql_009",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "List all fulfillments with more than one delivery attempt."
+    },
+    {
+      "id": "f_sql_010",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "How many delivery events were recorded last month, broken down by event type?"
+    },
+    {
+      "id": "f_sql_011",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "Which sellers have never had a dispute raised against them?"
+    },
+    {
+      "id": "f_sql_012",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "What is the median order value across the network?"
+    },
+    {
+      "id": "f_sql_013",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "How many locations are registered in Maharashtra?"
+    },
+    {
+      "id": "f_sql_014",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "List the 10 most recent orders placed in Mumbai."
+    },
+    {
+      "id": "f_sql_015",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "What is the total line value of items sold in the grocery category?"
+    },
+    {
+      "id": "f_sql_016",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "How many logistics providers are B2B-enabled?"
+    },
+    {
+      "id": "f_sql_017",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "Which seller has the highest total order value this quarter?"
+    },
+    {
+      "id": "f_sql_018",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "How many fulfillments are currently in transit?"
+    },
+    {
+      "id": "f_sql_019",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "What is the count of orders per order channel?"
+    },
+    {
+      "id": "f_sql_020",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "List sellers whose contracted SLA hours field is null in the database."
+    },
+    {
+      "id": "f_docs_001",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What is the contracted delivery SLA for supplier S014 in the Metro NCR zone?"
+    },
+    {
+      "id": "f_docs_002",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What penalty percentage does the SLA annexure for logistics provider LP003 specify for missed deliveries?"
+    },
+    {
+      "id": "f_docs_003",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "According to the network's returns policy, what is the window for a customer to initiate a return?"
+    },
+    {
+      "id": "f_docs_004",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What does the data retention policy say about how long delivery event notes are kept?"
+    },
+    {
+      "id": "f_docs_005",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What is the resolution window specified in the dispute resolution policy?"
+    },
+    {
+      "id": "f_docs_006",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What are the seller compliance policy's requirements for catalog listing accuracy?"
+    },
+    {
+      "id": "f_docs_007",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What temperature range does the cold chain SOP require for perishable goods in transit?"
+    },
+    {
+      "id": "f_docs_008",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What is the first step a support agent should take per the customer escalation SOP?"
+    },
+    {
+      "id": "f_docs_009",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "According to the delivery exceptions SOP, what should a courier do if a customer is unavailable at the address?"
+    },
+    {
+      "id": "f_docs_010",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What does the warehouse damage SOP require before a damaged item can be written off?"
+    },
+    {
+      "id": "f_docs_011",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What is the penalty clause in supplier S001's agreement for late delivery?"
+    },
+    {
+      "id": "f_docs_012",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What SLA does supplier S010's agreement commit to for the western region?"
+    },
+    {
+      "id": "f_docs_013",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What refund timeline does the returns and refunds policy specify for electronics?"
+    },
+    {
+      "id": "f_docs_014",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What escalation tier handles disputes that remain unresolved after the SOP's first response window?"
+    },
+    {
+      "id": "f_docs_015",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What does the seller compliance policy say about repeated late fulfillment?"
+    },
+    {
+      "id": "f_docs_016",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What is the SLA annexure penalty for logistics provider LP007 in a missed pickup?"
+    },
+    {
+      "id": "f_docs_017",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What documentation does the warehouse damage SOP require for a damage claim?"
+    },
+    {
+      "id": "f_docs_018",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What does the data retention policy say about dispute narrative retention after resolution?"
+    },
+    {
+      "id": "f_docs_019",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What is supplier S020's contracted SLA per their supplier agreement?"
+    },
+    {
+      "id": "f_docs_020",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What steps does the cold chain SOP specify for a temperature excursion during transit?"
+    },
+    {
+      "id": "f_hybrid_001",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "Which sellers breached their contracted delivery SLA last quarter, and what penalty does their agreement specify?"
+    },
+    {
+      "id": "f_hybrid_002",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "Does seller S014's actual average delivery time exceed the SLA committed in their supplier agreement?"
+    },
+    {
+      "id": "f_hybrid_003",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "How many fulfillments did logistics provider LP003 deliver late, and what penalty does their SLA annexure impose for that?"
+    },
+    {
+      "id": "f_hybrid_004",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "Are the number of unresolved disputes within the window the dispute resolution policy allows, or has it been exceeded?"
+    },
+    {
+      "id": "f_hybrid_005",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "How many returns has seller S001 processed, and does that exceed what the returns policy considers a compliance concern?"
+    },
+    {
+      "id": "f_hybrid_006",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "Which cold-chain category orders had a dispute raised, and does the cold chain SOP's temperature requirement explain the failure?"
+    },
+    {
+      "id": "f_hybrid_007",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "How many disputes are categorized as damage-related, and what does the warehouse damage SOP require for each to be resolved?"
+    },
+    {
+      "id": "f_hybrid_008",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "Which sellers have late-fulfillment rates that the seller compliance policy would flag, and what does that policy say should happen next?"
+    },
+    {
+      "id": "f_hybrid_009",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "Are the unresolved dispute counts for any category approaching the threshold the customer escalation SOP defines for escalation?"
+    },
+    {
+      "id": "f_hybrid_010",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "What is supplier S010's actual fulfillment performance in the western region, and does it meet the SLA in their agreement?"
+    },
+    {
+      "id": "f_hybrid_011",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "How many of logistics provider LP007's fulfillments involved a missed pickup, and what penalty does their SLA annexure specify?"
+    },
+    {
+      "id": "f_hybrid_012",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "Does the count of late deliveries for supplier S020 exceed the tolerance implied by the penalty terms in their agreement?"
+    },
+    {
+      "id": "f_hybrid_013",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "How many orders has seller S025 had returned, and what refund timeline does the returns policy require for those?"
+    },
+    {
+      "id": "f_hybrid_014",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "Which suppliers' contracted_sla_hours in the database differ from the SLA their own agreement document states?"
+    },
+    {
+      "id": "f_hybrid_015",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "How many disputes for seller S005 remain open past the resolution policy's window?"
+    },
+    {
+      "id": "f_hybrid_016",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "What is the average delivery delay for logistics provider LP001, and how does their SLA annexure define an acceptable delay?"
+    },
+    {
+      "id": "f_hybrid_017",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "How many warehouse-damage disputes exist for seller S014, and did their handling follow the warehouse damage SOP's documentation requirement?"
+    },
+    {
+      "id": "f_hybrid_018",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "Which sellers exceed the compliance policy's late-fulfillment threshold based on their actual fulfillment records?"
+    },
+    {
+      "id": "f_hybrid_019",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "How many disputes for supplier S001 were escalated, and does that match what the customer escalation SOP defines as an escalation trigger?"
+    },
+    {
+      "id": "f_hybrid_020",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "Does logistics provider LP005's actual missed-pickup rate exceed what their SLA annexure's penalty clause is priced for?"
+    }
+  ]
+}

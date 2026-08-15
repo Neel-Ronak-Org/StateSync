@@ -35,7 +35,7 @@ from db import init_pool, close_pool, get_connection
 from embeddings import close_embeddings_client
 from fingerprint import verify_fingerprint_at_startup
 from qdrant_store import init_qdrant, close_qdrant
-from session import set_session, get_tenant_id
+from session import set_session, get_tenant_id, enforce_tenancy_policy, TenancyPolicyNotImplemented
 from tools.schema_tools import list_tables, describe_table
 from tools.data_tools import sample_rows, run_select
 from tools.vector_tools import semantic_search, hybrid_select, get_passage
@@ -105,6 +105,16 @@ from uuid import UUID
 def _serialize_json(obj: Any) -> Any:
     if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
         return obj.isoformat()
+    if isinstance(obj, datetime.timedelta):
+        # psycopg maps a Postgres INTERVAL (e.g. AVG(delivered_at -
+        # promised_at)) to timedelta. Previously unhandled: fell through to
+        # the raw object, which Starlette's JSON encoder cannot serialize --
+        # an uncaught TypeError deep in the response path, surfacing as a
+        # 500 transport fault. A4.4 requires a failed query to return
+        # ok:false as data, never a transport-level fault; an aggregate over
+        # a timestamp difference (delivery delay, dispute resolution time,
+        # etc.) is an ordinary, expected result shape, not a failure.
+        return obj.total_seconds()
     if isinstance(obj, Decimal):
         return float(obj) if obj % 1 else int(obj)
     if isinstance(obj, UUID):
@@ -115,7 +125,22 @@ def _serialize_json(obj: Any) -> Any:
         return {k: _serialize_json(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
         return [_serialize_json(x) for x in obj]
-    return obj
+    if isinstance(obj, (str, int, float, bool)) or obj is None:
+        return obj
+    # Catch-all for any remaining psycopg type mapping that JSON cannot
+    # encode natively. Found the hard way twice, one type at a time:
+    # INTERVAL -> timedelta (F-V2 baseline), then INET -> IPv4Address
+    # (F-V1 Class 3). Both surfaced as an uncaught TypeError deep inside
+    # Starlette's encoder, i.e. a 500 transport fault -- exactly what A4.4
+    # forbids ("A failed query returns ok: false ... it does not raise a
+    # transport-level fault"), and worse, a SUCCESSFUL query being reported
+    # as a transport failure. Postgres has many more such types (NUMERIC
+    # ranges, arrays of custom types, JSONB edge cases, CIDR, MACADDR,
+    # tsvector...); enumerating them individually is whack-a-mole. Anything
+    # unrecognized degrades to its string form, which is lossy but honest
+    # and keeps the A4.4 contract intact.
+    logger.debug("Serializing unrecognized type %s via str().", type(obj).__name__)
+    return str(obj)
 
 
 def _jsonrpc_error(request_id: Any, code: int, message: str) -> dict:
@@ -155,6 +180,17 @@ async def rpc_handler(request: Request) -> JSONResponse:
         )
 
     set_session(tenant_id=tenant_id, session_id=session_id)
+
+    # Appendix 4 seam: MCP session policy layer for tenancy.enforced (A0.5).
+    # No-op while the flag is false (the shipped default, D6); real dispatch
+    # point regardless -- see session.enforce_tenancy_policy's docstring.
+    try:
+        enforce_tenancy_policy(tenant_id)
+    except TenancyPolicyNotImplemented as exc:
+        return JSONResponse(
+            _jsonrpc_error(None, -32603, str(exc)),
+            status_code=501,
+        )
 
     # Parse JSON-RPC body
     try:

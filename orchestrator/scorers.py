@@ -207,6 +207,34 @@ class ExecutionScorer:
         }
 
 
+# ── VisionScorer (F-V5 seam; Strategy §6 stretch, D11) ────────────────────────
+class VisionScorer:
+    """
+    VLM-based visual scoring of a rendered chart image (Strategy §6, D11).
+
+    Registered unconditionally (F1 Scope: "VisionScorer registered and
+    flag-disabled"), so `get_scorer("vision")` always resolves -- the seam
+    is real, not a comment (A0.5). Only `.score()` is unbuilt: the actual
+    VLM call is deferred stretch content, and invoking it raises rather
+    than silently returning a fake score.
+
+    F-V5 checks exactly this distinction: with `evaluation.vision_scorer.
+    enabled=false` (the shipped default) the pipeline never calls
+    `.score()` here at all; flipping the flag makes it call `.score()` and
+    get NotImplementedError -- "failing on a missing implementation, not
+    on a missing registration."
+    """
+
+    name = "vision"
+
+    def score(self, generated: Any, reference: Any) -> dict[str, Any]:
+        raise NotImplementedError(
+            "VisionScorer content is Strategy §6 stretch scope (D11) -- the "
+            "VLM call itself is not built. Only the registry seam is (A0.5). "
+            "See Appendix 4: evaluation.vision_scorer.enabled, Part F."
+        )
+
+
 # ── Registry ──────────────────────────────────────────────────────────────────
 _REGISTRY: dict[str, type] = {}
 
@@ -223,6 +251,7 @@ def register_scorer(name: str, scorer_cls: type) -> None:
 
 register_scorer(SpecScorer.name, SpecScorer)
 register_scorer(ExecutionScorer.name, ExecutionScorer)
+register_scorer(VisionScorer.name, VisionScorer)
 
 
 def get_scorer(name: str) -> Scorer:

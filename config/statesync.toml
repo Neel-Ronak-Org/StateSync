@@ -80,10 +80,35 @@ transform_weight          = 0.15
 scorers                   = ["spec", "execution"]
 golden_run_schedule_cron  = "0 * * * *"
 history_retention_runs    = 200
+# F1 Scope: "the Scorer registry with SpecScorer and ExecutionScorer
+# registered and enabled" -- these name the fixtures whose shape matches
+# each registered scorer's own need (reference_spec for spec, ground_truth_sql
+# for execution). See docs/spec-gaps.md GAP-8 for why "the full golden set"
+# is defined this way, since F1 Scope does not itself name a fixture.
+spec_scorer_fixture       = "phase_e2.json"
+execution_scorer_fixture  = "phase_c2.json"
+history_default_limit     = 20      # GET /history default page size
 
 [tenancy]
 default_tenant            = "t_capstone_default"
 enforced                  = false   # D6; threading is mandatory even when false
+
+[experiment]
+# F-V2 over-exposure experiment (M9). Surface sizes reuse mcp.tool_ceiling's
+# own scale (9 = current registered tool count, 15 = the configured ceiling)
+# as decoy-capability-count targets injected into the Supervisor's own
+# classification prompt -- see docs/spec-gaps.md GAP-7 for why: M9 measures
+# Supervisor ROUTING accuracy, and D1 decoupled that 3-route classification
+# from MCP's own tool list, so the surface that can actually move this
+# metric is the Supervisor's own prompt, not MCP's registered RPC methods.
+tool_ceiling_surfaces        = [9, 15, 25, 40]
+tool_ceiling_runs_per_level  = 5
+# Stratified subsample (not the full 60) for local-model runtime -- 4/route,
+# 4 levels x 5 runs x 12 queries = 240 calls vs 1200 for the full set.
+# Reasoned tradeoff, recorded in docs/phase_f_log.md; the F-V2 BASELINE
+# measurement (single pass, the actual >=90% pass condition) always runs
+# the full 60-query set.
+tool_ceiling_subsample_per_route = 4
 
 [models]
 temperature               = 0.0

@@ -47,6 +47,8 @@ import pdfplumber
 import psycopg
 from psycopg.rows import dict_row
 
+from ingestion_source import get_ingestion_source
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -242,10 +244,16 @@ def ingest(manifest_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Ingest fixtures/documents/ into postgres as statesync_ingest.")
+    # Manifest path resolved through the IngestionSource seam (A8, Appendix 4)
+    # rather than hardcoded -- ingestion.source in config/flags.toml is a real
+    # dispatch point here, not a comment. LocalFileSource resolves to the
+    # exact same fixtures/documents/manifest.json this always defaulted to.
+    default_manifest = str(get_ingestion_source().manifest_path())
+
+    parser = argparse.ArgumentParser(description="Ingest a document corpus into postgres as statesync_ingest.")
     parser.add_argument(
-        "--manifest", default=str(REPO_ROOT / "fixtures" / "documents" / "manifest.json"),
-        help="Path to the document manifest (default: fixtures/documents/manifest.json)",
+        "--manifest", default=default_manifest,
+        help=f"Path to the document manifest (default: resolved via ingestion.source, currently {default_manifest})",
     )
     args = parser.parse_args()
 

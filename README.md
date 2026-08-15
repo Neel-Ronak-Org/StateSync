@@ -59,29 +59,80 @@ docker compose exec ollama ollama pull qwen2.5:7b
 docker compose up -d
 
 # 2. Run Database Migrations & Fingerprint Calculation
+#    (includes ss_embed, the Part E1 vector.hybrid_select function)
 bash scripts/migrate.sh
 
 # 3. Seed Database with Frozen Synthetic ONDC Fixtures
 python scripts/seed.py
 ```
 
+If `docker compose build` stalls indefinitely with no output (a known Docker
+Desktop BuildKit issue on some hosts, unrelated to this repo), fall back to
+the classic builder:
+```bash
+DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0 docker compose build
+```
+
 ---
 
-### 6. Access Applications & Dashboards
+### 6. Ingest the Document Corpus (Part E1 — Hybrid Knowledge)
+The `docs` and `hybrid` routes answer from a corpus of supplier agreements,
+SLA annexures, and policy/SOP documents. This is a **one-time, operator-run
+step** — never invoked by the orchestrator or any agent (A1) — using its own
+`statesync_ingest` database role, distinct from the `statesync_reader` role
+every live query uses.
+```bash
+# 1. Generate the synthetic PDF corpus (frozen once generated; re-run only to regenerate)
+python scripts/gen_document_corpus.py
+
+# 2. Parse, chunk, embed, and load into documents/document_chunks
+python scripts/ingest.py
+```
+
+---
+
+### 7. Seed the Adversarial Test Corpus (Part F — Security Suite)
+`scripts/verify_security.sh` (F-V1 / M8) needs specific adversarial payloads
+already present in `delivery_events.note` / `disputes.narrative` before it
+runs — this seeds them (also via `statesync_ingest`, same isolation as step 6):
+```bash
+python scripts/seed_adversarial.py
+```
+
+---
+
+### 8. Access Applications & Dashboards
 - **Frontend Dashboard:** [http://localhost:3000](http://localhost:3000)
 - **Orchestrator API:** [http://localhost:8090/health](http://localhost:8090/health)
 - **MCP Service API:** [http://localhost:8080](http://localhost:8080)
+- **Evaluator API:** [http://localhost:8095/health](http://localhost:8095/health) (`GET /history`, `POST /run`)
 
 ---
 
-### 7. Run Complete Verification Suite
+### 9. Run the Verification Suites
 ```bash
-# Run B-V1 through B-V9 verification suite
+# Config discipline & literal lint (A0.2) — orchestrator/, mcp/, evaluator/
+bash scripts/lint-no-literals.sh
+
+# Phase B structural + golden-query suite (B-V1..B-V9)
 bash scripts/verify_b.sh
 
-# Run Config Discipline & Literal Lint
-bash scripts/lint-no-literals.sh
+# Phase E2 — A7 dual validation, CSP/vega-interpreter, malicious-spec suite
+python scripts/verify_e2.py
+
+# Phase F — seams exist (A0.5/Appendix 4), vision-scorer registration seam
+python scripts/verify_seams.py
+
+# Phase F — M8 adversarial security suite (binary; run step 7 first)
+bash scripts/verify_security.sh
+
+# Phase F — M9 routing determinism + tool-ceiling over-exposure experiment
+python scripts/experiment_tool_ceiling.py
 ```
+Model-sensitive re-verification (M2/M4/M6/M7 and related checks) reuses each
+phase's own bench script unchanged — see `docs/metrics-report.md` for the
+full list and `docs/rebaseline_runbook.md` for the graded (Anthropic)
+re-baseline procedure.
 
 ---
 

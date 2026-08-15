@@ -1264,14 +1264,15 @@ Files: `phase_b.json` (10 en), `phase_c1.json` (30: 10 base + 10 repeat + 10 par
 
 | Flag | Default | Read at | Purpose |
 |---|---|---|---|
-| `memory.enabled` | `true` | query entry | D13 control path for M1/M2 |
+| `memory.enabled` | `false` | query entry | D13 control path for M1/M2 (flipped from `true` post-E1; see BD6, `docs/spec-gaps.md` NOTE-1 — reversible default, not itself a BD) |
 | `normalization.enabled` | `true` | query entry | D13 control path for M3 |
 | `normalization.provider` | `"prompt"` | process start | D2 provider slot |
 | `spatial.provider` | `"digipin"` | process start | Spatial resolver slot |
 | `schema_retriever.provider` | `"direct"` | process start | D7 CSR-RAG slot |
+| `ingestion.source` | `"local"` | operator-run (`scripts/ingest.py`) | `IngestionSource` slot (A8, Appendix 4) — added in Part F; E1 shipped the consumer without wiring this flag, closed here (F-V4) |
 | `retrieval.hybrid_decomposition.enabled` | `true` | query entry | D7 cost gate |
 | `evaluation.vision_scorer.enabled` | `false` | process start | D11 stretch |
-| `tenancy.enforced` | `false` | process start | D6 |
+| `tenancy.enforced` | `false` | query entry (`mcp` session policy layer, every request) | D6 — added in Part F; the flag existed but nothing read it before F-V4, closed here |
 | `routing.table` | 3 routes | process start | D1/D5 specialist registration |
 
 # Appendix 4 — Deferred scope → concrete artifacts
@@ -1281,10 +1282,10 @@ Files: `phase_b.json` (10 en), `phase_c1.json` (30: 10 base + 10 repeat + 10 par
 | GRPO fine-tuned multilingual model | `normalization.provider = "finetuned"` | `LanguageNormalizer` | **D** |
 | Vision Score | `evaluation.vision_scorer.enabled` | `Scorer` (registry entry `"vision"`) | **F** |
 | CSR-RAG hypergraph retrieval | `schema_retriever.provider = "hypergraph"` | `SchemaRetriever` | **C1** |
-| Multi-tenancy enforcement | `tenancy.enforced` | MCP session policy layer | **A/B** (threaded from B) |
+| Multi-tenancy enforcement | `tenancy.enforced` | MCP session policy layer | **A/B** (threaded from B); **F** (real dispatch point — the flag existed but nothing read it before F-V4 found it, see `docs/phase_f_log.md`) |
 | HEAR root-cause node | `routing.table` entry `"rca"` | `SpecialistNode` | **B** (registry), **E1** (real routes) |
 | Richer spatial resolution | `spatial.provider = "<other>"` | `SpatialResolver` | **D** |
-| Live network ingestion | `ingestion.source = "beckn"` | `IngestionSource` | **E1** |
+| Live network ingestion | `ingestion.source = "beckn"` | `IngestionSource` | **E1** nominally; **F** (actual seam — E1 shipped `scripts/ingest.py` without wiring `IngestionSource`/`ingestion.source` at all, closed at F-V4, see `docs/phase_f_log.md`) |
 | Write capability | — | **none, intentionally** | — (Strategy §6 deliberate non-hook) |
 
 Every seam in this table is **core scope in its named Part** per A0.5, verified by F-V4. The final row is a deliberate absence: a build agent must not create an interface for it.
@@ -1537,6 +1538,43 @@ schema actually excludes.
 `A7.DUAL_FORM_EXPRESSION_KEYS` counterparts in `frontend/index.html` must stay
 in step — same no-compile-time-link caveat as BD4 and BD5. E2-V3 run against
 both validators is what catches drift.
+
+## BD8 — Evaluation history persisted as a local SQLite file, not Postgres
+
+**Decided**: `evaluator/history_store.py` persists each evaluation run
+(Deliverable 2: "persisted evaluation history queryable as a trend across
+>= 5 runs") to a SQLite file on a dedicated Docker volume
+(`evaluator_data:/app/data`), owned entirely by the `evaluator` service.
+One row per run (aggregate scores + a JSON blob of per-query detail),
+queried by `GET /history`.
+
+**Alternative considered**: a new table in the existing Postgres database
+(e.g. `evaluation_runs`), written through `mcp` the same way the orchestrator
+writes trajectories through `memory.put_trajectory`.
+
+**Why not**: A1's topology table gives `evaluator` only
+`orchestrator, mcp (read-only fixtures)` — and `mcp` always connects to
+Postgres as `statesync_reader` (Layer 3), which holds no `INSERT` privilege
+on any table, by construction (B-V5, D15). Writing evaluation history through
+that path would require either relaxing Layer 3's read-only guarantee for
+this one caller (voiding the property the whole security narrative rests on)
+or introducing a new database role A1 never describes — either is a
+Strategy-adjacent security-topology change, not a Part F implementation
+detail. A local, evaluator-owned store needs no new grant and touches
+nothing Layers 1-3 or A1 already lock down.
+
+**Why not qdrant** (also reachable, in principle, if evaluator were added to
+`db_net`): evaluator is deliberately kept off `db_net` entirely per its own
+A1 row (`app_net` only, matching `orchestrator`'s isolation) — adding it to
+`db_net` to reach `qdrant` would be the same class of topology change as the
+Postgres alternative, for a workload (a small, append-only run log) that
+does not need a vector store's own capabilities.
+
+**Hook**: `evaluator/history_store.py`'s `DB_PATH`
+(`EVAL_DB_PATH` env var, default `/app/data/eval_history.db`) and the
+`evaluator_data` named volume in `docker-compose.yml`. If evaluation history
+ever needs to be queried cross-service (not just by the evaluator's own
+`GET /history`), that is itself a new decision, not an extension of this one.
 
 ---
 

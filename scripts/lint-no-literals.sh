@@ -25,7 +25,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 VIOLATIONS=0
 FILES_CHECKED=0
 
-SCAN_DIRS=("${REPO_ROOT}/orchestrator" "${REPO_ROOT}/mcp")
+SCAN_DIRS=("${REPO_ROOT}/orchestrator" "${REPO_ROOT}/mcp" "${REPO_ROOT}/evaluator")
 
 echo "==> Scanning for configurable numeric literals in agent source..."
 echo "    Directories: ${SCAN_DIRS[*]}"
@@ -85,7 +85,7 @@ EXEMPT_VALUES = {
     # JSON-RPC 2.0 spec codes
     -32700, -32600, -32601, -32602, -32603, -32604, -32605,
     # HTTP status codes
-    200, 201, 204, 400, 401, 403, 404, 405, 406, 409, 410, 415, 422, 429, 500, 502, 503, 504,
+    200, 201, 204, 400, 401, 403, 404, 405, 406, 409, 410, 415, 422, 429, 500, 501, 502, 503, 504,
     # PostgreSQL SQLSTATE (42501 as integer — usually a string in practice)
     42501,
     # SRID

@@ -52,6 +52,9 @@ provider                        = "digipin"  # Spatial resolver slot; resolved a
 [schema_retriever]
 provider                        = "direct"   # D7 CSR-RAG slot; resolved at process start
 
+[ingestion]
+source                          = "local"    # IngestionSource slot (A8, Appendix 4); resolved by scripts/ingest.py at operator-run time
+
 [retrieval]
 [retrieval.hybrid_decomposition]
 enabled                         = true   # D7 cost gate; read at query entry

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-14T10:05:37Z",
+  "generated_at": "2026-08-15T10:38:35Z",
   "runs_per_query": 5,
   "control": {
     "flag": "memory.enabled=false",
@@ -121,7 +121,7 @@
     "flag": "memory.enabled=true",
     "per_query": {
       "c1_base_001": {
-        "distinct_result_sets": 1,
+        "distinct_result_sets": 3,
         "runs": 5,
         "memory_hit_per_run": [
           false,
@@ -154,7 +154,7 @@
         ]
       },
       "c1_base_004": {
-        "distinct_result_sets": 1,
+        "distinct_result_sets": 2,
         "runs": 5,
         "memory_hit_per_run": [
           false,
@@ -187,7 +187,7 @@
         ]
       },
       "c1_base_007": {
-        "distinct_result_sets": 2,
+        "distinct_result_sets": 1,
         "runs": 5,
         "memory_hit_per_run": [
           false,
@@ -220,25 +220,27 @@
         ]
       },
       "c1_base_010": {
-        "distinct_result_sets": 1,
+        "distinct_result_sets": 2,
         "runs": 5,
         "memory_hit_per_run": [
           false,
-          false,
-          false,
-          false,
-          false
+          true,
+          true,
+          true,
+          true
         ]
       }
     },
-    "mean_distinct_result_sets": 1.5
+    "mean_distinct_result_sets": 1.8
   },
   "pass": false,
   "worse_queries": [
+    "c1_base_001",
+    "c1_base_004",
     "c1_base_005",
     "c1_base_006",
-    "c1_base_007",
     "c1_base_008",
-    "c1_base_009"
+    "c1_base_009",
+    "c1_base_010"
   ]
 }

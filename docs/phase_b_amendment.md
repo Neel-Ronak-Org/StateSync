@@ -249,3 +249,40 @@ schema actually excludes.
 `A7.DUAL_FORM_EXPRESSION_KEYS` counterparts in `frontend/index.html` must stay
 in step — same no-compile-time-link caveat as BD4 and BD5. E2-V3 run against
 both validators is what catches drift.
+
+## BD8 — Evaluation history persisted as a local SQLite file, not Postgres
+
+**Decided**: `evaluator/history_store.py` persists each evaluation run
+(Deliverable 2: "persisted evaluation history queryable as a trend across
+>= 5 runs") to a SQLite file on a dedicated Docker volume
+(`evaluator_data:/app/data`), owned entirely by the `evaluator` service.
+One row per run (aggregate scores + a JSON blob of per-query detail),
+queried by `GET /history`.
+
+**Alternative considered**: a new table in the existing Postgres database
+(e.g. `evaluation_runs`), written through `mcp` the same way the orchestrator
+writes trajectories through `memory.put_trajectory`.
+
+**Why not**: A1's topology table gives `evaluator` only
+`orchestrator, mcp (read-only fixtures)` — and `mcp` always connects to
+Postgres as `statesync_reader` (Layer 3), which holds no `INSERT` privilege
+on any table, by construction (B-V5, D15). Writing evaluation history through
+that path would require either relaxing Layer 3's read-only guarantee for
+this one caller (voiding the property the whole security narrative rests on)
+or introducing a new database role A1 never describes — either is a
+Strategy-adjacent security-topology change, not a Part F implementation
+detail. A local, evaluator-owned store needs no new grant and touches
+nothing Layers 1-3 or A1 already lock down.
+
+**Why not qdrant** (also reachable, in principle, if evaluator were added to
+`db_net`): evaluator is deliberately kept off `db_net` entirely per its own
+A1 row (`app_net` only, matching `orchestrator`'s isolation) — adding it to
+`db_net` to reach `qdrant` would be the same class of topology change as the
+Postgres alternative, for a workload (a small, append-only run log) that
+does not need a vector store's own capabilities.
+
+**Hook**: `evaluator/history_store.py`'s `DB_PATH`
+(`EVAL_DB_PATH` env var, default `/app/data/eval_history.db`) and the
+`evaluator_data` named volume in `docker-compose.yml`. If evaluation history
+ever needs to be queried cross-service (not just by the evaluator's own
+`GET /history`), that is itself a new decision, not an extension of this one.

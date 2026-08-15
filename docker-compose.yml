@@ -16,6 +16,7 @@ volumes:
   postgres_data:
   qdrant_data:
   ollama_data:
+  evaluator_data:   # BD8: persisted evaluation history (SQLite), owned solely by evaluator
 
 # ─── Services ────────────────────────────────────────────────────────────────
 services:
@@ -183,9 +184,12 @@ services:
       - ORCHESTRATOR_URL=http://orchestrator:8090
       - MCP_URL=http://mcp:8080
       - CONFIG_DIR=/app/config
+      - FIXTURES_DIR=/app/fixtures
+      - EVAL_DB_PATH=/app/data/eval_history.db
     volumes:
       - ./config:/app/config:ro
       - ./fixtures:/app/fixtures:ro
+      - evaluator_data:/app/data
     depends_on:
       orchestrator:
         condition: service_healthy

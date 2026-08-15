@@ -10,9 +10,10 @@ as the historical record and do not edit them to match this summary.
 |---|---|---|---|---|
 | [GAP-6](#gap-6) | A5 schema fingerprint hashes PostGIS's `spatial_ref_sys` alongside the 12 real application tables | Open, escalated | No | Team decision (no Part owns this — see below) |
 | [BD7](#bd7) | A7's `transform` items allow `additionalProperties: true`, so a `calculate` transform (ms_05) satisfies the schema; closed by a separate expression audit, not a schema edit | Closed as a decision, not a defect | No | — (recorded; the two-file sync it depends on is the residual risk) |
-| [F-V1 Class 4 / E2-V4](#f-v1-class-4--e2-v4-csp-enforcement) | E2-V4's CSP-safe-render claim was proven via a browser-independent mechanism (dynamic-code-construction trap), not by observed enforcement — this test browser doesn't enforce CSP at all | Mechanism proven; enforcement unconfirmed | No | Part F, `F-V1` Class 4 ("re-run E2-V3 and E2-V4 against the frozen build") |
+| [F-V1 Class 1 & Class 4](#f-v1-class-1--class-4) | Both classes pass structurally on the local model/this browser now, but each rests on something worth re-confirming under different conditions later: Class 4's CSP claim on a browser that actually enforces CSP; Class 1's prompt-injection resistance on the graded model | Passing now; each has a distinct residual condition to re-confirm | No (see entry — deliberately not folded into BD6) | Part F, `F-V1` (run as part of Phase F; re-confirm Class 4 in an enforcing browser, Class 1 informally under the graded model) |
 | [c2g_10 routing](#c2g_10-routing) | "List sellers whose contracted SLA hours has not been set" routes to `docs` instead of `sql` — the word "SLA" pulls a plainly relational question toward the document route | Open, unpatched | No | Part F, `F-V2` (M9 routing determinism) |
 | [Task 10 / E2-V1 — M7 quality](#task-10--e2-v1--m7-quality) | Synthesizer still emits `chart: null` on every route; M7 chart-quality score cannot be measured until it's taught to populate `chart` | Blocked on Synthesizer work, not yet started | **Yes** | Part F, `F-V3` (M7 row); graded number per `rebaseline_runbook.md` |
+| [M3 regression](#m3-regression) | D-V1 lift halved (+47.5pp → +25.0pp) and D-V2 entity preservation dropped (84.4% → 56.2%) since Phase D; the English reference line fell 80% → 45%, proving the cause is upstream of normalization. Two deliberate Phase-E-gap changes are candidates, not yet separated | Open — regression confirmed, cause not isolated | Partly (the graded re-baseline re-measures M3 anyway, but the cause here is a config/build change, not a model ceiling) | One controlled run separates the two causes; then Part F / re-baseline |
 
 ---
 
@@ -85,7 +86,36 @@ Full write-up: [`docs/phase_b_amendment.md`](phase_b_amendment.md) (BD7) ·
 also migrated to Appendix 5 of
 [`docs/StateSync_Build_Spec.md`](StateSync_Build_Spec.md) (see Task B below).
 
-## F-V1 Class 4 / E2-V4 CSP enforcement
+## F-V1 Class 1 & Class 4
+
+Grouped together because both classes of `scripts/verify_security.sh`
+**pass in full now**, and both rest on a condition worth tracking separately
+from the pass/fail result itself — one environmental, one model-related.
+Neither is re-baseline-gated in the BD6 sense (nothing here blocks a Part or
+voids a decision); both are "keep an eye on this under different conditions"
+items.
+
+### Class 1 — tool poisoning through data
+
+Nine payloads (`adv_01`–`adv_08`, `adv_16`) seeded into real
+`delivery_events.note` / `disputes.narrative` rows via
+`scripts/seed_adversarial.py`, each retrieved through a natural-language
+query designed to surface that exact row (`fixtures/adversarial_targets.json`).
+Results recorded in `docs/phase_f_log.md`'s F-V1 section.
+
+**Why it's tracked here anyway, despite passing:** M8's pass condition is
+binary and structural ("no unintended tool invocation," "injection not
+obeyed"), but the mechanism that DELIVERS a pass — the local model
+correctly declining to treat text arriving through a data column as an
+instruction — is itself a property that could plausibly differ under a
+different (graded) model. A stronger or more instruction-tuned model isn't
+guaranteed to be more resistant; it could in principle be more literal about
+following an embedded "[SYSTEM]" prefix. Worth a re-confirmation pass under
+the graded model for completeness, the same spirit as Class 4's browser
+re-check below, even though — unlike Class 4 — there's no reason to expect
+today's PASS is an artifact of a broken test environment.
+
+### Class 4 — execution path / CSP enforcement
 
 **What E2-V4 asked for, and what was actually shown.** E2-V4 wants "zero CSP
 violations in the console" for 30 valid specs, and a malicious spec to raise
@@ -120,7 +150,8 @@ the precise owner here instead.
 **Not re-baseline-gated** — a browser/environment question, not a model one.
 
 Full write-up: [`docs/phase_e2_log.md`](phase_e2_log.md) (E2-V4 section) ·
-spec step: `docs/StateSync_Build_Spec.md` §F-V1 Class 4.
+[`docs/phase_f_log.md`](phase_f_log.md) (F-V1 section, both classes) ·
+spec step: `docs/StateSync_Build_Spec.md` §F-V1.
 
 ## c2g_10 routing
 
@@ -146,6 +177,50 @@ or re-measure, not a number to defer.
 Full write-up: [`docs/phase_e_gap_log.md`](phase_e_gap_log.md) ("Observed in
 passing, out of this packet's scope") · spec step:
 `docs/StateSync_Build_Spec.md` §F-V2.
+
+## M3 regression
+
+**Both halves of M3 regressed between Phase D and Phase F's F-V3 re-run**,
+on the same model (`qwen2.5:7b`), same fixture, same procedure:
+
+| | Phase D | Phase F (isolated clean re-run) |
+|---|---|---|
+| D-V1 lift | +47.5pp (15.0% → 62.5%) | **+25.0pp** (32.5% → 57.5%) |
+| D-V2 entity preservation | 27/32 (84.4%) | **18/32 (56.2%)** |
+| English reference line | 16/20 (80.0%) | **9/20 (45.0%)** |
+
+M3 still *passes* its written condition — the normalization path is still
+measurably better than the control, which is what D-V1 requires — but the
+margin halved and entity preservation fell sharply. Reported as a regression
+per F-V3's explicit instruction rather than quietly replacing the old number.
+
+**The English reference line localizes the cause.** D-V3 confirms in both
+runs that English queries pass through the gate byte-identical (20/20
+`normalized_query_unchanged=True`), so an English-only 80%→45% drop cannot
+originate in the multilingual path. Two deliberate changes from the
+Phase-E-gap packet are the candidates:
+
+1. **`memory.enabled` default flipped `true`→`false`** (Task 3, NOTE-1).
+   Phase D measured M3 with memory ON. Every query in this run took the
+   full miss path instead of hitting a cached trajectory.
+2. **Draft-first interrogation targeting** (Task 4) changed miss-path SQL
+   generation — and with memory off, every query is a miss-path query, so
+   this change now applies universally rather than only on cache misses.
+
+**Not yet separated, and deliberately not guessed at.** One controlled run
+(`bench_multilingual.py` with `memory.enabled=true`, everything else held
+constant) distinguishes them: if the number returns toward +47.5pp, cause 1
+dominates and the regression is a known, accepted trade of the memory
+default flip; if it stays near +25pp, cause 2 is implicated and Task 4's
+interrogation change needs review against multilingual queries specifically.
+
+**Not a BD6-style model-ceiling item** — both candidate causes are config or
+code changes made in this repo, not properties of the local model. The
+graded re-baseline will re-measure M3 regardless, but it will not by itself
+answer which change caused this.
+
+Full write-up: [`docs/metrics-report.md`](metrics-report.md) (M3 regression
+section) · [`docs/phase_f_log.md`](phase_f_log.md) (F-V3 section).
 
 ## Task 10 / E2-V1 — M7 quality
 

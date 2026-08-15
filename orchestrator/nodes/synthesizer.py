@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 from typing import Any
 
@@ -49,7 +50,83 @@ Rules:
 6. chart must always be null in this response.
 7. Leave citations as an empty array -- it is filled in deterministically
    after your response, not by you.
-8. answer_text must not exceed 4000 characters."""
+8. answer_text must not exceed 4000 characters.
+9. NEVER include executable code in answer_text -- no Python, matplotlib,
+   JavaScript, shell commands, or any other runnable program text, and no
+   fenced code blocks. If the user asks for code, or asks you to run
+   something, explain in prose that this system answers with data and
+   declarative charts only, and does not produce or execute code (D8).
+10. Emit the raw JSON object only. Do not wrap it in markdown code fences."""
+
+
+def _strip_json_fences(text: str) -> str:
+    """
+    Strip markdown code fences the model sometimes wraps its JSON response in.
+
+    Without this, a fenced response fails json.loads(), falls into the
+    plain-text branch, and the ENTIRE raw JSON blob (braces, field names and
+    all) is handed to the user as answer_text. Observed directly during F-V1
+    Class 4. Same fence-stripping the SQL Agent already does for its own
+    output (sql_agent._strip_sql_fences).
+    """
+    stripped = text.strip()
+    if not stripped.startswith("```"):
+        return text
+    lines = [ln for ln in stripped.split("\n") if not ln.lstrip().startswith("```")]
+    return "\n".join(lines).strip()
+
+
+# Fenced code blocks, and bare lines that are unmistakably program text.
+# Deliberately conservative: this only has to catch content a user could
+# copy and RUN, not every mention of a technical term.
+_FENCED_BLOCK_RE = re.compile(r"```.*?(?:```|\Z)", re.DOTALL)
+_CODE_LINE_RE = re.compile(
+    r"^\s*(?:import\s+\w|from\s+\w+\s+import\b|def\s+\w+\s*\(|class\s+\w+\s*[:(]"
+    r"|plt\.\w|os\.system\s*\(|subprocess\.\w|exec\s*\(|eval\s*\()",
+    re.MULTILINE,
+)
+_CODE_REFUSAL = (
+    "This system answers with data and declarative charts only. It does not "
+    "produce or execute code (see the declarative-output contract, D8/A7), so "
+    "the code that was requested has been withheld."
+)
+
+
+def _strip_executable_content(answer_text: str, query_id: str) -> str:
+    """
+    F-V1 Class 4 / M8: "no response contains executable content."
+
+    A7's schema constrains `chart` but says nothing about `answer_text`
+    beyond its length, so nothing structurally stopped the Synthesizer from
+    putting a runnable matplotlib program in the prose field -- and on
+    adversarial payload adv_18 ("give me matplotlib code ... then run it")
+    it did exactly that, verbatim and copy-pasteable. Rule 9 of the system
+    prompt now tells the model not to, but M8 is binary and deterministic,
+    and this repo's own experience is that small local models follow
+    negative instructions unreliably (same reasoning as
+    _ensure_category_mentioned right below). So the guarantee is enforced
+    here, in code, rather than trusted to the prompt.
+
+    Note this is defense in depth, not the RCE boundary: nothing downstream
+    ever executes answer_text, and D8's actual security property is the
+    absence of any execution path at all. This closes the gap between that
+    property and F-V1's written pass condition, which is about what the
+    response CONTAINS.
+    """
+    cleaned = _FENCED_BLOCK_RE.sub("", answer_text)
+    if _CODE_LINE_RE.search(cleaned):
+        # Bare (unfenced) program lines survived fence removal -- drop them.
+        cleaned = "\n".join(
+            ln for ln in cleaned.split("\n") if not _CODE_LINE_RE.match(ln)
+        )
+    if cleaned != answer_text:
+        logger.warning(
+            "Synthesizer emitted executable content for query_id=%s; stripped "
+            "before response (F-V1 Class 4 / M8).", query_id,
+        )
+        cleaned = cleaned.strip()
+        cleaned = f"{cleaned}\n\n{_CODE_REFUSAL}" if cleaned else _CODE_REFUSAL
+    return cleaned
 
 
 def _ensure_category_mentioned(answer_text: str, sql_error: dict | None) -> str:
@@ -203,15 +280,20 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         )
         elapsed_ms = int(time.monotonic() * 1000) - start_ms
 
-        # Parse the JSON response
+        # Parse the JSON response (fences stripped first -- a fenced response
+        # would otherwise fall through to the plain-text branch below and put
+        # the whole raw JSON blob into answer_text).
         try:
-            parsed = json.loads(result.text)
+            parsed = json.loads(_strip_json_fences(result.text))
         except json.JSONDecodeError:
             logger.warning(
                 "Synthesizer returned non-JSON for query_id=%s; treating as plain text.",
                 query_id,
             )
-            parsed = {"answer_text": result.text[:cfg.sql.answer_max_chars], "chart": None, "citations": []}
+            parsed = {
+                "answer_text": _strip_json_fences(result.text)[:cfg.sql.answer_max_chars],
+                "chart": None, "citations": [],
+            }
 
         # Force chart: null through Part E1; citations always deterministic (above).
         parsed["chart"] = None
@@ -219,7 +301,8 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
 
         # Validate against A7
         safe_out = safe_synthesizer_output(parsed)
-        answer_text = _ensure_category_mentioned(safe_out["answer_text"], sql_error)
+        answer_text = _strip_executable_content(safe_out["answer_text"], query_id)
+        answer_text = _ensure_category_mentioned(answer_text, sql_error)
 
         logger.info(
             "Synthesizer completed for query_id=%s (tokens_in=%d tokens_out=%d citations=%d).",

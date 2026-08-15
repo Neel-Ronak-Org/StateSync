@@ -12,7 +12,7 @@
         "tokens_out": 118,
         "llm_calls": 3,
         "trajectory_steps": 5,
-        "latency_ms": 5601
+        "latency_ms": 15829
       },
       "answer_text": "The contracted delivery SLA for supplier S014 in Metro NCR is 36 hours.",
       "citations": [
@@ -191,7 +191,7 @@
         "tokens_out": 107,
         "llm_calls": 3,
         "trajectory_steps": 5,
-        "latency_ms": 4810
+        "latency_ms": 15979
       },
       "answer_text": "The ONDC network's return window for the electronics category is 10 days, as per the returns policy.",
       "citations": [
@@ -352,7 +352,7 @@
         "tokens_out": 119,
         "llm_calls": 3,
         "trajectory_steps": 5,
-        "latency_ms": 5205
+        "latency_ms": 17140
       },
       "answer_text": "Supplier S001's agreement specifies a 3% penalty for the Metro NCR zone.",
       "citations": [
@@ -495,7 +495,7 @@
         "tokens_out": 121,
         "llm_calls": 3,
         "trajectory_steps": 5,
-        "latency_ms": 5278
+        "latency_ms": 17082
       },
       "answer_text": "FastShip 1's SLA annexure specifies a committed transit time of 29 hours for the Metro Mumbai zone.",
       "citations": [
@@ -656,7 +656,7 @@
         "tokens_out": 104,
         "llm_calls": 3,
         "trajectory_steps": 5,
-        "latency_ms": 4788
+        "latency_ms": 15271
       },
       "answer_text": "The committed resolution window for a damaged_goods dispute is 5 business days, as per the ONDC Network Dispute Resolution Policy.",
       "citations": [
@@ -817,7 +817,7 @@
         "tokens_out": 123,
         "llm_calls": 3,
         "trajectory_steps": 5,
-        "latency_ms": 5520
+        "latency_ms": 17980
       },
       "answer_text": "When a delivery exception occurs because the recipient is unavailable, per the delivery exception handling SOP, the required action is to reattempt delivery on the next business day. The escalation window for this exception is 24 hours.",
       "citations": [
@@ -978,7 +978,7 @@
         "tokens_out": 124,
         "llm_calls": 3,
         "trajectory_steps": 5,
-        "latency_ms": 5441
+        "latency_ms": 19378
       },
       "answer_text": "The maximum transit time for frozen goods, as per the Cold Chain and Perishables Handling SOP, is 24 hours. This can be found in the document passage that lists the maximum transit times for different product categories.",
       "citations": [
@@ -1139,7 +1139,7 @@
         "tokens_out": 100,
         "llm_calls": 3,
         "trajectory_steps": 5,
-        "latency_ms": 4544
+        "latency_ms": 13566
       },
       "answer_text": "According to the ONDC Network Seller Onboarding and Compliance Policy, a seller must renew their GST registration compliance annually.",
       "citations": [
@@ -1297,17 +1297,17 @@
         "What penalty does a seller's supplier agreement specify for a late delivery?"
       ],
       "metrics": {
-        "tokens_in": 4920,
-        "tokens_out": 423,
+        "tokens_in": 4862,
+        "tokens_out": 421,
         "llm_calls": 5,
-        "trajectory_steps": 19,
-        "latency_ms": 22052
+        "trajectory_steps": 18,
+        "latency_ms": 50383
       },
       "answer_text": "The sellers who breached their contracted delivery SLA last quarter are S010, S008, S030, S021, S024, S025, S018, S005, S006, S016, S023, S027, S009, S015, S002, S011, S019, S004, S029, S020, S017, S014, S007, S026, S012, S028, S022, and S013. The penalty for breaching the SLA varies by zone and is specified in their respective supplier agreements. For example, Seller ID S010 has a 4% penalty for orders shipped to Metro NCR or Metro Mumbai zones, while Seller ID S025 has a 2% penalty for all zones.",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT s.seller_id\nFROM sellers s\nJOIN orders o ON s.seller_id = o.seller_id\nJOIN fulfillments f ON o.order_id = f.order_id\nWHERE f.delivered_at > f.promised_at\n  AND f.promised_at >= NOW() - INTERVAL '3 months'\nGROUP BY s.seller_id\nLIMIT 1000",
+          "ref": "SELECT s.seller_id \nFROM sellers s\nJOIN orders o ON s.seller_id = o.seller_id\nJOIN fulfillments f ON o.order_id = f.order_id\nWHERE f.delivered_at > f.promised_at AND f.promised_at >= NOW() - INTERVAL '3 months'\nGROUP BY s.seller_id\nLIMIT 1000",
           "page": null
         },
         {
@@ -1410,17 +1410,17 @@
         "What is the committed resolution window for disputes per the dispute resolution policy?"
       ],
       "metrics": {
-        "tokens_in": 3559,
-        "tokens_out": 277,
+        "tokens_in": 3498,
+        "tokens_out": 270,
         "llm_calls": 5,
-        "trajectory_steps": 19,
-        "latency_ms": 14671
+        "trajectory_steps": 18,
+        "latency_ms": 28362
       },
       "answer_text": "Seller S014 has had a total of 2 disputes. According to the dispute resolution policy, the committed resolution window for disputes is as follows:\n\n- Metro NCR: 36 hours\n- Metro Mumbai: 44 hours\n- Tier-2 West: 56 hours\n- Rural North: 76 hours",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT s.seller_id, COUNT(d.dispute_id) AS dispute_count \nFROM sellers s\nJOIN orders o ON s.seller_id = o.seller_id\nJOIN disputes d ON o.order_id = d.order_id\nWHERE s.seller_id = 'S014'\nGROUP BY s.seller_id;",
+          "ref": "SELECT s.seller_id, COUNT(*) \nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.seller_id = 'S014'\nGROUP BY s.seller_id;",
           "page": null
         },
         {
@@ -1464,11 +1464,11 @@
         "What does S005's supplier agreement specify for the Metro NCR zone?"
       ],
       "metrics": {
-        "tokens_in": 3596,
+        "tokens_in": 3538,
         "tokens_out": 240,
         "llm_calls": 5,
-        "trajectory_steps": 19,
-        "latency_ms": 14261
+        "trajectory_steps": 18,
+        "latency_ms": 24866
       },
       "answer_text": "Seller S005's contracted SLA in hours is 36. According to the supplier agreement for Seller ID: S005, their commitment for the Metro NCR zone specifies a service level of 37 hours.",
       "citations": [
@@ -1518,11 +1518,11 @@
         "What penalty does seller S001's agreement specify for the Metro NCR zone?"
       ],
       "metrics": {
-        "tokens_in": 3559,
+        "tokens_in": 3501,
         "tokens_out": 221,
         "llm_calls": 5,
-        "trajectory_steps": 19,
-        "latency_ms": 14397
+        "trajectory_steps": 18,
+        "latency_ms": 22454
       },
       "answer_text": "Seller S001 has placed 17 orders. According to the agreement, for orders shipped to the Metro NCR zone, a 3% penalty applies if the SLA is breached.",
       "citations": [
@@ -1572,17 +1572,17 @@
         "What transit time does logistics provider 'FastShip 1' commit to for deliveries in the Metro Mumbai zone?"
       ],
       "metrics": {
-        "tokens_in": 4288,
-        "tokens_out": 270,
+        "tokens_in": 4441,
+        "tokens_out": 311,
         "llm_calls": 5,
-        "trajectory_steps": 20,
-        "latency_ms": 17635
+        "trajectory_steps": 19,
+        "latency_ms": 33450
       },
-      "answer_text": "FastShip 1 has handled 0 fulfillments, based on the provided data. However, FastShip 1 commits to a transit time of 29 hours for the Metro Mumbai zone.",
+      "answer_text": "The query failed due to an unknown_column error, specifically because the column 'seller_id' does not exist in the relevant tables. However, based on the provided document passages, FastShip 1 (Provider ID: LP001) commits to a 29-hour transit time for the Metro Mumbai zone.",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT COUNT(*) \nFROM fulfillments f\nJOIN orders o ON f.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE s.seller_id = 'FastShip 1' AND l.city = 'Mumbai'",
+          "ref": "SELECT COUNT(*) \nFROM fulfillments f\nJOIN orders o ON f.order_id = o.order_id\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE f.provider_id IN (\n    SELECT provider_id \n    FROM logistics_providers lp\n    JOIN locations hl ON lp.hub_location_id = hl.location_id\n    WHERE hl.city = 'Mumbai'\n) AND f.seller_id = 'FastShip 1'",
           "page": null
         },
         {
@@ -1739,17 +1739,17 @@
         "What is the committed resolution window for disputes in the damaged_goods category?"
       ],
       "metrics": {
-        "tokens_in": 4102,
-        "tokens_out": 235,
+        "tokens_in": 4044,
+        "tokens_out": 241,
         "llm_calls": 5,
-        "trajectory_steps": 20,
-        "latency_ms": 15653
+        "trajectory_steps": 19,
+        "latency_ms": 26389
       },
-      "answer_text": "Seller S010 has 0 disputes in the damaged_goods category. The committed resolution window for this category is 5 business days.",
+      "answer_text": "Seller S010 has 1 dispute in the damaged_goods category. The committed resolution window for this category is 5 business days.",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT COUNT(*) \nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.seller_id = 'S010' AND d.category = 'damaged_goods'",
+          "ref": "SELECT COUNT(*) \nFROM disputes \nWHERE order_id IN (\n    SELECT order_id \n    FROM order_items \n    JOIN catalog_items ON catalog_items.item_id = order_items.item_id \n    WHERE catalog_items.seller_id = 'S010'\n) \nAND category = 'damaged_goods'",
           "page": null
         },
         {
@@ -1888,17 +1888,17 @@
         "What penalty does seller S020's agreement specify for deliveries in the Rural North zone?"
       ],
       "metrics": {
-        "tokens_in": 3572,
-        "tokens_out": 275,
+        "tokens_in": 3514,
+        "tokens_out": 269,
         "llm_calls": 5,
-        "trajectory_steps": 19,
-        "latency_ms": 18388
+        "trajectory_steps": 18,
+        "latency_ms": 23947
       },
       "answer_text": "Seller S020 is in the 'food' category. According to the agreement, for orders shipped to the Rural North zone, there is no specific penalty mentioned. However, penalties are specified for other zones: Metro NCR has a 3% penalty, Metro Mumbai also has a 3% penalty, Tier-2 West has a 4% penalty, and Tier-2 South has a 4% penalty.",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT s.seller_id, s.category FROM sellers s WHERE s.seller_id = 'S020' LIMIT 1000",
+          "ref": "SELECT seller_id, category FROM sellers WHERE seller_id = 'S020' LIMIT 1000",
           "page": null
         },
         {
@@ -1942,11 +1942,11 @@
         "What penalty does seller S025's supplier agreement specify for the Tier-2 West zone?"
       ],
       "metrics": {
-        "tokens_in": 3569,
+        "tokens_in": 3511,
         "tokens_out": 222,
         "llm_calls": 5,
-        "trajectory_steps": 19,
-        "latency_ms": 14768
+        "trajectory_steps": 18,
+        "latency_ms": 21777
       },
       "answer_text": "Seller S025 has placed 11 orders. According to the supplier agreement, for orders shipped to the Tier-2 West zone, a 3% penalty is specified.",
       "citations": [
@@ -1993,17 +1993,17 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 1726,
-        "tokens_out": 135,
+        "tokens_in": 1777,
+        "tokens_out": 137,
         "llm_calls": 4,
         "trajectory_steps": 4,
-        "latency_ms": 9420
+        "latency_ms": 13961
       },
       "answer_text": "Seller S008 has placed 0 orders.",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT COUNT(orders.order_id) AS order_count\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name = 'seller S008';",
+          "ref": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'seller S008';",
           "page": null
         }
       ],
@@ -2015,17 +2015,17 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 1759,
-        "tokens_out": 148,
-        "llm_calls": 4,
-        "trajectory_steps": 4,
-        "latency_ms": 9987
+        "tokens_in": 4914,
+        "tokens_out": 263,
+        "llm_calls": 6,
+        "trajectory_steps": 18,
+        "latency_ms": 21433
       },
       "answer_text": "The total order value for seller S012 is $566,769.90.",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.seller_id = 'S012';",
+          "ref": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.seller_id = 'S012'",
           "page": null
         }
       ],
@@ -2037,17 +2037,17 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 1541,
-        "tokens_out": 105,
-        "llm_calls": 4,
-        "trajectory_steps": 4,
-        "latency_ms": 6966
+        "tokens_in": 4045,
+        "tokens_out": 182,
+        "llm_calls": 6,
+        "trajectory_steps": 17,
+        "latency_ms": 11381
       },
-      "answer_text": "There are 16 disputes in the wrong_item category.",
+      "answer_text": "There are 16 disputes categorized as wrong_item.",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT COUNT(*) AS wrong_item_disputes_count\nFROM disputes\nWHERE category = 'wrong_item';",
+          "ref": "SELECT COUNT(*) \nFROM disputes \nWHERE category = 'wrong_item';",
           "page": null
         }
       ],
@@ -2059,17 +2059,17 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 1536,
-        "tokens_out": 100,
-        "llm_calls": 4,
-        "trajectory_steps": 4,
-        "latency_ms": 6562
+        "tokens_in": 4041,
+        "tokens_out": 168,
+        "llm_calls": 6,
+        "trajectory_steps": 17,
+        "latency_ms": 10627
       },
       "answer_text": "There are 5 logistics providers that are b2b_enabled.",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT COUNT(*) FROM logistics_providers WHERE b2b_enabled = TRUE;",
+          "ref": "SELECT COUNT(*) FROM logistics_providers WHERE b2b_enabled = TRUE",
           "page": null
         }
       ],
@@ -2081,17 +2081,17 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 1761,
-        "tokens_out": 119,
-        "llm_calls": 4,
-        "trajectory_steps": 4,
-        "latency_ms": 8346
+        "tokens_in": 3693,
+        "tokens_out": 271,
+        "llm_calls": 6,
+        "trajectory_steps": 17,
+        "latency_ms": 20420
       },
       "answer_text": "There were 269 orders placed via the b2c channel.",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT COUNT(*) AS b2c_order_count\nFROM orders\nWHERE order_channel = 'b2c';",
+          "ref": "SELECT COUNT(*) AS b2c_orders_count\nFROM orders\nWHERE order_channel = 'b2c'\nLIMIT 1000;",
           "page": null
         }
       ],
@@ -2103,17 +2103,17 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 1569,
-        "tokens_out": 119,
-        "llm_calls": 4,
-        "trajectory_steps": 4,
-        "latency_ms": 7650
+        "tokens_in": 4434,
+        "tokens_out": 198,
+        "llm_calls": 6,
+        "trajectory_steps": 17,
+        "latency_ms": 15066
       },
       "answer_text": "The average order value across all orders is $25,612.09.",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT ROUND(AVG(order_value::numeric), 2) AS avg_order_value FROM orders LIMIT 1000;",
+          "ref": "SELECT ROUND(AVG(order_value::numeric), 2) AS avg_order_value \nFROM orders;",
           "page": null
         }
       ],
@@ -2125,17 +2125,17 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 1514,
-        "tokens_out": 92,
-        "llm_calls": 4,
-        "trajectory_steps": 4,
-        "latency_ms": 7272
+        "tokens_in": 3892,
+        "tokens_out": 185,
+        "llm_calls": 6,
+        "trajectory_steps": 17,
+        "latency_ms": 11699
       },
-      "answer_text": "There are currently 19 fulfillments pending.",
+      "answer_text": "There are currently 227 fulfillments pending.",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT COUNT(*) FROM fulfillments WHERE status = 'pending'",
+          "ref": "SELECT COUNT(*) AS pending_fulfillments\nFROM fulfillments\nWHERE delivered_at IS NULL;",
           "page": null
         }
       ],
@@ -2147,17 +2147,17 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 1534,
-        "tokens_out": 101,
-        "llm_calls": 4,
-        "trajectory_steps": 4,
-        "latency_ms": 12269
+        "tokens_in": 4121,
+        "tokens_out": 178,
+        "llm_calls": 6,
+        "trajectory_steps": 17,
+        "latency_ms": 11043
       },
-      "answer_text": "There are 0 sellers listed in the electronics category.",
+      "answer_text": "There are 3 sellers in the electronics category.",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT COUNT(*) AS electronics_sellers_count\nFROM sellers\nWHERE category = 'Electronics';",
+          "ref": "SELECT COUNT(*) \nFROM sellers \nWHERE category = 'electronics';",
           "page": null
         }
       ],
@@ -2169,17 +2169,17 @@
       "actual_route": "sql",
       "subtasks": [],
       "metrics": {
-        "tokens_in": 1560,
-        "tokens_out": 100,
-        "llm_calls": 4,
-        "trajectory_steps": 4,
-        "latency_ms": 26116
+        "tokens_in": 4068,
+        "tokens_out": 296,
+        "llm_calls": 6,
+        "trajectory_steps": 17,
+        "latency_ms": 20608
       },
       "answer_text": "There are 566 delivery events with a null location_id.",
       "citations": [
         {
           "kind": "sql",
-          "ref": "SELECT COUNT(*) \nFROM delivery_events \nWHERE location_id IS NULL;",
+          "ref": "SELECT de.event_id\nFROM delivery_events de\nLEFT JOIN locations l ON de.location_id = l.location_id\nWHERE l.location_id IS NULL\nLIMIT 1000;",
           "page": null
         }
       ],
@@ -2192,7 +2192,7 @@
     "non_hybrid_fired": 0,
     "non_hybrid_total": 17,
     "mean_llm_calls_by_route": {
-      "sql": 4.0,
+      "sql": 5.777777777777778,
       "docs": 3.0,
       "hybrid": 5.0
     }
@@ -2506,17 +2506,12 @@
         "hit": [],
         "claims": [
           {
-            "claim": "FastShip 1 has handled 0 fulfillments",
-            "grounded_in_retrieved_context": false,
-            "factually_correct": false
-          },
-          {
-            "claim": "FastShip 1 commits to a transit time of 29 hours for the Metro Mumbai zone",
+            "claim": "FastShip 1 commits to a 29-hour transit time for the Metro Mumbai zone.",
             "grounded_in_retrieved_context": true,
             "factually_correct": true
           }
         ],
-        "faithfulness_score": 0.5,
+        "faithfulness_score": 1.0,
         "ungrounded_but_true_count": 0
       },
       "e1_hybrid_006": {
@@ -2533,9 +2528,9 @@
         ],
         "claims": [
           {
-            "claim": "Seller S010 has 0 disputes in the damaged_goods category.",
-            "grounded_in_retrieved_context": false,
-            "factually_correct": false
+            "claim": "Seller S010 has 1 dispute in the damaged_goods category.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
           },
           {
             "claim": "The committed resolution window for the damaged_goods category is 5 business days.",
@@ -2543,8 +2538,8 @@
             "factually_correct": true
           }
         ],
-        "faithfulness_score": 0.5,
-        "ungrounded_but_true_count": 1
+        "faithfulness_score": 1.0,
+        "ungrounded_but_true_count": 0
       },
       "e1_hybrid_007": {
         "precision": 1.0,
@@ -2621,7 +2616,7 @@
     },
     "mean_context_precision": 0.6222222222222221,
     "mean_context_recall": 0.8,
-    "mean_faithfulness": 0.76875,
-    "total_ungrounded_but_true": 5
+    "mean_faithfulness": 0.83125,
+    "total_ungrounded_but_true": 4
   }
 }

@@ -200,3 +200,65 @@ run, so C1-V1/C1-V3's A/B is unaffected, and flags_snapshot still captures it
 at query entry (A2). Reversible by editing one line; the re-baseline runbook
 (docs/rebaseline_runbook.md, step 4) re-decides it on the graded model.
 ---
+
+---
+GAP-7 | Part F | F-V2 over-exposure experiment | build agent | 2026-08-15
+F-V2 asks for the over-exposure experiment to run "at surfaces of 9, 15, 25,
+and 40 tools by registering inert decoys" -- numbers that exactly match
+mcp.tool_ceiling's own scale (9 = the current registered tool count, 15 = the
+configured ceiling, Appendix 1). But F-V2 itself, and M9, measure SUPERVISOR
+ROUTING accuracy ("the Supervisor routes a fixed query set to the correct
+specialist"), and D1 deliberately decoupled the Supervisor's 3-route
+classification from MCP's tool list entirely: orchestrator/nodes/
+supervisor.py's system prompt never names a single MCP tool
+(schema.list_tables, data.run_select, etc.), and the Supervisor never calls
+or sees mcp/main.py's _REGISTERED_TOOLS. There is no code path by which
+registering decoy MCP JSON-RPC methods could move what the Supervisor's LLM
+call sees or how it routes -- the two "tool surfaces" the spec's own
+vocabulary conflates are, in this D1-reduced architecture, mechanically
+unconnected. (This vocabulary clash traces back further: Strategy Document
+§4.2/§7 borrow "tool surface crowds routing accuracy" language from the
+original six-agent design MCP-architecture research, written before D1
+collapsed Supervisor/Geocoding/COLA into a 3-route classifier decoupled from
+MCP's own tool list.)
+Resolution: scripts/experiment_tool_ceiling.py interprets "surfaces of
+9/15/25/40" as the total number of CAPABILITY DESCRIPTIONS injected into the
+Supervisor's own classification prompt (3 real routes + N decoys), reusing
+the spec's own scale as decoy-count targets -- this is the only surface that
+can actually move M9, and it reproduces the intended phenomenon (a
+classification decision degrading as its own context crowds) even though the
+numbers no longer literally equal MCP's registered tool count. Decoy
+descriptions are drawn partly from Strategy §6's own deferred-scope items
+(several -- "geocoding" chief among them -- were literally rejected as peer
+routing destinations by D1, a fitting source) plus invented but plausible
+logistics-analytics specialist names; none are ever a valid classification
+target (_extract_route only accepts sql/docs/hybrid). Not a BD -- this is an
+implementation choice for an unaddressed case (A0.1), not a reopening of D1's
+own settled reduction.
+---
+
+---
+GAP-8 | Part F | F1 Scope, evaluator pipeline | build agent | 2026-08-15
+F1 Scope says the evaluator pipeline "runs the full golden set on a schedule
+and on demand" but never defines "the full golden set" -- by Part F the repo
+holds seven distinct golden fixtures (phase_b/c1/c2/d_multilingual/d_spatial/
+e1/e2.json), each built for a different phase's own Verification section, not
+for a continuous evaluation pipeline. Running all seven on every scheduled
+tick (golden_run_schedule_cron = hourly) would mean re-running C1's
+memory-flag A/B machinery, D's normalization A/B, and E1's LLM-judge
+faithfulness scoring on a cron -- none of which the evaluator's own Scorer
+registry (SpecScorer, ExecutionScorer) can even score, since those fixtures
+don't carry reference_spec or ground_truth_sql/expected_row_count in the
+shape those two scorers need.
+Resolution: "the full golden set" is defined as the union of the two
+fixtures whose shape matches the two ENABLED scorers -- fixtures/golden/
+phase_c2.json (ground_truth_sql, for ExecutionScorer) and fixtures/golden/
+phase_e2.json (reference_spec, for SpecScorer) -- named in config
+(evaluation.spec_scorer_fixture / execution_scorer_fixture), not hardcoded.
+Every other phase's golden set keeps its own Verification-section role
+(B-V1, C1-V1..V6, D-V1..V7, E1-V1..V8) and is re-run there, and again at
+F-V3, unchanged (F2 Notes: "reuses its original Part's procedure unchanged").
+Not a BD -- this is an implementation choice for an unaddressed case, not a
+new Strategy-level decision; the Scorer registry seam itself (A8) is
+unaffected by which fixture feeds it.
+---
