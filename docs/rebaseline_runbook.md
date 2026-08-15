@@ -43,8 +43,14 @@ copy the local report aside first if you want both on disk)**
 - [ ] `scripts/bench_grounding.py` — E1-V3 (M6)
 - [ ] `scripts/experiment_tool_ceiling.py` — F-V2 (M9; model-independent, re-run
       for completeness only — do not gate on it)
-- [ ] E2-V1 (M7): **only runnable once Task 10 lands** (the Synthesizer must
-      populate `chart` first). If still deferred, record it as still deferred.
+- [ ] E2-V1 (M7): **Task 10 has landed — this is now runnable and must be run.**
+      `python3 scripts/run_e2_v1.py --out docs/e2_v1_generated_<label>.json`
+      then `python3 scripts/score_specs.py --score <same path>`. Two numbers to
+      record, not one: the A7 validity count (binary, must be 30/30) and the
+      mean spec score. Record the `chart:null` count separately — a null scores
+      0.0 against a reference that has a chart, so the null count and the spec
+      quality move the mean for different reasons and must not be conflated.
+      `scripts/verify_fv3.sh` runs both halves automatically.
 
 Use `scripts/verify_fv3.sh` to run the C/D/E sequence in order — it resets
 flags to shipped defaults between steps, which a hand-run sequence does not
@@ -97,7 +103,8 @@ Run in this order and record each result next to its local baseline:
 | D-V2 | M3 entity preservation | 27/32 (84.4%) — same `bench_multilingual.py` run as D-V1, not a separate script | ___ |
 | D-V6 | spatial exact count | FAIL (41 vs 30) | ___ |
 | E1-V3 | M6 prec/recall/faith | 0.622 / 0.80 / 0.769 | ___ |
-| E2 (Task 10) | M7 chart quality | pending — Synthesizer does not yet populate `chart` on any route | ___ |
+| E2-V1 | M7 chart quality | 0.4592 mean spec score, 8/30 `chart:null`, A7 30/30 valid (local, first run, pre-JSON-fix) | ___ |
+| E2-V1 | M7 A7 validity (binary) | 30/30 valid — must stay 30/30 on any model | ___ |
 
 **M9 (F-V2 routing determinism) is intentionally NOT a row above.** Strategy
 §7.0 classifies M9 as model-independent ("a classification property... stand
