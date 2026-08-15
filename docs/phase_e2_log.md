@@ -232,3 +232,93 @@ run after the clean rebuild).
 All images rebuilt cleanly (`DOCKER_BUILDKIT=0`, see the gap log's environment
 note) and containers recreated from those images before this verification —
 nothing here was measured against a live-patched container.
+
+---
+
+## Task 10 — chart emission built, and E2-V1 run for the first time
+
+Until now the Synthesizer emitted `chart: null` on every route, so E2-V1's M7
+was not "deferred pending a better model" — there was **nothing to score**.
+Task 10 closes E2 Deliverable 1.
+
+### Design: the model picks the shape, the code supplies the data
+
+`build_chart()` takes the model's proposed `{mark, encoding, title}` and
+attaches `data.values` from the real SQL rows in code. The model is never
+asked for, and never trusted with, the data itself.
+
+This is not a stylistic preference. A model that emits its own `data.values`
+can produce a chart that is fully A7-valid — every number well-formed — and
+that silently contradicts the prose answer above it. Generating the data in
+code makes that class of error *impossible* rather than merely unlikely, which
+is what Strategy §1's "grounded in real rows" has to mean if it means anything.
+
+Guards, all of which return `None` rather than a repaired spec (A7: "It never
+returns a repaired chart"):
+- `mark` not in the A7 enum → drop the chart.
+- an encoding channel naming a column absent from the result → drop the
+  channel (Vega-Lite renders an unknown field as a silently empty channel).
+- non-A7 encoding properties → stripped.
+- `is_chartable()` gate: below `chart_min_rows`/`chart_min_columns` a result is
+  an answer, not a chart.
+
+### E2-V1 first run (local model, provisional)
+
+| | value |
+|---|---|
+| responses A7-valid | **30/30** |
+| A7-invalid | 0 |
+| transport errors | 0 |
+| charts populated | 22/30 |
+| `chart: null` | 8 |
+| **M7 mean spec score** | **0.4592** |
+| M7 over charts actually produced | 0.626 |
+
+The A7 half is binary and **passes**. M7 is model-sensitive and provisional
+(BD6), pending the graded re-baseline.
+
+### The 8 nulls were investigated rather than attributed to the model
+
+All 30 fixture queries expect a chart, so each null scores 0.0 and the null
+count — not spec quality — was doing most of the damage to the mean. The
+obvious reading ("a 7B model just isn't good at charts") turned out to be
+wrong for most of them.
+
+Diagnosis found **a real code defect, not a model ceiling**: the Synthesizer
+was returning a perfectly good JSON object whose `answer_text` contained
+*literal* newlines instead of the `\n` escape JSON requires. That is invalid
+JSON by the letter of the spec, `json.loads` rejected it, and the entire
+structured response — chart included — was discarded into the plain-text
+fallback. It affected result sets that had already passed the chartability
+gate: 10 rows × 2 columns, 32 rows × 5 columns.
+
+The bug had been *logging itself the whole time* and saying nothing useful:
+`"Synthesizer returned non-JSON for query_id=..."` recorded that parsing
+failed while throwing away **what** failed. Adding the response preview to
+that warning identified the cause immediately. This is the same defect class
+as the evaluator's empty-string error strings — a log that cannot diagnose its
+own event.
+
+Three fixes:
+1. `json.loads(..., strict=False)` — permits control characters inside string
+   values. Nothing else is relaxed; a genuinely malformed object still raises
+   and still falls through to plain text.
+2. `_extract_json_object()` — recovers an object embedded in surrounding prose
+   via a string-aware brace scan (braces inside string values and escaped
+   quotes do not affect depth). Returns `None` rather than anything partial.
+3. The non-JSON warning now logs a truncated response preview.
+
+Verified: a 10-row × 2-column result that produced `chart: null` before the
+fix produces a real `bar` chart after it.
+
+**Residual nulls are genuine and are not papered over.** After the fix the
+remaining ones split into three honest categories:
+- **upstream SQL returned 0 rows** (e.g. "Scatter of promised versus actual
+  delivery hours") — an M4-class text-to-SQL failure, not a charting failure;
+- **SQL returned 1 wide row** (e.g. "What share of orders is B2B versus B2C?"
+  → one row, two count columns) where the reference expects an `arc` over a
+  long-format two-row result. Correctly gated out by `is_chartable`; the
+  mismatch is in the SQL's shape, upstream of the chart;
+- **the model chose `null`** on un-aggregated raw rows (32 dispute rows with
+  `narrative`), where a bar chart would have needed a count aggregate. That
+  one is a real model-quality limitation (BD6).

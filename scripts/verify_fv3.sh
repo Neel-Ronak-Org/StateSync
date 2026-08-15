@@ -13,10 +13,12 @@
 # experiment_tool_ceiling.py's over-exposure part -- shared local-model
 # contention would distort every number) and records exit codes.
 #
-# E2-V1 (M7) is DELIBERATELY NOT run for a quality number here -- the
-# Synthesizer still emits chart:null on every route (Task 10, deferred).
-# scripts/verify_e2.py already re-confirms E2-V1's validity/rejection half
-# (model-independent) separately.
+# E2-V1 (M7) IS run here as of Task 10. It was previously skipped for a
+# sound reason that has since expired: the Synthesizer emitted chart:null on
+# every route, so a "quality number" would have measured an unbuilt feature
+# rather than generation quality. Now that build_chart() emits real specs,
+# F-V3's own wording ("Execute, unchanged: ... E2-V1 (M7)") applies normally.
+# scripts/verify_e2.py still covers the model-INDEPENDENT half separately.
 #
 # BUG FOUND AND FIXED (Phase F): several of these scripts toggle
 # config/flags.toml's memory.enabled / normalization.enabled as PART of
@@ -97,6 +99,14 @@ run_step "D-V1/D-V2 (M3)" python3 scripts/bench_multilingual.py
 reset_flags_to_defaults
 run_step "E1-V3 (M6)"     python3 scripts/bench_grounding.py
 
+# E2-V1 runs in two halves: generation+A7 validation (binary, its own exit
+# code) then scoring (the M7 number). The generated-spec file is stamped per
+# run so a re-verification never overwrites an earlier run's artifact.
+reset_flags_to_defaults
+E2V1_OUT="docs/e2_v1_generated_fv3_$(date -u +%Y%m%dT%H%M%SZ).json"
+run_step "E2-V1 (M7) generate+A7" python3 -u scripts/run_e2_v1.py --out "${E2V1_OUT}"
+run_step "E2-V1 (M7) score"       python3 scripts/score_specs.py --score "${E2V1_OUT}"
+
 reset_flags_to_defaults
 echo ""
 echo "── Summary ──────────────────────────────────────────"
@@ -106,4 +116,4 @@ done
 echo ""
 echo "F-V3 re-verification run complete. $(date -u +%Y-%m-%dT%H:%M:%SZ)."
 echo "Numbers: each step's own docs/*_report.json (freshly overwritten)."
-echo "E2-V1 (M7) quality: not run here -- deferred (Task 10), see docs/phase_e2_log.md."
+echo "E2-V1 (M7) quality: generated specs in ${E2V1_OUT}; M7 printed above."

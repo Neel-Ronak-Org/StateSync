@@ -46,8 +46,24 @@ Rules:
 3. If the query failed with an error, explain the failure clearly to the user.
 4. Do not mention internal details like table names or SQL syntax unless helpful.
 5. Respond with a JSON object matching this exact schema:
-   {"answer_text": "<string, max 4000 chars>", "chart": null, "citations": []}
-6. chart must always be null in this response.
+   {"answer_text": "<string, max 4000 chars>", "chart": <null or chart shape>, "citations": []}
+6. chart: propose a chart ONLY when the data context says a chart is
+   appropriate, and only ever as this SHAPE -- never include the data:
+     {"mark": "<bar|line|point|area|tick|rect|arc>",
+      "encoding": {"<channel>": {"field": "<exact column name>",
+                                 "type": "<quantitative|nominal|ordinal|temporal>",
+                                 "aggregate": "<optional: sum|mean|count|min|max|median>"}},
+      "title": "<optional short title>"}
+   - Use ONLY mark values from that list. Do not invent a mark type.
+   - "field" must be an EXACT column name from the Columns line in the
+     context. A channel naming any other column is discarded.
+   - Do NOT include a "data" key. The real rows are attached in code; any
+     data you write would be ignored and could contradict your own answer.
+   - Typical choices: a category vs a measure -> bar; a measure over time ->
+     line or area; two measures -> point; a share of a whole -> arc.
+   - If the data context says a chart is not appropriate, or no single chart
+     honestly represents the answer, use null. A wrong chart is worse than
+     none.
 7. Leave citations as an empty array -- it is filled in deterministically
    after your response, not by you.
 8. answer_text must not exceed 4000 characters.
@@ -57,6 +73,153 @@ Rules:
    something, explain in prose that this system answers with data and
    declarative charts only, and does not produce or execute code (D8).
 10. Emit the raw JSON object only. Do not wrap it in markdown code fences."""
+
+
+_A7_MARKS = ("bar", "line", "point", "area", "tick", "rect", "arc")
+_A7_ENCODING_TYPES = ("quantitative", "nominal", "ordinal", "temporal")
+_A7_AGGREGATES = ("sum", "mean", "count", "min", "max", "median")
+_A7_ENCODING_PROPS = ("field", "type", "aggregate", "title", "sort")
+_VEGA_LITE_SCHEMA = "https://vega.github.io/schema/vega-lite/v5.json"
+
+
+def is_chartable(sql_rows: list[dict], sql_columns: list[str]) -> bool:
+    """
+    Deterministic gate for E2 Deliverable 1's "where a chart is appropriate".
+    A single scalar result is an answer, not a chart. Thresholds are config
+    (A0.2), not literals.
+    """
+    return (
+        len(sql_rows) >= cfg.sql.chart_min_rows
+        and len(sql_columns) >= cfg.sql.chart_min_columns
+    )
+
+
+def build_chart(
+    proposed: dict | None,
+    sql_rows: list[dict],
+    sql_columns: list[str],
+    query_id: str,
+) -> dict | None:
+    """
+    Assembles the final A7 chart from the model's proposed SHAPE plus the
+    real result rows.
+
+    The split is deliberate and load-bearing: the model chooses the mark and
+    the encoding (what kind of chart, which column on which channel), and
+    THIS CODE supplies `data.values` from the actual SQL result. The model is
+    never asked for, and never trusted with, the data itself.
+
+    Two reasons, both from the spec:
+      - E2 Notes: "`data.values` is the actual result rows, capped at 5000."
+      - Strategy §1: answers are "grounded in real rows". A model that emits
+        its own data.values can fabricate a plausible-looking chart that
+        contradicts the prose above it, and A7's schema would happily
+        validate it — every value is a well-formed number. Generating the
+        data in code makes that class of error impossible rather than
+        unlikely.
+
+    Every `field` referenced by an encoding must exist in `sql_columns`; a
+    reference to a column that is not in the result is dropped, because
+    Vega-Lite renders a missing field as a silently empty channel.
+    Returns None whenever a conformant chart cannot be built — never a
+    partial or repaired one (A7: "It never returns a repaired chart").
+    """
+    if not isinstance(proposed, dict):
+        return None
+
+    mark = proposed.get("mark")
+    if mark not in _A7_MARKS:
+        if mark is not None:
+            logger.info(
+                "Synthesizer proposed mark %r for query_id=%s, which is not in the A7 enum; chart dropped.",
+                mark, query_id,
+            )
+        return None
+
+    raw_encoding = proposed.get("encoding")
+    if not isinstance(raw_encoding, dict) or not raw_encoding:
+        return None
+
+    columns = set(sql_columns)
+    encoding: dict[str, dict] = {}
+    for channel, spec in raw_encoding.items():
+        if not isinstance(spec, dict):
+            continue
+        field = spec.get("field")
+        if field is not None and field not in columns:
+            logger.info(
+                "Synthesizer bound channel %r to unknown column %r for query_id=%s; channel dropped.",
+                channel, field, query_id,
+            )
+            continue
+        clean = {k: v for k, v in spec.items() if k in _A7_ENCODING_PROPS}
+        if clean.get("type") not in _A7_ENCODING_TYPES:
+            continue
+        if "aggregate" in clean and clean["aggregate"] not in _A7_AGGREGATES:
+            del clean["aggregate"]
+        encoding[channel] = clean
+
+    if not encoding:
+        return None
+
+    chart: dict = {
+        "$schema": _VEGA_LITE_SCHEMA,
+        "mark": mark,
+        "data": {"values": sql_rows[:cfg.sql.chart_max_data_rows]},
+        "encoding": encoding,
+    }
+    title = proposed.get("title")
+    if isinstance(title, str) and title.strip():
+        chart["title"] = title.strip()
+    return chart
+
+
+def _extract_json_object(text: str) -> dict | None:
+    """
+    Recover a JSON object embedded in surrounding prose.
+
+    Scans for the first `{` and returns the substring through its matching
+    `}`, parsed. Brace counting is string-aware: braces inside a JSON string
+    value (an answer_text that itself mentions "{") and escaped quotes do not
+    affect the depth, which a naive `text[text.find("{"):text.rfind("}")+1]`
+    gets wrong on exactly the answers most likely to contain them.
+
+    Returns the parsed object, or None when no balanced object parses --
+    never a partial or repaired one. A model that produced genuine prose and
+    no JSON must still fall through to the plain-text branch.
+    """
+    start = text.find("{")
+    if start == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escaped = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    # strict=False: see the primary parse site for why raw
+                    # newlines inside string values must be tolerated.
+                    candidate = json.loads(text[start:i + 1], strict=False)
+                except json.JSONDecodeError:
+                    return None
+                return candidate if isinstance(candidate, dict) else None
+    return None
 
 
 def _strip_json_fences(text: str) -> str:
@@ -254,9 +417,20 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         if sql_rows:
             rows_preview = sql_rows[:cfg.sql.synthesizer_preview_rows]
             rows_text = json.dumps(rows_preview, indent=2, default=str)  # noqa: literals — JSON display indent
+            chartable = is_chartable(sql_rows, sql_columns)
+            chart_hint = (
+                f"A chart IS appropriate for this result "
+                f"({len(sql_rows)} rows x {len(sql_columns)} columns). Propose one "
+                f"unless no single chart honestly represents the answer."
+                if chartable else
+                f"A chart is NOT appropriate for this result "
+                f"({len(sql_rows)} row(s) x {len(sql_columns)} column(s) is too "
+                f"little shape to plot). Use chart: null."
+            )
             context_parts.append(
                 f"SQL query returned {len(sql_rows)} row(s).\n"
                 f"Columns: {', '.join(sql_columns)}\n"
+                f"{chart_hint}\n"
                 f"Results (first {len(rows_preview)} rows):\n{rows_text}"
             )
         else:
@@ -284,19 +458,53 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         # would otherwise fall through to the plain-text branch below and put
         # the whole raw JSON blob into answer_text).
         try:
-            parsed = json.loads(_strip_json_fences(result.text))
+            # strict=False allows raw control characters inside string values.
+            # The model routinely writes a multi-line answer_text with LITERAL
+            # newlines rather than the \n escape JSON requires. That is invalid
+            # JSON by the letter of the spec, and rejecting it threw away an
+            # otherwise perfectly good structured response -- including its
+            # chart. Diagnosed from E2-V1: it accounted for 7 of the 8
+            # chart:null results, every one of them on a result set that had
+            # passed the chartability gate. Nothing else is relaxed; a genuinely
+            # malformed object still raises and still falls through below.
+            parsed = json.loads(_strip_json_fences(result.text), strict=False)
         except json.JSONDecodeError:
-            logger.warning(
-                "Synthesizer returned non-JSON for query_id=%s; treating as plain text.",
-                query_id,
-            )
-            parsed = {
-                "answer_text": _strip_json_fences(result.text)[:cfg.sql.answer_max_chars],
-                "chart": None, "citations": [],
-            }
+            # Second chance before giving up: a model that prefaces its JSON
+            # with a sentence of prose ("Here is the response:") produces text
+            # that is not itself JSON but CONTAINS the object. Falling straight
+            # to plain text there discards a perfectly good structured
+            # response -- and with it the chart, which is how E2-V1 lost 7 of
+            # its 8 chart:null results on the local model.
+            parsed = _extract_json_object(result.text)
+            if parsed is None:
+                logger.warning(
+                    # Log the evidence, not just the fact. The earlier version
+                    # recorded that parsing failed and threw away WHAT failed,
+                    # which is the same defect as the evaluator's empty-string
+                    # error strings -- a log that cannot diagnose its own event.
+                    "Synthesizer returned non-JSON for query_id=%s; treating as "
+                    "plain text. Response began: %r",
+                    query_id, result.text[:200],  # noqa: literals — log truncation width
+                )
+                parsed = {
+                    "answer_text": _strip_json_fences(result.text)[:cfg.sql.answer_max_chars],
+                    "chart": None, "citations": [],
+                }
+            else:
+                logger.info(
+                    "Synthesizer wrapped its JSON in prose for query_id=%s; "
+                    "object recovered.", query_id,
+                )
 
-        # Force chart: null through Part E1; citations always deterministic (above).
-        parsed["chart"] = None
+        # E2 Deliverable 1. The model proposed only the chart SHAPE; the real
+        # rows are attached here, in code (see build_chart's docstring for why
+        # the model is never trusted with data.values). Gated on the same
+        # deterministic chartability test the prompt was told about, so a
+        # model that proposes a chart for a single scalar still gets null.
+        parsed["chart"] = (
+            build_chart(parsed.get("chart"), sql_rows, sql_columns, query_id)
+            if is_chartable(sql_rows, sql_columns) else None
+        )
         parsed["citations"] = citations
 
         # Validate against A7
@@ -304,14 +512,22 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         answer_text = _strip_executable_content(safe_out["answer_text"], query_id)
         answer_text = _ensure_category_mentioned(answer_text, sql_error)
 
+        # safe_out["chart"] is the A7-VALIDATED chart: safe_synthesizer_output
+        # nullifies it (never repairs it) if it failed the schema or the BD7
+        # expression audit. main.py validates the assembled payload a second
+        # time at the response boundary, and the frontend a third time before
+        # rendering (A7's two-independent-validations rule, E2-V6).
+        final_chart = safe_out["chart"]
         logger.info(
-            "Synthesizer completed for query_id=%s (tokens_in=%d tokens_out=%d citations=%d).",
+            "Synthesizer completed for query_id=%s (tokens_in=%d tokens_out=%d "
+            "citations=%d chart=%s).",
             query_id, result.tokens_in, result.tokens_out, len(citations),
+            final_chart["mark"] if final_chart else "null",
         )
 
         return {
             "answer_text": answer_text,
-            "vega_spec": None,
+            "vega_spec": final_chart,
             "metrics": {
                 "tokens_in":        result.tokens_in,
                 "tokens_out":       result.tokens_out,

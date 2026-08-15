@@ -422,13 +422,47 @@
   }
 
   // ── Trace renderer ─────────────────────────────────────────────────────────
+  // SECURITY: built with DOM nodes and textContent, never innerHTML.
+  //
+  // This previously interpolated trace values straight into innerHTML, which
+  // is an XSS sink fed by untrusted data: state_trace carries `sql_rows` (raw
+  // database content) and echoes `normalized_query` (the user's own text).
+  //
+  // Characterised honestly, because the distinction matters: this was a
+  // LATENT vulnerability, not an exploited one. The Part F adversarial corpus
+  // (scripts/seed_adversarial.py) is prompt-injection PROSE -- it contains no
+  // <script>, no onerror, no executable construct -- so nothing currently
+  // seeded achieves script execution. What the database does contain is
+  // angle-bracketed text: two `delivery_events.note` rows carry
+  // `<tool_call>...</tool_call>` payloads. That proves untrusted markup
+  // reaches this sink. Had any payload been executable it would have run,
+  // because the page's CSP allows 'unsafe-inline' for script-src (it must:
+  // the app is a single inline <script>).
+  //
+  // There is a second, already-active bug here that is not about XSS at all:
+  // innerHTML PARSES those `<tool_call>` tags as unknown elements and drops
+  // them from the rendered output, so an analyst reading the trace to inspect
+  // an injection attempt saw the payload silently vanish -- the security
+  // trace concealing the exact thing it exists to show. textContent displays
+  // it verbatim.
+  //
+  // Same threat model as F-V1's "tool poisoning through data", one layer
+  // further out, where nothing was checking.
   function renderTrace(trace) {
     if (!trace) return;
-    const lines = Object.entries(trace).map(([k, v]) => {
-      const val = typeof v === 'object' ? JSON.stringify(v) : String(v);
-      return `<span class="trace-key">${k}</span>: <span class="trace-value">${val}</span>`;
+    traceCard.textContent = '';
+    Object.entries(trace).forEach(([k, v], i) => {
+      if (i > 0) traceCard.appendChild(document.createTextNode('\n'));
+      const keyEl = document.createElement('span');
+      keyEl.className = 'trace-key';
+      keyEl.textContent = k;
+      const valEl = document.createElement('span');
+      valEl.className = 'trace-value';
+      valEl.textContent = typeof v === 'object' ? JSON.stringify(v) : String(v);
+      traceCard.appendChild(keyEl);
+      traceCard.appendChild(document.createTextNode(': '));
+      traceCard.appendChild(valEl);
     });
-    traceCard.innerHTML = lines.join('\n');
     traceCard.classList.add('visible');
   }
 

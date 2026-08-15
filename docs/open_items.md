@@ -198,7 +198,33 @@ routing fixture when this is fixed, so M9 can catch a regression here.
 **This now shares a root cause with the [M3 regression](#m3-regression)
 item** — one fix closes the routing half of both.
 
+### FIXED 2026-08-15 — routing half closed, M3 recovery not yet measured
+
+Cause was narrower than "the word SLA pulls toward docs": the `sql` route
+description ended with *"No mention of a policy, agreement, SLA commitment
+document, or SOP."* That is a test on the question's **vocabulary**, so it
+fired on wording rather than on where the answer lives. Replaced with an
+explicit stored-column listing, a DISAMBIGUATION block ("decide by WHERE THE
+VALUE LIVES, never by which word appears"), and worked examples for the
+overlap cases. Commit `c735457`.
+
+Also done, as this item itself asked for: the six missing query classes were
+added to `fixtures/golden/phase_f_routing.json`, so **M9 can now catch a
+regression here** — the blind spot that let M9 score 60/60 while production
+routing was broken is closed. Six of the least discriminating existing entries
+were dropped to hold Appendix 2.2's mandated 20/route.
+
+**Measured so far:** M9 re-run scores **sql = 1.000 (20/20), including all six
+new hard cases**; overall 0.983 (59/60), F-V2 PASS.
+
+**Still open:** whether this recovers the ~20 percentage points it was costing
+M3's English reference line. That is a D-V1/D-V2 measurement, not an
+inference, and it has not been run yet. The prediction on record — English
+9/20 (45%) → roughly 13/20 (65%) — is written down *before* the run precisely
+so it can be wrong. This item closes when that number exists, not before.
+
 Full write-up: [`docs/phase_d_log.md`](phase_d_log.md) (§ M3 separation run) ·
+[`docs/phase_f_log.md`](phase_f_log.md) (§ Supervisor routing fix) ·
 [`docs/phase_e_gap_log.md`](phase_e_gap_log.md) · spec step:
 `docs/StateSync_Build_Spec.md` §F-V2.
 

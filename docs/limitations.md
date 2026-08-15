@@ -71,6 +71,43 @@ Recorded honestly in `docs/metrics-report.md`; summarized here per F-V8:
   still emits `chart: null` on every route (Task 10, deferred) — see
   `docs/open_items.md`.
 
+## Limitations of the measuring instruments themselves
+
+The metrics above describe the system. These describe the *scorers*, and they
+matter just as much: a number is only as trustworthy as the thing producing it.
+
+- **SpecScorer (M7) cannot see a channel bound to the wrong column.** The
+  encoding key is `<channel>|<type>|<aggregate>`; the `field` NAME is
+  deliberately excluded, because a reference spec describes what the chart
+  should *look like*, and the column's name is a text-to-SQL artifact — the
+  same correct chart is produced whether the agent named a column `seller_id`,
+  `seller`, or `s_id`, and scoring the name would measure SQL naming under the
+  guise of measuring chart quality. The cost is real and is stated rather than
+  hidden: **a bar chart plotting the right shape from the wrong column scores
+  as correct.** This is precisely the gap the deferred VLM Vision Score (D11)
+  exists to close — VegaChat reports ~0.71 Pearson for VLM judging vs ~0.65 for
+  deterministic spec scoring, and this blind spot is a concrete instance of
+  that difference. Mitigating factor, not a fix: `build_chart()` drops any
+  channel naming a column absent from the result set, so the wrong column must
+  at least be a column that genuinely exists in the query output.
+
+- **M9's routing fixture only measures what it contains.** F-V2 scored 60/60
+  for the whole of Phase F while a deterministic routing defect was live in
+  production (`c2g_10`), because every `sql` query in the fixture had been
+  authored unambiguous. Six overlap-vocabulary cases were added once that was
+  discovered. The general lesson is recorded because it will recur: **a fixture
+  authored by the same reasoning as the prompt shares the prompt's blind
+  spots.** The Phase D fixture, written earlier and independently, is what
+  exposed the defect.
+
+- **A7 validation in `run_e2_v1.py` is not independent.** It imports the
+  orchestrator's own validator, so it re-checks that the pipeline's output
+  matches the pipeline's own rules — it is a regression guard, not a second
+  opinion. The genuinely independent second validator is the frontend's,
+  hand-written in JavaScript and exercised in-browser (E2-V6). A Python
+  reimplementation was deliberately *not* written, since it would test a copy
+  of the rules rather than the rules.
+
 ## C2-V2 categories with a 0% repair rate
 
 Per F-V8's specific requirement. From the Phase F re-run of

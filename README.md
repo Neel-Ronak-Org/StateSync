@@ -153,7 +153,14 @@ python scripts/verify_seams.py
 bash scripts/verify_security.sh
 
 # Phase F — M9 routing determinism + tool-ceiling over-exposure experiment
+# (writes docs/f_v2_report.json; refuses to overwrite an existing report --
+#  pass --out <new path> to record a re-run alongside it)
 python scripts/experiment_tool_ceiling.py
+
+# Phase E2 — E2-V1: run all 30 chart queries live, validate each response
+# against A7 (binary), then score the generated specs for M7.
+python scripts/run_e2_v1.py --out docs/e2_v1_generated_<label>.json
+python scripts/score_specs.py --score docs/e2_v1_generated_<label>.json
 ```
 Model-sensitive re-verification (M2/M4/M6/M7 and related checks) reuses each
 phase's own bench script unchanged — see `docs/metrics-report.md` for the

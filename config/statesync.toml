@@ -30,6 +30,13 @@ max_tokens_judge          = 1024    # E1: bench_grounding.py context precision /
 synthesizer_preview_rows  = 50      # rows shown to synthesizer LLM (context window budget)
 answer_max_chars          = 4000    # A7 answer_text character cap
 chart_max_data_rows       = 5000    # A7 data.values maxItems
+# E2 Deliverable 1: "populated chart WHERE A CHART IS APPROPRIATE". A result
+# has to have enough shape to plot -- a single scalar ("how many orders?" -> 1
+# row, 1 column) is an answer, not a chart, and forcing one would be noise.
+# The Synthesizer may still return null above these floors; these only gate
+# out results that cannot be charted at all.
+chart_min_rows            = 2       # need at least two points to show a shape
+chart_min_columns         = 2       # need a dimension and a measure
 chart_max_transforms      = 8       # A7 transform maxItems
 chart_min_dimension       = 100     # A7 chart width/height minimum (px)
 chart_max_width           = 1600    # A7 chart width maximum (px)

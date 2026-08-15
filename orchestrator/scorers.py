@@ -108,7 +108,23 @@ class SpecScorer:
 
     # Properties that carry meaning about WHAT is plotted, as opposed to how it
     # is dressed. Order-independent: joined into a sorted, stable key.
-    _SEMANTIC_ENCODING_PROPS = ("field", "type", "aggregate")
+    #
+    # `field` is deliberately EXCLUDED. A reference spec encodes what the chart
+    # should LOOK like -- a bar chart with a nominal x and an aggregated
+    # quantitative y. The column's NAME is a SQL-generation artifact, not a
+    # visualization-correctness property: the same correct chart is produced
+    # whether the agent named the column `seller_id`, `seller`, or `s_id`, and
+    # penalising that would measure text-to-SQL naming under the guise of
+    # measuring chart quality. Channel identity is still in the key, so
+    # `x|nominal` and `color|nominal` remain distinct, and a missing or
+    # wrongly-typed channel is still caught.
+    #
+    # Known limitation, recorded rather than hidden: binding the right channel
+    # to the WRONG column is not detected. That is the deterministic scorer
+    # being "honest about its own limitation" exactly as D11 frames it, and it
+    # is the gap the deferred VLM Vision Score (VegaChat, ~0.71 vs ~0.65
+    # Pearson) exists to close.
+    _SEMANTIC_ENCODING_PROPS = ("type", "aggregate")
 
     def _encoding_features(self, spec: dict[str, Any]) -> set[str]:
         encoding = spec.get("encoding") or {}

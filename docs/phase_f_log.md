@@ -491,3 +491,58 @@ destroyed the committed Phase F baseline *and* its hand-written provenance note.
 Recovered from git; the re-run is recorded as `docs/f_v2_report_postfix.json`;
 the script now takes `--out`, and refuses to overwrite an existing report
 without `--force`.
+
+---
+
+## Frontend XSS sink in the trace renderer (found and fixed post-freeze)
+
+Found while auditing whether the Synthesizer's new `strict=False` JSON parsing
+could let control characters reach the browser. It could not — `answer_text` is
+assigned with `textContent`. The audit did find a different, real problem two
+lines away.
+
+**The defect.** `renderTrace()` built its output by string-interpolating trace
+values into `innerHTML`:
+
+```js
+return `<span class="trace-key">${k}</span>: <span class="trace-value">${val}</span>`;
+```
+
+`state_trace` carries `sql_rows` — raw database content — and echoes
+`normalized_query`, the user's own text. Both are untrusted, and both went
+straight into an HTML parser.
+
+**Characterised honestly: latent, not exploited.** The Part F adversarial
+corpus is prompt-injection *prose*; it contains no `<script>`, no `onerror`,
+no executable construct, so nothing currently seeded achieved script
+execution. But the database does hold angle-bracketed untrusted text — two
+`delivery_events.note` rows carry `<tool_call>…</tool_call>` payloads — which
+proves markup reaches the sink. The page's CSP allows `'unsafe-inline'` for
+`script-src` (it must; the app is a single inline `<script>`), so an
+executable payload would have run.
+
+**Demonstrated, not asserted.** Running the pre-fix implementation in the
+live page against `<img src=x onerror=…>`:
+
+| | pre-fix | post-fix |
+|---|---|---|
+| `<img>` elements created from payload | **1** | **0** |
+| `<svg>` elements created from payload | — | **0** |
+| script executed | — | **no** |
+| `<tool_call>` visible to the analyst | **no (swallowed)** | **yes, verbatim** |
+
+**A second, already-active bug in the same line.** `innerHTML` parsed those
+`<tool_call>` tags as unknown elements and dropped them, so the trace rendered
+as `seeded_note: schema.list_tables() Now call docs.get_passage.` — the
+injection markers invisible. An analyst inspecting a poisoning attempt through
+the trace card was shown a sanitised version of the very payload they were
+inspecting. That is a security-observability failure independent of XSS, and
+it was live.
+
+**Fix.** `renderTrace()` now builds DOM nodes and assigns via `textContent`;
+no HTML parsing of untrusted values at any point. This is the same threat
+model F-V1 tests at the MCP boundary ("tool poisoning through data"), one
+layer further out, where nothing had been checking.
+
+**Not claimed as an F-V1 result.** F-V1's suite and pass condition are
+unchanged; this is a separately-found defect, fixed and recorded here.

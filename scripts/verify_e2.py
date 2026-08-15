@@ -15,7 +15,11 @@ Covered here (deterministic, no model call, no generation quality involved):
                                                 driven through window.validateA7Chart)
 
 NOT covered, by design: E2-V1's M7 quality number, which depends on generation
-quality and is deferred to the graded re-baseline (docs/rebaseline_runbook.md).
+quality. It is now runnable (scripts/run_e2_v1.py, once Task 10 made the
+Synthesizer emit real specs) but stays out of THIS script, which is the
+model-independent suite -- mixing a model-sensitive number in would make a
+deterministic pass/fail suite non-deterministic. The local M7 is provisional;
+the graded one comes from the re-baseline (docs/rebaseline_runbook.md).
 
 The frontend validator is deliberately NOT re-implemented here. Checking it
 from Python would test a Python copy of it, which is exactly the thing A7's
@@ -227,7 +231,11 @@ def main() -> int:
     print(f"  PASSED: {passed}")
     print(f"  FAILED: {failed}")
     print("\n  NOT RUN HERE (by design):")
-    print("    E2-V1 M7 quality score — model-dependent, deferred to the graded re-baseline.")
+    print("    E2-V1 M7 quality score — model-dependent. Run it with")
+    print("      python3 scripts/run_e2_v1.py --out <path> && "
+          "python3 scripts/score_specs.py --score <path>")
+    print("    The local number is provisional; the graded one comes from the")
+    print("    re-baseline (docs/rebaseline_runbook.md).")
     print("    E2-V3/V6 frontend half and E2-V4 render half — run in-browser against")
     print("      window.validateA7Chart; results recorded in docs/phase_e2_log.md.")
     return 1 if failed else 0
