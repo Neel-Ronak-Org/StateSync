@@ -364,3 +364,30 @@ This is exactly why E2-V1 requires the `chart:null` count to be reported
 separately instead of averaged into the mean — the two move for unrelated
 reasons, and collapsing them would have hidden a text-to-SQL problem inside a
 charting metric.
+
+### E2-V4 render half re-run against REAL generated specs
+
+The in-browser render check had only ever been run against a hand-written
+synthetic chart, because Task 10 did not exist and the pipeline produced no
+real ones. Re-run using specs the model actually generated in the E2-V1 run
+(`docs/e2_v1_generated_local_postjsonfix.json`):
+
+| Check | Result |
+|---|---|
+| frontend `validateA7Chart` (validator 2 of 2) | `[]` — no violations |
+| `renderChart` threw | no |
+| canvas produced | yes, 294×546 |
+| pixels actually painted (sparse sample) | 668 / 1655 |
+| container marked visible | yes |
+| **`eval` / `Function` attempts during render** | **0** |
+
+The zero is the point: with `Function` and `eval` trapped for the duration of
+the render, a real generated spec draws a complete chart without a single
+compilation attempt. Vega's default compiler builds mark functions through
+`Function(...)`; the AST + `vega-interpreter` path does not. That is what
+makes the CSP's omission of `unsafe-eval` a real constraint the render
+satisfies rather than a header nobody exercises.
+
+This closes the loop end to end on real data: SQL rows → `build_chart()` →
+orchestrator A7 validation → HTTP → frontend A7 validation (independent,
+hand-written, different language) → CSP-safe interpreter render → pixels.
