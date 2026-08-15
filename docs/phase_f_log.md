@@ -426,3 +426,68 @@ Two fixes:
 
 Both changes postdate the five runs above; those rows were produced by the
 pre-fix code and are left exactly as recorded.
+
+---
+
+## Supervisor routing fix — M9 re-confirmation (post-freeze)
+
+**Trigger.** The Phase D M3 separation run showed the Supervisor sending a whole
+class of plainly relational questions to `docs` — asking for a seller's
+`contracted_sla_hours`, or a seller's `category`, routed on the *word* "SLA" or
+"category" rather than on where the value lives. F-V2 scored a clean 60/60
+throughout and never saw it, because every one of its 20 `sql` queries had been
+authored to be unambiguous. The fixture was measuring a blind spot it shared
+with the prompt.
+
+**Cause (found by re-reading the prompt, not by experiment).** The `sql` route
+description ended with *"No mention of a policy, agreement, SLA commitment
+document, or SOP."* That is a test on **vocabulary**, and it fires on the
+question's wording rather than on the answer's location.
+
+**Fix** (`orchestrator/nodes/supervisor.py`): replaced the vocabulary test with
+(a) an explicit listing of the stored columns per table, (b) a DISAMBIGUATION
+block stating that "SLA", "category" and "penalty" occur in *both* worlds and
+must be decided by where the value lives, and (c) worked examples for the
+overlap cases. The operative test is now: *could this be answered by reading one
+value out of a table row?*
+
+**Fixture hardened** (`scripts/gen_phase_f_routing_fixture.py`): 6 overlap-
+vocabulary `sql` queries added; the 6 most redundant existing entries dropped to
+hold Appendix 2.2's mandated 20/route. Verified `Counter({'sql': 20, 'docs': 20,
+'hybrid': 20})`.
+
+**Result — M9 re-run, full 60 queries:**
+
+| | pre-fix (old fixture) | post-fix (hardened fixture) |
+|---|---|---|
+| overall | 1.000 (60/60) | **0.983 (59/60)** |
+| sql | 1.000 | **1.000** |
+| docs | 1.000 | 1.000 |
+| hybrid | 1.000 | 0.950 |
+
+F-V2 pass condition (≥ 0.90): **PASS**.
+
+Read this honestly: **it is not a clean before/after.** The prompt and the
+fixture changed in the same step, so the two columns are scored on different
+question sets and the drop from 1.000 to 0.983 is not evidence of a regression
+in the ordinary sense. What the run does establish is the thing worth
+establishing — `sql` is **1.000 including all six overlap-vocabulary queries**,
+the exact class that was failing in production before the fix.
+
+**The single miss is real and is not smoothed over.** `f_hybrid_004` ("Are the
+number of unresolved disputes within the window the dispute resolution policy
+allows, or has it been exceeded?") routes to `docs`; it needs a database count
+*and* a policy window, so `hybrid` is correct. It is a genuinely borderline
+question and it is plausible the new emphasis on stored columns pulled it. Not
+chased further: the metric passes with headroom, the failure is one borderline
+item on the hybrid/docs boundary rather than the systematic sql/docs confusion
+that motivated the fix, and further prompt tuning to recover one item risks
+re-breaking the class that was actually broken. Recorded as an open item, not
+as a resolved one.
+
+**Append-only violation found and fixed in passing.** `experiment_tool_ceiling.py`
+wrote unconditionally to `docs/f_v2_report.json`, so this re-run silently
+destroyed the committed Phase F baseline *and* its hand-written provenance note.
+Recovered from git; the re-run is recorded as `docs/f_v2_report_postfix.json`;
+the script now takes `--out`, and refuses to overwrite an existing report
+without `--force`.

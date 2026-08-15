@@ -256,7 +256,22 @@ async def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--baseline-only", action="store_true")
     parser.add_argument("--over-exposure-only", action="store_true")
+    # Verification results are append-only: a re-run records a NEW result, it
+    # does not rewrite the one a previous phase committed. Writing
+    # unconditionally to a fixed path silently destroyed the committed Phase F
+    # baseline (1.000 on the pre-hardening fixture) together with its
+    # hand-written provenance note -- recovered from git, then prevented here.
+    parser.add_argument("--out", default=str(REPORT_PATH),
+                        help="Report path. Refuses to overwrite unless --force.")
+    parser.add_argument("--force", action="store_true",
+                        help="Permit overwriting an existing report.")
     args = parser.parse_args()
+    out_path = Path(args.out)
+    if out_path.exists() and not args.force:
+        print(f"ERROR: {out_path} exists. Verification results are append-only -- "
+              f"pass --out with a new filename to record this run alongside it, "
+              f"or --force to deliberately replace it.")
+        return 1
 
     fixture = json.loads(FIXTURE.read_text())
     queries = fixture["queries"]

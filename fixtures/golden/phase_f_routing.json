@@ -74,55 +74,55 @@
       "id": "f_sql_012",
       "lang": "en",
       "expected_route": "sql",
-      "text": "What is the median order value across the network?"
+      "text": "List the 10 most recent orders placed in Mumbai."
     },
     {
       "id": "f_sql_013",
       "lang": "en",
       "expected_route": "sql",
-      "text": "How many locations are registered in Maharashtra?"
+      "text": "What is the total line value of items sold in the grocery category?"
     },
     {
       "id": "f_sql_014",
       "lang": "en",
       "expected_route": "sql",
-      "text": "List the 10 most recent orders placed in Mumbai."
+      "text": "How many fulfillments are currently in transit?"
     },
     {
       "id": "f_sql_015",
       "lang": "en",
       "expected_route": "sql",
-      "text": "What is the total line value of items sold in the grocery category?"
+      "text": "What is Seller Store 1's contracted SLA in hours?"
     },
     {
       "id": "f_sql_016",
       "lang": "en",
       "expected_route": "sql",
-      "text": "How many logistics providers are B2B-enabled?"
+      "text": "What category is Seller Store 5 in?"
     },
     {
       "id": "f_sql_017",
       "lang": "en",
       "expected_route": "sql",
-      "text": "Which seller has the highest total order value this quarter?"
+      "text": "List sellers whose contracted SLA hours field is null in the database."
     },
     {
       "id": "f_sql_018",
       "lang": "en",
       "expected_route": "sql",
-      "text": "How many fulfillments are currently in transit?"
+      "text": "Which sellers have a contracted SLA of 24 hours or less?"
     },
     {
       "id": "f_sql_019",
       "lang": "en",
       "expected_route": "sql",
-      "text": "What is the count of orders per order channel?"
+      "text": "How many disputes fall into each dispute category?"
     },
     {
       "id": "f_sql_020",
       "lang": "en",
       "expected_route": "sql",
-      "text": "List sellers whose contracted SLA hours field is null in the database."
+      "text": "What is the unit price and category of the most expensive catalog item?"
     },
     {
       "id": "f_docs_001",

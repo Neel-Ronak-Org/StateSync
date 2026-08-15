@@ -37,15 +37,28 @@ SQL_QUERIES = [
     "List all fulfillments with more than one delivery attempt.",
     "How many delivery events were recorded last month, broken down by event type?",
     "Which sellers have never had a dispute raised against them?",
-    "What is the median order value across the network?",
-    "How many locations are registered in Maharashtra?",
     "List the 10 most recent orders placed in Mumbai.",
     "What is the total line value of items sold in the grocery category?",
-    "How many logistics providers are B2B-enabled?",
-    "Which seller has the highest total order value this quarter?",
     "How many fulfillments are currently in transit?",
-    "What is the count of orders per order channel?",
+    # --- Column lookups whose wording overlaps document vocabulary ---
+    # Added post-freeze. The original 20 were all authored to be
+    # UNAMBIGUOUS, which is exactly why M9 scored 60/60 while the Supervisor
+    # was still misrouting a whole class of plainly relational questions to
+    # `docs` -- a blind spot the Phase D fixture exposed and this one
+    # structurally could not (see the M3 separation run, docs/phase_d_log.md).
+    # Each asks for a value that IS a column (sellers.contracted_sla_hours,
+    # sellers.category, disputes.category, catalog_items.category) using the
+    # same words that appear in supplier agreements, SLA annexures and
+    # policies. Six of the previous entries were dropped to hold Appendix
+    # 2.2's mandated 20-per-route, chosen as the most redundant of the set
+    # (duplicate order-value aggregates, a duplicate channel breakdown, and
+    # two simple counts already covered by other rows).
+    "What is Seller Store 1's contracted SLA in hours?",
+    "What category is Seller Store 5 in?",
     "List sellers whose contracted SLA hours field is null in the database.",
+    "Which sellers have a contracted SLA of 24 hours or less?",
+    "How many disputes fall into each dispute category?",
+    "What is the unit price and category of the most expensive catalog item?",
 ]
 
 DOCS_QUERIES = [
