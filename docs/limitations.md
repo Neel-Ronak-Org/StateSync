@@ -48,9 +48,11 @@ rule that a default change is not a BD.
 Recorded honestly in `docs/metrics-report.md`; summarized here per F-V8:
 
 - **M2 (consistency, C1-V3): FAIL on the local model.** Treatment mean
-  distinct-result-sets 1.5 > control 1.0 — memory-hit SQL is less reliable
+  distinct-result-sets **1.8** > control 1.0 — memory-hit SQL is less reliable
   than a fresh full-schema read on `qwen2.5:7b`. Recorded as BD6 (provisional,
-  self-voiding, re-baseline-gated).
+  self-voiding, re-baseline-gated). The F-V3 re-run reproduced **1.8 exactly**,
+  so this is a stable property of the model, not run-to-run noise — which
+  strengthens the BD6 attribution rather than leaving it a one-off.
 - **C2-V1 conditions 3–4: FAIL.** The correction loop never redirects a 2-hop
   join through `orders` on this model, despite a documented, verified prompt
   improvement attempt. Same BD6 disposition.
@@ -58,18 +60,24 @@ Recorded honestly in `docs/metrics-report.md`; summarized here per F-V8:
   `status='delivered'` filter (41 vs. hand-computed 30). Same BD6 disposition;
   mechanism (digipin decode, predicate construction, GIST index) independently
   confirmed correct.
-- **M4 (C2-V8, query correctness): low on both paths** — 29.2% cold / 32.0%
-  warm on the local model. Not BD6-covered (BD6 is scoped to exactly three
-  checks), but the same root cause class (2-hop join / filter omission) — see
-  `docs/rebaseline_runbook.md`.
+- **M4 (C2-V8, query correctness): low on both paths** — 28.0% cold / 32.0%
+  warm on the local model (F-V3 run). Not BD6-covered (BD6 is scoped to exactly
+  three checks), but the same root cause class (2-hop join / filter omission) —
+  see `docs/rebaseline_runbook.md`. **Read alongside the instrument limitation
+  below: M4 is a lower bound on semantic correctness**, and 15 of the 18 cold
+  misses return exactly the expected row count.
 - **M6 (E1-V3, grounding): moderate.** Context precision 0.622, faithfulness
-  0.769. One clearly-diagnosed, partially-fixed root cause (aggregate queries
+  0.8125 (F-V3 run; 0.769 at E1, 0.831 at the first Phase F run). One clearly-diagnosed, partially-fixed root cause (aggregate queries
   not echoing an ID column for targeted retrieval); a second, deeper cause
   (a specific entity-name-to-table-mapping failure, "FastShip 1") accepted as
   measured model variance after four distinct, root-caused fix attempts.
-- **M7 (E2-V1, chart quality): not yet measured at all.** The Synthesizer
-  still emits `chart: null` on every route (Task 10, deferred) — see
-  `docs/open_items.md`.
+- **M7 (E2-V1, chart quality): measured, and low at 0.4850** (local,
+  provisional). Task 10 built the chart emission this metric was waiting on.
+  The A7 validity half is a clean binary **PASS at 30/30**. The quality figure
+  is dragged mostly by 7 `chart:null` results, and **5 of the original 8 nulls
+  were upstream SQL returning 0 rows or the wrong shape** — so M7 on this model
+  is substantially a downstream reflection of M4, not a clean measure of chart
+  competence. Per-query accounting: `docs/phase_e2_log.md`.
 
 ## Limitations of the measuring instruments themselves
 
