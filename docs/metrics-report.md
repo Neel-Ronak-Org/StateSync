@@ -61,6 +61,21 @@ phase log; this table is not silently overwritten, per
 
 ### M3 regression, reported as F-V3 requires
 
+> **RESOLVED 2026-08-15 — read this box before the analysis below.** The
+> routing defect named at the end of this section was fixed (`c735457`) and
+> M3 re-measured in the F-V3 post-fix run. **D-V2 recovered: 56.2% →
+> 81.25%** (record: 84.4%). **D-V1 treatment 57.5% → 65.0%, now ABOVE the
+> Phase D record of 62.5%.** The lift stayed at +25.0pp because control also
+> rose (32.5% → 40.0%) by exactly the same 3 queries — routing sits upstream
+> of normalization, so it cannot move the difference between the arms. The
+> lift is below +47.5pp because the **baseline improved**, not because
+> treatment degraded. Residual genuinely below record: the English reference
+> line, 60.0% vs 80.0%. Full write-up: `docs/phase_d_log.md` §"M3
+> re-measurement after the Supervisor routing fix".
+>
+> The analysis that follows is the PRE-FIX investigation, kept intact as the
+> record of how the cause was found. Its numbers are the pre-fix numbers.
+
 F-V3: "A metric that regressed since its original Part is reported as a
 regression, not silently overwritten." M3 regressed on both halves:
 
