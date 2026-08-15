@@ -153,6 +153,38 @@ async def data_run_select(
     return await session.call("data.run_select", params)
 
 
+async def vector_semantic_search(
+    session: MCPSession,
+    query_text: str,
+    top_k: int | None = None,
+    document_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    """A4.6 vector.semantic_search"""
+    params: dict[str, Any] = {"query_text": query_text}
+    if top_k is not None:
+        params["top_k"] = top_k
+    if document_ids is not None:
+        params["document_ids"] = document_ids
+    return await session.call("vector.semantic_search", params)
+
+
+async def vector_hybrid_select(
+    session: MCPSession,
+    sql: str,
+    max_rows: int | None = None,
+) -> dict[str, Any]:
+    """A4.7 vector.hybrid_select — same ok/error contract as data.run_select."""
+    params: dict[str, Any] = {"sql": sql}
+    if max_rows is not None:
+        params["max_rows"] = max_rows
+    return await session.call("vector.hybrid_select", params)
+
+
+async def docs_get_passage(session: MCPSession, chunk_id: str) -> dict[str, Any]:
+    """A4.9 docs.get_passage"""
+    return await session.call("docs.get_passage", {"chunk_id": chunk_id})
+
+
 async def memory_get_trajectory(
     session: MCPSession,
     query_text: str,

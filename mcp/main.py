@@ -1,12 +1,15 @@
 """
 mcp/main.py
-MCP service — JSON-RPC 2.0 server exposing the 6 Phase-B + C1 tools.
+MCP service — JSON-RPC 2.0 server exposing the 9 Phase-B + C1 + E1 tools.
 
 Tools exposed (A4):
   schema.list_tables      (A4.1)
   schema.describe_table   (A4.2)
   data.sample_rows        (A4.3)
   data.run_select         (A4.4) — with all 3 SELECT-enforcement layers
+  vector.semantic_search  (A4.6, E1)
+  vector.hybrid_select    (A4.7, E1) — with the ss_embed request-scoped vector
+  docs.get_passage        (A4.9, E1)
   memory.get_trajectory   (A4.8, C1)
   memory.put_trajectory   (A4.8, C1)
 
@@ -35,6 +38,7 @@ from qdrant_store import init_qdrant, close_qdrant
 from session import set_session, get_tenant_id
 from tools.schema_tools import list_tables, describe_table
 from tools.data_tools import sample_rows, run_select
+from tools.vector_tools import semantic_search, hybrid_select, get_passage
 from tools.memory_tools import get_trajectory, put_trajectory
 
 logging.basicConfig(
@@ -80,6 +84,9 @@ _REGISTERED_TOOLS: dict[str, Any] = {
     "schema.describe_table": describe_table,
     "data.sample_rows":      sample_rows,
     "data.run_select":       run_select,
+    "vector.semantic_search": semantic_search,
+    "vector.hybrid_select":   hybrid_select,
+    "docs.get_passage":       get_passage,
     "memory.get_trajectory": get_trajectory,
     "memory.put_trajectory": put_trajectory,
 }

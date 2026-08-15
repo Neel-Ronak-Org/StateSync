@@ -79,6 +79,14 @@ echo "==> Running 002_schema.sql..."
 ${PSQL} < "${MIGRATIONS_DIR}/002_schema.sql"
 echo "    Schema applied."
 
+# ── Migration 004: ss_embed (A4.7) ────────────────────────────────────────────
+# Does not affect the A5 schema fingerprint formula (tables/columns/FKs only,
+# no functions) -- ordered here for logical grouping (DDL setup complete
+# before computing the fingerprint of that DDL), not because order matters.
+echo "==> Running 004_ss_embed.sql..."
+${PSQL} < "${MIGRATIONS_DIR}/004_ss_embed.sql"
+echo "    ss_embed registered."
+
 # ── Migration 003: fingerprint (computed + inserted) ─────────────────────────
 echo "==> Computing schema fingerprint..."
 if [[ ${USE_DOCKER_EXEC} -eq 1 ]]; then

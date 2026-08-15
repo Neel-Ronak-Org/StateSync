@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "rubric_name": "faithfulness",
+  "description": "E1-V3 (M6): scores whether every factual claim in a synthesizer answer_text traces to a retrieved document passage, independent of whether the claim happens to be true. An ungrounded claim is a failure regardless of its truth -- the scoring script must enforce this rather than crediting lucky accuracy (E1-V3 pass condition, verbatim).",
+  "instructions": "You are given: (1) the user's question, (2) the system's answer_text, (3) the full content of every document passage that was actually retrieved and shown to the system when it wrote the answer, and (4) an independent reference (ground truth) for verifying factual correctness, which the system generating the answer did NOT necessarily see in this form. Break the answer into its individual factual claims (a factual claim is any specific, checkable assertion -- a number, a named entity, a status, a date; general framing sentences like 'Here is what I found' are not claims). For each claim, judge two independent things: (a) grounded_in_retrieved_context -- does this specific claim appear in, or follow directly from, the retrieved passage content in (3)? A claim grounded only by the model's own prior knowledge or invented does not count, even if true. (b) factually_correct -- does this claim match the independent reference in (4), regardless of whether it was grounded?",
+  "scoring": {
+    "faithfulness_score": "fraction of claims with grounded_in_retrieved_context = true (0.0-1.0). An answer with zero claims scores 1.0 (vacuously faithful -- nothing was asserted ungrounded).",
+    "ungrounded_but_true_count": "count of claims where grounded_in_retrieved_context = false AND factually_correct = true -- the most informative failure mode per E1-V3: the system got lucky, not grounded, and would look identical to a hallucination without independent verification.",
+    "context_precision": "computed separately by the bench script from expected_chunk_ids vs. actual citations, not by this judge -- the judge only scores faithfulness of the prose against what was retrieved."
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["claims", "faithfulness_score", "ungrounded_but_true_count"],
+    "properties": {
+      "claims": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["claim", "grounded_in_retrieved_context", "factually_correct"],
+          "properties": {
+            "claim": {"type": "string"},
+            "grounded_in_retrieved_context": {"type": "boolean"},
+            "factually_correct": {"type": "boolean"}
+          }
+        }
+      },
+      "faithfulness_score": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+      "ungrounded_but_true_count": {"type": "integer", "minimum": 0}
+    }
+  }
+}

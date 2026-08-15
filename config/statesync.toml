@@ -25,6 +25,8 @@ max_tokens_sql            = 1024    # SQL generation
 max_tokens_synthesizer    = 1024    # prose answer generation
 max_tokens_memory_summary = 256     # C1: insight/tables/join_path JSON, capped by memory.insight_max_chars
 max_tokens_normalizer     = 512     # D: detected_language/confidence/normalized_query/preserved_entities JSON
+max_tokens_decomposer     = 512     # E1: sub-question decomposition JSON, hybrid route only
+max_tokens_judge          = 1024    # E1: bench_grounding.py context precision / faithfulness JSON
 synthesizer_preview_rows  = 50      # rows shown to synthesizer LLM (context window budget)
 answer_max_chars          = 4000    # A7 answer_text character cap
 chart_max_data_rows       = 5000    # A7 data.values maxItems
@@ -60,7 +62,12 @@ roundtrip_rng_seed        = 20260807
 chunk_target_tokens       = 512
 chunk_overlap_tokens      = 64
 semantic_top_k            = 8
+semantic_top_k_max        = 25      # A4.6 vector.semantic_search input bound
 decomposition_max_hops    = 3
+embedding_model           = "mxbai-embed-large"  # E1: same model as memory's, own name per concern (A0.2)
+embedding_dim             = 1024    # must match document_chunks.embedding VECTOR(1024), A5
+embedding_timeout_s       = 30      # mcp -> ollama /api/embeddings HTTP timeout, ingestion + query-time
+citation_max_chunks       = 3       # synthesizer: max kind:"chunk" citations deterministically emitted
 
 [scoring]
 recall_weight             = 0.70    # spec score; recall over precision per VegaChat

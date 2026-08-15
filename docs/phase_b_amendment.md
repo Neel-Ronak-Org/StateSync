@@ -103,3 +103,43 @@ queries) unable to assert the specific category the spec names.
 format ever changes, this regex must change with it — there is no
 compile-time link between `data_tools.py`'s `f"[Layer 1 Gate] {rejection}"`
 prefix and this rule.
+
+## BD5 — ss_embed reads a session-local GUC set by mcp, rather than any
+## SQL-text rewriting
+
+**Decided**: `ss_embed(query_text TEXT) RETURNS VECTOR(1024)` is a
+`STABLE SQL` function (`migrations/004_ss_embed.sql`) that ignores its own
+argument's value and instead reads `current_setting('statesync.query_vector')`.
+`vector.hybrid_select`'s handler (`mcp/tools/vector_tools.py`) parses the
+submitted SQL with pglast (the same parser Layer 1 already uses), extracts
+the literal string argument passed to `ss_embed(...)`, embeds *that text* via
+Ollama, then runs `SELECT set_config('statesync.query_vector', '<vector>', true)`
+inside the same transaction — before executing the original, **unmodified**
+SQL text. `set_config(..., true)` is `SET LOCAL`'s parameterizable
+equivalent; it's transaction-scoped and is cleared by the `ROLLBACK` every
+mcp request already performs (Layer 2, A4.5), so nothing can leak into the
+next pooled use of that connection.
+
+**Alternative considered**: have mcp textually substitute each
+`ss_embed('literal')` call in the submitted SQL with a bound parameter
+placeholder before execution.
+
+**Why**: A4.7 requires ss_embed to make no network call, with "the
+query-side vector... bound as a request-scoped parameter by mcp." Text
+substitution would ALSO satisfy that constraint, but it means rewriting
+LLM-generated SQL by string surgery — matching and replacing an exact
+substring inside text that was not written by mcp itself, with all the
+quoting/escaping edge cases that implies — before the SQL is ever executed.
+The GUC approach never touches the submitted SQL text at all: Layer 1
+validates the *original* SQL (so the security-relevant check runs against
+exactly what will execute), and `ss_embed` is a real, genuinely-invoked
+function at query time, not a placeholder papered over before submission.
+This also keeps the literal argument meaningful to a human or LLM reading
+the query (it documents intent) without it being load-bearing for
+correctness.
+
+**Hook**: `mcp/tools/vector_tools.py`'s `_check_hybrid_gate` (literal
+extraction + the dangerous-function denylist) and
+`migrations/004_ss_embed.sql` (the GUC name `statesync.query_vector`) must
+stay in sync — there is no compile-time link between them, same caveat as
+BD4's regex/message-prefix coupling.

@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "documents": [
+    {
+      "filename": "supplier_agreement_S001.pdf",
+      "doc_type": "supplier_agreement",
+      "title": "Supplier Agreement -- Seller Store 1 (Seller ID: S001)",
+      "party_id": "S001",
+      "document_id": "doc_supplier_agreement_S001",
+      "source_uri": "fixtures/documents/supplier_agreement_S001.pdf"
+    },
+    {
+      "filename": "supplier_agreement_S005.pdf",
+      "doc_type": "supplier_agreement",
+      "title": "Supplier Agreement -- Seller Store 5 (Seller ID: S005)",
+      "party_id": "S005",
+      "document_id": "doc_supplier_agreement_S005",
+      "source_uri": "fixtures/documents/supplier_agreement_S005.pdf"
+    },
+    {
+      "filename": "supplier_agreement_S010.pdf",
+      "doc_type": "supplier_agreement",
+      "title": "Supplier Agreement -- Seller Store 10 (Seller ID: S010)",
+      "party_id": "S010",
+      "document_id": "doc_supplier_agreement_S010",
+      "source_uri": "fixtures/documents/supplier_agreement_S010.pdf"
+    },
+    {
+      "filename": "supplier_agreement_S014.pdf",
+      "doc_type": "supplier_agreement",
+      "title": "Supplier Agreement -- Seller Store 14 (Seller ID: S014)",
+      "party_id": "S014",
+      "document_id": "doc_supplier_agreement_S014",
+      "source_uri": "fixtures/documents/supplier_agreement_S014.pdf"
+    },
+    {
+      "filename": "supplier_agreement_S020.pdf",
+      "doc_type": "supplier_agreement",
+      "title": "Supplier Agreement -- Seller Store 20 (Seller ID: S020)",
+      "party_id": "S020",
+      "document_id": "doc_supplier_agreement_S020",
+      "source_uri": "fixtures/documents/supplier_agreement_S020.pdf"
+    },
+    {
+      "filename": "supplier_agreement_S025.pdf",
+      "doc_type": "supplier_agreement",
+      "title": "Supplier Agreement -- Seller Store 25 (Seller ID: S025)",
+      "party_id": "S025",
+      "document_id": "doc_supplier_agreement_S025",
+      "source_uri": "fixtures/documents/supplier_agreement_S025.pdf"
+    },
+    {
+      "filename": "sla_annexure_LP001.pdf",
+      "doc_type": "sla_annexure",
+      "title": "SLA Annexure -- FastShip 1 (Provider ID: LP001)",
+      "party_id": "LP001",
+      "document_id": "doc_sla_annexure_LP001",
+      "source_uri": "fixtures/documents/sla_annexure_LP001.pdf"
+    },
+    {
+      "filename": "sla_annexure_LP003.pdf",
+      "doc_type": "sla_annexure",
+      "title": "SLA Annexure -- FastShip 3 (Provider ID: LP003)",
+      "party_id": "LP003",
+      "document_id": "doc_sla_annexure_LP003",
+      "source_uri": "fixtures/documents/sla_annexure_LP003.pdf"
+    },
+    {
+      "filename": "sla_annexure_LP005.pdf",
+      "doc_type": "sla_annexure",
+      "title": "SLA Annexure -- FastShip 5 (Provider ID: LP005)",
+      "party_id": "LP005",
+      "document_id": "doc_sla_annexure_LP005",
+      "source_uri": "fixtures/documents/sla_annexure_LP005.pdf"
+    },
+    {
+      "filename": "sla_annexure_LP007.pdf",
+      "doc_type": "sla_annexure",
+      "title": "SLA Annexure -- FastShip 7 (Provider ID: LP007)",
+      "party_id": "LP007",
+      "document_id": "doc_sla_annexure_LP007",
+      "source_uri": "fixtures/documents/sla_annexure_LP007.pdf"
+    },
+    {
+      "filename": "policy_dispute_resolution.pdf",
+      "doc_type": "policy",
+      "title": "ONDC Network Dispute Resolution Policy",
+      "party_id": null,
+      "document_id": "doc_policy_dispute_resolution",
+      "source_uri": "fixtures/documents/policy_dispute_resolution.pdf"
+    },
+    {
+      "filename": "policy_returns_refunds.pdf",
+      "doc_type": "policy",
+      "title": "ONDC Network Returns and Refunds Policy",
+      "party_id": null,
+      "document_id": "doc_policy_returns_refunds",
+      "source_uri": "fixtures/documents/policy_returns_refunds.pdf"
+    },
+    {
+      "filename": "policy_data_retention.pdf",
+      "doc_type": "policy",
+      "title": "ONDC Network Data Retention and Privacy Policy",
+      "party_id": null,
+      "document_id": "doc_policy_data_retention",
+      "source_uri": "fixtures/documents/policy_data_retention.pdf"
+    },
+    {
+      "filename": "policy_seller_compliance.pdf",
+      "doc_type": "policy",
+      "title": "ONDC Network Seller Onboarding and Compliance Policy",
+      "party_id": null,
+      "document_id": "doc_policy_seller_compliance",
+      "source_uri": "fixtures/documents/policy_seller_compliance.pdf"
+    },
+    {
+      "filename": "sop_delivery_exceptions.pdf",
+      "doc_type": "sop",
+      "title": "Delivery Exception Handling SOP",
+      "party_id": null,
+      "document_id": "doc_sop_delivery_exceptions",
+      "source_uri": "fixtures/documents/sop_delivery_exceptions.pdf"
+    },
+    {
+      "filename": "sop_warehouse_damage.pdf",
+      "doc_type": "sop",
+      "title": "Warehouse Damage Assessment SOP",
+      "party_id": null,
+      "document_id": "doc_sop_warehouse_damage",
+      "source_uri": "fixtures/documents/sop_warehouse_damage.pdf"
+    },
+    {
+      "filename": "sop_customer_escalation.pdf",
+      "doc_type": "sop",
+      "title": "Customer Complaint Escalation SOP",
+      "party_id": null,
+      "document_id": "doc_sop_customer_escalation",
+      "source_uri": "fixtures/documents/sop_customer_escalation.pdf"
+    },
+    {
+      "filename": "sop_cold_chain.pdf",
+      "doc_type": "sop",
+      "title": "Cold Chain and Perishables Handling SOP",
+      "party_id": null,
+      "document_id": "doc_sop_cold_chain",
+      "source_uri": "fixtures/documents/sop_cold_chain.pdf"
+    }
+  ]
+}

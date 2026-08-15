@@ -24,6 +24,7 @@ from pydantic import BaseModel
 from config_loader import cfg, flags, snapshot_flags
 from graph import graph
 from llm.provider import validate_llm_config
+from nodes.synthesizer import build_citations
 from state import StateSyncState
 
 logging.basicConfig(
@@ -156,7 +157,21 @@ async def run_query(request: QueryRequest) -> QueryResponse:
         "normalized_query":   final_state.normalized_query,
         "preserved_entities": final_state.preserved_entities,
         "spatial":            final_state.spatial.model_dump(),
+        "subtasks":           final_state.subtasks,
+        "retrievals":         [r.model_dump() for r in final_state.retrievals],
     }
+
+    # Recomputed here from final_state's typed fields, not read off the
+    # synthesizer node's own return value: graph.ainvoke()'s return is
+    # reconstructed against StateSyncState's schema (A2, locked -- no
+    # citations field) regardless of whether the last hop was a direct or
+    # conditional edge, so a scratch key set by synthesizer_node cannot
+    # survive out to this boundary (verified empirically; same principle as
+    # C2's scratch-key-through-conditional-edge fix, one level further out).
+    # build_citations is pure and reused as-is, so this always matches what
+    # synthesizer_node itself computed and validated the answer_text against.
+    sql_error = final_state.errors[-1].model_dump() if len(final_state.errors) > final_state.attempt else None
+    citations = build_citations(final_state.executed_sql, sql_error, state_trace["retrievals"])
 
     logger.info(
         "Query completed: query_id=%s route=%s rows=%d latency_ms=%d",
@@ -170,7 +185,7 @@ async def run_query(request: QueryRequest) -> QueryResponse:
         query_id=final_state.query_id,
         answer_text=final_state.answer_text or "",
         chart=final_state.vega_spec,
-        citations=[],        # Phase B: citations returned by synthesizer node
+        citations=citations,
         state_trace=state_trace,
         latency_ms=latency_ms,
     )

@@ -1,15 +1,21 @@
 """
 orchestrator/nodes/synthesizer.py
-Synthesizer node — Phase B implementation.
-
-Per B1 scope: "The Synthesizer in B emits answer_text and chart: null,
-validated against A7."
+Synthesizer node.
 
 Per A7 enforcement:
 - Validates output against A7 schema before returning.
 - If validation fails: returns prose answer with chart: null and logs a
   validation failure. Never returns a repaired chart.
-- chart: null in Phase B — chart generation is Phase E2.
+- chart: null through Part E1 — chart generation is Phase E2.
+
+Per E1-V4: citations are built deterministically from state (sql when
+executed_sql is present, chunk entries from state.retrievals when present),
+not left to the LLM's own citation list -- the same reasoning as
+_ensure_category_mentioned below: this repo's local-model testing has
+repeatedly shown small models are not reliable at following "always include
+both kinds" instructions, and a response citing only one kind is a spec
+failure even if the prose mentions both sources. A hybrid query naturally
+gets both kinds this way, without depending on the model remembering to.
 """
 
 from __future__ import annotations
@@ -26,17 +32,24 @@ from schemas.synthesizer_output import safe_synthesizer_output
 logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = """\
-You are a data analytics assistant. Answer the user's question based on the SQL query results provided.
+You are a data analytics assistant for an ONDC logistics network. Answer \
+the user's question using only the data context provided below -- SQL \
+query results, retrieved document passages, or both.
 
 Rules:
-1. Be concise and factual. Base your answer only on the provided data.
-2. If the query failed with an error, explain the failure clearly to the user.
-3. Do not mention internal details like table names or SQL syntax unless helpful.
-4. Respond with a JSON object matching this exact schema:
-   {"answer_text": "<string, max 4000 chars>", "chart": null, "citations": [{"kind": "sql", "ref": "<executed_sql>"}]}
-5. chart must always be null in this response.
-6. citations must include one entry with kind: "sql" and ref: the executed SQL (or attempted SQL on failure).
-7. answer_text must not exceed 4000 characters."""
+1. Be concise and factual. Base your answer only on the provided data --
+   never invent a number or fact that isn't in the context.
+2. If the context includes retrieved document passages, ground every
+   factual claim in them; do not state something as fact unless it traces
+   to a passage or the SQL results.
+3. If the query failed with an error, explain the failure clearly to the user.
+4. Do not mention internal details like table names or SQL syntax unless helpful.
+5. Respond with a JSON object matching this exact schema:
+   {"answer_text": "<string, max 4000 chars>", "chart": null, "citations": []}
+6. chart must always be null in this response.
+7. Leave citations as an empty array -- it is filled in deterministically
+   after your response, not by you.
+8. answer_text must not exceed 4000 characters."""
 
 
 def _ensure_category_mentioned(answer_text: str, sql_error: dict | None) -> str:
@@ -60,17 +73,70 @@ def _ensure_category_mentioned(answer_text: str, sql_error: dict | None) -> str:
     return answer_text + suffix
 
 
+def build_citations(
+    executed_sql: str | None, sql_error: dict | None, retrievals: list[dict],
+) -> list[dict]:
+    """
+    Deterministic citation construction (E1-V4; see module docstring).
+    kind:"sql" whenever there's a SQL statement to point to (success or
+    failure -- citing what was attempted is still meaningful on failure).
+    kind:"chunk" for the first citation_max_chunks retrievals, IN THE ORDER
+    GIVEN -- deliberately not re-sorted by raw score here. The caller
+    (unstructured_knowledge.py's _semantic_search_expanded) already orders
+    retrievals document-major (best-matching document first, that
+    document's own chunks together in reading order), specifically so a
+    relevant document's table chunk stays adjacent to its narrative chunk
+    instead of being outranked by an unrelated document's narrative chunk
+    (table Markdown embeds further from a natural-language question than
+    prose does -- verified empirically, see docs/phase_e1_log.md).
+    Re-sorting by score here would undo that ordering.
+
+    Public (not module-private): main.py imports this directly and
+    recomputes the same citations from final_state's typed fields, rather
+    than this node smuggling its own computed value out through a scratch
+    key. Verified empirically that graph.ainvoke()'s return value is
+    reconstructed against StateSyncState's schema regardless of whether the
+    last hop was a direct or conditional edge -- scratch keys do not survive
+    to the graph's own boundary, only between internal node-to-node hops
+    (the same lesson C2's scratch-key-through-conditional-edge finding
+    already established for sql_error; this is that principle applied one
+    level further out).
+    """
+    citations: list[dict] = []
+    sql_ref = (sql_error or {}).get("offending_sql") or executed_sql
+    if sql_ref:
+        citations.append({"kind": "sql", "ref": sql_ref, "page": None})
+
+    for r in retrievals[: cfg.retrieval.citation_max_chunks]:
+        prov = r["provenance"]
+        citations.append({"kind": "chunk", "ref": prov["chunk_id"], "page": prov.get("page")})
+
+    return citations
+
+
+def _format_doc_context(retrievals: list[dict]) -> str:
+    parts = [f"Retrieved {len(retrievals)} document passage(s):"]
+    for r in retrievals[: cfg.retrieval.semantic_top_k]:
+        prov = r["provenance"]
+        parts.append(
+            f"  [chunk_id={prov['chunk_id']} document_id={prov['document_id']} "
+            f"page={prov.get('page')} score={prov['score']:.3f}]\n{r['content']}"
+        )
+    return "\n\n".join(parts)
+
+
 async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     """
-    Synthesizer node. Generates answer_text from SQL results or error info.
-    Validates output against A7. chart is always null in Phase B.
+    Synthesizer node. Generates answer_text from SQL results, retrieved
+    document passages, or both (sql / docs / hybrid routes respectively).
+    Validates output against A7. chart is always null through Part E1.
     """
     query_id: str = state_dict.get("query_id", "")
     raw_query: str = state_dict.get("normalized_query") or state_dict.get("raw_query", "")
     sql_rows: list[dict] = state_dict.get("sql_rows", [])
     sql_columns: list[str] = state_dict.get("sql_columns", [])
     executed_sql: str | None = state_dict.get("executed_sql")
-    stub_message: str | None = state_dict.get("_stub_message")
+    retrievals: list[dict] = state_dict.get("retrievals", [])
 
     # Derived from the typed, reliably-accumulated state.errors/state.attempt
     # (same test _route_after_sql uses), NOT a scratch key. A conditional
@@ -86,33 +152,17 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     sql_error: dict | None = errors[-1] if len(errors) > attempt else None
 
     start_ms = int(time.monotonic() * 1000)
+    citations = build_citations(executed_sql, sql_error, retrievals)
 
-    # Stub route — pass through without an LLM call
-    if stub_message:
-        output = {
-            "answer_text": stub_message,
-            "chart": None,
-            "citations": [],
-        }
-        safe_out = safe_synthesizer_output(output)
-        elapsed_ms = int(time.monotonic() * 1000) - start_ms
-        return {
-            "answer_text": safe_out["answer_text"],
-            "vega_spec": None,
-            "metrics": {
-                "tokens_in":        0,
-                "tokens_out":       0,
-                "llm_calls":        0,
-                "trajectory_steps": 1,
-                "latency_ms":       elapsed_ms,
-            },
-        }
+    # Build context for the LLM. sql/doc context blocks are independent and
+    # concatenated when both are present (hybrid) -- neither depends on the
+    # other's shape.
+    context_parts: list[str] = []
 
-    # Build context for the LLM
     if sql_error:
         # Category is C2's classifier output (A3), never LLM-generated.
         category = sql_error.get("category", "unclassified")
-        context = (
+        context_parts.append(
             f"The SQL query failed after {sql_error.get('attempt', 0) + 1} attempt(s).\n"
             f"Classified failure category: {category}\n"
             f"Error code: {sql_error.get('engine_code') or 'N/A'}\n"
@@ -123,21 +173,25 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             f"category ({category}) in your answer -- do not omit it, and do not "
             f"invent a numeric or factual answer that was never computed."
         )
-        citation_ref = sql_error.get("offending_sql") or executed_sql or ""
-    else:
+    elif executed_sql:
         if sql_rows:
             rows_preview = sql_rows[:cfg.sql.synthesizer_preview_rows]
             rows_text = json.dumps(rows_preview, indent=2, default=str)  # noqa: literals — JSON display indent
-            context = (
+            context_parts.append(
                 f"SQL query returned {len(sql_rows)} row(s).\n"
                 f"Columns: {', '.join(sql_columns)}\n"
                 f"Results (first {len(rows_preview)} rows):\n{rows_text}"
             )
         else:
-            context = "The SQL query returned zero rows. The answer may be 'none' or 'zero'."
-        citation_ref = executed_sql or ""
+            context_parts.append("The SQL query returned zero rows. The answer may be 'none' or 'zero'.")
 
-    user_message = f"Question: {raw_query}\n\nData context:\n{context}"
+    if retrievals:
+        context_parts.append(_format_doc_context(retrievals))
+
+    if not context_parts:
+        context_parts.append("No data was retrieved for this question.")
+
+    user_message = f"Question: {raw_query}\n\nData context:\n" + "\n\n".join(context_parts)
 
     llm = get_agent_llm("synthesizer")
 
@@ -157,25 +211,19 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 "Synthesizer returned non-JSON for query_id=%s; treating as plain text.",
                 query_id,
             )
-            parsed = {
-                "answer_text": result.text[:cfg.sql.answer_max_chars],
-                "chart": None,
-                "citations": [{"kind": "sql", "ref": citation_ref}],
-            }
+            parsed = {"answer_text": result.text[:cfg.sql.answer_max_chars], "chart": None, "citations": []}
 
-        # Force chart: null in Phase B
+        # Force chart: null through Part E1; citations always deterministic (above).
         parsed["chart"] = None
-
-        if not parsed.get("citations"):
-            parsed["citations"] = [{"kind": "sql", "ref": citation_ref}]
+        parsed["citations"] = citations
 
         # Validate against A7
         safe_out = safe_synthesizer_output(parsed)
         answer_text = _ensure_category_mentioned(safe_out["answer_text"], sql_error)
 
         logger.info(
-            "Synthesizer completed for query_id=%s (tokens_in=%d tokens_out=%d).",
-            query_id, result.tokens_in, result.tokens_out,
+            "Synthesizer completed for query_id=%s (tokens_in=%d tokens_out=%d citations=%d).",
+            query_id, result.tokens_in, result.tokens_out, len(citations),
         )
 
         return {
@@ -196,7 +244,7 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         fallback = {
             "answer_text": f"An error occurred while generating the answer: {exc}",
             "chart": None,
-            "citations": [{"kind": "sql", "ref": citation_ref}],
+            "citations": citations,
         }
         safe_out = safe_synthesizer_output(fallback)
         answer_text = _ensure_category_mentioned(safe_out["answer_text"], sql_error)

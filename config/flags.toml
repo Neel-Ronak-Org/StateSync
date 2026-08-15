@@ -19,6 +19,8 @@ sql               = "qwen2.5:7b"
 synthesizer       = "qwen2.5:7b"
 memory_summarizer = "qwen2.5:7b"   # C1: trajectory insight generation
 normalizer        = "qwen2.5:7b"   # D: language detection + entity-preserving rewrite
+decomposer        = "qwen2.5:7b"   # E1: hybrid query decomposition into sub-tasks
+judge             = "qwen2.5:7b"   # E1: bench_grounding.py context precision / faithfulness scoring
 
 [llm.models.anthropic]
 supervisor        = "claude-opus-4-5"
@@ -26,6 +28,8 @@ sql               = "claude-sonnet-4-5"
 synthesizer       = "claude-sonnet-4-5"
 memory_summarizer = "claude-sonnet-4-5"   # C1: trajectory insight generation
 normalizer        = "claude-sonnet-4-5"   # D: language detection + entity-preserving rewrite
+decomposer        = "claude-sonnet-4-5"   # E1: hybrid query decomposition into sub-tasks
+judge             = "claude-opus-4-5"     # E1: bench_grounding.py context precision / faithfulness scoring
 
 # ─────────────────────────────────────────────────────────────────────────────
 # that is the point of the flag system. Changing the *existence* of a flag

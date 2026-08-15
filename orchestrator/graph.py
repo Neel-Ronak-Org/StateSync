@@ -3,7 +3,7 @@ orchestrator/graph.py
 LangGraph: entry -> Normalize -> Supervisor -> Specialist (routed) ->
 [correction loop] -> Synthesizer.
 
-Graph structure (Phase B + C2 + D):
+Graph structure (Phase B + C2 + D + E1):
   entry_node
       |
   normalize_node    (D1: language detection + entity-preserving rewrite;
@@ -14,8 +14,10 @@ Graph structure (Phase B + C2 + D):
       |               conditional) edge, before supervisor_node can run.)
   supervisor_node   (LLM classification: sql | docs | hybrid)
       |
-  [routing dispatch] -> sql_agent_node  (route = "sql")
-                     -> stub_node       (route = "docs" | "hybrid")
+  [routing dispatch] -> sql_agent_node                (route = "sql")
+                     -> unstructured_knowledge_node    (route = "docs" | "hybrid";
+                                                         same node, decomposition
+                                                         gated inside to hybrid only, D7)
       |
   sql_agent_node -> [check_result, C2] -> success:            synthesizer_node
                                         -> retriable error:    sql_agent_node (self-loop,
@@ -23,7 +25,7 @@ Graph structure (Phase B + C2 + D):
                                         -> terminal error, or
                                            retry_max exhausted: error_exit_node -> synthesizer_node
       |
-  docs/hybrid (stub_node) -----------------------------------> synthesizer_node
+  docs/hybrid (unstructured_knowledge_node) ------------------> synthesizer_node
       |
   synthesizer_node  (always runs; generates answer_text)
 
@@ -59,7 +61,7 @@ from nodes.error_exit import error_exit_node
 from nodes.normalize import normalize_node
 from nodes.supervisor import supervisor_node
 from nodes.sql_agent import sql_agent_node
-from nodes.stub_node import stub_node
+from nodes.unstructured_knowledge import unstructured_knowledge_node
 from nodes.synthesizer import synthesizer_node
 from routing.registry import register, resolve, validate_routing_table
 
@@ -70,8 +72,8 @@ logger = logging.getLogger(__name__)
 # This is the "registration function that is actually called" per A0.5.
 # All three routes must be registered before validate_routing_table() is called.
 register("sql", sql_agent_node)
-register("docs", stub_node)      # Phase B stub; real impl in Phase E1
-register("hybrid", stub_node)    # Phase B stub; real impl in Phase E1
+register("docs", unstructured_knowledge_node)      # Part E1
+register("hybrid", unstructured_knowledge_node)    # Part E1; decomposition gated inside (D7)
 
 # Validate at module load time — unresolvable name = startup failure (A8).
 validate_routing_table()
@@ -150,11 +152,14 @@ def _route_after_sql(state: StateSyncState) -> str:
 def _merge_with_scratch(state: StateSyncState, update: dict[str, Any], node_name: str) -> dict[str, Any]:
     """
     Apply state.merge() for the typed A2 fields, then pass through any
-    underscore-prefixed scratch keys (_sql_error, _stub_message) unmerged.
-    merge() deliberately drops these -- they are not part of the A2 typed
-    schema -- but sql_agent_node/stub_node use them to hand a value to the
-    very next node (synthesizer_node reads them). Dropping them here would
-    silently break that handoff.
+    underscore-prefixed scratch keys unmerged. merge() deliberately drops
+    these -- they are not part of the A2 typed schema -- but a node can use
+    one to hand a value to the very next node over a *direct* (non-
+    conditional) edge only; see C2's scratch-key-through-conditional-edge
+    finding (docs/phase_c2_log.md) for why that hop-limit is load-bearing.
+    No node currently returns one (C2 removed the last, _sql_error, in
+    favor of deriving state from state.errors/state.attempt directly), but
+    the mechanism stays available for a future node that needs it.
     """
     merged = merge(state, update, node_name=node_name).model_dump()
     for key, value in update.items():

@@ -1,0 +1,301 @@
+{
+  "version": 1,
+  "phase": "e1",
+  "queries": [
+    {
+      "id": "e1_doc_001",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What is the contracted delivery SLA for supplier S014 in Metro NCR?",
+      "expected_chunk_ids": [
+        "doc_supplier_agreement_S014_c000",
+        "doc_supplier_agreement_S014_c001"
+      ],
+      "ground_truth_sql": null,
+      "notes": "E1-V2 worked example.",
+      "expected_row_count": null
+    },
+    {
+      "id": "e1_doc_002",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What is the ONDC network's return window in days for the electronics category, per the returns policy?",
+      "expected_chunk_ids": [
+        "doc_policy_returns_refunds_c000",
+        "doc_policy_returns_refunds_c001"
+      ],
+      "ground_truth_sql": null,
+      "notes": "",
+      "expected_row_count": null
+    },
+    {
+      "id": "e1_doc_003",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What penalty does supplier S001's agreement specify for the Metro NCR zone?",
+      "expected_chunk_ids": [
+        "doc_supplier_agreement_S001_c000",
+        "doc_supplier_agreement_S001_c001"
+      ],
+      "ground_truth_sql": null,
+      "notes": "",
+      "expected_row_count": null
+    },
+    {
+      "id": "e1_doc_004",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What committed transit time does FastShip 1's SLA annexure specify for the Metro Mumbai zone?",
+      "expected_chunk_ids": [
+        "doc_sla_annexure_LP001_c000",
+        "doc_sla_annexure_LP001_c001"
+      ],
+      "ground_truth_sql": null,
+      "notes": "",
+      "expected_row_count": null
+    },
+    {
+      "id": "e1_doc_005",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What is the committed resolution window in business days for a damaged_goods dispute, per the dispute resolution policy?",
+      "expected_chunk_ids": [
+        "doc_policy_dispute_resolution_c000",
+        "doc_policy_dispute_resolution_c001"
+      ],
+      "ground_truth_sql": null,
+      "notes": "",
+      "expected_row_count": null
+    },
+    {
+      "id": "e1_doc_006",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What action is required when a delivery exception occurs because the recipient is unavailable, per the delivery exception handling SOP?",
+      "expected_chunk_ids": [
+        "doc_sop_delivery_exceptions_c000",
+        "doc_sop_delivery_exceptions_c001"
+      ],
+      "ground_truth_sql": null,
+      "notes": "",
+      "expected_row_count": null
+    },
+    {
+      "id": "e1_doc_007",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "What is the maximum transit time in hours for frozen goods, per the cold chain and perishables handling SOP?",
+      "expected_chunk_ids": [
+        "doc_sop_cold_chain_c000",
+        "doc_sop_cold_chain_c001"
+      ],
+      "ground_truth_sql": null,
+      "notes": "",
+      "expected_row_count": null
+    },
+    {
+      "id": "e1_doc_008",
+      "lang": "en",
+      "expected_route": "docs",
+      "text": "How often must a seller renew their GST registration compliance, per the seller onboarding and compliance policy?",
+      "expected_chunk_ids": [
+        "doc_policy_seller_compliance_c000",
+        "doc_policy_seller_compliance_c001"
+      ],
+      "ground_truth_sql": null,
+      "notes": "",
+      "expected_row_count": null
+    },
+    {
+      "id": "e1_hybrid_001",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "Which sellers breached their contracted delivery SLA last quarter, and what penalty does their agreement specify?",
+      "expected_chunk_ids": [],
+      "ground_truth_sql": null,
+      "notes": "E1-V4 mandated worked example -- open-ended, checked directly by E1-V4, not scored here.",
+      "expected_row_count": null
+    },
+    {
+      "id": "e1_hybrid_002",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "How many disputes has seller S014 had in total, and what is the committed resolution window for disputes per the dispute resolution policy?",
+      "expected_chunk_ids": [
+        "doc_policy_dispute_resolution_c000",
+        "doc_policy_dispute_resolution_c001"
+      ],
+      "ground_truth_sql": "SELECT COUNT(*) FROM disputes d JOIN orders o ON d.order_id = o.order_id WHERE o.seller_id = 'S014'",
+      "notes": "",
+      "expected_row_count": 1
+    },
+    {
+      "id": "e1_hybrid_003",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "What is seller S005's contracted SLA in hours in the database, and what does S005's supplier agreement specify for the Metro NCR zone?",
+      "expected_chunk_ids": [
+        "doc_supplier_agreement_S005_c000",
+        "doc_supplier_agreement_S005_c001"
+      ],
+      "ground_truth_sql": "SELECT contracted_sla_hours FROM sellers WHERE seller_id = 'S005'",
+      "notes": "",
+      "expected_row_count": 1
+    },
+    {
+      "id": "e1_hybrid_004",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "How many orders has seller S001 placed, and what penalty does S001's agreement specify for the Metro NCR zone?",
+      "expected_chunk_ids": [
+        "doc_supplier_agreement_S001_c000",
+        "doc_supplier_agreement_S001_c001"
+      ],
+      "ground_truth_sql": "SELECT COUNT(*) FROM orders WHERE seller_id = 'S001'",
+      "notes": "",
+      "expected_row_count": 1
+    },
+    {
+      "id": "e1_hybrid_005",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "How many fulfillments has FastShip 1 handled, and what transit time does FastShip 1 commit to for the Metro Mumbai zone?",
+      "expected_chunk_ids": [
+        "doc_sla_annexure_LP001_c000",
+        "doc_sla_annexure_LP001_c001"
+      ],
+      "ground_truth_sql": "SELECT COUNT(*) FROM fulfillments WHERE provider_id = 'LP001'",
+      "notes": "",
+      "expected_row_count": 1
+    },
+    {
+      "id": "e1_hybrid_006",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "How many disputes does seller S010 have in the damaged_goods category, and what is the committed resolution window for that category?",
+      "expected_chunk_ids": [
+        "doc_policy_dispute_resolution_c000",
+        "doc_policy_dispute_resolution_c001"
+      ],
+      "ground_truth_sql": "SELECT COUNT(*) FROM disputes d JOIN orders o ON d.order_id = o.order_id WHERE o.seller_id = 'S010' AND d.category = 'damaged_goods'",
+      "notes": "",
+      "expected_row_count": 1
+    },
+    {
+      "id": "e1_hybrid_007",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "What category is seller S020 in, in the database, and what penalty does S020's agreement specify for the Rural North zone?",
+      "expected_chunk_ids": [
+        "doc_supplier_agreement_S020_c000",
+        "doc_supplier_agreement_S020_c001"
+      ],
+      "ground_truth_sql": "SELECT category FROM sellers WHERE seller_id = 'S020'",
+      "notes": "",
+      "expected_row_count": 1
+    },
+    {
+      "id": "e1_hybrid_008",
+      "lang": "en",
+      "expected_route": "hybrid",
+      "text": "How many orders has seller S025 placed, and what penalty does S025's supplier agreement specify for the Tier-2 West zone?",
+      "expected_chunk_ids": [
+        "doc_supplier_agreement_S025_c000",
+        "doc_supplier_agreement_S025_c001"
+      ],
+      "ground_truth_sql": "SELECT COUNT(*) FROM orders WHERE seller_id = 'S025'",
+      "notes": "",
+      "expected_row_count": 1
+    },
+    {
+      "id": "e1_sql_001",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "How many orders has seller S008 placed?",
+      "expected_chunk_ids": [],
+      "ground_truth_sql": "SELECT COUNT(*) FROM orders WHERE seller_id = 'S008'",
+      "notes": "",
+      "expected_row_count": 1
+    },
+    {
+      "id": "e1_sql_002",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "What is the total order value for seller S012?",
+      "expected_chunk_ids": [],
+      "ground_truth_sql": "SELECT SUM(order_value) FROM orders WHERE seller_id = 'S012'",
+      "notes": "",
+      "expected_row_count": 1
+    },
+    {
+      "id": "e1_sql_003",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "How many disputes are in the wrong_item category?",
+      "expected_chunk_ids": [],
+      "ground_truth_sql": "SELECT COUNT(*) FROM disputes WHERE category = 'wrong_item'",
+      "notes": "",
+      "expected_row_count": 1
+    },
+    {
+      "id": "e1_sql_004",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "How many logistics providers are b2b_enabled?",
+      "expected_chunk_ids": [],
+      "ground_truth_sql": "SELECT COUNT(*) FROM logistics_providers WHERE b2b_enabled = true",
+      "notes": "",
+      "expected_row_count": 1
+    },
+    {
+      "id": "e1_sql_005",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "How many orders were placed via the b2c channel?",
+      "expected_chunk_ids": [],
+      "ground_truth_sql": "SELECT COUNT(*) FROM orders WHERE order_channel = 'b2c'",
+      "notes": "",
+      "expected_row_count": 1
+    },
+    {
+      "id": "e1_sql_006",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "What is the average order value across all orders, rounded to 2 decimal places?",
+      "expected_chunk_ids": [],
+      "ground_truth_sql": "SELECT ROUND(AVG(order_value), 2) FROM orders",
+      "notes": "",
+      "expected_row_count": 1
+    },
+    {
+      "id": "e1_sql_007",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "How many fulfillments are currently pending?",
+      "expected_chunk_ids": [],
+      "ground_truth_sql": "SELECT COUNT(*) FROM fulfillments WHERE status = 'pending'",
+      "notes": "",
+      "expected_row_count": 1
+    },
+    {
+      "id": "e1_sql_008",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "How many sellers are in the electronics category?",
+      "expected_chunk_ids": [],
+      "ground_truth_sql": "SELECT COUNT(*) FROM sellers WHERE category = 'electronics'",
+      "notes": "",
+      "expected_row_count": 1
+    },
+    {
+      "id": "e1_sql_009",
+      "lang": "en",
+      "expected_route": "sql",
+      "text": "How many delivery events have a null location_id?",
+      "expected_chunk_ids": [],
+      "ground_truth_sql": "SELECT COUNT(*) FROM delivery_events WHERE location_id IS NULL",
+      "notes": "",
+      "expected_row_count": 1
+    }
+  ]
+}

@@ -1,0 +1,264 @@
+"""
+mcp/tools/vector_tools.py
+MCP vector/retrieval tools: vector.semantic_search (A4.6), vector.hybrid_select
+(A4.7), docs.get_passage (A4.9). Part E1.
+
+vector.hybrid_select and the ss_embed mechanism (A4.7):
+  The submitted SQL may call the registered function ss_embed(query_text).
+  ss_embed itself (migrations/004_ss_embed.sql) makes no network call --
+  it is STABLE and reads a session-local GUC. The actual embedding call
+  happens here, in mcp, before the SQL ever reaches postgres:
+    1. Run the base Layer 1 statement-type gate (shared with data.run_select).
+    2. Parse the (already-validated) SQL with pglast's Visitor to find every
+       FuncCall node. Reject any call to a function in the dangerous-function
+       denylist below (the "extended to allow exactly that one function and
+       no other non-builtin function" part of A4.7 -- exhaustively
+       allowlisting Postgres's ~2000 real builtins would break ordinary
+       SELECT queries, so this targets the actually dangerous surface:
+       file I/O, superuser/admin, and long-sleep functions).
+    3. Collect the literal string argument(s) passed to ss_embed(...), if any.
+    4. Embed that text via Ollama (embeddings.py), same call shape as
+       memory's trajectory embeddings but retrieval's own model/dim config.
+    5. SET LOCAL statesync.query_vector = '<vector literal>' inside the same
+       transaction as the query, then execute the ORIGINAL SQL text
+       unmodified. ss_embed(), when postgres evaluates it, reads that GUC.
+  The SQL text itself is never rewritten -- only a session GUC is set ahead
+  of it -- which is both simpler and safer than substituting into
+  LLM-generated SQL.
+"""
+
+from __future__ import annotations
+
+import logging
+import re
+from typing import Any
+
+import psycopg
+
+from config_loader import cfg
+from db import get_connection
+from embeddings import embed_text
+from session import get_tenant_id
+from tools.data_tools import _check_layer1
+
+logger = logging.getLogger(__name__)
+
+try:
+    import pglast
+    from pglast.visitors import Visitor
+    _PGLAST_AVAILABLE = True
+except ImportError:
+    _PGLAST_AVAILABLE = False
+
+_CHUNK_ID_RE = re.compile(r'^[A-Za-z0-9_\-]{1,128}$')
+
+# Dangerous non-builtin-in-spirit functions: file I/O, admin/superuser,
+# network, long-sleep. ss_embed is not on this list, so it needs no
+# special-casing -- everything not listed here (COUNT, AVG, EXTRACT, NOW,
+# ordinary math/string/date functions, ss_embed, ...) remains callable.
+_DENIED_FUNCTIONS = frozenset({
+    "pg_read_file", "pg_read_binary_file", "pg_ls_dir", "pg_ls_logdir",
+    "pg_ls_waldir", "pg_ls_tmpdir", "pg_stat_file",
+    "lo_import", "lo_export", "lo_read", "lo_write", "lo_open", "lo_creat",
+    "dblink", "dblink_connect", "dblink_exec", "dblink_connect_u",
+    "pg_sleep", "pg_sleep_for", "pg_sleep_until",
+    "set_config", "pg_reload_conf", "pg_rotate_logfile",
+    "pg_terminate_backend", "pg_cancel_backend",
+    "pg_read_server_files", "pg_write_server_files", "pg_execute_server_program",
+    "pg_promote", "pg_switch_wal", "pg_create_restore_point",
+})
+
+
+class _FuncCallCollector(Visitor if _PGLAST_AVAILABLE else object):
+    """Walks a parsed SQL statement collecting every FuncCall's name and args."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, list]] = []
+
+    def visit_FuncCall(self, ancestors, node):  # noqa: N802 — pglast visitor naming
+        name = ".".join(n.sval for n in node.funcname).lower()
+        self.calls.append((name, list(node.args or [])))
+
+
+def _format_vector_literal(vector: list[float]) -> str:
+    return "[" + ",".join(repr(float(x)) for x in vector) + "]"
+
+
+def _check_hybrid_gate(sql: str) -> tuple[str | None, str | None]:
+    """
+    Extended Layer 1 for vector.hybrid_select (A4.7).
+
+    Returns (rejection_reason, ss_embed_literal). rejection_reason is None
+    when the SQL is accepted; ss_embed_literal is the text argument found in
+    the (sole distinct) ss_embed(...) call, or None if the SQL doesn't call it.
+    """
+    rejection = _check_layer1(sql)
+    if rejection:
+        return rejection, None
+
+    if not _PGLAST_AVAILABLE:
+        logger.error("SECURITY: pglast unavailable — hybrid_select function gate bypassed.")
+        return None, None
+
+    try:
+        parsed = pglast.parse_sql(sql)
+    except pglast.Error as exc:
+        return f"SQL parse error: {exc}", None
+
+    collector = _FuncCallCollector()
+    for stmt in parsed:
+        collector(stmt)
+
+    literals: set[str] = set()
+    for name, args in collector.calls:
+        short_name = name.rsplit(".", 1)[-1]
+        if short_name == "ss_embed":
+            if args and type(args[0]).__name__ == "A_Const" and hasattr(args[0].val, "sval"):
+                literals.add(args[0].val.sval)
+            continue
+        if short_name in _DENIED_FUNCTIONS:
+            return f"Rejected: function {short_name!r} is not permitted.", None
+
+    if len(literals) > 1:
+        return (
+            "Rejected: multiple distinct ss_embed(...) literals in one "
+            "query are not supported (only one query-side vector can be "
+            "bound per request).",
+            None,
+        )
+
+    return None, (next(iter(literals)) if literals else None)
+
+
+# ── A4.6 vector.semantic_search ─────────────────────────────────────────────
+async def semantic_search(
+    query_text: str,
+    top_k: int | None = None,
+    document_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    top_k_max = cfg.retrieval.semantic_top_k_max
+    if top_k is not None and not (1 <= top_k <= top_k_max):
+        raise ValueError(f"top_k must be between 1 and {top_k_max}, got {top_k!r}")
+
+    tenant_id = get_tenant_id()
+    effective_top_k = top_k if top_k is not None else cfg.retrieval.semantic_top_k
+
+    vector = await embed_text(
+        query_text,
+        model=cfg.retrieval.embedding_model,
+        dim=cfg.retrieval.embedding_dim,
+    )
+    vector_literal = _format_vector_literal(vector)
+
+    where_clauses = ["dc.tenant_id = %(tenant_id)s"]
+    params: dict[str, Any] = {"tenant_id": tenant_id, "qvec": vector_literal, "top_k": effective_top_k}
+    if document_ids:
+        where_clauses.append("dc.document_id = ANY(%(document_ids)s)")
+        params["document_ids"] = document_ids
+
+    sql = f"""
+        SELECT dc.chunk_id, dc.document_id, dc.content_md, dc.page,
+               1 - (dc.embedding <=> %(qvec)s::vector) AS score
+        FROM document_chunks dc
+        WHERE {' AND '.join(where_clauses)}
+        ORDER BY dc.embedding <=> %(qvec)s::vector
+        LIMIT %(top_k)s
+    """
+
+    async with get_connection() as conn:
+        cur = await conn.execute(sql, params)
+        rows = await cur.fetchall()
+        col_names = [desc.name for desc in cur.description] if cur.description else []
+        matches = [dict(zip(col_names, row)) for row in rows]
+
+    logger.info(
+        "vector.semantic_search: tenant=%s top_k=%d matches=%d",
+        tenant_id, effective_top_k, len(matches),
+    )
+    return {"matches": matches}
+
+
+# ── A4.7 vector.hybrid_select ───────────────────────────────────────────────
+async def hybrid_select(
+    sql: str,
+    max_rows: int | None = None,
+) -> dict[str, Any]:
+    effective_max = min(max(1, max_rows if max_rows is not None else cfg.mcp.max_rows_default), cfg.mcp.max_rows_hard_cap)
+
+    rejection, ss_embed_literal = _check_hybrid_gate(sql)
+    if rejection:
+        logger.warning("hybrid_select gate rejected SQL: %s", rejection)
+        return {
+            "ok": False, "columns": [], "rows": [], "row_count": 0, "truncated": False,
+            "error": {"sqlstate": None, "message": f"[Layer 1 Gate] {rejection}"},
+        }
+
+    async with get_connection() as conn:
+        try:
+            if ss_embed_literal is not None:
+                vector = await embed_text(
+                    ss_embed_literal,
+                    model=cfg.retrieval.embedding_model,
+                    dim=cfg.retrieval.embedding_dim,
+                )
+                # SET LOCAL: scoped to this transaction only, cleared on the
+                # rollback get_connection() always performs -- never leaks
+                # into the next pooled use of this connection.
+                await conn.execute(
+                    "SELECT set_config('statesync.query_vector', %s, true)",
+                    (_format_vector_literal(vector),),
+                )
+
+            cur = await conn.execute(sql)
+            rows = await cur.fetchmany(effective_max + 1)
+            col_names = [desc.name for desc in cur.description] if cur.description else []
+            truncated = len(rows) > effective_max
+            result_rows = [dict(zip(col_names, row)) for row in rows[:effective_max]]
+
+            logger.info(
+                "vector.hybrid_select: ok=True rows=%d truncated=%s used_ss_embed=%s",
+                len(result_rows), truncated, ss_embed_literal is not None,
+            )
+            return {
+                "ok": True, "columns": col_names, "rows": result_rows,
+                "row_count": len(result_rows), "truncated": truncated, "error": None,
+            }
+
+        except psycopg.errors.InsufficientPrivilege as exc:
+            logger.warning("vector.hybrid_select: permission denied (42501): %s", exc)
+            return {
+                "ok": False, "columns": [], "rows": [], "row_count": 0, "truncated": False,
+                "error": {"sqlstate": "42501", "message": str(exc)},
+            }
+        except psycopg.Error as exc:
+            sqlstate = exc.sqlstate if hasattr(exc, "sqlstate") else None
+            logger.warning("vector.hybrid_select: query error sqlstate=%s message=%s", sqlstate, exc)
+            return {
+                "ok": False, "columns": [], "rows": [], "row_count": 0, "truncated": False,
+                "error": {"sqlstate": sqlstate, "message": str(exc)},
+            }
+
+
+# ── A4.9 docs.get_passage ───────────────────────────────────────────────────
+async def get_passage(chunk_id: str) -> dict[str, Any]:
+    if not _CHUNK_ID_RE.match(chunk_id):
+        raise ValueError(f"Invalid chunk_id: {chunk_id!r}")
+
+    tenant_id = get_tenant_id()
+    sql = """
+        SELECT dc.chunk_id, dc.document_id, dc.content_md, dc.page, d.source_uri
+        FROM document_chunks dc
+        JOIN documents d ON d.document_id = dc.document_id
+        WHERE dc.chunk_id = %(chunk_id)s AND dc.tenant_id = %(tenant_id)s
+    """
+    async with get_connection() as conn:
+        cur = await conn.execute(sql, {"chunk_id": chunk_id, "tenant_id": tenant_id})
+        row = await cur.fetchone()
+
+    if row is None:
+        raise ValueError(f"chunk_id not found: {chunk_id!r}")
+
+    col_names = [desc.name for desc in cur.description]
+    result = dict(zip(col_names, row))
+    logger.debug("docs.get_passage: chunk_id=%s document_id=%s", chunk_id, result["document_id"])
+    return result

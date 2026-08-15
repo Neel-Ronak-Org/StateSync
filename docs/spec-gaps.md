@@ -117,3 +117,31 @@ own new fixtures) before this work proceeded, given it touches previously
 shipped data. Not a BD -- both are fixture-content corrections against the
 existing spec text, not new Strategy-level decisions.
 ---
+
+---
+GAP-5 | Part E1 | E1 Scope, D7/C2 boundary | build agent | 2026-08-15
+E1 Scope says decomposition (D7) splits a hybrid query into a SQL sub-task
+and a doc sub-task, but is silent on whether the SQL sub-task engages C2's
+correction loop (retry on a classified, retriable failure) the way the pure
+sql route does. The spec frames the correction loop consistently as a
+sql_agent_node / sql-route concept (C2 Deliverable 2's own language: "not a
+try/except retry loop... inside sql_agent_node"); E1 never says it also
+covers a decomposed sub-question executed from within the hybrid route.
+Resolution: implemented hybrid's SQL sub-task as a simplified single-shot
+generation+execution (no memory consultation, no active interrogation, no
+correction-loop retry) -- reasoned that a decomposed sub-question is by
+construction simpler than a standalone sql-route question (decomposition
+already isolated the structured-data part), and that wiring hybrid through
+C2's actual graph edges would mean either duplicating sql_agent_node's
+correction-loop machinery for a second call site or routing hybrid through
+the sql route's own conditional edges, neither of which Deliverable 5's
+"Unstructured Knowledge Engine node replacing both stubs" language
+suggests. On a sub-task SQL failure, the error is still classified (A3,
+same classify_error() sql_agent_node uses) and surfaced honestly via
+state.errors rather than silently treated as an empty result -- found as a
+real bug during E1-V4 testing (a hallucinated table name was originally
+surfacing as "no sellers breached SLA," a fabricated answer, instead of a
+reported failure) and fixed before this gap was recorded. Not a BD -- this
+is an implementation choice for an unaddressed case, not a reopening of a
+locked D-numbered decision.
+---
