@@ -1,9 +1,14 @@
 # Phase B Amendment — Build-Level Decisions
 
-Standalone BD log (Appendix 5 equivalent) for this repo. `StateSync_Build_Spec.md`
-is not yet checked in under `docs/`; when it is, migrate these entries into its
-Appendix 5 verbatim, per the format A0.3 defines: Decided / Alternative considered
-/ Why / Hook.
+Running append log of BD entries, in the format A0.3 defines: Decided /
+Alternative considered / Why / Hook. `StateSync_Build_Spec.md` is now checked
+in under `docs/`, and BD1–BD7 below have been migrated into its Appendix 5,
+which is the **consolidated record** later Parts should treat as
+authoritative. This file remains the historical trail — each entry recorded
+once, at the Part where it was decided — and new BD entries should still land
+here first, then be copied into Appendix 5. See `docs/open_items.md` for a
+tracked summary of what's still open across BD7 and the other carried-forward
+items.
 
 ## BD1 — LLM provider seam implemented in Phase B (not deferred to D)
 
