@@ -88,6 +88,12 @@ history_retention_runs    = 200
 spec_scorer_fixture       = "phase_e2.json"
 execution_scorer_fixture  = "phase_c2.json"
 history_default_limit     = 20      # GET /history default page size
+# Per-query HTTP budget for the evaluation pipeline. Deliberately NOT derived
+# from mcp.statement_timeout_ms: that bounds a single SQL statement, whereas a
+# pipeline query is a full graph traversal (normalize + route + generate +
+# execute + synthesize, several LLM calls). Reusing the MCP timeout gave 75s,
+# under which 15 of 150 spec queries (10%) timed out across the 5-run trend.
+query_timeout_s           = 300
 
 [tenancy]
 default_tenant            = "t_capstone_default"

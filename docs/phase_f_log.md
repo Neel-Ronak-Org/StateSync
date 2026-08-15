@@ -24,8 +24,13 @@ existing graded re-baseline. **No new re-baseline gate is introduced.**
    holds no INSERT — writing history there would mean relaxing Layer 3 or
    inventing a role A1 never describes).
 
-   **Deliverable 2 says "queryable as a trend across ≥ 5 runs". One real run
-   is on record, not five.** The pipeline was exercised end-to-end
+   **Deliverable 2 is now SATISFIED — see "Deliverable 2 — trend verification"
+   at the end of this log (5 runs, 2026-08-15).** The paragraph below records
+   the state at Phase F freeze, when only one run existed; it is left unedited
+   as the honest record of that moment.
+
+   **[At freeze] Deliverable 2 says "queryable as a trend across ≥ 5 runs". One
+   real run is on record, not five.** The pipeline was exercised end-to-end
    (`POST /run`): 55 live queries, `execution_mean=0.320 (n=25)`,
    `spec_mean=0.000 null=30/30`, persisted and read back via `GET /history`
    with full per-query detail intact. The `spec_mean` of 0 is expected and not
@@ -346,3 +351,78 @@ Carried forward unchanged: GAP-6, BD7, c2g_10, M7 re-baseline
 
 All run against containers recreated from cleanly rebuilt images
 (`DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0`), not live-patched ones.
+
+---
+
+# Deliverable 2 — trend verification (post-freeze, 2026-08-15)
+
+**Appended, not edited.** Everything above is the Phase F record as measured at
+freeze and stands unchanged. At freeze, Deliverable 2 ("persisted evaluation
+history queryable as a trend across ≥ 5 runs") had **one** run on record. Four
+more were run sequentially — never concurrently, since the evaluator's per-query
+HTTP budget was already known to be tight — bringing the total to five.
+
+## The five runs
+
+| # | run_id | started (UTC) | trigger | execution_mean | n | spec_mean | null | per-query rows |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `e8bdef14` | 14:42:04 | on_demand | 0.320 | 25 | 0.000 | 30 | 25 + 30 |
+| 2 | `8f3939ac` | 16:56:56 | on_demand | 0.320 | 25 | 0.000 | 30 | 25 + 30 |
+| 3 | `25370c3d` | 17:31:46 | on_demand | 0.280 | 25 | 0.000 | 30 | 25 + 30 |
+| 4 | `914426ac` | 18:00:33 | on_demand | 0.280 | 25 | 0.000 | 30 | 25 + 30 |
+| 5 | `b1e9fc05` | 18:31:04 | on_demand | 0.280 | 25 | 0.000 | 30 | 25 + 30 |
+
+`GET /history` returns all five with **distinct `run_id`s, distinct
+timestamps, and complete per-query detail** (25 execution + 30 spec entries
+each). Confirmed still present after a container rebuild and
+`--force-recreate`, which is the point of BD8's named `evaluator_data` volume.
+
+`spec_mean = 0.000` with `null = 30/30` in every run is expected, not a defect:
+Task 10 is deferred, the Synthesizer emits `chart: null` on every route, so
+every spec comparison is null-vs-reference by construction.
+
+## What the trend actually shows — and why one run could not
+
+execution_mean: **0.320, 0.320, 0.280, 0.280, 0.280** (mean 0.2960, spread
+0.040 — exactly one query out of 25).
+
+Per-query analysis across all five runs is the part a single run cannot give:
+
+- **6 of 25 queries pass in all five runs** (stable).
+- **4 queries are flaky** — `c2g_02`, `c2g_04`, `c2g_15`, `c2g_21` — passing in
+  some runs and failing in others with no input change.
+
+So M4's ≈0.28–0.32 is not "roughly 30% of queries are right." It is **6
+reliably-correct queries plus 4 coin-flips**, and the headline number moves
+only because the coin-flips land differently. That is precisely the regression
+signal Strategy §7's M2 argument cares about ("a system that answers
+differently each time cannot be demonstrated"), and it is invisible in any
+single run. Deliverable 2's trend requirement earns its place here.
+
+## A real defect the trend exposed, now fixed
+
+Counting scorer failures by truthiness reported **zero errors in all five
+runs**. Counting by key presence reported **15**. Both were reading the same
+data.
+
+Cause: `str(exc)` on httpx's timeout exceptions returns the **empty string**.
+Every failure was recorded as `{"id": ..., "score": 0.0, "error": ""}` and
+logged as `SpecScorer failed for e2_010: ` with nothing after the colon. Because
+`""` is falsy, any ordinary `if q.get("error")` check counted 15 genuine
+timeouts as a clean sweep — a scheduled pipeline silently under-reporting its
+own failures, which is the exact risk flagged (but not yet evidenced) at freeze.
+
+Real failure rate across the trend: **15 of 150 spec queries (10%)**, zero
+execution-scorer failures.
+
+Two fixes:
+1. `_describe_exc()` — prefixes the exception type, so a reason is never empty
+   (`ReadTimeout` rather than `""`).
+2. `evaluation.query_timeout_s = 300` (new config key) replaces the old budget,
+   which was `mcp.statement_timeout_ms / 1000 + 60` = 75s. That was the wrong
+   quantity to borrow: `statement_timeout_ms` bounds a **single SQL statement**,
+   while a pipeline query is a full graph traversal — normalize, route,
+   generate, execute, synthesize — across several LLM calls.
+
+Both changes postdate the five runs above; those rows were produced by the
+pre-fix code and are left exactly as recorded.

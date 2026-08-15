@@ -57,6 +57,22 @@ TENANT_ID = str(cfg.tenancy.default_tenant)
 _run_lock = asyncio.Lock()
 
 
+def _describe_exc(exc: BaseException) -> str:
+    """
+    Always yields a non-empty failure reason.
+
+    `str(exc)` on several httpx timeout exceptions returns the EMPTY STRING,
+    which silently erased the reason from both the log line ("SpecScorer
+    failed for e2_010: ") and the persisted per-query record ({"error": ""}).
+    Because "" is falsy, any downstream `if q.get("error")` check then counted
+    those failures as zero -- 15 real timeouts across the 5-run trend read as
+    a clean sweep until they were counted by key presence instead. Prefixing
+    the exception type guarantees the record is always meaningful.
+    """
+    detail = str(exc).strip()
+    return f"{type(exc).__name__}: {detail}" if detail else type(exc).__name__
+
+
 async def _submit_query(client: httpx.AsyncClient, text: str) -> dict[str, Any]:
     resp = await client.post(f"{ORCH_URL}/query", json={"query": text})
     resp.raise_for_status()
@@ -81,8 +97,9 @@ async def _score_execution(client: httpx.AsyncClient) -> dict[str, Any]:
                 result = scorer.score(gen_rows, ref_rows)
                 per_query.append({"id": q["id"], **result})
             except Exception as exc:
-                logger.warning("ExecutionScorer failed for %s: %s", q["id"], exc)
-                per_query.append({"id": q["id"], "score": 0.0, "error": str(exc)})
+                reason = _describe_exc(exc)
+                logger.warning("ExecutionScorer failed for %s: %s", q["id"], reason)
+                per_query.append({"id": q["id"], "score": 0.0, "error": reason})
 
     scores = [p["score"] for p in per_query]
     mean = sum(scores) / len(scores) if scores else 0.0
@@ -105,8 +122,9 @@ async def _score_spec(client: httpx.AsyncClient) -> dict[str, Any]:
             result = scorer.score(chart, q["reference_spec"])
             per_query.append({"id": q["id"], **result})
         except Exception as exc:
-            logger.warning("SpecScorer failed for %s: %s", q["id"], exc)
-            per_query.append({"id": q["id"], "score": 0.0, "error": str(exc)})
+            reason = _describe_exc(exc)
+            logger.warning("SpecScorer failed for %s: %s", q["id"], reason)
+            per_query.append({"id": q["id"], "score": 0.0, "error": reason})
             null_count += 1
 
     scores = [p["score"] for p in per_query]
@@ -140,7 +158,7 @@ async def run_evaluation(trigger: str) -> dict[str, Any]:
         started = datetime.now(timezone.utc).isoformat()
         logger.info("Evaluation run %s starting (trigger=%s)...", run_id, trigger)
 
-        async with httpx.AsyncClient(timeout=httpx.Timeout(cfg.mcp.statement_timeout_ms / 1000 + 60)) as client:  # noqa: literals — ms conversion + generous full-query budget
+        async with httpx.AsyncClient(timeout=httpx.Timeout(float(cfg.evaluation.query_timeout_s))) as client:
             execution_result = await _score_execution(client)
             spec_result = await _score_spec(client)
             vision_attempted = await _maybe_run_vision(spec_result)
