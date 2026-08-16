@@ -230,9 +230,30 @@ per condition across multiple schemas.
 
 Row scale is easy; **schema scale is the problem.**
 
+> **✎ CORRECTED 2026-08-16 — the first row of this table is wrong, and it was
+> load-bearing.** "Schema will not fit in context" was never measured. Measured
+> now against the live MCP: the 12-table schema formats to **3,733 chars ≈ 933
+> tokens**, i.e. 49.8 chars per column. At that density **200 tables / 2,000
+> columns is ~24,900 tokens** — which fits comfortably in every current model's
+> context window, and even in the local 7B's 32k. The claim is off by roughly an
+> order of magnitude.
+>
+> What actually breaks first, in order: **accuracy** (the model picks the wrong
+> tables out of 200 — and table selection is already this project's measured
+> weak point, per BD6's 2-hop join weakness at *twelve* tables), then **200
+> sequential `describe_table` round-trips per query** (`sql_agent.py` passes
+> every table, unnarrowed), then **cost**, then — only past ~500 tables —
+> context.
+>
+> That reordering changes the fix: a context problem needs compression or
+> hierarchy; an accuracy-and-cost problem needs **selection**. Full reasoning,
+> the pre-committed build trigger, and a per-seam verdict:
+> **`docs/schema_retrieval_decision.md`**.
+
 | Failure | Trigger | Severity |
 |---|---|---|
-| schema will not fit in context | `describe_table` over 200 tables / 2000 columns | **fatal — the real problem** |
+| schema will not fit in context | `describe_table` over 200 tables / 2000 columns | ~~**fatal — the real problem**~~ — **corrected: ~25k tokens, fits. See the box above.** |
+| model picks wrong tables from an over-supplied schema | 200 tables in one prompt, no candidate selection | **severe — the real problem** |
 | join-path explosion | many tables, more wrong joins | severe |
 | 15s statement timeout | 50M-row tables | easy fix |
 | cost/latency per query | 5.2 LLM calls × large context | moderate |

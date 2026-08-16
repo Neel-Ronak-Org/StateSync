@@ -227,9 +227,26 @@ and the owner caught it.
 | Needing **scalable schema retrieval** once a real schema is loaded (Olist, TPC-DS, BIRD, Spider 2.0) | **Yes — and it is the FIRST thing that breaks.** |
 
 `DirectSchemaRetriever` calls `describe_table` on candidate tables and puts the
-result in the prompt. At 12 tables that is fine. At 200 tables / 2000 columns
-it does not fit in any context window, and no amount of prompt tuning helps.
-`docs/PROJECT_DIRECTION.md` §6 lists this as **fatal — the real problem**.
+result in the prompt. At 12 tables that is fine.
+
+> **✎ CORRECTED 2026-08-16.** This paragraph continued: "At 200 tables / 2000
+> columns it does not fit in any context window, and no amount of prompt tuning
+> helps." **Measured: that is wrong by about an order of magnitude.** The
+> 12-table schema formats to 933 tokens (49.8 chars/column), so 200 tables /
+> 2,000 columns is **~24,900 tokens** — comfortable in every current model, and
+> workable even in the local 7B's 32k.
+>
+> The conditional verdict on CSR-RAG survives; its stated *mechanism* does not.
+> What breaks first is **accuracy** — the model choosing wrong tables out of
+> 200, which is already this project's measured weakness at twelve — followed
+> by 200 sequential `describe_table` round-trips per query, since
+> `sql_agent.py` passes every table with no candidate selection at all.
+>
+> Consequence for what gets built: the answer is **top-k candidate selection**
+> behind the existing seam (~one class, the embedding model is already in the
+> stack), not a hypergraph. With a pre-committed trigger so it is not a
+> judgment call later. See **`docs/schema_retrieval_decision.md`**, which also
+> gives a build/don't-build verdict for all eight seams.
 
 **The seam already exists**: `schema_retriever.provider = "hypergraph"` resolves
 through `orchestrator/schema_retriever.py`. Only `DirectSchemaRetriever` is
