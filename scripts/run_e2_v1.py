@@ -34,6 +34,9 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+from shipped_flags import (require_shipped_flags, add_flag_guard_argument,
+                           FlagStateError)
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -63,8 +66,16 @@ def main() -> int:
     ap.add_argument("--url", default=DEFAULT_URL)
     ap.add_argument("--out", type=Path, required=True,
                     help="Where to write {query_id: chart}. Refuses to overwrite.")
-    ap.add_argument("--force", action="store_true")
+    # Shipped-flag guard -- see scripts/shipped_flags.py for the two incidents
+    # this exists to prevent.
+    add_flag_guard_argument(ap)
     args = ap.parse_args()
+    try:
+        flag_provenance = require_shipped_flags(
+            'run_e2_v1.py (E2-V1 / M7 chart quality)', allow_nonshipped=args.allow_nonshipped_flags)
+    except FlagStateError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(2)
 
     # Same append-only rule as every other verification artifact.
     if args.out.exists() and not args.force:

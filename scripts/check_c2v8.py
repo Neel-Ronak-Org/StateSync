@@ -25,8 +25,12 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import time
 from pathlib import Path
+
+from shipped_flags import (require_shipped_flags, add_flag_guard_argument,
+                           FlagStateError)
 
 from bench_memory import (
     REPO_ROOT,
@@ -187,7 +191,21 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", default=str(REPORT_PATH),
                     help="Report path. A non-default path refuses to overwrite.")
+
+    # Shipped-flag guard (scripts/shipped_flags.py). This script deliberately
+    # ends with memory.enabled=true for its warm pass -- which is exactly how a
+    # contaminated default got committed once (d7c0a6b). The guard asserts the
+    # state at ENTRY, so a run that inherits the previous run's leftover is
+    # refused instead of silently measuring the warm path twice.
+    add_flag_guard_argument(ap)
     args = ap.parse_args()
+    try:
+        flag_provenance = require_shipped_flags(
+            "check_c2v8.py (M4 query correctness)",
+            allow_nonshipped=args.allow_nonshipped_flags)
+    except FlagStateError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(2)
     out_path = Path(args.out)
     if out_path != REPORT_PATH and out_path.exists():
         print(f"ERROR: {out_path} exists. Results are append-only -- choose a new --out.")
@@ -215,6 +233,7 @@ def main() -> None:
 
     report = {
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "flag_provenance": flag_provenance,
         "novel_path_cache_cold": {"correct": cold["correct"], "scored": cold["scored"], "accuracy": cold["accuracy"]},
         "cache_hit_path_warm": {"correct": warm["correct"], "scored": warm["scored"], "accuracy": warm["accuracy"]},
         "golden_recovery": recovery,

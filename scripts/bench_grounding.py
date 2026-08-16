@@ -35,8 +35,12 @@ Usage:
 from __future__ import annotations
 
 import json
+import sys
 import subprocess
 from pathlib import Path
+
+from shipped_flags import (require_shipped_flags, add_flag_guard_argument,
+                           FlagStateError)
 from typing import Any
 
 from bench_memory import REPO_ROOT, restart_orchestrator, run_query
@@ -163,7 +167,23 @@ def main() -> None:
     _ap = argparse.ArgumentParser(description=__doc__)
     _ap.add_argument("--out", default=str(REPORT_PATH),
                      help="Report path. A non-default path refuses to overwrite.")
+
+    # Shipped-flag guard (scripts/shipped_flags.py). Two measurements were
+    # contaminated by leftover flag state before this existed: once by a script
+    # that toggled flags under a live run, once by a killed run that left the
+    # orchestrator serving a value the file no longer had. Both were discarded.
+    # This asserts the flags file AND that the running orchestrator post-dates
+    # it, and refuses rather than producing a number that is not comparable to
+    # anything on record. Scripts that vary a flag ON PURPOSE do so AFTER this
+    # point; the deviation they introduce is theirs and is recorded.
+    add_flag_guard_argument(_ap)
     _args, _ = _ap.parse_known_args()
+    try:
+        flag_provenance = require_shipped_flags(
+            'bench_grounding.py (M6 grounding)', allow_nonshipped=_args.allow_nonshipped_flags)
+    except FlagStateError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(2)
     out_path = Path(_args.out)
     if out_path != REPORT_PATH and out_path.exists():
         print(f"ERROR: {out_path} exists. Verification results are append-only "
@@ -265,6 +285,7 @@ def main() -> None:
     print(f"  Total ungrounded-but-true claims: {total_ungrounded_but_true}")
 
     report = {
+        "flag_provenance": flag_provenance,
         "results": results,
         "e1v5_decomposition": {
             "hybrid_fired": hybrid_fired, "hybrid_total": len(hybrid_ids),

@@ -73,6 +73,8 @@ TENANT = "t_capstone_default"
 # a local copy is what caused the two definitions to drift apart.
 sys.path.insert(0, str(REPO_ROOT / "orchestrator"))
 from scorers import ExecutionAccuracyScorer  # noqa: E402
+from shipped_flags import (require_shipped_flags, add_flag_guard_argument,  # noqa: E402
+                           FlagStateError)
 
 _EX = ExecutionAccuracyScorer()
 
@@ -240,7 +242,21 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--limit", type=int, default=0)
+
+    # Shipped-flag guard (scripts/shipped_flags.py). The first attempt at this
+    # script's corrected run was measured with normalization.enabled=false --
+    # left behind by a bench harness that was killed mid-run -- and discarded.
+    # The flags FILE said `true` throughout; only the live orchestrator was
+    # wrong, which is why the guard checks both.
+    add_flag_guard_argument(ap)
     args = ap.parse_args()
+    try:
+        flag_provenance = require_shipped_flags(
+            "diagnose_m4.py (M4 three-way diagnosis)",
+            allow_nonshipped=args.allow_nonshipped_flags)
+    except FlagStateError as exc:
+        print(exc, file=sys.stderr)
+        return 2
     if args.out.exists():
         print(f"ERROR: {args.out} exists. Results are append-only.")
         return 1
@@ -318,6 +334,7 @@ def main() -> int:
     n = len(queries)
     report = {
         "generated_by": "scripts/diagnose_m4.py",
+        "flag_provenance": flag_provenance,
         "report_schema": 2,
         "schema_note": (
             "v2: rows are persisted (v1 stored only counts); standard_ex is now "

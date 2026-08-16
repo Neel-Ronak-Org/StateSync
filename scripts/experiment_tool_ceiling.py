@@ -60,6 +60,9 @@ import urllib.error
 import urllib.request
 from collections import Counter, defaultdict
 from pathlib import Path
+
+from shipped_flags import (require_shipped_flags, add_flag_guard_argument,
+                           FlagStateError)
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -265,7 +268,16 @@ async def main() -> int:
                         help="Report path. Refuses to overwrite unless --force.")
     parser.add_argument("--force", action="store_true",
                         help="Permit overwriting an existing report.")
+    # Shipped-flag guard -- see scripts/shipped_flags.py for the two incidents
+    # this exists to prevent.
+    add_flag_guard_argument(parser)
     args = parser.parse_args()
+    try:
+        flag_provenance = require_shipped_flags(
+            'experiment_tool_ceiling.py (M9 routing determinism)', allow_nonshipped=args.allow_nonshipped_flags)
+    except FlagStateError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(2)
     out_path = Path(args.out)
     if out_path.exists() and not args.force:
         print(f"ERROR: {out_path} exists. Verification results are append-only -- "
@@ -279,7 +291,8 @@ async def main() -> int:
         "phase_f_routing.json must hold exactly 20 queries per route (Appendix 2.2)."
     )
 
-    report: dict[str, Any] = {"generated_by": "scripts/experiment_tool_ceiling.py"}
+    report: dict[str, Any] = {"generated_by": "scripts/experiment_tool_ceiling.py",
+                              "flag_provenance": flag_provenance}
 
     if not args.over_exposure_only:
         report["baseline"] = run_baseline(queries)

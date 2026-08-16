@@ -34,6 +34,9 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from shipped_flags import (require_shipped_flags, add_flag_guard_argument,
+                           FlagStateError)
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FLAGS_PATH = REPO_ROOT / "config" / "flags.toml"
 FIXTURE_PATH = REPO_ROOT / "fixtures" / "golden" / "phase_c1.json"
@@ -179,7 +182,23 @@ def main() -> None:
     _ap = argparse.ArgumentParser(description=__doc__)
     _ap.add_argument("--out", default=str(REPORT_PATH),
                      help="Report path. A non-default path refuses to overwrite.")
+
+    # Shipped-flag guard (scripts/shipped_flags.py). Two measurements were
+    # contaminated by leftover flag state before this existed: once by a script
+    # that toggled flags under a live run, once by a killed run that left the
+    # orchestrator serving a value the file no longer had. Both were discarded.
+    # This asserts the flags file AND that the running orchestrator post-dates
+    # it, and refuses rather than producing a number that is not comparable to
+    # anything on record. Scripts that vary a flag ON PURPOSE do so AFTER this
+    # point; the deviation they introduce is theirs and is recorded.
+    add_flag_guard_argument(_ap)
     _args, _ = _ap.parse_known_args()
+    try:
+        flag_provenance = require_shipped_flags(
+            'bench_memory.py (M1 memory A/B)', allow_nonshipped=_args.allow_nonshipped_flags)
+    except FlagStateError as exc:
+        print(exc, file=sys.stderr)
+        raise SystemExit(2)
     out_path = Path(_args.out)
     if out_path != REPORT_PATH and out_path.exists():
         print(f"ERROR: {out_path} exists. Verification results are append-only "
@@ -207,6 +226,7 @@ def main() -> None:
     treatment_summary = summarize(treatment_results)
 
     report = {
+        "flag_provenance": flag_provenance,
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "fixture": str(FIXTURE_PATH.relative_to(REPO_ROOT)),
         "comparison_scope": (
