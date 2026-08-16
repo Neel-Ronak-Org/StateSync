@@ -263,14 +263,18 @@ All fixtures self-authored (~287 queries). Never run against a standard benchmar
 
 **Current honest metrics** (local 7B, post projection fix):
 
-| | |
-|---|---|
-| standard EX (BIRD/Spider definition) | **44%** |
-| strict EX (this project's scorer) | 36% |
-| mean value recall | 74% |
-| M8 adversarial | 36/36 |
-| M9 routing | 0.983 |
-| gates | seams 24/24 · E2 30/30 · tenancy 12/12 |
+| | | |
+|---|---|---|
+| standard EX (BIRD/Spider definition) | **44%** | re-verified 2026-08-16 under the *shipped* `ExecutionAccuracyScorer`; the earlier figure came from a looser in-script definition (`f46e0bf`) and the number happens to be identical |
+| strict EX (this project's scorer) | 36% | unchanged |
+| mean value recall | 74% | **weak metric — do not read as capability.** Unaligned and de-duplicated: a query returning 30 rows for a 1-row answer scores 1.00. Mean *row* recall is **48%** |
+| M8 adversarial | **40/40** | was 36/36; +4 payload-count assertions that close a class-empties-silently hole (`dc2e31f`) |
+| M9 routing | 0.983 | unchanged |
+| gates | seams **25/25** · E2 30/30 · tenancy 12/12 · **deployed 19/19** | seams +1 (flag liveness); `verify_deployed.py` is new (`5301b89`) |
+
+**Of the 16 remaining M4 failures, 9 are genuine model errors** — not 5. The
+"unrecovered SQL error" category never fired correctly, and correcting it moved
+queries *into* the genuine column. See PROJECT_DIRECTION §2's updated table.
 
 **Two prompt interventions were measured this session.** Schema comments: net
 **negative**, reverted. Projection discipline: net **+8pp**, kept. Both *moved*
@@ -282,9 +286,20 @@ spending the Azure credits rather than more wording.
 
 ## 7. Next steps, in order
 
-1. **Resolve §5** — re-score D-V2 under a Latin-data assumption; decide whether
-   the schema-comments revert stands. Ask the owner before acting; it changes a
-   decision already taken.
+1. ✅ **§5 resolved 2026-08-16 — the revert stands.** D-V2 re-scored under a
+   Latin-only assumption: shipped 81.2%, migration-005 75.0%, still under the
+   pre-committed bar, and D-V1 treatment fell 65.0% → 55.0% on a measure with
+   no script assumption in it. Nothing was reversed. **The live item this
+   uncovered instead:** the system silently answers Hinglish + Latin-entity
+   queries *wrongly* (it invents Devanagari for Latin place names and matches
+   `city_local`), and that half of the fixture is 20pp weaker than the
+   Devanagari half. That is the multilingual work's real problem. See §5.
+
+   **Not yet done, and the obvious next move:** the open item's
+   "script-triggered, symmetric wording" hypothesis now has a measured failure
+   mode on *both* sides, so it can be tested against a pre-committed condition
+   that covers both — English line up, D-V2 ≥ 81.25%, D-V1 treatment ≥ 65.0%,
+   **and** the Hinglish half no worse. Budget two ~35-minute runs.
 2. **Gemini + Azure providers** behind the BD1 seam. Model-independent, no cost.
 3. **Load Olist** (real Brazilian e-commerce, ~100k orders, 9 tables) — real
    data, right domain, surfaces schema-scale retrieval immediately.
@@ -308,5 +323,19 @@ engineering problem and solving it is a genuine contribution.
 - **Never alter a verification to make a number look better.** The M4 scorer
   was deliberately left strict; a *third* scorer was added alongside it instead.
 - **Check for running work before starting anything** — a measurement was
-  contaminated once by a script that restarted the orchestrator mid-run.
+  contaminated once by a script that restarted the orchestrator mid-run. This
+  has now happened **three times**, so it is a guard rather than advice:
+  `scripts/shipped_flags.py` makes every harness assert the shipped flag state
+  (file **and** liveness) and refuse otherwise, and each report carries a
+  `flag_provenance` field. Check `ps aux | grep -E "bench_|check_|diagnose_"`
+  and `ListAgents`/other sessions before starting a run anyway — the third
+  instance was two Claude sessions in one repo, which no in-repo guard can see.
+- **Never edit a shell script while it is executing.** Bash reads a script
+  incrementally by file offset; rewriting it in place shifts that offset and
+  the run dies mid-suite on a syntax error. Cost one M8 run (`dc2e31f`). Run
+  from a frozen copy inside `scripts/` — not `/tmp`, since `SCRIPT_DIR` must
+  resolve to the repo.
+- **Run `python3 scripts/verify_deployed.py` before trusting any measurement.**
+  "The code in the repo is the code that is running" was an unverified
+  assumption under every other verification, and it has been false twice.
 - **Commit after each item closes**, with the reasoning in the message.
