@@ -113,7 +113,11 @@ Rules:
 3. Use only the tables and columns described in the context below.
 4. Apply LIMIT {max_rows} unless the question explicitly asks for all rows.
 5. Use TIMESTAMPTZ-aware comparisons (cast to timestamptz, never compare with integers).
-6. Return ONLY the SQL query text — no markdown, no explanation, no comments."""
+6. Return ONLY the columns the question actually asks for. If it asks
+   "which sellers", return the seller identifier (plus a name if the answer
+   would be unreadable without it) -- not every column of the table. Selecting
+   extra columns "for context" makes the result a different answer.
+7. Return ONLY the SQL query text — no markdown, no explanation, no comments."""
 
 _CORRECTION_SYSTEM_PROMPT = """\
 You are a PostgreSQL query generator correcting a previously failed query for a
@@ -134,9 +138,13 @@ Rules:
 3. Use only the tables and columns described in the schema below.
 4. Apply LIMIT {max_rows} unless the question explicitly asks for all rows.
 5. Use TIMESTAMPTZ-aware comparisons (cast to timestamptz, never compare with integers).
-6. Directly address every remediation hint below — do not repeat a mistake a hint
+6. Return ONLY the columns the question actually asks for. If it asks
+   "which sellers", return the seller identifier (plus a name if the answer
+   would be unreadable without it) -- not every column of the table. Selecting
+   extra columns "for context" makes the result a different answer.
+7. Directly address every remediation hint below — do not repeat a mistake a hint
    already explained.
-7. Return ONLY the SQL query text — no markdown, no explanation, no comments."""
+8. Return ONLY the SQL query text — no markdown, no explanation, no comments."""
 
 _SUMMARIZER_SYSTEM_PROMPT = """\
 You are documenting how a PostgreSQL query was constructed, so the navigation

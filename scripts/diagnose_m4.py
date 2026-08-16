@@ -123,10 +123,16 @@ def categorise(gen, ref, strict, std, recall) -> str:
         return "correct under standard EX; strict scorer counts column width"
     if gen.get("error"):
         return "SQL execution error (unrecovered)"
-    if recall == 1.0:
-        return "right values, wider/narrower projection"
+    # Row count is checked BEFORE value recall. A query returning 30 rows that
+    # merely CONTAINS the 1 expected row scores recall 1.0, and checking recall
+    # first labelled that a "projection" problem when it is a missing
+    # aggregation or filter -- a different defect with a different fix.
     if len(gen["rows"]) == len(ref["rows"]):
+        if recall == 1.0:
+            return "right values, wider/narrower projection"
         return "right row COUNT, wrong values"
+    if recall == 1.0:
+        return "right values but WRONG ROW COUNT (missing aggregation/filter)"
     if not gen["rows"] and ref["rows"]:
         return "returned nothing; ground truth has rows"
     if gen["rows"] and not ref["rows"]:
