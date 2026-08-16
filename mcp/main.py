@@ -35,7 +35,9 @@ from db import init_pool, close_pool, get_connection
 from embeddings import close_embeddings_client
 from fingerprint import verify_fingerprint_at_startup
 from qdrant_store import init_qdrant, close_qdrant
-from session import set_session, get_tenant_id, enforce_tenancy_policy, TenancyPolicyNotImplemented
+from session import (set_session, get_tenant_id, enforce_tenancy_policy,
+                     TenancyPolicyNotImplemented, TenantNotAllowed,
+                     TenancyAcknowledgementMissing)
 from tools.schema_tools import list_tables, describe_table
 from tools.data_tools import sample_rows, run_select
 from tools.vector_tools import semantic_search, hybrid_select, get_passage
@@ -186,6 +188,21 @@ async def rpc_handler(request: Request) -> JSONResponse:
     # point regardless -- see session.enforce_tenancy_policy's docstring.
     try:
         enforce_tenancy_policy(tenant_id)
+    except TenantNotAllowed as exc:
+        # 403, not 501: the policy IS implemented and it is refusing this
+        # tenant. Distinguishing the two matters -- "not built" and "not
+        # permitted" are different operational facts.
+        logger.warning("Tenancy admission refused: %s", exc)
+        return JSONResponse(
+            _jsonrpc_error(None, -32602, str(exc)),
+            status_code=403,
+        )
+    except TenancyAcknowledgementMissing as exc:
+        logger.error("Tenancy misconfiguration: %s", exc)
+        return JSONResponse(
+            _jsonrpc_error(None, -32603, str(exc)),
+            status_code=501,
+        )
     except TenancyPolicyNotImplemented as exc:
         return JSONResponse(
             _jsonrpc_error(None, -32603, str(exc)),

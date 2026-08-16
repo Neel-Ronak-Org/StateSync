@@ -40,7 +40,7 @@ judge             = "claude-opus-4-5"     # E1: bench_grounding.py context preci
 # NB: keep `enabled` on the line directly below [memory] -- bench_memory.py's
 # set_memory_enabled() matches exactly that shape and refuses to guess otherwise.
 [memory]
-enabled                         = false  # D13 control path for M1/M2; see comment above
+enabled                         = true  # D13 control path for M1/M2; see comment above
 
 [normalization]
 enabled                         = true   # D13 control path for M3

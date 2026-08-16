@@ -102,9 +102,35 @@ history_default_limit     = 20      # GET /history default page size
 # under which 15 of 150 spec queries (10%) timed out across the 5-run trend.
 query_timeout_s           = 300
 
+# D11 Vision Score. A sub-table of [evaluation], so it must follow every
+# bare [evaluation] key -- TOML closes a table when the next header appears.
+# `model` is empty until a vision-capable model exists in the deployment, and
+# is deliberately NOT defaulted to a text model: a text model asked to judge a
+# picture it cannot see returns a confident, meaningless number.
+[evaluation.vision_scorer]
+model                     = ""
+render_scale              = 2.0     # PNG scale factor passed to vl-convert
+mark_weight               = 0.40    # mirrors the deterministic scorer's split
+encoding_weight           = 0.45
+readability_weight        = 0.15
+
 [tenancy]
 default_tenant            = "t_capstone_default"
 enforced                  = false   # D6; threading is mandatory even when false
+# Admission control for tenancy.enforced=true. A tenant_id outside this list is
+# refused at the MCP boundary rather than silently served an empty result set,
+# so a typo in X-Tenant-ID surfaces as an error instead of as "no data".
+allowed_tenants           = ["t_capstone_default"]
+# The relational business tables (orders, sellers, fulfillments, ...) carry NO
+# tenant discriminator column, so they CANNOT be row-isolated. Only the
+# document plane (documents, document_chunks) and the trajectory plane carry
+# tenant_id. Enabling enforcement while the relational plane is shared is a
+# real decision with real consequences, so it must be stated explicitly here;
+# startup refuses otherwise rather than implying an isolation that does not
+# exist. Adding tenant_id to the relational tables would change the A5 schema
+# fingerprint and invalidate every stored trajectory under D4 -- see
+# docs/open_items.md.
+relational_plane_shared_ack = false
 
 [experiment]
 # F-V2 over-exposure experiment (M9). Surface sizes reuse mcp.tool_ceiling's

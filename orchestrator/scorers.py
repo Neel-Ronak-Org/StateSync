@@ -244,10 +244,62 @@ class VisionScorer:
     name = "vision"
 
     def score(self, generated: Any, reference: Any) -> dict[str, Any]:
-        raise NotImplementedError(
-            "VisionScorer content is Strategy §6 stretch scope (D11) -- the "
-            "VLM call itself is not built. Only the registry seam is (A0.5). "
-            "See Appendix 4: evaluation.vision_scorer.enabled, Part F."
+        """
+        Render both specs, then ask a vision model to compare the PICTURES.
+
+        Two halves with different evidential status, kept distinct on purpose:
+
+          rendering -- BUILT and verified. vl-convert turns a Vega-Lite spec
+                       into a PNG with no browser and no network, which is what
+                       made this feasible inside the evaluator container at all.
+          judging   -- a real dispatch point. No vision-capable model exists in
+                       this deployment, so it raises VisionModelUnavailable
+                       naming what is missing. It does NOT fall back to a text
+                       model: a text model asked to judge an image it cannot
+                       see returns a confident, meaningless number, which is
+                       strictly worse than refusing.
+
+        A null chart is a total miss, matching SpecScorer's own treatment.
+        """
+        from vision import (render_spec_to_png, get_vision_model,
+                            ChartRenderUnavailable, VisionModelUnavailable)
+
+        if not isinstance(generated, dict) or not isinstance(reference, dict):
+            return {
+                "score": 0.0, "null_chart": generated is None,
+                "rendered": False, "judged": False,
+                "detail": "generated or reference is not a chart spec",
+            }
+
+        # Rendering half -- runs for real.
+        try:
+            generated_png = render_spec_to_png(generated)
+            reference_png = render_spec_to_png(reference)
+        except ChartRenderUnavailable:
+            raise
+        except Exception as exc:
+            # A spec that will not render is itself a finding, and is reported
+            # as a zero with the reason rather than crashing the pipeline.
+            return {
+                "score": 0.0, "null_chart": False,
+                "rendered": False, "judged": False,
+                "detail": f"render failed: {type(exc).__name__}: {exc}",
+            }
+
+        rendered = {
+            "rendered": True,
+            "generated_png_bytes": len(generated_png),
+            "reference_png_bytes": len(reference_png),
+        }
+
+        # Judging half -- resolves a model or explains precisely what is absent.
+        model = get_vision_model()          # raises VisionModelUnavailable
+        raise VisionModelUnavailable(
+            f"Both charts rendered ({rendered['generated_png_bytes']} and "
+            f"{rendered['reference_png_bytes']} PNG bytes), and vision model "
+            f"{model!r} is configured, but no vision transport is wired for the "
+            f"current llm.provider. Wire the image call for that provider to "
+            f"complete D11; the rendering half above is already real."
         )
 
 

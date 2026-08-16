@@ -119,11 +119,35 @@ def fv5() -> None:
     from scorers import get_scorer
 
     vision = get_scorer("vision")
+
+    # The seam is no longer wholly unbuilt: D11's RENDERING half is
+    # implemented (vl-convert, browser-free), while the VLM judging half is
+    # not. F-V5 therefore checks the two halves SEPARATELY -- a single
+    # "does it raise" assertion can no longer tell them apart, and would
+    # report a half-built feature as unbuilt.
+    null_result = vision.score(None, None)
+    check("a null chart scores 0.0 rather than crashing the pipeline",
+          isinstance(null_result, dict) and null_result.get("score") == 0.0,
+          str(null_result)[:70])
+
+    real_spec = {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "bar",
+        "data": {"values": [{"k": "A", "v": 3}, {"k": "B", "v": 5}]},
+        "encoding": {"x": {"field": "k", "type": "nominal"},
+                     "y": {"field": "v", "type": "quantitative"}},
+    }
     try:
-        vision.score(None, None)
-        check("VisionScorer.score() fails on missing IMPLEMENTATION", False, "did not raise")
-    except NotImplementedError:
+        vision.score(real_spec, real_spec)
+        check("VisionScorer.score() fails on the missing VLM half", False, "did not raise")
+    except NotImplementedError as exc:
+        # Rendering ran (the message reports PNG byte counts) and the failure
+        # is specifically the absent vision transport, not a missing
+        # registration and not a missing renderer.
+        msg = str(exc)
         check("VisionScorer.score() fails on missing IMPLEMENTATION (not missing registration)", True)
+        check("failure is the VLM half specifically, with rendering already done",
+              "PNG bytes" in msg or "vision" in msg.lower(), msg[:70])
     except Exception as exc:
         check("VisionScorer.score() fails on missing IMPLEMENTATION", False, f"wrong exception type: {exc!r}")
 

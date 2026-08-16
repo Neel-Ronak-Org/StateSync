@@ -38,7 +38,7 @@ import psycopg
 from config_loader import cfg
 from db import get_connection
 from embeddings import embed_text
-from session import get_tenant_id
+from session import get_tenant_id, enforce_tenancy_policy
 from tools.data_tools import _check_layer1
 
 logger = logging.getLogger(__name__)
@@ -84,6 +84,63 @@ def _format_vector_literal(vector: list[float]) -> str:
     return "[" + ",".join(repr(float(x)) for x in vector) + "]"
 
 
+def _collect_relations(parsed) -> set[str]:
+    """Relation names referenced anywhere in the parsed statement."""
+    found: set[str] = set()
+
+    def walk(node) -> None:
+        if node is None:
+            return
+        if isinstance(node, (list, tuple)):
+            for item in node:
+                walk(item)
+            return
+        if type(node).__name__ == "RangeVar" and getattr(node, "relname", None):
+            found.add(str(node.relname).lower())
+        for attr in getattr(node, "__slots__", ()) or ():
+            try:
+                walk(getattr(node, attr))
+            except AttributeError:
+                continue
+    walk(parsed)
+    return found
+
+
+def _check_tenant_predicate(sql: str, parsed) -> str | None:
+    """
+    Under tenancy.enforced=true, a hybrid_select touching a tenant-scoped
+    relation must carry an explicit `tenant_id = '<this tenant>'` predicate.
+
+    semantic_search and get_passage build their own SQL and filter on
+    tenant_id unconditionally, so they were never the hole. hybrid_select
+    executes MODEL-AUTHORED SQL, so without this a generated query reading
+    document_chunks with no tenant predicate would read across tenants. The
+    predicate is REQUIRED rather than injected: silently rewriting a caller's
+    SQL would make the executed statement differ from the audited one, and
+    A4.5's whole premise is that what Layer 1 approved is what runs.
+    """
+    policy = enforce_tenancy_policy(get_tenant_id())
+    if not policy.enforced:
+        return None
+
+    touched = {r for r in _collect_relations(parsed) if policy.requires_tenant_predicate(r)}
+    if not touched:
+        return None
+
+    expected = re.compile(
+        r"tenant_id\s*=\s*'" + re.escape(policy.tenant_id) + r"'", re.IGNORECASE
+    )
+    if expected.search(sql):
+        return None
+    return (
+        f"Rejected: tenancy.enforced=true and this query reads "
+        f"{sorted(touched)}, which are tenant-scoped, without an explicit "
+        f"tenant_id = '{policy.tenant_id}' predicate. Add the predicate; it is "
+        f"required rather than auto-injected so the audited SQL is the "
+        f"executed SQL (A4.5)."
+    )
+
+
 def _check_hybrid_gate(sql: str) -> tuple[str | None, str | None]:
     """
     Extended Layer 1 for vector.hybrid_select (A4.7).
@@ -118,6 +175,10 @@ def _check_hybrid_gate(sql: str) -> tuple[str | None, str | None]:
             continue
         if short_name in _DENIED_FUNCTIONS:
             return f"Rejected: function {short_name!r} is not permitted.", None
+
+    tenant_rejection = _check_tenant_predicate(sql, parsed)
+    if tenant_rejection:
+        return tenant_rejection, None
 
     if len(literals) > 1:
         return (
