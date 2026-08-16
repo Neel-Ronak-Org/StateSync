@@ -164,14 +164,53 @@ exactly that transliteration. On Latin-script data that behaviour is *right*.
 **The revert rests on a premise that may be wrong.** The pre-committed
 acceptance condition in `open_items.md` inherits the same flaw.
 
-**Not yet actioned. Two concrete moves were proposed and not started:**
-1. Re-score D-V2 under a Latin-only data assumption — cheap, and may vindicate
-   the reverted change.
-2. Build a **Hinglish / code-mixed fixture** over the existing Latin columns.
-   Code-mixed text-to-SQL is *less* studied than Indic-script text-to-SQL, more
-   realistic, and harder in an interesting way (no clean language boundary for
-   the normalizer). Keep Devanagari as a supported path with a smaller fixture,
-   not the headline metric.
+**Two concrete moves were proposed. Both are now resolved — 2026-08-16,
+fresh-context audit. Read this before acting on the section above.**
+
+**1. Re-score D-V2 under a Latin-only data assumption — DONE. The revert
+stands.** Relaxing only the script requirement (an entity counts as preserved
+in *either* script; both halves of D-V2's own test kept):
+
+| | D-V2 as written | Latin-only assumption |
+|---|---|---|
+| shipped config | 26/32 = 81.2% | 26/32 = **81.2%** |
+| migration 005 | 20/32 = 62.5% | 24/32 = **75.0%** |
+
+The concern was legitimate — 4 of the 12 failures under 005 *are* pure
+transliteration artifacts. But 005 still lands 6.2pp under the pre-committed
+≥81.25% bar, and **D-V1 treatment fell 65.0% → 55.0%** under 005, which is
+execution-based equality with no script assumption anywhere in it. Nothing was
+reversed; the decision is confirmed, not overturned.
+
+**2. Build a Hinglish / code-mixed fixture — ALREADY BUILT. This proposal was
+based on a factual error about the repo.**
+`fixtures/golden/phase_d_multilingual.json` is **20 `hi` + 20 `hinglish`** and
+has been since Phase D: `"Seller Store 9 ne kitne orders receive kiye hain?"`,
+`"Jaipur mein kitne orders deliver hue hain?"`, `"Pichhle 30 dino mein kitne
+orders fail ya return hue hain?"`. The missing thing was never the fixture — it
+was **disaggregation**. M3 was always reported as one averaged number.
+
+**And the split inverts this section's premise:**
+
+| | Devanagari (n=20) | Hinglish (n=20) |
+|---|---|---|
+| D-V1 treatment | **75.0%** | **55.0%** |
+| D-V2 entity preservation (n=16 each) | **93.8%** | **68.8%** |
+
+The Latin-script half is the weak half, by 20pp. Confirmed live on the shipped
+build: `"Lucknow mein kitne sellers located hain?"` → the model **invents a
+Devanagari string** for a Latin place name (`city_local = 'उख्लौंग'`), gets 0
+rows, and the Synthesizer answers "Lucknow mein 0 sellers located hain." The
+correct answer is 4. That is a silently wrong answer on the input class you
+identified as the realistic one — the strongest single finding of this audit.
+
+Your instinct in this section was right for a better reason than the one given:
+the multilingual path really is mis-aimed, but the fault is not D-V2
+over-protecting Devanagari. It is that **nothing tells the model which of the
+`x` / `x_local` column pair a value lives in**, so it guesses from the
+question's script — and migration 005 broke it in one direction while the
+shipped default breaks it in the other. Full working: `docs/phase_d_log.md`
+§ "Audit findings, fresh-context review".
 
 ---
 

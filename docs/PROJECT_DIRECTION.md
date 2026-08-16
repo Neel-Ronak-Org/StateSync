@@ -127,14 +127,53 @@ Blockers: answer quality, real data, auth/multi-user/audit, and schema-scale
 retrieval.
 
 **Research** — a focused empirical paper.
-The strongest candidate result is already in the logs: **schema documentation
-improved English text-to-SQL and destroyed multilingual entity preservation**
-(81.25% → 62.5%), because "an English name will never match `city_local`" made
-the model transliterate दिल्ली → 'Delhi'. Measured, mechanistically explained,
-counter-intuitive, and reverted (`migrations/006`).
+
+> **CORRECTED 2026-08-16.** This section previously read: "schema documentation
+> **improved English text-to-SQL** and destroyed multilingual entity
+> preservation". The first half is **false against this project's own
+> measurement**, which was already in the repo when the claim was written.
+> `docs/phase_d_log.md`'s table for the same experiment records:
+>
+> | | before 005 | after 005 |
+> |---|---|---|
+> | D-V1 control (does **not** ship) | 40.0% | **50.0%** |
+> | D-V1 treatment (**ships**) | 65.0% | **55.0%** |
+> | D-V2 entity preservation | 81.25% | **62.5%** |
+> | English reference line | 60.0% | **55.0%** |
+> | M4 cold | 28.0% | 28.0% |
+> | M4 warm | 32.0% | **24.0%** |
+>
+> The English reference line went **down**, 12/20 → 11/20. The only arm that
+> improved is D-V1 control — normalization *disabled* — which is not the
+> shipped path. The "English gain" was a three-query spot-check
+> (`city = 'Bengaluru'` replacing `city_local = 'Bengaluru'`), and the
+> spot-check impression was carried forward as if it were the measured line.
+> `phase_d_log.md`'s own prose makes the same slip two lines under its own
+> table ("bought a small English gain"); a correction note is filed there.
+>
+> **This matters for a live decision.** §7a and `AGENT_HANDOFF.md` §5 argue
+> the migrations 005/006 revert "rests on a premise that may be wrong" —
+> namely D-V2's Devanagari-verbatim requirement — and propose re-scoring D-V2
+> under a Latin-only assumption to possibly vindicate the change. **That
+> cannot vindicate it.** D-V2 is only one of five metrics that moved, and it is
+> the only one the Devanagari critique touches. The shipped treatment arm fell
+> 10 points, the English reference line fell, and M4 warm fell 8 points — none
+> of which involve D-V2's scoring rule at all. **The revert stands on grounds
+> entirely independent of the D-V2 design flaw.** The design flaw is real and
+> worth fixing; it is not load-bearing here.
+
+What survives as a candidate result is narrower and still genuine: **schema
+documentation traded multilingual entity preservation for nothing measurable
+elsewhere** — 81.25% → 62.5%, mechanistically explained ("an English name will
+never match `city_local`" made the model transliterate दिल्ली → 'Delhi'),
+measured, and reverted (`migrations/006`). "Documentation that helps in one
+language silently destroys entity fidelity in another" is the publishable
+shape. "It improved English" is not available.
+
 Blocker: **statistical power.** D-V1 is 40 queries; the English reference line
-is 20, so one query is 5 percentage points. Publication needs ~200+ per
-condition across multiple schemas.
+is 20, so one query is 5 percentage points — and the English movement being
+corrected here is a *single query*, well inside noise. Publication needs ~200+
+per condition across multiple schemas.
 
 ---
 
@@ -160,8 +199,13 @@ real scale — it becomes the thing you need, not a citation.
 1. ✅ **Standard `execution_accuracy` scorer** — done. Without it, a correct
    BIRD run still produces incomparable numbers.
 2. ✅ **`diagnose_m4.py`** — done. Failure categories, not just pass/fail.
-3. **Projection discipline** — prompt rule added; re-measurement in flight.
-   Targets 6 queries; if it converts them, standard EX ≈ 64%.
+3. ✅ **Projection discipline** — done, and the prediction on this line was
+   **wrong**, which is why it is left visible. It predicted "if it converts
+   them, standard EX ≈ 64%". Measured: **44.0%** (11/25, from 40.0%). It
+   converted 2 of the 6 targets, regressed 1 previously-correct query
+   (under-selection, the mirror failure), and dropped mean value recall
+   76.8% → 74.0%. The prompt-interventions-redistribute-errors pattern in §2
+   is the generalisation of that miss.
 4. **Gemini + Azure providers** behind the BD1 seam. Model-independent.
 5. **Load Olist** (real Brazilian e-commerce data, ~100k orders, 9 tables) —
    real messiness, right domain, surfaces schema retrieval immediately.
@@ -197,23 +241,47 @@ the pre-committed acceptance condition in `open_items.md` inherits the same
 flaw. Re-score before writing the idea off.
 
 **The more valuable multilingual problem is code-mixed input over Latin-script
-data**, not Devanagari over Devanagari:
-
-| Realistic | What is currently tested |
-|---|---|
-| `"kitne orders late delivered hue last month?"` | grammatical Devanagari |
-| `Bangalore` / `Bengaluru` / `Banglore` variance | exact-match Devanagari |
-| informal, ungrammatical framing | well-formed sentences |
-
-Hinglish/code-mixed text-to-SQL is *less* studied than Indic-script
-text-to-SQL, more realistic for enterprise analytics, and harder in an
-interesting way (no clean language boundary for the normalizer to detect).
-Devanagari support stays — it is real for government/PSU contexts and is what
-IndicDB studies — but as a supported path with a smaller fixture, not as the
+data**, not Devanagari over Devanagari. Hinglish/code-mixed text-to-SQL is
+*less* studied than Indic-script text-to-SQL, more realistic for enterprise
+analytics, and harder in an interesting way (no clean language boundary for the
+normalizer to detect). Devanagari support stays — it is real for government/PSU
+contexts and is what IndicDB studies — but as a supported path, not as the
 headline metric.
 
-**Not yet actioned.** Recorded so the flaw is not re-discovered and so no M3
-number is quoted without this caveat.
+### ✎ Corrected 2026-08-16 by the fresh-context audit — read this before acting on §7a
+
+Two things above were wrong, and one of them was steering the next move.
+
+**1. The Hinglish fixture already exists.** The table this section originally
+carried claimed "what is currently tested: grammatical Devanagari". False:
+`fixtures/golden/phase_d_multilingual.json` is **20 `hi` + 20 `hinglish`**, and
+has been since Phase D — `"Seller Store 9 ne kitne orders receive kiye hain?"`,
+`"Pichhle 30 dino mein kitne orders fail ya return hue hain?"`. Latin-script
+entities, code-mixed grammar, informal framing. What was missing was not the
+fixture; it was **disaggregation** — M3 has always been reported as one number
+averaging the two halves. (The spelling-variance point —
+`Bangalore`/`Bengaluru`/`Banglore` — *is* genuinely untested and stands.)
+
+**2. Split, the Latin half is the WEAK half** (re-derived from the shipped-config
+run, no re-run):
+
+| | Devanagari (n=20) | Hinglish (n=20) |
+|---|---|---|
+| D-V1 treatment | **75.0%** | **55.0%** |
+| D-V2 entity preservation (n=16 each) | **93.8%** | **68.8%** |
+
+So the premise of §7a inverts. D-V2 is not mainly over-protecting Devanagari;
+the Latin-script half is 20pp worse and was never reported separately. Confirmed
+live: `"Lucknow mein kitne sellers located hain?"` makes the model invent a
+Devanagari string (`city_local = 'उख्लौंग'`) for a Latin place name, return 0
+rows, and answer "Lucknow mein 0 sellers located hain." The true answer is 4.
+
+**3. The D-V2 concern is real but does NOT overturn the migrations 005/006
+revert.** Re-scored under a Latin-only data assumption (script requirement
+relaxed, both halves of D-V2's own test kept): shipped **81.2%**, migration-005
+**75.0%** — 005 still misses the pre-committed ≥81.25% bar. And D-V1 treatment
+fell 65.0% → 55.0% under 005, a measure with no script assumption in it at all.
+**The revert stands.** Full working: `docs/phase_d_log.md` § "Audit findings".
 
 ---
 

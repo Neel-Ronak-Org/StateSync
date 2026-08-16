@@ -454,3 +454,134 @@ would repeat the error with more confidence and no more evidence.
 
 Recorded as an open item with the hypothesis stated, so the next attempt
 starts from this evidence rather than from the same intuition.
+
+---
+
+# Audit findings, fresh-context review (2026-08-16, later session)
+
+Everything below was found by checking this project's own claims against its
+own artifacts with commands. Nothing here re-runs a benchmark; the numbers are
+re-derived from runs that already existed.
+
+## 1. The canonical M3 report file held the DISCARDED experimental condition
+
+`docs/bench_multilingual_report.json` is the default `--out` path, and
+`bench_multilingual.py`'s append-only guard deliberately exempts that default
+path so `verify_fv3.sh` keeps working. The migration-005 experiment therefore
+overwrote it, and `a4293e1` committed the result. From that commit onward the
+repo's canonical M3 artifact contained **the condition that was reverted**:
+
+| | file at `docs/bench_multilingual_report.json` (a4293e1..41ae18d) | what `metrics-report.md` quotes |
+|---|---|---|
+| D-V1 treatment | 22/40 (55.0%) | 26/40 (65.0%) |
+| D-V2 entity preservation | 20/32 (62.5%) | 26/32 (81.25%) |
+
+The reported numbers were the right ones — the commit message for `a4293e1`
+records both columns honestly. The **evidence** was the wrong file, with
+nothing in it saying which condition it came from. Anyone verifying
+`metrics-report.md` against the repo would have concluded the report was
+inflated by ~19 points.
+
+**Fixed by relabelling, not by editing any result.** The 005 run is preserved
+byte-for-byte at `docs/bench_multilingual_report_migration005.json`; the
+canonical path now holds the shipped-configuration run (recovered from
+`5a7bb90`), which is the one every M3 figure on record quotes. Neither file's
+contents were altered.
+
+## 2. D-V2 re-scored under a Latin-only data assumption — the revert STANDS
+
+`AGENT_HANDOFF.md` §5 / `PROJECT_DIRECTION.md` §7a argued that D-V2 encodes a
+data-model assumption (Devanagari stored in `city_local`) and therefore
+penalises the transliteration `दिल्ली → 'Delhi'`, which on realistic
+Latin-script data is the *correct* answer — and that the migrations 005/006
+revert "rests on a premise that may be wrong."
+
+Re-scored offline from the stored runs, relaxing **only** the script
+requirement (an entity counts as preserved if the SQL and the entity map carry
+it in *either* script; both halves of D-V2's own test are otherwise kept):
+
+| | D-V2 as written | D-V2, Latin-only assumption |
+|---|---|---|
+| shipped config (005/006 reverted) | 26/32 = **81.2%** | 26/32 = **81.2%** |
+| migration 005 (column comments) | 20/32 = **62.5%** | 24/32 = **75.0%** |
+
+**The concern is real but does not overturn the decision.** Four of the twelve
+005-condition failures (`d_ml_009`, `d_ml_010`, `d_ml_012`, `d_ml_013`) *are*
+pure transliteration artifacts and would be correct answers on Latin-only
+data. Even so, 005 lands **6.2pp below** the shipped arm on the metric's own
+relaxed form, missing the pre-committed acceptance condition (≥81.25%).
+
+And D-V2 is not the load-bearing evidence anyway: **D-V1 treatment fell 65.0%
+→ 55.0%** under 005. D-V1 is execution-based dataframe equality with no script
+assumption anywhere in it. The revert stands on that alone.
+
+**`open_items.md`'s acceptance condition is kept as written.** It was fixed in
+advance precisely so it could not be renegotiated after seeing results, and
+nothing found here justifies moving it.
+
+## 3. The Hinglish fixture that §5 proposes building ALREADY EXISTS
+
+`AGENT_HANDOFF.md` §5 item 2 proposes building "a Hinglish / code-mixed
+fixture", and `PROJECT_DIRECTION.md` §7a tabulates
+`"kitne orders late delivered hue last month?"` as *realistic* against "what is
+currently tested: grammatical Devanagari".
+
+**That is factually wrong about this repo.** `fixtures/golden/phase_d_multilingual.json`
+is 20 `lang: "hi"` + **20 `lang: "hinglish"`**, and has been since Phase D:
+
+```
+d_ml_021  Seller Store 9 ne kitne orders receive kiye hain?
+d_ml_031  Jaipur mein kitne orders deliver hue hain?
+d_ml_037  Pichhle 30 dino mein kitne orders fail ya return hue hain?
+```
+
+Latin-script entities, code-mixed grammar, no clean language boundary — the
+exact construction §7a describes as untested. What was missing was never the
+fixture; it was **disaggregation**. M3 has always been reported as one number
+averaging the two halves.
+
+## 4. Split by language group, the halves differ sharply
+
+Re-derived from the shipped-config run (`5a7bb90`), no re-run:
+
+| | Devanagari (`hi`, n=20) | Hinglish (n=20) |
+|---|---|---|
+| D-V1 control | 55.0% | 25.0% |
+| D-V1 treatment | **75.0%** | **55.0%** |
+| | Devanagari nouns (n=16) | Latin nouns (n=16) |
+| D-V2 entity preservation | **93.8%** | **68.8%** |
+
+The system is **20pp worse on the realistic input class**, and entity
+preservation — the metric Phase D exists to defend — fails **four times more
+often on Latin-script proper nouns than on Devanagari ones**. The headline
+65.0% / 81.25% averages that away.
+
+This inverts the premise of §7a. The multilingual path's weakness is not that
+D-V2 over-protects Devanagari; it is that **the Latin-script half is worse and
+was never reported separately.**
+
+## 5. The mechanism, confirmed live on the shipped build
+
+```
+$ curl -s localhost:8090/query -d '{"query":"Lucknow mein kitne sellers located hain?"}'
+  route      : sql
+  lang       : other                       <- Hinglish not detected
+  entities   : {}                          <- nothing preserved
+  sql        : ... WHERE l.city_local = 'उख्लौंग'::text
+  rows       : [{"count": 0}]
+  answer     : "Lucknow mein 0 sellers located hain."
+```
+
+Ground truth: **4**. The model was handed a Latin place name and **invented a
+Devanagari string for it** (`'उख्लौंग'` is not a word; the real value is
+`'लखनऊ'`), matched it against `city_local`, got zero rows, and the Synthesizer
+reported that as an answer. A wrong answer delivered confidently, on the input
+class the owner identifies as the realistic one.
+
+This is the mirror image of the migration-005 failure. 005 made the model
+prefer the English column *for Devanagari questions*; the shipped default makes
+it prefer the local column *for Latin questions*. Both are the same underlying
+defect: **nothing tells the model which of the `x` / `x_local` pair a value
+lives in**, so it guesses from the question's script and is wrong half the
+time. `open_items.md`'s "script-triggered, symmetric wording" hypothesis is
+aimed at exactly this, and now has a measured failure mode on both sides.
