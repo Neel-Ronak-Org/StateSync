@@ -65,7 +65,8 @@ Research output is desirable but secondary to the thing actually working.
 
 | Decision | Why |
 |---|---|
-| **Do not add features.** Beckn ingestion, HEAR node, richer spatial, CSR-RAG | Zero value for either path right now. Discussed and closed. |
+| **Do not add features.** Beckn ingestion, HEAR node, richer spatial | Zero value for either path right now. Discussed and closed. |
+| **CSR-RAG / hierarchical schema retrieval: NOT settled — conditional** | Do **not** build it for the current 12-table schema; there is nothing to solve. It becomes **required** the moment a real schema is loaded. See §5a. |
 | **Do not chase SOTA on BIRD** | Will lose to teams with 1000× compute. Report for context, not competition. |
 | **Do not quote accuracy without naming the scorer** | Three scorers with different semantics exist. See PROJECT_DIRECTION §3. |
 | **Do not tune against the fixture you report from** | `f_hybrid_004` deliberately left failing for this reason. |
@@ -140,6 +141,40 @@ acceptance condition in `open_items.md` inherits the same flaw.
    realistic, and harder in an interesting way (no clean language boundary for
    the normalizer). Keep Devanagari as a supported path with a smaller fixture,
    not the headline metric.
+
+---
+
+## 5a. CSR-RAG / schema-scale retrieval — conditional, not closed
+
+This was nearly recorded as "settled: don't build". That would have been wrong,
+and the owner caught it.
+
+**The distinction that matters:**
+
+| Context | Verdict |
+|---|---|
+| Building CSR-RAG's hypergraph pre-computation for the **current 12-table synthetic schema** | **No.** Nothing to solve. Its purpose is massively denormalised enterprise schemas, and it carries a continuous re-computation cost. Building it here would be citing a paper, not fixing a problem. |
+| Needing **scalable schema retrieval** once a real schema is loaded (Olist, TPC-DS, BIRD, Spider 2.0) | **Yes — and it is the FIRST thing that breaks.** |
+
+`DirectSchemaRetriever` calls `describe_table` on candidate tables and puts the
+result in the prompt. At 12 tables that is fine. At 200 tables / 2000 columns
+it does not fit in any context window, and no amount of prompt tuning helps.
+`docs/PROJECT_DIRECTION.md` §6 lists this as **fatal — the real problem**.
+
+**The seam already exists**: `schema_retriever.provider = "hypergraph"` resolves
+through `orchestrator/schema_retriever.py`. Only `DirectSchemaRetriever` is
+implemented. Adding a scale-aware implementation behind that seam is a config
+change plus one class — it does not require touching the agents.
+
+**Sequencing:** do not build it speculatively. Load a real schema first (next
+steps §7 item 3), watch it break, then implement against the observed failure.
+Solving that concretely is a genuine engineering contribution and is the
+strongest technical claim available on the production path.
+
+**Original reasoning, for the record:** `docs/StateSync_Strategy_Document.md`
+deferred CSR-RAG because a synthetic capstone schema does not have the problem
+it solves. That reasoning was correct *for that schema* and does not survive
+contact with a real one.
 
 ---
 

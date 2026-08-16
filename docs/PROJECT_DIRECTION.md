@@ -220,7 +220,10 @@ number is quoted without this caveat.
 ## 8. What NOT to do
 
 - **Do not add features.** Beckn ingestion, HEAR node, richer spatial — zero
-  value for either path now.
+  value for either path now. **CSR-RAG is NOT in this list**: hierarchical
+  schema retrieval is unnecessary at 12 tables but becomes the first thing that
+  breaks on a real schema (§6). Do not build it speculatively; do expect to
+  need it at step 5. See `docs/AGENT_HANDOFF.md` §5a.
 - **Do not chase SOTA on BIRD.** You will lose to teams with 1000× the
   compute. Report the number for context, not competition.
 - **Do not spend API credits before step 3.** Paying a better model to fix a
