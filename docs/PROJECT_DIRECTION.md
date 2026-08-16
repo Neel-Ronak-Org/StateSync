@@ -9,6 +9,9 @@ from this one.
 
 Written 2026-08-16. Supersedes nothing; nothing supersedes it silently.
 
+**New agent?** Read `docs/AGENT_HANDOFF.md` first — it carries the history,
+what is already settled, and the owner's own position. This file is step 2.
+
 ---
 
 ## 1. What this project actually is

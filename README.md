@@ -1,5 +1,8 @@
 # StateSync — Multi-Agent Analytics Infrastructure for ONDC
 
+> **Picking this up cold (human or agent)?** Start with [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md) — history, settled decisions, and current direction — then [`docs/PROJECT_DIRECTION.md`](docs/PROJECT_DIRECTION.md).
+
+
 StateSync is an enterprise-grade multi-agent analytics platform for open network (ONDC) e-commerce data. It provides natural language analytics, schema-guided SQL generation, deterministic security guarantees, and interactive Vega-Lite visualizations.
 
 ---
