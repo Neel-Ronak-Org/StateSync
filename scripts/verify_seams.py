@@ -31,6 +31,7 @@ os.environ.setdefault("CONFIG_DIR", str(REPO_ROOT / "config"))
 
 passed = 0
 failed = 0
+skipped = 0
 
 
 def check(label: str, ok: bool, detail: str = "") -> None:
@@ -41,6 +42,15 @@ def check(label: str, ok: bool, detail: str = "") -> None:
     else:
         failed += 1
         print(f"  ✗ FAIL: {label}" + (f" — {detail}" if detail else ""))
+
+
+def skip(label: str, reason: str) -> None:
+    """Record a check that could NOT run here. Deliberately not a pass: it is
+    counted separately and printed in the summary, so an environment that
+    cannot exercise something never reports that it did."""
+    global skipped
+    skipped += 1
+    print(f"  ⊘ SKIP: {label} — {reason}")
 
 
 def section(title: str) -> None:
@@ -192,10 +202,20 @@ def fv6() -> None:
     # orchestrator started means the running process may still hold a
     # superseded value. That is how a diagnose_m4 run was contaminated and
     # discarded today; checking the file alone passed throughout that window.
-    stale = live_staleness()
-    check("running orchestrator post-dates config/flags.toml (no stale flag state)",
-          stale is None,
-          "" if stale is None else str(stale.get("reason"))[:100])
+    #
+    # --no-live exists for CI, where there is no stack to be live against. It
+    # is an explicit flag and it SKIPS loudly -- it never converts to a pass.
+    # A liveness check that silently passed when it could not run would be the
+    # vacuous pass this whole file exists to prevent.
+    if "--no-live" in sys.argv:
+        skip("running orchestrator post-dates config/flags.toml",
+             "--no-live given (no stack in this environment); this is NOT a pass. "
+             "Run without the flag against a live stack.")
+    else:
+        stale = live_staleness()
+        check("running orchestrator post-dates config/flags.toml (no stale flag state)",
+              stale is None,
+              "" if stale is None else str(stale.get("reason"))[:100])
 
 
 def main() -> int:
@@ -210,6 +230,8 @@ def main() -> int:
     print("\n" + "─" * 20 + " Summary " + "─" * 20)
     print(f"  PASSED: {passed}")
     print(f"  FAILED: {failed}")
+    if skipped:
+        print(f"  SKIPPED: {skipped}  <- ran nowhere; not counted as passing")
     return 1 if failed else 0
 
 

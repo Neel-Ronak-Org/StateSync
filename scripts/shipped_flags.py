@@ -259,17 +259,26 @@ def _self_test() -> int:
               stale is None if running else isinstance(stale, dict),
               "in sync" if stale is None else str(stale.get("reason"))[:70])
 
-        with tempfile.NamedTemporaryFile("w", suffix=".toml", delete=False) as tmp:
-            tmp.write(real)
-            tmp_path = Path(tmp.name)
-        os.utime(tmp_path, (time.time() + 3600, time.time() + 3600))
-        FLAGS_PATH = tmp_path
-        induced = live_staleness()
-        check("liveness: a flags file newer than the orchestrator is REFUSED "
-              "(the failing direction — today's exact incident)",
-              isinstance(induced, dict) and "AFTER the orchestrator started" in str(induced.get("reason")),
-              str(induced)[:90] if induced else "returned None — guard is vacuous")
-        tmp_path.unlink(missing_ok=True)
+        if not running:
+            # No stack here (CI, or a laptop with docker down). The induced
+            # failure below compares against a container start time that does
+            # not exist, so it cannot be exercised. Say so; do NOT count it as
+            # a pass. A self-test that silently shrinks in the environment
+            # where it is run most often is worse than no self-test.
+            print("  ⊘ SKIP: liveness: induced-failure direction — no orchestrator "
+                  "container running; this is NOT a pass. Re-run against a live stack.")
+        else:
+            with tempfile.NamedTemporaryFile("w", suffix=".toml", delete=False) as tmp:
+                tmp.write(real)
+                tmp_path = Path(tmp.name)
+            os.utime(tmp_path, (time.time() + 3600, time.time() + 3600))
+            FLAGS_PATH = tmp_path
+            induced = live_staleness()
+            check("liveness: a flags file newer than the orchestrator is REFUSED "
+                  "(the failing direction — today's exact incident)",
+                  isinstance(induced, dict) and "AFTER the orchestrator started" in str(induced.get("reason")),
+                  str(induced)[:90] if induced else "returned None — guard is vacuous")
+            tmp_path.unlink(missing_ok=True)
     finally:
         FLAGS_PATH = original_path
 

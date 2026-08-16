@@ -1,0 +1,99 @@
+# StateSync CI — the deterministic gates
+#
+# WHY THIS EXISTS. Before this file there was no CI at all: 50+ verification
+# steps, and nothing ran them except a human remembering to. Two defects this
+# repo already paid for were exactly that shape -- a shipped default committed
+# wrong (d7c0a6b) and code committed but never built into the image (d5a5d35,
+# 5301b89). Neither needed a clever check to catch. They needed A check, run
+# automatically.
+#
+# WHAT THIS DELIBERATELY DOES NOT DO, stated here so a green badge never
+# implies more than it means. The model-sensitive metrics (M2-M7), the
+# adversarial suite (M8), the routing experiment (M9) and the browser half of
+# E2 are NOT run here, and cannot be: they need the full seven-service stack
+# including a local Ollama with qwen2.5:7b (~4.7GB), and take 25-40 minutes
+# each. A hosted runner cannot do that, and adding a job that never runs would
+# be the same decoration this project keeps deleting.
+#
+# So this job runs everything genuinely deterministic and stack-free, and the
+# final step prints what it could NOT cover -- into the run log, every time, so
+# the gap is visible rather than assumed covered.
+
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  deterministic:
+    name: Deterministic gates (no stack required)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Derive requirements from orchestrator/pyproject.toml
+        # Read from the manifest rather than hand-listing here. A second
+        # hand-maintained copy of the dependency list is exactly the drift that
+        # had already put pglast and openai out of sync inside
+        # orchestrator/Dockerfile.
+        run: |
+          python - <<'PY' > /tmp/requirements-ci.txt
+          import tomllib, pathlib
+          data = tomllib.loads(pathlib.Path("orchestrator/pyproject.toml").read_text())
+          for dep in data["project"]["dependencies"]:
+              print(dep)
+          PY
+          echo "pytest" >> /tmp/requirements-ci.txt
+          cat /tmp/requirements-ci.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r /tmp/requirements-ci.txt
+
+      - name: Config discipline (F-V6 lint — no configurable numeric literals)
+        run: ./scripts/lint-no-literals.sh
+
+      - name: Scorer semantics + error taxonomy (pytest)
+        run: python -m pytest tests/ -q
+
+      - name: Seams, vision-scorer seam, shipped defaults (F-V4/F-V5/F-V6)
+        # --no-live skips ONLY the flag-liveness assertion, which needs a
+        # running orchestrator to compare against. It prints as SKIP, never as
+        # a pass, and the summary counts it separately.
+        run: python3 scripts/verify_seams.py --no-live
+
+      - name: Azure provider seam (wired, and fails for the right reason)
+        # Runs without any credential, by design.
+        run: python3 scripts/verify_azure_seam.py
+
+      - name: Shipped flag state (self-test, both directions)
+        run: python3 scripts/shipped_flags.py --self-test
+
+      - name: State what CI did NOT cover
+        if: always()
+        run: |
+          cat <<'EOF'
+          ============================================================
+          NOT COVERED BY CI — requires the full stack, run locally:
+
+            docker compose up -d
+            python3 scripts/verify_deployed.py     # repo == running image
+            python3 scripts/verify_e2.py           # E2-V2..V6
+            docker compose exec -T mcp python3 - < scripts/verify_tenancy.py
+            python3 scripts/verify_seams.py        # incl. flag liveness
+            bash scripts/verify_security.sh        # M8, ~15-25 min
+            python3 scripts/diagnose_m4.py --out docs/m4_<label>.json
+
+          Model-sensitive metrics (M2-M7) are provisional on the local 7B and
+          are never run in CI. See docs/rebaseline_runbook.md.
+          ============================================================
+          EOF
