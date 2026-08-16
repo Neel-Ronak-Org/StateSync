@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-08-15T22:14:30Z",
+  "generated_at": "2026-08-16T05:53:05Z",
   "novel_path_cache_cold": {
     "correct": 7,
     "scored": 25,
     "accuracy": 0.28
   },
   "cache_hit_path_warm": {
-    "correct": 8,
+    "correct": 6,
     "scored": 25,
-    "accuracy": 0.32
+    "accuracy": 0.24
   },
   "golden_recovery": {
     "results": {
@@ -64,8 +64,8 @@
       }
     },
     "recovered": [
-      "b_007",
-      "b_008"
+      "b_008",
+      "b_007"
     ],
     "still_failing": []
   },
@@ -91,7 +91,7 @@
     "c2g_04": {
       "match": false,
       "memory_hit": false,
-      "row_count": 0,
+      "row_count": 6,
       "expected_row_count": 5
     },
     "c2g_05": {
@@ -109,7 +109,7 @@
     "c2g_07": {
       "match": false,
       "memory_hit": false,
-      "row_count": 3,
+      "row_count": 0,
       "expected_row_count": 3
     },
     "c2g_08": {
@@ -137,7 +137,7 @@
       "expected_row_count": 6
     },
     "c2g_12": {
-      "match": false,
+      "match": true,
       "memory_hit": false,
       "row_count": 362,
       "expected_row_count": 362
@@ -155,7 +155,7 @@
       "expected_row_count": 5
     },
     "c2g_15": {
-      "match": true,
+      "match": false,
       "memory_hit": false,
       "row_count": 30,
       "expected_row_count": 30
@@ -225,7 +225,7 @@
     "c2g_01": {
       "match": false,
       "memory_hit": true,
-      "row_count": 470,
+      "row_count": 30,
       "expected_row_count": 1
     },
     "c2g_02": {
@@ -243,7 +243,7 @@
     "c2g_04": {
       "match": false,
       "memory_hit": false,
-      "row_count": 0,
+      "row_count": 6,
       "expected_row_count": 5
     },
     "c2g_05": {
@@ -260,8 +260,8 @@
     },
     "c2g_07": {
       "match": false,
-      "memory_hit": true,
-      "row_count": 3,
+      "memory_hit": false,
+      "row_count": 0,
       "expected_row_count": 3
     },
     "c2g_08": {
@@ -278,7 +278,7 @@
     },
     "c2g_10": {
       "match": false,
-      "memory_hit": true,
+      "memory_hit": false,
       "row_count": 0,
       "expected_row_count": 0
     },
@@ -325,7 +325,7 @@
       "expected_row_count": 5
     },
     "c2g_18": {
-      "match": true,
+      "match": false,
       "memory_hit": true,
       "row_count": 0,
       "expected_row_count": 0
@@ -343,7 +343,7 @@
       "expected_row_count": 470
     },
     "c2g_21": {
-      "match": true,
+      "match": false,
       "memory_hit": true,
       "row_count": 4,
       "expected_row_count": 4
@@ -357,7 +357,7 @@
     "c2g_23": {
       "match": false,
       "memory_hit": true,
-      "row_count": 0,
+      "row_count": 10,
       "expected_row_count": 10
     },
     "c2g_24": {

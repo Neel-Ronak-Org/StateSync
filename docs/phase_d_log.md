@@ -384,3 +384,73 @@ sits in SQL generation, not in the multilingual path.
 Candidate 2 (draft-first interrogation) remains the only live hypothesis for
 that residual, and isolating it still needs a miss-path-without-draft-first
 condition that has no toggle today. Not guessed at.
+
+---
+
+## Schema column semantics: a hypothesis, a measurement, and a revert (2026-08-16)
+
+**The hypothesis, and why it looked strong.** The English reference line's 8
+misses were read individually rather than treated as noise. Four were one
+cluster: the model filtering `locations.city_local` (local-script) for an
+English city name, which cannot match. Two more measured delivery delay from
+`orders.placed_at` instead of against the SLA deadline `fulfillments.promised_at`.
+
+The cause looked structural and cheap to fix. `mcp/tools/schema_tools.py::
+describe_table` has selected `col_description(...)` and returned it as each
+column's `comment` since Phase B, and the SchemaRetriever passes it to the SQL
+Agent — but **every comment in the database was NULL**. A semantic channel had
+been wired end to end and never populated. Migration 005 filled it for 22
+genuinely ambiguous columns.
+
+Verified D4-safe before running anything: comments are not fingerprint inputs,
+and `cf4caa5c…` was identical before, after, and after the revert.
+
+**Spot-checks passed.** `city = 'Bengaluru'` replaced `city_local = 'Bengaluru'`;
+delay became `delivered_at - promised_at`. Two of three probe queries fixed.
+
+**Then it was measured, and it was worse.**
+
+| | before 005 | after 005 |
+|---|---|---|
+| D-V1 control | 40.0% | 50.0% |
+| **D-V1 treatment** | **65.0%** | **55.0%** |
+| D-V1 lift | +25.0pp | +5.0pp |
+| **D-V2 entity preservation** | **81.25%** | **62.5%** |
+| English reference | 60.0% | 55.0% |
+| M4 cold (independent fixture) | 28.0% | 28.0% |
+| M4 warm | 32.0% | 24.0% |
+
+**The mechanism is visible in the D-V2 detail, not inferred.** `दिल्ली`,
+`बेंगलुरु` and `चेन्नई` all flipped to `preserved=False`. The comment *"an
+English city name will never match city_local"* reads to the model as *"prefer
+the English column"* — so for a Hindi query naming `दिल्ली` it transliterates to
+`'Delhi'` and filters `city`. That **destroys the preserved entity**, which is
+exactly what D-V2 measures and exactly what Phase D's normalization design
+exists to protect.
+
+The change bought a small English gain by damaging the multilingual path. On
+the arm that actually ships it is a 10-point regression, and on entity
+preservation nearly 19.
+
+**Reverted (migration 006), not re-tuned.** Rewriting the comments to be
+script-neutral is a plausible fix — but it is a hypothesis, and this exact
+hypothesis has already been wrong once at a cost of two 30-minute
+measurements. Shipping an unvalidated revision of a change measured as harmful
+would repeat the error with more confidence and no more evidence.
+
+**What this run actually bought**, since the code change is gone:
+1. A **mechanism**, not a guess, for part of the English residual: the model
+   cannot tell `city` from `city_local` and nothing tells it.
+2. A **live demonstration** that schema comments reach the model and change
+   its SQL — the channel works; the wording was wrong.
+3. A **warning about single-axis optimisation**: the English line and entity
+   preservation pull in opposite directions on the same column pair. Any fix
+   here must be measured on both halves or it will trade one for the other
+   silently. The spot-checks looked fine precisely because they only tested
+   the English half.
+4. Confirmation that **M4's fixture is a weak holdout for this class** — only
+   ~5 of 25 C2 queries touch city/delay/category, so it cannot resolve the
+   question either way.
+
+Recorded as an open item with the hypothesis stated, so the next attempt
+starts from this evidence rather than from the same intuition.

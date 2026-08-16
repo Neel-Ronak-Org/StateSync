@@ -13,6 +13,7 @@ as the historical record and do not edit them to match this summary.
 | [F-V1 Class 1 & Class 4](#f-v1-class-1--class-4) | Both classes pass structurally on the local model/this browser now, but each rests on something worth re-confirming under different conditions later: Class 4's CSP claim on a browser that actually enforces CSP; Class 1's prompt-injection resistance on the graded model | Passing now; each has a distinct residual condition to re-confirm | No (see entry — deliberately not folded into BD6) | Part F, `F-V1` (run as part of Phase F; re-confirm Class 4 in an enforcing browser, Class 1 informally under the graded model) |
 | [c2g_10 routing](#c2g_10-routing) | "List sellers whose contracted SLA hours has not been set" routes to `docs` instead of `sql` — the word "SLA" pulls a plainly relational question toward the document route | **Fixed 2026-08-15** (`c735457`); M9 sql now 1.000 incl. 6 new overlap cases. Open only for the M3-recovery measurement | No | Part F, `F-V2` (M9 routing determinism) |
 | [Task 10 / E2-V1 — M7 quality](#task-10--e2-v1--m7-quality) | Synthesizer still emits `chart: null` on every route; M7 chart-quality score cannot be measured until it's taught to populate `chart` | **Built and measured 2026-08-15** (`a00d0d1`). A7 30/30 (binary PASS); M7 0.4850 local provisional. Graded number still owed | **Yes** (graded number only) | Part F, `F-V3` (M7 row); graded number per `rebaseline_runbook.md` |
+| [Schema column semantics](#schema-column-semantics-reverted) | The model cannot distinguish `locations.city` (English) from `city_local` (Indic script) and nothing tells it; ~4 of 8 English-line misses. A comment-based fix was built, measured, and REVERTED for damaging entity preservation | Open — mechanism known, fix unvalidated | No | Needs a script-neutral wording measured on BOTH the English line and D-V2 |
 | [CSP `unsafe-inline`](#csp-unsafe-inline-in-script-src-raised-by-the-trace-renderer-xss-fix) | `script-src` still allows `'unsafe-inline'` because the app is one inline `<script>`; this is what would have made the (now-fixed) trace-renderer sink executable | Open, deliberately deferred — needs its own change + browser re-verify | No | Beyond F1 Scope; improvement, not a spec requirement |
 | [M3 regression](#m3-regression) | D-V1 lift halved and D-V2 entity preservation dropped since Phase D. **Separation run done:** memory-flip candidate REFUTED; ~20 of the 35 lost English points traced to `c2g_10` misrouting; residual ~15 points still unattributed | Partly closed — one cause identified and shared with `c2g_10`, residual open | No for the identified cause (a routing defect, fixable now); the residual is re-measured by the graded re-baseline anyway | Routing half → fix with `c2g_10`; residual → needs a draft-first toggle that does not yet exist |
 
@@ -356,3 +357,39 @@ after, not folded into unrelated work.
 **Not claimed as a Part F requirement.** F1 Scope asks for CSP without
 `unsafe-eval`, which is satisfied and verified. This is an improvement beyond
 the spec's bar, recorded so it is a decision rather than an oversight.
+
+## Schema column semantics (reverted)
+
+**Status: open. Mechanism identified, one fix attempted and measured as
+harmful, reverted.**
+
+`locations.city` holds English/romanised names and `locations.city_local`
+holds Indic script. Nothing tells the model which to use, so English queries
+filter `city_local` and match nothing. Same shape on
+`sellers.display_name`/`display_name_local` and
+`catalog_items.title`/`title_local`. This accounts for roughly 4 of the 8
+English reference-line misses (`docs/phase_d_log.md`).
+
+The delivery channel exists and works: `describe_table` returns a `comment`
+per column and the SQL Agent receives it. Migration 005 populated it;
+migration 006 reverted it.
+
+**Why the first attempt failed** (full numbers in `docs/phase_d_log.md`):
+telling the model "an English name will never match `city_local`" made it
+prefer the English column *even for Devanagari queries*, transliterating
+`दिल्ली` to `'Delhi'`. D-V2 entity preservation fell 81.25% → 62.5% and D-V1
+treatment fell 65.0% → 55.0%.
+
+**Hypothesis for the next attempt, stated in advance so it can be wrong:**
+wording that is symmetric and script-triggered rather than
+English-preferring — e.g. *"match the script the question uses: romanised
+names against `city`, Indic-script names against `city_local`"* — should fix
+the English half without biasing the multilingual half.
+
+**Acceptance condition, fixed now to prevent moving the goalposts later:** it
+must improve the English reference line **and** hold D-V2 entity preservation
+at or above 81.25% **and** hold D-V1 treatment at or above 65.0%. Anything
+less is the same trade in a new costume.
+
+**Not re-baseline-gated** — this is a schema-content question, not a
+model-quality one, though a stronger model may well need less hand-holding.
