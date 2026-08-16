@@ -97,9 +97,15 @@ def get_agent_llm(role: str) -> "ChatModel":
         from llm.adapters.anthropic_adapter import AnthropicAdapter
         return AnthropicAdapter(model=model)
 
+    if provider == "azure":
+        # `model` here is an Azure DEPLOYMENT name, not a published model id.
+        from llm.adapters.azure_adapter import AzureAdapter
+        return AzureAdapter(model=model)
+
     raise RuntimeError(
         f"Unknown LLM provider {provider!r}. "
-        "Valid values: 'local', 'anthropic'. Check flags.llm.provider in config/flags.toml."
+        "Valid values: 'local', 'anthropic', 'azure'. "
+        "Check flags.llm.provider in config/flags.toml."
     )
 
 
@@ -122,6 +128,25 @@ def validate_llm_config() -> None:
         from llm.adapters.anthropic_adapter import AnthropicAdapter
         AnthropicAdapter._read_api_key()   # raises RuntimeError if absent
         logger.info("  Anthropic API key: present ✓")
+    elif provider == "azure":
+        # Azure has THREE ways to be half-configured (key, endpoint, api
+        # version) and a fourth that no startup check can catch: a deployment
+        # name that does not exist in the resource. The first three are
+        # validated here so they surface at boot rather than at query one.
+        # The fourth is named explicitly in the log because it is the common
+        # one -- flags.llm.models.azure.<role> must match the DEPLOYMENT name
+        # you typed in the Foundry portal, not the base model id.
+        from llm.adapters.azure_adapter import AzureAdapter
+        AzureAdapter._read_api_key()       # raises AzureConfigError if absent
+        endpoint = AzureAdapter._read_endpoint()
+        version = AzureAdapter._read_api_version()
+        logger.info("  Azure key: present ✓  endpoint=%s api_version=%s",
+                    endpoint, version)
+        logger.warning(
+            "  Azure model names above are DEPLOYMENT names. If a call returns "
+            "404 DeploymentNotFound, the deployment name in "
+            "flags.llm.models.azure.* does not match the Foundry portal."
+        )
     else:
         logger.info(
             "  Provider=%s — Anthropic key NOT required. "

@@ -144,11 +144,16 @@ services:
       - ORCHESTRATOR_PORT=8090
       - MCP_URL=http://mcp:8080
       - ANTHROPIC_API_KEY_FILE=/run/secrets/anthropic_api_key
+      # Azure OpenAI (BD1 seam, provider = "azure"). Like the Anthropic key,
+      # this is read ONLY when that provider is selected -- a stack running
+      # provider="local" never opens it, so the placeholder file is harmless.
+      - AZURE_OPENAI_API_KEY_FILE=/run/secrets/azure_openai_api_key
       - CONFIG_DIR=/app/config
     volumes:
       - ./config:/app/config:ro
     secrets:
       - anthropic_api_key
+      - azure_openai_api_key
     depends_on:
       mcp:
         condition: service_healthy
@@ -236,3 +241,5 @@ secrets:
     file: ./secrets/pg_reader_password
   anthropic_api_key:
     file: ./secrets/anthropic_api_key
+  azure_openai_api_key:
+    file: ./secrets/azure_openai_api_key

@@ -10,8 +10,20 @@
 # never appear in reported metrics or panel demos. Always run on anthropic for
 # any result you intend to show.
 [llm]
-provider = "local"          # change to "anthropic" for graded runs
+provider = "local"          # "local" | "anthropic" | "azure"
 ollama_url = "http://host.docker.internal:11434"
+
+# Azure OpenAI / AI Foundry (BD1 seam, third implementation).
+# NOT secrets -- an endpoint is not sensitive, and keeping it in config keeps
+# it visible to the config-discipline checks. The KEY goes in the Docker
+# secret secrets/azure_openai_api_key (or AZURE_OPENAI_API_KEY).
+#
+# endpoint:    Foundry portal → Deployments → your deployment → Endpoint.
+#              Looks like https://<resource>.openai.azure.com/
+# api_version: shown next to the deployment in the portal.
+[llm.azure]
+endpoint    = ""            # REPLACE — startup refuses while this is empty
+api_version = "2024-10-21"
 
 [llm.models.local]
 supervisor        = "qwen2.5:7b"
@@ -21,6 +33,21 @@ memory_summarizer = "qwen2.5:7b"   # C1: trajectory insight generation
 normalizer        = "qwen2.5:7b"   # D: language detection + entity-preserving rewrite
 decomposer        = "qwen2.5:7b"   # E1: hybrid query decomposition into sub-tasks
 judge             = "qwen2.5:7b"   # E1: bench_grounding.py context precision / faithfulness scoring
+
+# DEPLOYMENT names, not model ids. Azure addresses whatever you named the
+# deployment in the portal; two deployments of the same base model with
+# different names are different values here. A 404 DeploymentNotFound at the
+# first query almost always means these do not match the portal.
+# The defaults below assume you named them after the models, which is the
+# portal's own suggestion — change them if you named them anything else.
+[llm.models.azure]
+supervisor        = "gpt-4o-mini"
+sql               = "gpt-4o"
+synthesizer       = "gpt-4o"
+memory_summarizer = "gpt-4o-mini"
+normalizer        = "gpt-4o-mini"
+decomposer        = "gpt-4o-mini"
+judge             = "gpt-4o"
 
 [llm.models.anthropic]
 supervisor        = "claude-opus-4-5"

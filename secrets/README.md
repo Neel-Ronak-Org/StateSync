@@ -27,3 +27,22 @@ echo "sk-ant-..." > secrets/anthropic_api_key
 Replace file-based secrets with Docker Swarm secrets or a secrets manager
 (e.g., HashiCorp Vault). The application reads from `/run/secrets/<name>` in
 Docker; the path is configurable via `<NAME>_FILE` environment variables.
+
+### Azure OpenAI / AI Foundry (BD1 seam, provider = "azure")
+
+```bash
+# Azure OpenAI API key — Foundry portal → your deployment → Key
+echo "<your-azure-key>" > secrets/azure_openai_api_key
+```
+
+The **endpoint** and **api_version** are NOT secrets and do not go here — they
+live in `config/flags.toml` under `[llm.azure]`, where the config-discipline
+checks can see them.
+
+A placeholder file is fine while `llm.provider = "local"`: the key is read only
+when the azure provider is actually selected, exactly like the Anthropic key.
+Verify the wiring without a key at all:
+
+```bash
+python3 scripts/verify_azure_seam.py
+```

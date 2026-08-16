@@ -159,3 +159,9 @@ temperature               = 0.0
 seed                      = 20260807
 # LLM provider choice is set in flags.toml; model name is also there.
 ollama_timeout_s          = 120     # generous — local inference can be slow
+# Azure OpenAI. Much shorter than the local timeout: a hosted frontier model
+# answering in 120s means something is wrong, not that it is thinking.
+azure_timeout_s           = 60
+# The SDK retries 429/5xx itself. Kept low deliberately -- a graded run that
+# silently retries is a graded run whose token accounting is wrong.
+azure_max_retries         = 2

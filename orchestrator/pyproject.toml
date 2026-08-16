@@ -11,6 +11,9 @@ dependencies = [
     "langgraph>=0.1.0",
     "langchain-core>=0.2.0",
     "anthropic>=0.28.0",
+    # Azure OpenAI / AI Foundry adapter (BD1 seam). Imported lazily inside
+    # AzureAdapter.__init__, so a provider="local" stack never loads it.
+    "openai>=1.40.0",
     "jsonschema>=4.22.0",
     "tomllib>=2.0.0 ; python_version < '3.11'",
     "digipin>=2.1.1",
