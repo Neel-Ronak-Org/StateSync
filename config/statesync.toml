@@ -82,6 +82,11 @@ precision_weight          = 0.30
 mark_weight               = 0.40
 encoding_weight           = 0.45
 transform_weight          = 0.15
+# ExecutionAccuracyScorer (BIRD/Spider "EX"). SQL result order is unspecified
+# without ORDER BY, so the published definition compares result sets
+# order-insensitively; set true only for a fixture whose ground truth pins an
+# order and means it.
+ex_order_sensitive        = false
 
 [evaluation]
 scorers                   = ["spec", "execution"]

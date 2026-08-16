@@ -223,6 +223,80 @@ class ExecutionScorer:
         }
 
 
+# ── ExecutionAccuracyScorer (BIRD / Spider "EX") ──────────────────────────────
+class ExecutionAccuracyScorer:
+    """
+    Execution Accuracy as the text-to-SQL literature defines it (BIRD, Spider).
+
+    WHY A THIRD SCORER, rather than adjusting one of the two that exist:
+    this project already had two comparison semantics, and neither matched the
+    published definition, which made its numbers incomparable to any
+    leaderboard even when run on the same benchmark.
+
+        ExecutionScorer ("execution")   compares (column_NAME, value) pairs, so
+                                        an alias difference is a failure.
+        C2-V8's own signature            ignores names but includes the column
+                                        COUNT, so two EMPTY results with
+                                        different projections differ.
+        this scorer ("execution_accuracy")
+                                        compares the RESULT SETS as sorted
+                                        tuples of values, which is the
+                                        published definition.
+
+    All three are kept and reported separately rather than one being "fixed"
+    into the others. They answer different questions, and collapsing them would
+    hide exactly the gap that makes a strict internal number look like a
+    capability failure. Measured on phase_c2: the strict scorer and this one
+    disagree substantially -- see docs/m4_diagnosis.json.
+
+    Order-insensitive by default because SQL result order is unspecified
+    without ORDER BY; set scoring.ex_order_sensitive=true in config to compare
+    ordered results for queries whose ground truth pins an order.
+    """
+
+    name = "execution_accuracy"
+
+    @staticmethod
+    def _rows_to_tuples(rows: Any) -> list[tuple]:
+        """Each row as a tuple of its stringified VALUES; column names ignored."""
+        if not isinstance(rows, list):
+            return []
+        out = []
+        for row in rows:
+            if isinstance(row, dict):
+                out.append(tuple(str(v) for v in row.values()))
+            elif isinstance(row, (list, tuple)):
+                out.append(tuple(str(v) for v in row))
+            else:
+                out.append((str(row),))
+        return out
+
+    def score(self, generated: Any, reference: Any) -> dict[str, Any]:
+        gen = self._rows_to_tuples(generated)
+        ref = self._rows_to_tuples(reference)
+
+        ordered = bool(getattr(cfg.scoring, "ex_order_sensitive", False))
+        if ordered:
+            match = gen == ref
+        else:
+            # Multiset comparison: duplicate rows are meaningful in SQL results,
+            # so sorted() rather than set().
+            match = sorted(gen) == sorted(ref)
+
+        return {
+            "score": 1.0 if match else 0.0,
+            "match": match,
+            "order_sensitive": ordered,
+            "generated_row_count": len(gen),
+            "reference_row_count": len(ref),
+            # Reported so a near-miss is visible rather than collapsed to 0.0:
+            # the fraction of reference rows present in the generated result.
+            "row_recall": (
+                len(set(ref) & set(gen)) / len(set(ref)) if ref else (1.0 if not gen else 0.0)
+            ),
+        }
+
+
 # ── VisionScorer (F-V5 seam; Strategy §6 stretch, D11) ────────────────────────
 class VisionScorer:
     """
@@ -319,6 +393,7 @@ def register_scorer(name: str, scorer_cls: type) -> None:
 
 register_scorer(SpecScorer.name, SpecScorer)
 register_scorer(ExecutionScorer.name, ExecutionScorer)
+register_scorer(ExecutionAccuracyScorer.name, ExecutionAccuracyScorer)
 register_scorer(VisionScorer.name, VisionScorer)
 
 
