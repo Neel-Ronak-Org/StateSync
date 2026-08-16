@@ -79,6 +79,23 @@ Recorded honestly in `docs/metrics-report.md`; summarized here per F-V8:
   see `docs/rebaseline_runbook.md`. **Read alongside the instrument limitation
   below: M4 is a lower bound on semantic correctness**, and 15 of the 18 cold
   misses return exactly the expected row count.
+
+  **Updated 2026-08-16 (cold path only).** The projection-discipline prompt
+  (`da6e49f`) and a corrected diagnostic (`f46e0bf`) both landed after the F-V3
+  run above. Clean re-run, `docs/m4_diagnosis_v2_corrected.json`: **cold
+  36.0% (9/25)**, standard EX 44.0%, mean value recall 74.0%, mean row recall
+  48.0%. **The warm path has not been re-measured since either change**, so the
+  32.0% above is now attributed to a build that no longer ships.
+
+  **What got worse in the re-read, stated because it is the finding that
+  matters:** the "unrecovered SQL error" category was empty in truth — it fired
+  on `bool(state_trace["errors"])`, which stays non-empty after the correction
+  loop *succeeds*. Correcting it moved both of its queries into genuine-error
+  categories. Of the 16 remaining misses, **9 are genuine wrong-value or
+  wrong-shape model errors** (was 5 by the old labelling), 4 are projection
+  width, 2 are the strict scorer alone, 1 is routing. The measurement artifact
+  is now smaller than the model error, which is the opposite of the direction
+  `PROJECT_DIRECTION.md` §2 originally argued.
 - **M6 (E1-V3, grounding): moderate.** Context precision 0.622, faithfulness
   0.8125 (F-V3 run; 0.769 at E1, 0.831 at the first Phase F run). One clearly-diagnosed, partially-fixed root cause (aggregate queries
   not echoing an ID column for targeted retrieval); a second, deeper cause
@@ -132,6 +149,22 @@ matter just as much: a number is only as trustworthy as the thing producing it.
   **M4 is a lower bound on semantic correctness**, and the gap is not small:
   for the remaining 12 same-row-count misses the cause (projection width,
   differing values, or both) was not determined and is not asserted.
+
+  **Recomputed 2026-08-16 on the current build**, now that the diagnostic
+  persists the rows instead of their length (`f46e0bf`), so this no longer has
+  to be left undetermined. Of the **16** strict misses: **13 return exactly the
+  expected row count**, 2 of those return zero rows on both sides, and **11 of
+  the 13 differ in column count**. But column width is not the whole story —
+  only **2** of the 16 are correct under standard EX, and **11 of the 13
+  same-row-count misses have row recall 0.00**, i.e. the values genuinely
+  differ, not just the projection. The lower-bound claim stands; the gap is
+  **narrower than the earlier framing implied**, and the previously
+  undetermined cause is now determined and is mostly wrong values.
+
+  The scorer is now pinned from the other side too:
+  `tests/test_scorer_semantics.py` asserts C2-V8 keeps distinguishing empty
+  results with different column counts, so a future "cleanup" cannot quietly
+  relax it and raise M4.
 
 - **`empty_result` is classified as a retryable error even when empty is the
   correct answer.** `c2g_10`'s true answer is zero rows, and the correction
