@@ -585,3 +585,71 @@ defect: **nothing tells the model which of the `x` / `x_local` pair a value
 lives in**, so it guesses from the question's script and is wrong half the
 time. `open_items.md`'s "script-triggered, symmetric wording" hypothesis is
 aimed at exactly this, and now has a measured failure mode on both sides.
+
+---
+
+# M3 re-measured on the current build (2026-08-16, post-projection-fix)
+
+The run the audit's first attempt was killed mid-flight for. Clean and serial:
+stack verified in the shipped flag state first, nothing else touching it, and
+this is the **first report in the repo to carry `flag_provenance`**
+(`shipped: true`). Artifact: `docs/bench_multilingual_report_postprojfix.json`.
+
+## The result: the projection-discipline change cost M3 what it bought M4
+
+| | pre-`da6e49f` (`5a7bb90`) | post (this run) | delta |
+|---|---|---|---|
+| D-V1 control · hi | 11/20 55.0% | 11/20 55.0% | 0.0pp |
+| D-V1 control · hinglish | 5/20 25.0% | 5/20 25.0% | 0.0pp |
+| **D-V1 treatment · hi** | 15/20 75.0% | **12/20 60.0%** | **−15.0pp** |
+| D-V1 treatment · hinglish | 11/20 55.0% | 10/20 50.0% | −5.0pp |
+| **D-V1 treatment (all)** | 26/40 65.0% | **22/40 55.0%** | **−10.0pp** |
+| D-V1 lift | +25.0pp | **+15.0pp** | −10.0pp |
+| English reference | 12/20 60.0% | 11/20 55.0% | −5.0pp |
+| D-V2 entity preservation | 26/32 81.2% | 26/32 81.2% | **0.0pp** |
+| D-V2 · Devanagari nouns | 15/16 93.8% | 15/16 93.8% | 0.0pp |
+| D-V2 · Latin nouns | 11/16 68.8% | 11/16 68.8% | 0.0pp |
+
+**In query counts, across both fixtures:** the change won **+2** on `phase_c2`
+(M4 strict 7→9) and lost **−4** on D-V1 treatment and **−1** on the English
+line. Net **−3 queries**.
+
+**The control arms are identical by coincidence, not by inaction.** Checked
+rather than assumed: **45 of 60 control SQL strings changed** between the two
+runs (42 of 60 in treatment). The prompt reached the model and altered most
+generated SQL; the control arm's score simply landed on the same total. With
+`temperature = 0.0` that is a plausible coincidence, and it is recorded as one.
+
+**D-V2 is completely untouched** — both halves, to the query. Entity
+preservation is about which *values* reach the SQL, and the projection rule
+governs which *columns* are selected. The two are orthogonal, and the data says
+so exactly.
+
+## What this establishes, beyond this one change
+
+`da6e49f` was validated on one fixture (`phase_c2`, 25 queries) and shipped.
+`metrics-report.md`'s build-provenance section flagged, as a *risk*, that this
+re-dated every other model-sensitive number. **It was not a risk. It was a
+10-point regression on the arm that ships, sitting unmeasured for a day.**
+
+This is the second measured instance of the pattern the previous session named:
+schema comments bought English and lost entity preservation; projection
+discipline bought M4 and lost M3. On a 7B, prompt interventions **relocate**
+errors — and this one relocated them *across fixtures*, where a single-fixture
+validation cannot see it.
+
+## Recommendation: do NOT revert tonight
+
+The evidence points at reverting, and reverting now would still be premature:
+
+1. Both effects are small-n. One query is 4.0pp on `phase_c2`, 2.5pp on D-V1.
+2. The graded probe is next. If a frontier model does not need the projection
+   rule — or does not suffer from it — the whole trade dissolves, and reverting
+   tonight on 7B numbers risks a third un-measured flip in the same file.
+3. Reverting is itself a prompt intervention and would need its own
+   before/after on **both** fixtures to be honest, which is two more ~40-minute
+   runs on a model that is about to be replaced.
+
+**Decide after the Azure probe, with both fixtures measured on the graded
+model.** Recorded here so the decision is made on data rather than on whichever
+number someone happens to look at first.

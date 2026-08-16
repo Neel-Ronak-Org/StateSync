@@ -58,15 +58,30 @@ of its effect on the other metrics is genuinely unknown, not assumed benign.
 | Metric | Measured on | Re-measured after `da6e49f`? |
 |---|---|---|
 | M4 cold (C2-V8), standard EX, value recall | post-change build | **yes** (re-run again 2026-08-16 on the corrected diagnostic) |
-| M2, M3, M4 warm, M5, M6, M7 | pre-change build | **no** |
+| **M3 (D-V1 / D-V2 / D-V3)** | **post-change build** | **yes — and it REGRESSED, see below** |
+| M2, M4 warm, M5, M6, M7 | pre-change build | **no** |
 
-**M3 specifically.** A post-projection-fix M3 re-run was started and killed by
-a session collision before its control arm finished; nothing from it is
-recorded. So the D-V1/D-V2/D-V3 numbers below remain pre-`da6e49f`, and the
-language-group split derived from them (`docs/phase_d_log.md` § "Audit
-findings") inherits the same caveat. The split is a re-reading of an existing
-run, not a new measurement, so its *relative* finding — the Hinglish half is
-~20pp weaker — is as sound as the run it came from.
+### The risk this section flagged was not a risk. It happened.
+
+M3 re-measured on the current build (`docs/bench_multilingual_report_postprojfix.json`,
+the first report carrying `flag_provenance`):
+
+| | pre-`da6e49f` | post | delta |
+|---|---|---|---|
+| **D-V1 treatment (the arm that ships)** | 26/40 65.0% | **22/40 55.0%** | **−10.0pp** |
+| D-V1 treatment · Devanagari half | 15/20 75.0% | 12/20 60.0% | −15.0pp |
+| D-V1 lift | +25.0pp | +15.0pp | −10.0pp |
+| English reference line | 12/20 60.0% | 11/20 55.0% | −5.0pp |
+| D-V2 entity preservation | 26/32 81.2% | 26/32 81.2% | 0.0pp |
+
+**In query counts across both fixtures, `da6e49f` won +2 and lost −5.** It was
+validated on `phase_c2` alone and shipped. The control arms are identical by
+coincidence, not inaction — 45 of 60 control SQL strings changed between the
+runs; checked, not assumed.
+
+**Do not revert on these numbers alone** — both effects are small-n, and the
+graded probe is next. Full reasoning and the recommendation:
+`docs/phase_d_log.md` § "M3 re-measured on the current build".
 
 The lesson generalises past this instance: a prompt change validated on one
 fixture silently re-dates every other model-sensitive number in the repo.
