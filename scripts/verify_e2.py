@@ -49,6 +49,7 @@ MALICIOUS = REPO_ROOT / "fixtures" / "malicious_specs.json"
 E2_FIXTURE = REPO_ROOT / "fixtures" / "golden" / "phase_e2.json"
 NGINX_CONF = REPO_ROOT / "frontend" / "nginx.conf"
 INDEX_HTML = REPO_ROOT / "frontend" / "index.html"
+APP_JS = REPO_ROOT / "frontend" / "app.js"
 
 passed = 0
 failed = 0
@@ -138,13 +139,30 @@ def e2_v4_csp() -> None:
     check("CSP sets object-src 'none'", "object-src 'none'" in csp)
     check("CSP sets frame-ancestors 'none'", "frame-ancestors 'none'" in csp)
 
+    # The app moved out of index.html into app.js so the CSP could drop
+    # 'unsafe-inline' from script-src. These checks follow the code: the
+    # property being verified (the render path never reaches the eval-based
+    # compiler) is unchanged, only its file changed.
     html = INDEX_HTML.read_text()
-    check("frontend loads vega-interpreter", "vega-interpreter" in html)
-    check("render path requests the AST parser", re.search(r"\bast:\s*true", html) is not None)
+    app = APP_JS.read_text()
+    both = html + "\n" + app
+
+    check("frontend loads vega-interpreter", "vega-interpreter" in both)
+    check("render path requests the AST parser", re.search(r"\bast:\s*true", both) is not None)
     check("render path passes an expression interpreter",
-          re.search(r"\bexpr:\s*interp\b", html) is not None)
+          re.search(r"\bexpr:\s*interp\b", both) is not None)
     check("render refuses to fall back to the eval compiler",
-          "refusing to render via the eval-based compiler" in html)
+          "refusing to render via the eval-based compiler" in both)
+
+    # Hardening added after the trace-renderer XSS sink was found: script-src
+    # no longer permits inline script, so a future DOM-injection bug cannot
+    # reach script execution even if a sink is reintroduced.
+    check("CSP contains no script-src 'unsafe-inline'",
+          "unsafe-inline" not in csp.split("script-src")[1].split(";")[0])
+    check("index.html carries no inline <script> body",
+          re.search(r"<script(?![^>]*\bsrc=)[^>]*>\s*\S", html) is None)
+    check("app.js is served same-origin, not from a CDN",
+          '<script src="app.js"' in html)
 
 
 # ── E2-V5 ─────────────────────────────────────────────────────────────────────

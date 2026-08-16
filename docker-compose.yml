@@ -171,7 +171,17 @@ services:
     ports:
       - "3000:80"
     environment:
-      - ORCHESTRATOR_URL=http://orchestrator:8090
+      # Consumed by the BROWSER, not by this container. entrypoint.sh bakes it
+      # into app.js, which runs on the user's machine, so it must be an address
+      # the user's machine can resolve. `http://orchestrator:8090` is a
+      # compose-network DNS name that only exists between containers -- the
+      # browser cannot resolve it, and every query from the UI failed with
+      # "TypeError: Failed to fetch". The published port is what the browser
+      # can reach.
+      #
+      # Contrast the evaluator service below, which keeps
+      # `http://orchestrator:8090`: that one really is container-to-container.
+      - ORCHESTRATOR_URL=http://localhost:8090
     depends_on:
       orchestrator:
         condition: service_healthy

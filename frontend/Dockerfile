@@ -2,6 +2,7 @@ FROM nginx:1.27-alpine
 
 # Copy static assets
 COPY index.html /usr/share/nginx/html/index.html
+COPY app.js /usr/share/nginx/html/app.js
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Remove the default nginx config
