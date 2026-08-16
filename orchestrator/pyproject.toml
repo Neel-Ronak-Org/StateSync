@@ -21,6 +21,12 @@ dependencies = [
     # non-security-bearing: sql_agent parses its own draft SQL to learn which
     # tables to interrogate. Version-matched to mcp/pyproject.toml on purpose.
     "pglast>=6.2",
+    # D11 VisionScorer's rendering half. orchestrator/vision.py imports
+    # vl_convert directly and this was never declared here -- only in
+    # evaluator/Dockerfile -- so the orchestrator image shipped a registered
+    # scorer whose renderer was absent. Pure Rust wheel: no browser, no
+    # network, so it costs image size and nothing else (A1).
+    "vl-convert-python>=1.6.0",
 ]
 
 [tool.uv]

@@ -35,12 +35,13 @@ RUN uv pip install --system --no-cache -r pyproject.toml || \
     "openai>=1.40.0" \
     "jsonschema>=4.22.0" \
     "digipin>=2.1.1" \
-    "pglast>=6.2"
+    "pglast>=6.2" \
+    "vl-convert-python>=1.6.0"
 
 # Fail the build, loudly, if any declared runtime dependency is absent.
 RUN python -c "\
 import importlib.util as u, sys; \
-missing = [m for m in ('fastapi','uvicorn','httpx','pydantic','langgraph','langchain_core','anthropic','openai','jsonschema','digipin','pglast') if u.find_spec(m) is None]; \
+missing = [m for m in ('fastapi','uvicorn','httpx','pydantic','langgraph','langchain_core','anthropic','openai','jsonschema','digipin','pglast','vl_convert') if u.find_spec(m) is None]; \
 sys.exit('MISSING DEPENDENCIES IN IMAGE: ' + ', '.join(missing) if missing else 0)"
 
 # Copy application source
