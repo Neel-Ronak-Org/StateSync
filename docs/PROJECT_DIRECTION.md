@@ -71,6 +71,55 @@ Failure breakdown of the 18 "failures":
 **Ten of eighteen "failures" were not capability failures.** Three were the
 scorer alone. Six returned the correct values with extra columns.
 
+### Updated 2026-08-16: the current build, on the corrected diagnostic
+
+The table above is the FIRST run, kept because it is what the argument was
+built on. Two things have changed since: the projection-discipline prompt
+(`da6e49f`) and three defects fixed in the diagnostic itself (`f46e0bf`).
+Clean serial re-run under the shipped flag state, `docs/m4_diagnosis_v2_corrected.json`:
+
+| Definition | First run | **Current** |
+|---|---|---|
+| strict EX (C2-V8 signature) | 7/25 = 28.0% | **9/25 = 36.0%** |
+| standard EX — shipped `ExecutionAccuracyScorer` | — | **11/25 = 44.0%** |
+| standard EX — legacy in-script definition | 10/25 = 40.0% | 11/25 = 44.0% |
+| mean value recall | 76.8% | 74.0% |
+| mean row recall (new) | — | 48.0% |
+
+**The BIRD-definition correction does not move the number here.** `f46e0bf`
+found that the published "standard EX" came from an in-script definition that
+sorted values *within* each row — so a generated row (5, 3) matched a
+ground-truth (3, 5) — and not from the registered scorer. On this fixture the
+two agree exactly, 11/25 both ways. That was established twice, independently:
+by re-executing the stored SQL through MCP with no model calls, and then by
+this full run. The definitions genuinely differ (`tests/test_scorer_semantics.py`
+pins a case where they disagree); `phase_c2` just contains no query that
+discriminates them. **The published 44% survives the correction** — worth
+stating plainly, because the correction was expected to lower it.
+
+**The honest failure count went UP, and that is the point.** Fixing the
+"SQL execution error (unrecovered)" mislabel — it fired on
+`bool(state_trace["errors"])`, which stays non-empty after the correction loop
+*succeeds* — emptied that bucket and moved both queries into genuine-error
+categories:
+
+| Category | First run | Current |
+|---|---|---|
+| correct | 7 | **9** |
+| right row COUNT, wrong values | 5 | **7** |
+| right values, wider/narrower projection | 6 | **4** |
+| correct under standard EX only (scorer artifact) | 3 | 2 |
+| right values, WRONG row count (missing aggregation) | 1 | 1 |
+| misrouted | 1 | 1 |
+| wrong shape and values | 1 | 1 |
+| **unrecovered SQL error** | **1** | **0 — the category never once fired correctly** |
+
+So the "ten of eighteen failures were not capability failures" framing does not
+survive intact on the current build: of 16 remaining failures, **9 are genuine
+wrong-value or wrong-shape model errors**, 4 are projection width, 2 are the
+strict scorer alone, 1 is routing. The measurement artifact was real and is now
+smaller than the model error.
+
 **Why this happened, and it is the project's real weakness:** the system is
 rigorously *verified* and poorly *diagnosable*. `c2v8_report.json` stored
 `match: false` and a row count, discarding the SQL and the rows. This is the

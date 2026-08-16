@@ -57,9 +57,16 @@ of its effect on the other metrics is genuinely unknown, not assumed benign.
 
 | Metric | Measured on | Re-measured after `da6e49f`? |
 |---|---|---|
-| M4 cold (C2-V8), standard EX, value recall | post-change build | **yes** |
-| M3 (D-V1 / D-V2 / D-V3) | pre-change build | **yes — see the post-projection-fix row below** |
-| M2, M4 warm, M5, M6, M7 | pre-change build | **no** |
+| M4 cold (C2-V8), standard EX, value recall | post-change build | **yes** (re-run again 2026-08-16 on the corrected diagnostic) |
+| M2, M3, M4 warm, M5, M6, M7 | pre-change build | **no** |
+
+**M3 specifically.** A post-projection-fix M3 re-run was started and killed by
+a session collision before its control arm finished; nothing from it is
+recorded. So the D-V1/D-V2/D-V3 numbers below remain pre-`da6e49f`, and the
+language-group split derived from them (`docs/phase_d_log.md` § "Audit
+findings") inherits the same caveat. The split is a re-reading of an existing
+run, not a new measurement, so its *relative* finding — the Hinglish half is
+~20pp weaker — is as sound as the run it came from.
 
 The lesson generalises past this instance: a prompt change validated on one
 fixture silently re-dates every other model-sensitive number in the repo.
@@ -74,8 +81,8 @@ timestamp archaeology exercise.
 | **M3** — multilingual lift (D-V1) | **PASS: +25.0pp (16/40 40.0% → 26/40 65.0%)** after the Supervisor routing fix. Treatment is now ABOVE the Phase D record (65.0% vs 62.5%); the lift is smaller than +47.5pp **because the control arm rose 15.0%→40.0%, not because treatment fell**. Prior pre-fix run (32.5%→57.5%) retained below | — | `scripts/bench_multilingual.py` | 2026-08-15 (F-V3 post-fix re-run) |
 | **M3** — entity preservation (D-V2) | **RECOVERED: 26/32 (81.25%)**, within noise of the 84.4% record (pre-fix run: 18/32 56.2%, retained) | — | same run as D-V1 | 2026-08-15 (F-V3 post-fix re-run) |
 | **M4** — query correctness (C2-V8) | Cold **28.0% (7/25)**, warm **32.0% (8/25)** in the F-V3 post-fix run (earlier Phase F run: cold 28.0%, warm 36.0% — retained). **Golden recovery now `still_failing: []`** (b_007, b_008 recovered). **SUPERSEDED for the cold path by the projection-discipline change (`da6e49f`): 9/25 = 36.0% under the same C2-V8 signature** (`docs/m4_diagnosis_projfix.json`). The warm path has NOT been re-measured since that change | — | `scripts/check_c2v8.py`; post-change cold value from `scripts/diagnose_m4.py` (identical signature) | 2026-08-15 (F-V3 post-fix re-run); cold re-measured 2026-08-16 |
-| **M4** — standard Execution Accuracy (BIRD/Spider EX) | **44.0% (11/25)** post-projection-fix (pre-change: 40.0%). Reported alongside M4, never instead of it — different definition, see PROJECT_DIRECTION §3 | — | `scripts/diagnose_m4.py` | 2026-08-16 |
-| **M4** — mean value recall (diagnostic, not a pass/fail metric) | **74.0%** post-projection-fix, **down from 76.8%** — the projection rule occasionally drops a column the answer needed | — | `scripts/diagnose_m4.py` | 2026-08-16 |
+| **M4** — standard Execution Accuracy (BIRD/Spider EX) | **44.0% (11/25)**, measured by the shipped `ExecutionAccuracyScorer`. The earlier 40.0% → 44.0% figures came from an in-script definition that sorted values *within* a row and was **not** BIRD's (`f46e0bf`); on this fixture both definitions give 11/25, so the published number survives the correction. Reported alongside M4, never instead of it | — | `scripts/diagnose_m4.py` → `docs/m4_diagnosis_v2_corrected.json` | 2026-08-16 (clean serial re-run) |
+| **M4** — mean value recall (diagnostic, NOT a capability metric) | **74.0%**, down from 76.8% pre-projection-fix. Read with the warning the script now carries: it is unaligned, cross-column and de-duplicated, so a query returning 30 rows for a 1-row answer scores 1.00. Mean **row** recall, from the shipped scorer, is **48.0%** | — | `scripts/diagnose_m4.py` | 2026-08-16 |
 | **M5** — self-correction repair rate (C2-V2) | **11/12 classified correctly** in the F-V3 post-fix run (earlier Phase F run: 10/12 — retained; Phase C2 original 12/12). The single miss is the `timeout` seed `mq_11`, the same client-side HTTP timeout artifact, not a classification failure | — | `scripts/bench_correction.py` | 2026-08-15 (F-V3 post-fix re-run) |
 | **M6** — grounding (E1-V3) | Precision **0.622**, recall **0.80**, faithfulness **0.8125**, **4** ungrounded-but-true — reproduces the earlier Phase F run (0.622 / 0.80 / 0.831 / 4) within noise on 16 scored queries | — | `scripts/bench_grounding.py` | 2026-08-15 (F-V3 post-fix re-run) |
 | **M7** — chart quality (E2-V1) | **0.4850** mean spec score, `chart:null` 7/30; over the 23 charts actually produced, 0.633. (First run, pre-JSON-fix: 0.4592 / 8 nulls — kept, not overwritten.) **Read with care: 5 of the 8 original nulls are upstream SQL returning 0 rows or the wrong shape, so this figure is partly a downstream reflection of M4, not a clean measure of chart competence** — see `docs/phase_e2_log.md` for the per-query accounting | — | `run_e2_v1.py` then `score_specs.py --score` | 2026-08-15 (re-run, post-JSON-fix) |
