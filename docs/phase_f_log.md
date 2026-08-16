@@ -656,3 +656,61 @@ check now has something real to fail, and does not.
 (`adv_19`/`adv_20` return null for ordinary reasons — 550 rows × the
 chartability gate, and a 1-row scalar respectively — not because anything was
 suppressed.)
+
+---
+
+## D11 Vision Score — rendering half deployed (2026-08-16)
+
+The code for D11's rendering half was committed in `03c0067`, but it had never
+run: `vl-convert-python` was not declared as a dependency and `vision.py` was
+not in the evaluator's `COPY` line. The module was in the repository and
+absent from the image — committed, not deployed. Found by trying to execute it
+rather than by reading it.
+
+Fixed both, rebuilt, and verified the half-built state precisely:
+
+| Probe | Result |
+|---|---|
+| `render_spec_to_png()` on a real spec | **38,608-byte valid PNG** (signature checked) |
+| `get_scorer("vision")` | resolves to `VisionScorer` |
+| `score(None, None)` | `{"score": 0.0, "null_chart": true, "rendered": false, "judged": false}` — scores rather than crashes |
+| `score(spec, spec)`, flag off | `VisionModelUnavailable`: *"enabled=false (the shipped default)"* |
+| flag on, no model named | `VisionModelUnavailable`: *"model is empty"* |
+| flag on, model named | *"Both charts rendered (40226 and 40226 PNG bytes) ... but no vision transport is wired"* |
+
+That last line is the point. The failure is specific enough to say **which
+half is missing**: rendering ran and produced real bytes; only the VLM
+transport is absent. A single "not implemented" would have reported a
+half-built feature as unbuilt, which is why F-V5 now checks the two halves
+separately.
+
+**Why `vl-convert` rather than a headless browser:** it is a self-contained
+Rust implementation, so the evaluation loop needs no Chrome, no display and no
+network. That matters for A1 — the evaluator keeps working without an outbound
+path, and rendering a chart does not become a reason to punch a hole in the
+network topology.
+
+**Still unbuilt:** the image call itself. It needs a vision-capable model,
+which the local stack does not have (`qwen2.5:7b` is text-only, and the
+Dockerised Ollama holds only `mxbai-embed-large`). Completing D11 means wiring
+the image call behind the BD1 provider seam and naming a model —
+straightforward once a vision-capable provider is reachable.
+
+**What this buys today, with the judging half still missing:** M7's documented
+blind spot — a chart bound to the *wrong column* scores as correct, because
+the deterministic scorer excludes field names — now has a working renderer
+sitting in front of it. That is the piece that could not be faked; the
+remaining work is a model call.
+
+## Build note: `docker compose build` stalled where `docker build` did not
+
+The evaluator rebuild sat at `Image statesync-evaluator Building` for 30+
+minutes with no step output under `DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0`
+(the flags this project adopted for an earlier BuildKit stall). The same image
+built in **~60 seconds** via `docker build --progress=plain ./evaluator`.
+
+Recorded because the earlier workaround is now itself a hazard: disabling
+BuildKit suppresses per-step progress through compose, so a slow or stuck build
+is indistinguishable from a fast one, and the first symptom is a 30-minute
+wait. For a single service, prefer `docker build --progress=plain <dir>` and
+then `docker compose up -d --no-build`.

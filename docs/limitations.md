@@ -7,18 +7,31 @@ not smoothed over. Cross-check: nothing in `docs/metrics-report.md` should
 be unsupported by a recorded measurement, and nothing weak should be absent
 from this file.
 
-## Stretch items not built (Strategy §6 / Appendix 4)
+## Stretch items and their seams (Strategy §6 / Appendix 4)
 
-All eight, per F-V4 (`scripts/verify_seams.py`, 18/18 checks pass, see
-`docs/phase_f_log.md`). Every seam exists and resolves from config at a real
-dispatch point; the *content* behind each is deliberately unbuilt.
+All eight seams exist and resolve from config at a real dispatch point, per
+F-V4 (`scripts/verify_seams.py`, see `docs/phase_f_log.md`).
+
+**Two are no longer unbuilt**, so the old blanket claim ("the content behind
+each is deliberately unbuilt") no longer holds and has been replaced by
+per-row status:
+
+- **Multi-tenancy enforcement — BUILT** and verified 12/12, including a fix
+  for a real cross-tenant read that existed in `vector.hybrid_select`.
+- **Vision Score — HALF BUILT.** The rendering half runs; the VLM judging
+  half does not, and the two failure modes are deliberately distinct so the
+  half-built state cannot be mistaken for either "done" or "unbuilt".
+
+The remaining six are genuinely seam-only. Reporting them all as "unbuilt"
+after building two would have been the same silent-overwrite failure this
+project keeps catching elsewhere.
 
 | Stretch item | Seam | Status |
 |---|---|---|
 | GRPO fine-tuned multilingual model | `normalization.provider = "finetuned"` (`LanguageNormalizer`) | Seam exists (`orchestrator/language_normalizer.py`); only `PromptNormalizer` is implemented. Unbuilt: the fine-tuned model itself. |
-| Vision Score | `evaluation.vision_scorer.enabled` (`Scorer` registry, `"vision"`) | Registered (`orchestrator/scorers.py`, `evaluator/scorers.py`); `.score()` raises `NotImplementedError` by design (F-V5 confirms this is the "content unbuilt" failure mode, not "registration missing"). Unbuilt: the VLM call. |
+| Vision Score | `evaluation.vision_scorer.enabled` (`Scorer` registry, `"vision"`) | **Half built.** Registered in both scorer modules; the **rendering half is implemented and deployed** — `vision.render_spec_to_png()` uses `vl-convert` (self-contained Rust, no browser, no network, so the evaluator keeps working without an outbound path per A1). Two distinct failure modes so a half-built feature cannot masquerade as unbuilt: `ChartRenderUnavailable` (no renderer) vs `VisionModelUnavailable` (no VLM). **Unbuilt: the VLM judging call itself**, which needs a vision-capable model — the local stack has none. |
 | CSR-RAG hypergraph retrieval | `schema_retriever.provider = "hypergraph"` (`SchemaRetriever`) | Seam exists (`orchestrator/schema_retriever.py`); only `DirectSchemaRetriever` is implemented. Unbuilt: the hypergraph pipeline. |
-| Multi-tenancy enforcement | `tenancy.enforced` (MCP session policy layer) | Seam added in Part F (`mcp/session.py::enforce_tenancy_policy`) — the flag existed since Phase B but nothing read it until F-V4 found the gap. Flipping it now raises `TenancyPolicyNotImplemented` per request, a real branch point. Unbuilt: the actual per-tenant isolation policy. |
+| Multi-tenancy enforcement | `tenancy.enforced` (MCP session policy layer) | **Built and verified (12/12, `scripts/verify_tenancy.py`).** Enforcement now does three real things: admission control (unknown tenant → 403, not an empty result set); a **mandatory tenant predicate on `vector.hybrid_select`**, which closes a genuine cross-tenant read — it executes model-authored SQL and, unlike `semantic_search`/`get_passage`, never filtered `tenant_id`; and a refusal to start unless `relational_plane_shared_ack` records that the business tables are shared. **Structurally unbuildable here:** row isolation on the relational plane — those tables have no `tenant_id`, and adding it changes the A5 fingerprint and invalidates every stored trajectory (D4). |
 | HEAR root-cause node | `routing.table` entry `"rca"` (`SpecialistNode`) | Registry exists (`orchestrator/routing/registry.py`), only `sql`/`docs`/`hybrid` registered. Unbuilt: the specialist node itself. |
 | Richer spatial resolution | `spatial.provider = "<other>"` (`SpatialResolver`) | Seam exists (`orchestrator/spatial_resolver.py`); only `DigipinResolver` is implemented. Unbuilt: free-text/reverse geocoding. |
 | Live network ingestion | `ingestion.source = "beckn"` (`IngestionSource`) | Seam added in Part F (`scripts/ingestion_source.py`) — E1 shipped `scripts/ingest.py` without wiring this at all; only `LocalFileSource` is implemented. Unbuilt: the Beckn-protocol source. |
