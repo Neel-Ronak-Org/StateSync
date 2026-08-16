@@ -24,7 +24,7 @@ Date: 2026-08-15. Local model: `qwen2.5:7b` (generation), `mxbai-embed-large`
 |---|---|---|---|
 | **M1 direction** — memory reduces tokens/trajectory | −39.2% tokens, −73.1% trajectory steps (control vs. treatment A/B) | `scripts/bench_memory.py` | C1 (2026-08-14); Phase-F re-run below is not directly comparable — see note |
 | **M8** — adversarial security suite | **PASS IN FULL — 36/36, 0 failed** (binary metric; see F-V1 section) | `scripts/verify_security.sh` | Part F (this run) |
-| **M9** — routing determinism ≥ 90% | **PASS — 60/60 (100%)**; over-exposure (9→40 surface) shows no degradation, honestly recorded as a non-reproduction | `scripts/experiment_tool_ceiling.py` | Part F (this run) |
+| **M9** — routing determinism ≥ 90% | **PASS — 0.983 (59/60)** on the hardened fixture, `sql` = 1.000 including all six overlap-vocabulary cases (earlier run on the pre-fix fixture: 60/60 100% — retained, and NOT a clean before/after: prompt and fixture changed in the same step). Over-exposure (9→40 surface) shows no degradation, honestly recorded as a non-reproduction | `scripts/experiment_tool_ceiling.py` | Part F baseline (`docs/f_v2_report.json`); re-run after the Supervisor routing fix `c735457` (`docs/f_v2_report_postfix.json`, `docs/phase_f_log.md`) |
 | **M10** — reproducibility | Stack comes up from a clean bring-up; golden set executes | B-V1 (`scripts/verify_b.sh`), re-run at F-V3 | Part F (this run) |
 | Structural verification (network isolation, credential absence, 3 SELECT-only layers, role separation, tool ceiling, seam resolution, output-contract enforcement) | All pass | B-V3..B-V9, E1-V6/V7/V8, E2-V3..V6, F-V4/F-V5/F-V6 | Part F (this run) |
 
@@ -37,6 +37,35 @@ directly diffable against each other. See F-V3 below for the fresh run.
 
 ---
 
+## ⚠ Build provenance: the SQL prompt changed under this table
+
+**Added by the fresh-context audit, 2026-08-16.** `da6e49f` ("projection
+discipline") added a rule to **both** SQL prompts in
+`orchestrator/nodes/sql_agent.py`. It was validated on one fixture
+(`phase_c2.json`, 25 queries) and shipped.
+
+Every model-sensitive metric below generates SQL, so that change moved the
+build all of them were measured against. **Only M4's cold path was
+re-measured after it.** M2, M3, M5, M6 and M7 on this table were measured on
+the pre-`da6e49f` build and their provenance is now stale — not wrong, but no
+longer attributable to the code that ships.
+
+That is a real gap and it is stated rather than smoothed. The commit's own
+message records that the change *moved* failures rather than removing them
+(two queries recovered, one regressed, value recall −2.8pp), so the direction
+of its effect on the other metrics is genuinely unknown, not assumed benign.
+
+| Metric | Measured on | Re-measured after `da6e49f`? |
+|---|---|---|
+| M4 cold (C2-V8), standard EX, value recall | post-change build | **yes** |
+| M3 (D-V1 / D-V2 / D-V3) | pre-change build | **yes — see the post-projection-fix row below** |
+| M2, M4 warm, M5, M6, M7 | pre-change build | **no** |
+
+The lesson generalises past this instance: a prompt change validated on one
+fixture silently re-dates every other model-sensitive number in the repo.
+A build identifier belongs in each report so this is visible without a
+timestamp archaeology exercise.
+
 ## Model-sensitive metrics (local provisional, pending graded re-baseline)
 
 | Metric | Local (provisional) | Graded (pending) | Procedure | Local date |
@@ -44,7 +73,9 @@ directly diffable against each other. See F-V3 below for the fresh run.
 | **M2** — consistency (C1-V3) | FAIL — treatment mean **1.8** distinct result sets vs. control 1.0 (fresh, worse than the 1.5 on record — see `docs/phase_f_log.md` for the run-to-run variance discussion) | — | `scripts/check_consistency.py` | 2026-08-15 (Phase F re-run) |
 | **M3** — multilingual lift (D-V1) | **PASS: +25.0pp (16/40 40.0% → 26/40 65.0%)** after the Supervisor routing fix. Treatment is now ABOVE the Phase D record (65.0% vs 62.5%); the lift is smaller than +47.5pp **because the control arm rose 15.0%→40.0%, not because treatment fell**. Prior pre-fix run (32.5%→57.5%) retained below | — | `scripts/bench_multilingual.py` | 2026-08-15 (F-V3 post-fix re-run) |
 | **M3** — entity preservation (D-V2) | **RECOVERED: 26/32 (81.25%)**, within noise of the 84.4% record (pre-fix run: 18/32 56.2%, retained) | — | same run as D-V1 | 2026-08-15 (F-V3 post-fix re-run) |
-| **M4** — query correctness (C2-V8) | Cold **28.0% (7/25)**, warm **32.0% (8/25)** in the F-V3 post-fix run (earlier Phase F run: cold 28.0%, warm 36.0% — retained). **Golden recovery now `still_failing: []`** (b_007, b_008 recovered) | — | `scripts/check_c2v8.py` | 2026-08-15 (F-V3 post-fix re-run) |
+| **M4** — query correctness (C2-V8) | Cold **28.0% (7/25)**, warm **32.0% (8/25)** in the F-V3 post-fix run (earlier Phase F run: cold 28.0%, warm 36.0% — retained). **Golden recovery now `still_failing: []`** (b_007, b_008 recovered). **SUPERSEDED for the cold path by the projection-discipline change (`da6e49f`): 9/25 = 36.0% under the same C2-V8 signature** (`docs/m4_diagnosis_projfix.json`). The warm path has NOT been re-measured since that change | — | `scripts/check_c2v8.py`; post-change cold value from `scripts/diagnose_m4.py` (identical signature) | 2026-08-15 (F-V3 post-fix re-run); cold re-measured 2026-08-16 |
+| **M4** — standard Execution Accuracy (BIRD/Spider EX) | **44.0% (11/25)** post-projection-fix (pre-change: 40.0%). Reported alongside M4, never instead of it — different definition, see PROJECT_DIRECTION §3 | — | `scripts/diagnose_m4.py` | 2026-08-16 |
+| **M4** — mean value recall (diagnostic, not a pass/fail metric) | **74.0%** post-projection-fix, **down from 76.8%** — the projection rule occasionally drops a column the answer needed | — | `scripts/diagnose_m4.py` | 2026-08-16 |
 | **M5** — self-correction repair rate (C2-V2) | **11/12 classified correctly** in the F-V3 post-fix run (earlier Phase F run: 10/12 — retained; Phase C2 original 12/12). The single miss is the `timeout` seed `mq_11`, the same client-side HTTP timeout artifact, not a classification failure | — | `scripts/bench_correction.py` | 2026-08-15 (F-V3 post-fix re-run) |
 | **M6** — grounding (E1-V3) | Precision **0.622**, recall **0.80**, faithfulness **0.8125**, **4** ungrounded-but-true — reproduces the earlier Phase F run (0.622 / 0.80 / 0.831 / 4) within noise on 16 scored queries | — | `scripts/bench_grounding.py` | 2026-08-15 (F-V3 post-fix re-run) |
 | **M7** — chart quality (E2-V1) | **0.4850** mean spec score, `chart:null` 7/30; over the 23 charts actually produced, 0.633. (First run, pre-JSON-fix: 0.4592 / 8 nulls — kept, not overwritten.) **Read with care: 5 of the 8 original nulls are upstream SQL returning 0 rows or the wrong shape, so this figure is partly a downstream reflection of M4, not a clean measure of chart competence** — see `docs/phase_e2_log.md` for the per-query accounting | — | `run_e2_v1.py` then `score_specs.py --score` | 2026-08-15 (re-run, post-JSON-fix) |

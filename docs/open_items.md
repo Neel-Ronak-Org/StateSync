@@ -14,7 +14,7 @@ as the historical record and do not edit them to match this summary.
 | [c2g_10 routing](#c2g_10-routing) | "List sellers whose contracted SLA hours has not been set" routes to `docs` instead of `sql` — the word "SLA" pulls a plainly relational question toward the document route | **Fixed 2026-08-15** (`c735457`); M9 sql now 1.000 incl. 6 new overlap cases. Open only for the M3-recovery measurement | No | Part F, `F-V2` (M9 routing determinism) |
 | [Task 10 / E2-V1 — M7 quality](#task-10--e2-v1--m7-quality) | Synthesizer still emits `chart: null` on every route; M7 chart-quality score cannot be measured until it's taught to populate `chart` | **Built and measured 2026-08-15** (`a00d0d1`). A7 30/30 (binary PASS); M7 0.4850 local provisional. Graded number still owed | **Yes** (graded number only) | Part F, `F-V3` (M7 row); graded number per `rebaseline_runbook.md` |
 | [Schema column semantics](#schema-column-semantics-reverted) | The model cannot distinguish `locations.city` (English) from `city_local` (Indic script) and nothing tells it; ~4 of 8 English-line misses. A comment-based fix was built, measured, and REVERTED for damaging entity preservation | Open — mechanism known, fix unvalidated | No | Needs a script-neutral wording measured on BOTH the English line and D-V2 |
-| [CSP `unsafe-inline`](#csp-unsafe-inline-in-script-src-raised-by-the-trace-renderer-xss-fix) | `script-src` still allows `'unsafe-inline'` because the app is one inline `<script>`; this is what would have made the (now-fixed) trace-renderer sink executable | Open, deliberately deferred — needs its own change + browser re-verify | No | Beyond F1 Scope; improvement, not a spec requirement |
+| [CSP `unsafe-inline`](#csp-unsafe-inline-in-script-src-raised-by-the-trace-renderer-xss-fix) | `script-src` still allows `'unsafe-inline'` because the app is one inline `<script>`; this is what would have made the (now-fixed) trace-renderer sink executable | **CLOSED 2026-08-16** (`9d73b7c`) — script extracted to `frontend/app.js`, `'unsafe-inline'` dropped, `verify_e2.py` 30/30. This row read "Open" for four commits after the fix shipped | No | Beyond F1 Scope; improvement, not a spec requirement |
 | [M3 regression](#m3-regression) | D-V1 lift halved and D-V2 entity preservation dropped since Phase D. **Separation run done:** memory-flip candidate REFUTED; ~20 of the 35 lost English points traced to `c2g_10` misrouting; residual ~15 points still unattributed | Partly closed — one cause identified and shared with `c2g_10`, residual open | No for the identified cause (a routing defect, fixable now); the residual is re-measured by the graded re-baseline anyway | Routing half → fix with `c2g_10`; residual → needs a draft-first toggle that does not yet exist |
 
 ---
@@ -332,8 +332,31 @@ graded procedure: [`docs/rebaseline_runbook.md`](rebaseline_runbook.md).
 
 ## CSP `'unsafe-inline'` in script-src (raised by the trace-renderer XSS fix)
 
-**Status: open, deliberately not fixed in place.** Raised while fixing the
-`renderTrace()` XSS sink (`docs/phase_f_log.md`).
+> **CLOSED 2026-08-16 in `9d73b7c` — this entry was left stale and is corrected
+> here by the fresh-context audit.** The fix described below as "not being done
+> blind" was in fact done, exactly as described: the inline script was extracted
+> to `frontend/app.js`, served same-origin, and `'unsafe-inline'` was dropped
+> from `script-src`. `open_items.md` was edited twice *after* that commit
+> (`a4293e1`) without updating this entry, so the repo's "what's still owed"
+> file claimed an open item that had shipped.
+>
+> Verified now, not assumed: `frontend/nginx.conf`'s `script-src` is
+> `'self' https://cdn.jsdelivr.net https://fonts.googleapis.com` — no
+> `'unsafe-inline'`, no `'unsafe-eval'`; `frontend/index.html` carries no inline
+> `<script>` body; `verify_e2.py` passes 30/30 including the three checks
+> `9d73b7c` added for exactly this.
+>
+> `style-src` keeps `'unsafe-inline'` deliberately — the `<style>` block is
+> still inline and inline style is not an execution primitive.
+>
+> Residual, recorded rather than reopened: `script-src` allows
+> `https://cdn.jsdelivr.net`, because Vega/Vega-Lite/vega-embed load from that
+> CDN. That is a supply-chain dependency on a third party, not a CSP weakness,
+> and it is a different decision from the one this item tracked.
+
+**Status when raised: open, deliberately not fixed in place.** Raised while
+fixing the `renderTrace()` XSS sink (`docs/phase_f_log.md`). The original text
+is kept below as the record of the reasoning.
 
 The frontend CSP is strong where E2-V4 requires it — no `'unsafe-eval'`, so
 `Function()` construction is blocked and Vega renders through the AST
