@@ -177,6 +177,22 @@ def golden_recovery() -> dict:
 
 
 def main() -> None:
+    # Same append-only rule as experiment_tool_ceiling.py: a re-run records a
+    # NEW result rather than rewriting a committed one. This script silently
+    # overwrote docs/c2v8_report.json during the schema-semantics A/B run --
+    # the F-V3 values survived only because they had already been transcribed
+    # into docs/metrics-report.md. --out is honoured when given; the default
+    # path is still overwritten so verify_fv3.sh keeps working unchanged.
+    import argparse
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--out", default=str(REPORT_PATH),
+                    help="Report path. A non-default path refuses to overwrite.")
+    args = ap.parse_args()
+    out_path = Path(args.out)
+    if out_path != REPORT_PATH and out_path.exists():
+        print(f"ERROR: {out_path} exists. Results are append-only -- choose a new --out.")
+        raise SystemExit(1)
+
     ground_truth = compute_ground_truth()
     c2_fixture = json.loads(C2_FIXTURE_PATH.read_text())["queries"]
 
@@ -205,8 +221,8 @@ def main() -> None:
         "cold_detail": cold["results"],
         "warm_detail": warm["results"],
     }
-    REPORT_PATH.write_text(json.dumps(report, indent=2))
-    print(f"\nReport written to {REPORT_PATH.relative_to(REPO_ROOT)}")
+    out_path.write_text(json.dumps(report, indent=2))
+    print(f"\nReport written to {out_path}")
     print(json.dumps({
         "novel_path_accuracy": f"{cold['correct']}/{cold['scored']} ({cold['accuracy']:.1%})",
         "cache_hit_accuracy": f"{warm['correct']}/{warm['scored']} ({warm['accuracy']:.1%})",

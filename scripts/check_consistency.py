@@ -77,6 +77,24 @@ def run_flag_state(base_queries: list[dict], memory_enabled: bool) -> dict[str, 
 
 
 def main() -> None:
+    # Append-only guard, applied uniformly across the bench harnesses.
+    # Two of them silently overwrote committed verification results during
+    # this build -- experiment_tool_ceiling.py destroyed the Phase F baseline,
+    # and check_c2v8.py overwrote its F-V3 report. Both were recoverable only
+    # because the numbers had already been transcribed elsewhere. --out lets a
+    # re-run be recorded ALONGSIDE an earlier one; the default path still
+    # overwrites so verify_fv3.sh keeps working unchanged.
+    import argparse
+    _ap = argparse.ArgumentParser(description=__doc__)
+    _ap.add_argument("--out", default=str(REPORT_PATH),
+                     help="Report path. A non-default path refuses to overwrite.")
+    _args, _ = _ap.parse_known_args()
+    out_path = Path(_args.out)
+    if out_path != REPORT_PATH and out_path.exists():
+        print(f"ERROR: {out_path} exists. Verification results are append-only "
+              f"-- choose a new --out path.")
+        raise SystemExit(1)
+
     print("=== check_consistency.py -- C1-V3 (M2) ===")
     fixture = json.loads(FIXTURE_PATH.read_text())
     base_queries = [q for q in fixture["queries"] if q["group"] == "base"]
@@ -102,7 +120,7 @@ def main() -> None:
         "worse_queries": worse_queries,
     }
 
-    REPORT_PATH.write_text(json.dumps(report, indent=2))
+    out_path.write_text(json.dumps(report, indent=2))
     print(f"\nReport written to {REPORT_PATH.relative_to(REPO_ROOT)}")
     print(json.dumps({
         "control_mean": control_mean,

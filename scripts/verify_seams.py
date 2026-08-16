@@ -166,6 +166,28 @@ def fv6() -> None:
         print(f"  {line}")
     check("lint-no-literals.sh exits 0", result.returncode == 0)
 
+    # Shipped-default guard. Several bench scripts toggle flags as part of
+    # their own control-vs-treatment procedure and some deliberately exit with
+    # a flag left flipped (check_c2v8.py leaves memory.enabled=true for its
+    # warm pass). That contaminated flags.toml has now been COMMITTED once by
+    # accident, silently changing the shipped default a fresh clone would run
+    # with. Caught by inspection, not by any check -- so it becomes a check.
+    flags_text = (REPO_ROOT / "config" / "flags.toml").read_text()
+    shipped = {
+        # (section, key): expected shipped default
+        ("memory", "enabled"): "false",          # NOTE-1 flip, docs/spec-gaps.md
+        ("normalization", "enabled"): "true",    # D13 control path for M3
+        ("tenancy", "enforced"): "false",        # D6 single-tenant as shipped
+        ("evaluation.vision_scorer", "enabled"): "false",   # D11 stretch, off
+    }
+    for (toml_section, key), expected in shipped.items():
+        pattern = rf"\[{re.escape(toml_section)}\]\s*\n(?:[^\[]*?\n)?\s*{re.escape(key)}\s*=\s*(true|false)"
+        m = re.search(pattern, flags_text)
+        actual = m.group(1) if m else None
+        check(f"shipped default {toml_section}.{key} == {expected}",
+              actual == expected,
+              f"found {actual!r}" if actual != expected else "")
+
 
 def main() -> int:
     print("=" * 72)
