@@ -92,7 +92,42 @@ flags to shipped defaults between steps, which a hand-run sequence does not
 ## 2. Re-run the model-sensitive checks (diff against recorded local numbers)
 Run in this order and record each result next to its local baseline:
 
-| Check | Metric | Local baseline on record | Graded result |
+> **⚠ READ BEFORE DIFFING ANYTHING AGAINST THIS TABLE — added 2026-08-16 by the
+> fresh-context audit.** The "Local baseline on record" column below is a
+> snapshot from *before* Phase F's re-runs, and **every model-sensitive row in
+> it has since been superseded**. It is the column a graded run would be
+> diffed against, so using it as-is would produce a wrong delta for essentially
+> every metric.
+>
+> Not overwritten, per §5's own append rule. The current values are added as a
+> third column instead, and the stale column is kept exactly as written:
+>
+> | Check | This table says | Current on record | Source |
+> |---|---|---|---|
+> | C1-V3 (M2) | treat **1.5** vs ctrl 1.0 | treat **1.8** vs ctrl 1.0 (F-V3 reproduced 1.8 exactly) | `metrics-report.md` |
+> | C2-V8 (M4) | **29.2%** / 32.0% | cold **36.0%** (2026-08-16 clean re-run), warm **not re-measured** since `da6e49f` | `m4_diagnosis_v2_corrected.json` |
+> | D-V1 (M3) | **+47.5pp** (15.0%→62.5%) | **+25.0pp** (40.0%→65.0%) — the lift fell because the CONTROL rose | `metrics-report.md` |
+> | D-V2 (M3) | **27/32 (84.4%)** | **26/32 (81.25%)** | `bench_multilingual_report.json` |
+> | E1-V3 (M6) | 0.622 / 0.80 / **0.769** | 0.622 / 0.80 / **0.8125** | `metrics-report.md` |
+> | E2-V1 (M7) | **0.4592**, 8/30 null (pre-JSON-fix) | **0.4850**, 7/30 null (post-fix) | `metrics-report.md` |
+>
+> The M4 row is the worst of them: **29.2% appears nowhere else in the repo**
+> (`metrics-report.md` says 28.0% for the same check), so this table and the
+> metrics report have disagreed on M4's baseline for as long as both have
+> existed. 29.2% is 7/24, one query short of the 25-query fixture.
+>
+> **Two further conditions a graded run must satisfy, neither of which existed
+> when this runbook was written:**
+> 1. Every harness now asserts the shipped flag state at startup
+>    (`scripts/shipped_flags.py`) and refuses otherwise. A graded run that
+>    deliberately varies a flag must pass `--allow-nonshipped-flags`, and the
+>    deviation is recorded in the report's `flag_provenance` field.
+> 2. Run `python3 scripts/verify_deployed.py` first. The provider switch in §1
+>    is a code change, and this repo has shipped a committed-but-not-deployed
+>    change twice (`d5a5d35`, `5301b89`). A graded run against a stale image
+>    would produce a graded number for the wrong build.
+
+| Check | Metric | Local baseline on record (STALE — see the box above) | Graded result |
 |---|---|---|---|
 | C1-V1 | M1 direction | −39.2% tokens, −73.1% steps (pre-Phase-F; re-run at F-V3 adds one miss-path draft call to the control arm — see `docs/phase_e_gap_log.md` Task 4 — so the fresh number is not directly comparable to this one; diff against the F-V3 re-run's own value, not this row) | ___ |
 | C1-V3 | M2 consistency | FAIL (treat 1.5 vs ctrl 1.0) | ___ |
