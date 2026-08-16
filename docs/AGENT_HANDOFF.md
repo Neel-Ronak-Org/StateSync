@@ -19,6 +19,37 @@ time on those conversations and does not want them replayed.
 
 ---
 
+## 0. This is context, not a cage
+
+The "SETTLED" list below exists to stop the same debates being re-run from
+scratch — not to make them unchallengeable. **Every item in this document is
+open to challenge if you have evidence.**
+
+What is actually binding:
+
+- Do not break the product.
+- Do not alter a verification, fixture or scorer to make a number look better.
+- Verify with commands; do not assert from memory.
+- Report regressions honestly, including your own.
+
+Everything else — including this file, `PROJECT_DIRECTION.md`, the priorities,
+and my reasoning — is a starting position. **If you find a fault, a loophole, a
+contradiction, or a claim that does not survive checking, chase it and fix it.**
+That is wanted, not tolerated.
+
+Two contradictions were already found this way and corrected: CSR-RAG was
+listed as settled-closed while being described elsewhere as required at scale
+(§5a), and D-V2 turns out to encode a data-model assumption that may invert one
+of its own conclusions (§5). Both were caught by the owner reading critically.
+Assume more remain.
+
+**When challenging something the owner decided**, say so and ask before acting
+— several items here reverse earlier calls, and reversing them again without
+discussion wastes their time. When challenging something *I* concluded, just
+check it and correct it.
+
+---
+
 ## 1. What the project is meant to be
 
 An **e-commerce / logistics data analysis assistant** over ONDC-style network
