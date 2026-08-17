@@ -10,7 +10,7 @@
 # never appear in reported metrics or panel demos. Always run on anthropic for
 # any result you intend to show.
 [llm]
-provider = "gemini"          # "local" | "anthropic" | "azure" | "gemini"
+provider = "local"          # "local" | "anthropic" | "azure" | "gemini"
 ollama_url = "http://host.docker.internal:11434"
 
 # Azure OpenAI / AI Foundry (BD1 seam, third implementation).
@@ -25,10 +25,34 @@ ollama_url = "http://host.docker.internal:11434"
 endpoint    = ""            # REPLACE — startup refuses while this is empty
 api_version = "2024-10-21"
 
+# qwen2.5-coder:14b WAS TRIED AND MEASURED WORSE. It is pulled and available;
+# it is deliberately NOT configured. Full 25-query A/B, same fixture, same day:
+#
+#                  qwen2.5:7b   coder:14b
+#   strict EX        36.0%        36.0%    +0.0pp
+#   standard EX      44.0%        40.0%    -4.0pp
+#   value recall     74.0%        66.3%    -7.7pp
+#   latency/query    ~20s         ~61s     3x slower
+#
+# Gained c2g_04/c2g_16, lost c2g_05/c2g_15/c2g_24. The reasoning for the swap
+# was sound -- code-tuned model, and every remaining M4 failure is SQL -- and
+# the measurement refuted it. Third instance of that pattern in this project
+# after schema comments and projection discipline. Do not re-try it without a
+# new reason; re-trying it on the old reason costs 40 minutes to relearn this.
+#
+# Sizing note for anything else tried here: M5 Air, 24GB, NO ACTIVE COOLING.
+# 9.0GB (a 14b q4) fits alongside the stack; a 32B q4 (~19GB) does not -- it
+# would swap and thermally throttle across a 30-minute run. 14B is the ceiling.
+#
+# NOTE: models live in the NATIVE Ollama.app (127.0.0.1:11434, IPv4), not the
+# dockerized one. Docker binds *:11434 on IPv6, so `localhost` from the host
+# reaches the CONTAINER while `host.docker.internal` from a container reaches
+# the NATIVE app. `ollama pull` on the host targets the native one, which is
+# the one this config uses. See docs/limitations.md.
 [llm.models.local]
 supervisor        = "qwen2.5:7b"
-sql               = "qwen2.5:7b"
-synthesizer       = "qwen2.5:7b"
+sql               = "qwen2.5:7b"   # NOT coder:14b -- measured WORSE, see below
+synthesizer       = "qwen2.5:7b"   # NOT coder:14b -- measured WORSE, see below
 memory_summarizer = "qwen2.5:7b"   # C1: trajectory insight generation
 normalizer        = "qwen2.5:7b"   # D: language detection + entity-preserving rewrite
 decomposer        = "qwen2.5:7b"   # E1: hybrid query decomposition into sub-tasks
