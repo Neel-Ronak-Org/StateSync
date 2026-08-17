@@ -221,6 +221,48 @@ already-diagnosed local-model weakness; two (`permission_denied`,
 outside the classifier's reach by design (BD3). No category fails silently
 or unexplained.
 
+## Real data: what it is, and what its licence forbids (added 2026-08-17)
+
+**The corpus is no longer 100% synthetic.** `olist` schema, 1,451,414 rows of
+real Brazilian e-commerce transactions (99,441 orders, 3,095 sellers, 100,000
+reviews), fetched and checksum-verified by `scripts/fetch_olist.sh`.
+
+**LICENCE: CC BY-NC-SA 4.0 — NON-COMMERCIAL.** Fine for this capstone, for
+benchmarking, and for any published measurement with attribution. **It cannot
+be the data behind a commercial deployment.** That is a real constraint on the
+"self-hosted service companies can use" framing: the *architecture* is
+deployable, this *data* is not sellable. Flagged here rather than discovered
+later by someone who read the strategy document and not the licence.
+
+**The agent can query it, and could before any code changed.** The Layer 1 gate
+is SELECT-only, not table-scoped, so `SELECT ... FROM olist.orders` worked
+immediately while `DELETE FROM olist.orders` was refused — the guarantee
+extended to a new schema with no change, because it was never built on a table
+allowlist. Only *discovery* needed work (`schema` parameter on
+`list_tables`/`describe_table`).
+
+**It is NOT in the A5 fingerprint, deliberately.** `mcp/fingerprint.py`
+hardcodes `table_schema='public'` in all three queries, so the fingerprint is
+structurally incapable of covering `olist` — asserted by
+`tests/test_schema_scoping.py`, not assumed. Verified live: `cf4caa5c…` before
+and after the load, the same value recorded in `a4293e1`.
+
+**Consequence nothing enforces:** trajectory memory over `olist` is meaningless
+(the memory key IS the A5 fingerprint, which does not describe `olist`), so
+runs against it must keep `memory.enabled=false`.
+
+**What the real data has that the synthetic corpus never did**, surveyed on
+load — this is the evidence for why synthetic numbers do not transfer:
+
+| | |
+|---|---|
+| 8 orders are `status='delivered'` with **no delivery date**; 2,963 more are not delivered at all | "average delivery time" now has a real denominator ambiguity, not an authoring slip |
+| **775 orders have no line items** | "revenue per order" joins them away silently |
+| **611 distinct `seller_city` values, and normalising case+whitespace gives 611** — zero improvement | `sao paulo` (694), `sao paulo - sp` (3), `sao paulop` (typo), `santo andre/sao paulo`. The `Bangalore/Bengaluru/Banglore` variance §7a called untested, now real |
+| 1,000,163 geolocation rows → **720,154 distinct points** (28% duplicates) | |
+| 610 products have a NULL category | |
+| `product_name_lenght` is **misspelled in the source** | kept verbatim; renaming would be cleaning |
+
 ## Environment limitations affecting this build session specifically
 
 Not defects in StateSync's own logic — infrastructure conditions on this
