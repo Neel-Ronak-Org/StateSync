@@ -63,7 +63,7 @@ import urllib.request
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-FIXTURE = REPO_ROOT / "fixtures" / "golden" / "phase_c2.json"
+DEFAULT_FIXTURE = REPO_ROOT / "fixtures" / "golden" / "phase_c2.json"
 ORCH = "http://localhost:8090"
 MCP = "http://localhost:8080"
 TENANT = "t_capstone_default"
@@ -82,6 +82,14 @@ _EX = ExecutionAccuracyScorer()
 # model. Capped only to stop a pathological result set producing a huge
 # artifact; when the cap bites it is recorded explicitly rather than silently.
 MAX_ROWS_PERSISTED = 2000
+
+
+def _fixture_label(path: Path) -> str:
+    """Repo-relative name if possible, absolute otherwise. Never raises."""
+    try:
+        return str(path.resolve().relative_to(REPO_ROOT))
+    except (ValueError, OSError):
+        return str(path)
 
 
 def mcp_run_select(sql: str) -> dict:
@@ -242,6 +250,12 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--limit", type=int, default=0)
+    # The fixture is an ARGUMENT because there are now two: phase_c2.json (the
+    # one every published number was measured against, never edited) and
+    # phase_c2_v2.json (corrected, with an _audit trail). Both get run and both
+    # get reported -- hardcoding one was why v2 could not be measured at all.
+    ap.add_argument("--fixture", type=Path, default=DEFAULT_FIXTURE,
+                    help="Fixture to score against. Recorded in the report.")
 
     # Shipped-flag guard (scripts/shipped_flags.py). The first attempt at this
     # script's corrected run was measured with normalization.enabled=false --
@@ -261,7 +275,7 @@ def main() -> int:
         print(f"ERROR: {args.out} exists. Results are append-only.")
         return 1
 
-    queries = json.loads(FIXTURE.read_text())["queries"]
+    queries = json.loads(args.fixture.read_text())["queries"]
     if args.limit:
         queries = queries[:args.limit]
 
@@ -334,6 +348,13 @@ def main() -> int:
     n = len(queries)
     report = {
         "generated_by": "scripts/diagnose_m4.py",
+        # NOT `relative_to(REPO_ROOT)`. That raises on a relative path, and it
+        # raised HERE -- after all 25 queries had run -- destroying a complete
+        # 25-minute run at the final write. Fifth instance in this repo of
+        # "captured the evidence, then threw it away at the last step".
+        # Anything that can throw while BUILDING the report must be made
+        # incapable of throwing, because by then the expensive part is done.
+        "fixture": _fixture_label(args.fixture),
         "flag_provenance": flag_provenance,
         "report_schema": 2,
         "schema_note": (
