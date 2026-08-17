@@ -28,17 +28,21 @@ api_version = "2024-10-21"
 # qwen2.5-coder:14b WAS TRIED AND MEASURED WORSE. It is pulled and available;
 # it is deliberately NOT configured. Full 25-query A/B, same fixture, same day:
 #
-#                  qwen2.5:7b   coder:14b
-#   strict EX        36.0%        36.0%    +0.0pp
-#   standard EX      44.0%        40.0%    -4.0pp
-#   value recall     74.0%        66.3%    -7.7pp
-#   latency/query    ~20s         ~61s     3x slower
+# TWO configurations tested, both worse. The first claim here generalised from
+# ONE of them and the owner caught it, so the second was measured too:
 #
-# Gained c2g_04/c2g_16, lost c2g_05/c2g_15/c2g_24. The reasoning for the swap
-# was sound -- code-tuned model, and every remaining M4 failure is SQL -- and
-# the measurement refuted it. Third instance of that pattern in this project
-# after schema comments and projection discipline. Do not re-try it without a
-# new reason; re-trying it on the old reason costs 40 minutes to relearn this.
+#   A) sql+synthesizer on 14b, ORIGINAL fixture
+#        strict 36.0 -> 36.0 (+0.0pp), standard 44.0 -> 40.0 (-4.0pp),
+#        value recall 74.0 -> 66.3 (-7.7pp)
+#   B) ALL SEVEN roles on 14b, CORRECTED fixture
+#        strict 52.0 -> 48.0 (-4.0pp), standard 60.0 -> 52.0 (-8.0pp),
+#        value recall 81.2 -> 73.8 (-7.4pp), gained c2g_16, lost 07/09/15
+#
+# Worse in both, and MORE so when applied everywhere. Latency ~61s/query vs
+# ~20s. The reasoning for the swap was sound -- code-tuned model, every
+# remaining M4 failure is SQL -- and the measurement refuted it twice. Third
+# instance of that pattern after schema comments and projection discipline.
+# Do not re-try on the same reasoning; it costs ~40 minutes per configuration.
 #
 # Sizing note for anything else tried here: M5 Air, 24GB, NO ACTIVE COOLING.
 # 9.0GB (a 14b q4) fits alongside the stack; a 32B q4 (~19GB) does not -- it
@@ -51,8 +55,8 @@ api_version = "2024-10-21"
 # the one this config uses. See docs/limitations.md.
 [llm.models.local]
 supervisor        = "qwen2.5:7b"
-sql               = "qwen2.5:7b"   # NOT coder:14b -- measured WORSE, see below
-synthesizer       = "qwen2.5:7b"   # NOT coder:14b -- measured WORSE, see below
+sql               = "qwen2.5:7b"
+synthesizer       = "qwen2.5:7b"
 memory_summarizer = "qwen2.5:7b"   # C1: trajectory insight generation
 normalizer        = "qwen2.5:7b"   # D: language detection + entity-preserving rewrite
 decomposer        = "qwen2.5:7b"   # E1: hybrid query decomposition into sub-tasks
