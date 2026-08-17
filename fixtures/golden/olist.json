@@ -1,0 +1,192 @@
+{
+  "_about": {
+    "corpus": "olist schema -- real Brazilian e-commerce data, 1,451,414 rows",
+    "licence": "CC BY-NC-SA 4.0 (non-commercial). See docs/limitations.md.",
+    "authored": "2026-08-17, by scripts/gen_olist_fixture.py",
+    "self_authored_warning": "These questions and their ground truth were written by the same project that is measured against them -- the exact condition that produced 12 instrument defects in phase_c2. Three safeguards are built in: every question names its expected columns; every ambiguous denominator is stated in the question text; and every ground truth is executed, with zero-row references REJECTED rather than shipped (any query returning nothing passes those). Run scripts/attribute_failures.py over the first results: a query where every model picks different tables than the reference is a QUESTION problem, which is how c2g_09 and c2g_24 were caught.",
+    "n": 18,
+    "probes_dirt": 7
+  },
+  "queries": [
+    {
+      "id": "ol_001",
+      "text": "List the order_status and the number of orders in each status.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT order_status, count(*) AS order_count FROM olist.orders GROUP BY order_status ORDER BY order_count DESC",
+      "expected_row_count": 8,
+      "expected_column_count": 2,
+      "probes_dirt": false,
+      "note": ""
+    },
+    {
+      "id": "ol_002",
+      "text": "How many orders are there in total? Return a single count.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT count(*) AS total_orders FROM olist.orders",
+      "expected_row_count": 1,
+      "expected_column_count": 1,
+      "probes_dirt": false,
+      "note": ""
+    },
+    {
+      "id": "ol_003",
+      "text": "Among orders whose status is 'delivered', how many have no recorded delivery date? Return a single count.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT count(*) AS delivered_without_date FROM olist.orders WHERE order_status = 'delivered' AND order_delivered_customer_date IS NULL",
+      "expected_row_count": 1,
+      "expected_column_count": 1,
+      "probes_dirt": true,
+      "note": "8 rows. Real dirt: a status that contradicts the data. Synthetic corpora have no such row."
+    },
+    {
+      "id": "ol_004",
+      "text": "How many orders have no rows at all in the order_items table? Return a single count.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT count(*) AS orders_without_items FROM olist.orders o WHERE NOT EXISTS (SELECT 1 FROM olist.order_items i WHERE i.order_id = o.order_id)",
+      "expected_row_count": 1,
+      "expected_column_count": 1,
+      "probes_dirt": true,
+      "note": "775. Any naive revenue-per-order join silently drops these."
+    },
+    {
+      "id": "ol_005",
+      "text": "List the seller_id and the number of order items sold, for the 5 sellers with the most order items.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT seller_id, count(*) AS item_count FROM olist.order_items GROUP BY seller_id ORDER BY item_count DESC, seller_id LIMIT 5",
+      "expected_row_count": 5,
+      "expected_column_count": 2,
+      "probes_dirt": false,
+      "note": ""
+    },
+    {
+      "id": "ol_006",
+      "text": "List the payment_type and total payment_value for each payment type, highest total first.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT payment_type, sum(payment_value) AS total_value FROM olist.order_payments GROUP BY payment_type ORDER BY total_value DESC",
+      "expected_row_count": 5,
+      "expected_column_count": 2,
+      "probes_dirt": false,
+      "note": ""
+    },
+    {
+      "id": "ol_007",
+      "text": "Considering ONLY orders that have a delivery date recorded, what is the average number of days between purchase and delivery? Return a single average.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT avg(EXTRACT(EPOCH FROM (order_delivered_customer_date - order_purchase_timestamp)) / 86400.0) AS avg_days FROM olist.orders WHERE order_delivered_customer_date IS NOT NULL",
+      "expected_row_count": 1,
+      "expected_column_count": 1,
+      "probes_dirt": true,
+      "note": "Denominator stated in the question -- the c2g_08 defect designed out."
+    },
+    {
+      "id": "ol_008",
+      "text": "Considering ONLY orders that have a delivery date recorded, how many were delivered LATER than their estimated delivery date? Return a single count.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT count(*) AS late_deliveries FROM olist.orders WHERE order_delivered_customer_date IS NOT NULL AND order_delivered_customer_date > order_estimated_delivery_date",
+      "expected_row_count": 1,
+      "expected_column_count": 1,
+      "probes_dirt": true,
+      "note": ""
+    },
+    {
+      "id": "ol_009",
+      "text": "List the review_score and the number of reviews with that score, from score 1 to 5.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT review_score, count(*) AS review_count FROM olist.order_reviews GROUP BY review_score ORDER BY review_score",
+      "expected_row_count": 5,
+      "expected_column_count": 2,
+      "probes_dirt": false,
+      "note": ""
+    },
+    {
+      "id": "ol_010",
+      "text": "List the seller_state and the number of sellers in each, for the 5 states with the most sellers.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT seller_state, count(*) AS seller_count FROM olist.sellers GROUP BY seller_state ORDER BY seller_count DESC, seller_state LIMIT 5",
+      "expected_row_count": 5,
+      "expected_column_count": 2,
+      "probes_dirt": false,
+      "note": ""
+    },
+    {
+      "id": "ol_011",
+      "text": "How many DISTINCT values does seller_city take? Return a single count.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT count(DISTINCT seller_city) AS distinct_cities FROM olist.sellers",
+      "expected_row_count": 1,
+      "expected_column_count": 1,
+      "probes_dirt": true,
+      "note": "611, and normalising case/whitespace still gives 611: the variance is semantic (sao paulo / sao paulo - sp / sao paulop)."
+    },
+    {
+      "id": "ol_012",
+      "text": "List the product_category_name and the number of products in it, for the 5 categories with the most products.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT product_category_name, count(*) AS product_count FROM olist.products WHERE product_category_name IS NOT NULL GROUP BY product_category_name ORDER BY product_count DESC, product_category_name LIMIT 5",
+      "expected_row_count": 5,
+      "expected_column_count": 2,
+      "probes_dirt": false,
+      "note": ""
+    },
+    {
+      "id": "ol_013",
+      "text": "How many products have no product_category_name recorded? Return a single count.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT count(*) AS uncategorised FROM olist.products WHERE product_category_name IS NULL",
+      "expected_row_count": 1,
+      "expected_column_count": 1,
+      "probes_dirt": true,
+      "note": "610 NULL categories in real data."
+    },
+    {
+      "id": "ol_014",
+      "text": "What is the total price and total freight_value across all order items? Return one row with both totals.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT sum(price) AS total_price, sum(freight_value) AS total_freight FROM olist.order_items",
+      "expected_row_count": 1,
+      "expected_column_count": 2,
+      "probes_dirt": false,
+      "note": ""
+    },
+    {
+      "id": "ol_015",
+      "text": "List the customer_state and the number of orders placed from it, for the 5 states with the most orders.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT c.customer_state, count(*) AS order_count FROM olist.orders o JOIN olist.customers c ON c.customer_id = o.customer_id GROUP BY c.customer_state ORDER BY order_count DESC, c.customer_state LIMIT 5",
+      "expected_row_count": 5,
+      "expected_column_count": 2,
+      "probes_dirt": false,
+      "note": ""
+    },
+    {
+      "id": "ol_016",
+      "text": "List the order_id and the number of items, for the 3 orders with the most order items.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT order_id, count(*) AS item_count FROM olist.order_items GROUP BY order_id ORDER BY item_count DESC, order_id LIMIT 3",
+      "expected_row_count": 3,
+      "expected_column_count": 2,
+      "probes_dirt": false,
+      "note": ""
+    },
+    {
+      "id": "ol_017",
+      "text": "How many geolocation rows are there, and how many distinct combinations of zip prefix, latitude and longitude? Return one row with both counts.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT count(*) AS total_rows, count(DISTINCT (geolocation_zip_code_prefix, geolocation_lat, geolocation_lng)) AS distinct_points FROM olist.geolocation",
+      "expected_row_count": 1,
+      "expected_column_count": 2,
+      "probes_dirt": true,
+      "note": "1,000,163 vs 720,154 -- 28% duplicates, and the largest table in the corpus."
+    },
+    {
+      "id": "ol_018",
+      "text": "List the product_category_name and its English translation for 5 categories, ordered by the Portuguese name.",
+      "expected_route": "sql",
+      "ground_truth_sql": "SELECT product_category_name, product_category_name_english FROM olist.product_category_name_translation ORDER BY product_category_name LIMIT 5",
+      "expected_row_count": 5,
+      "expected_column_count": 2,
+      "probes_dirt": false,
+      "note": ""
+    }
+  ]
+}
