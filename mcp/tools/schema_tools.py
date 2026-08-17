@@ -19,8 +19,39 @@ from fingerprint import compute_fingerprint
 
 logger = logging.getLogger(__name__)
 
+# A5's application schema. Everything defaults to it, so every existing caller
+# is byte-for-byte unaffected by the `schema` parameter added below.
+DEFAULT_SCHEMA = "public"
 
-async def list_tables() -> dict[str, Any]:
+# Schemas a caller may discover. An allowlist rather than free-form input:
+# these names are interpolated into catalog queries as PARAMETERS (never
+# formatted in), but an allowlist also stops discovery being pointed at
+# pg_catalog or information_schema, which is reconnaissance, not analysis.
+#
+# WHY olist IS DISCOVERABLE BUT NOT PART OF A5. mcp/fingerprint.py hardcodes
+# table_schema='public' in all three of its queries, so the A5 fingerprint is
+# STRUCTURALLY incapable of seeing another schema -- listing olist cannot move
+# it, and D4's validate-on-read is unaffected. That is asserted by a test, not
+# assumed: tests/test_schema_scoping.py.
+#
+# Trajectory memory over a non-A5 schema is NOT meaningful (the memory key is
+# the A5 fingerprint, which does not describe olist), so runs against olist
+# must keep memory.enabled=false. Stated here because nothing enforces it.
+ALLOWED_SCHEMAS = frozenset({"public", "olist"})
+
+
+def _validate_schema(schema: str) -> None:
+    """Refuse an unknown schema loudly. An unresolvable name is an error, not a
+    silent fallback to public -- the same rule A8 applies to scorer names."""
+    if schema not in ALLOWED_SCHEMAS:
+        raise ValueError(
+            f"Schema {schema!r} is not discoverable. Allowed: "
+            f"{sorted(ALLOWED_SCHEMAS)}. Add it to ALLOWED_SCHEMAS deliberately; "
+            f"note that only 'public' participates in the A5 fingerprint."
+        )
+
+
+async def list_tables(schema: str = DEFAULT_SCHEMA) -> dict[str, Any]:
     """
     A4.1 schema.list_tables
 
@@ -38,6 +69,7 @@ async def list_tables() -> dict[str, Any]:
     table-names-only stand-in would never change on a column rename, which
     is exactly the case C1-V4 exists to test.
     """
+    _validate_schema(schema)
     async with get_connection() as conn:
         # Table list with row estimates from pg_stat_user_tables.
         #
@@ -65,7 +97,7 @@ async def list_tables() -> dict[str, Any]:
                 obj_description(c.oid, 'pg_class') AS comment
             FROM pg_catalog.pg_class c
             JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-            WHERE n.nspname = 'public'
+            WHERE n.nspname = %s
               AND c.relkind = 'r'
               AND c.relname != 'schema_versions'
               AND NOT EXISTS (
@@ -78,7 +110,7 @@ async def list_tables() -> dict[str, Any]:
               )
             ORDER BY c.relname
         """
-        cur = await conn.execute(query)
+        cur = await conn.execute(query, (schema,))
         rows = await cur.fetchall()
 
         tables = [
@@ -93,10 +125,12 @@ async def list_tables() -> dict[str, Any]:
         fingerprint = await compute_fingerprint(conn)
 
         logger.debug("schema.list_tables: %d tables, fingerprint=%s", len(tables), fingerprint)
-        return {"tables": tables, "fingerprint": fingerprint}
+        # `schema` is echoed so a caller can never mistake an olist listing for
+        # the A5 one. The fingerprint is ALWAYS A5's (public), by construction.
+        return {"tables": tables, "fingerprint": fingerprint, "schema": schema}
 
 
-async def describe_table(table: str) -> dict[str, Any]:
+async def describe_table(table: str, schema: str = DEFAULT_SCHEMA) -> dict[str, Any]:
     """
     A4.2 schema.describe_table
 
@@ -112,6 +146,7 @@ async def describe_table(table: str) -> dict[str, Any]:
     import re
     if not re.match(r'^[a-z_][a-z0-9_]{0,62}$', table):
         raise ValueError(f"Invalid table name: {table!r}")
+    _validate_schema(schema)
 
     async with get_connection() as conn:
         # Columns
@@ -124,13 +159,13 @@ async def describe_table(table: str) -> dict[str, Any]:
             FROM pg_catalog.pg_attribute a
             JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
             JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-            WHERE n.nspname = 'public'
+            WHERE n.nspname = %s
               AND c.relname = %s
               AND a.attnum > 0
               AND NOT a.attisdropped
             ORDER BY a.attnum
         """
-        cur = await conn.execute(cols_query, (table,))
+        cur = await conn.execute(cols_query, (schema, table))
         col_rows = await cur.fetchall()
 
         if not col_rows:
@@ -172,11 +207,11 @@ async def describe_table(table: str) -> dict[str, Any]:
             JOIN pg_catalog.pg_attribute att2 ON att2.attrelid = con.conrelid AND att2.attnum = ck.attnum
             JOIN pg_catalog.pg_attribute att ON att.attrelid = con.confrelid AND att.attnum = cfk.attnum
             WHERE con.contype = 'f'
-              AND nsp.nspname = 'public'
+              AND nsp.nspname = %s
               AND rel.relname = %s
             ORDER BY att2.attname
         """
-        cur = await conn.execute(fk_query, (table,))
+        cur = await conn.execute(fk_query, (schema, table))
         fk_rows = await cur.fetchall()
 
         foreign_keys = [
