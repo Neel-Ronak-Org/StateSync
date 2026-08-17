@@ -1,5 +1,111 @@
 # Project direction — honest state and what to do next
 
+---
+
+# ⚑ SCOPE REVISION — 2026-08-17, after the first hosted-model probe
+
+**This section supersedes the priorities below it.** Everything under it stands
+as the record of how the project got here.
+
+## 1. What the probe established, and the reframe it forces
+
+Paired on the same 15 queries, a hosted model beat the local 7B by **+20pp on
+both scorers** (standard EX 40.0% → 60.0%). So the 7B was a real part of the
+ceiling. That was the expected finding.
+
+**The unexpected finding is what the residual failures turned out to be.** All
+six queries that still failed were opened and checked against the database:
+
+| Query | What it actually is |
+|---|---|
+| `c2g_04` | **Ground truth is WRONG.** "Which cities have both a seller and a logistics hub located in them" — the model's `INTERSECT` matches by CITY (8 rows); the ground truth requires both at the identical `location_id` (5 rows). The model was marked wrong for being right. |
+| `c2g_08` | **Question is ambiguous.** 550 fulfillments, 323 delivered. "What percentage of fulfillments were delivered after their promised time" — ground truth divides by 323, the model by 550. Both defensible; the question does not say. |
+| `c2g_12` | **Projection.** "Which fulfillments required more than one delivery attempt" names no columns. Model returned the id; reference returns 3 columns. Same 362 rows. |
+| `c2g_13` | **Projection.** Model returned 5 columns, reference 3. Same 5 rows. |
+| `c2g_14` | **Projection.** Model grouped by `buyer_app_id`; reference joins for the legal name. Same 5 rows. |
+| `c2g_15` | **Genuine model error** — `~ '\p{Devanagari}'` is not valid in PostgreSQL (`[\u0900-\u097F]` is). Note the reference is also weak: `display_name_local IS NOT NULL` equals "has Devanagari" only on this data. |
+
+**Five of six are instrument defects. One is a model error.**
+
+On a sound fixture the same run lands somewhere between the measured **60%**
+and **~93%** (14/15, if every defect resolved in the system's favour). The
+truth is in between and is not yet known — but the gap is larger than the
++20pp the model change bought.
+
+**The reframe: `phase_c2` has been measuring fixture quality as much as system
+capability, and nobody could see it while a 7B was failing for its own
+reasons.** A weak model masks a weak fixture. The M4 story has now moved twice —
+first from "28% capability" to "a strict scorer" (`PROJECT_DIRECTION` §2), now
+from "a strict scorer" to "an unsound fixture". Each move was found by opening
+the evidence rather than re-reading the number.
+
+## 2. Model-independent priorities, ranked
+
+**1 — Audit every ground truth in the reported fixtures. Highest value.**
+Three defects in six inspected queries, and only 15 of 25 have been examined at
+all. Until this is done, no accuracy number from `phase_c2` means what it says,
+on any model, and paying for frontier credits buys precision on a bent ruler.
+
+**Protocol, non-negotiable:** do NOT edit `fixtures/golden/phase_c2.json`.
+Build `phase_c2_v2.json` alongside it with corrected ground truths and
+projection-specified questions, run both, and report both numbers with the
+delta. That is the `execution_accuracy` precedent — add a correct instrument
+beside the flawed one and show the difference — not a quiet edit that raises a
+score. Every correction needs its evidence recorded (the SQL, the row counts,
+why the old one was wrong).
+
+**2 — Specify projections in questions, or accept that EX is unmeasurable here.**
+Three of six residual failures are the question not saying which columns to
+return. Both scorers compare column-bearing results, so an under-specified
+question makes the test unanswerable rather than hard. This is the same defect
+`da6e49f` chased with a prompt rule and *half*-fixed — the projection prompt
+bought 2 queries on `phase_c2` and cost 4 on M3, because it was treating a
+fixture problem as a model problem.
+
+**3 — Load real data (Olist).** Unchanged in rank and still the biggest single
+credibility lever. Kills "all data is synthetic", surfaces real schema
+messiness. Zero model dependence. ~1 day.
+
+**4 — The Hinglish / `x`/`x_local` defect.** Still a wrong-answer bug on the
+input class the owner identifies as realistic. Partly model-sensitive — Gemini
+detected `hinglish` where the 7B said `other` — but the root cause is
+model-independent: nothing tells any model which of the column pair holds which
+script.
+
+**5 — Production-grade gaps.** No auth of any kind. CI covers only the
+deterministic tier. Both cheap, both are claims a reviewer will test.
+
+**6 — Known FAILs on the local model** (M2 consistency, D-V6 spatial, C2-V1
+2-hop join). These ARE model-gated — BD6 says so — so they wait for the graded
+run rather than leading it.
+
+**7 — Schema-retrieval selection.** Trigger not fired and will not be by Olist
+(9 tables) or TPC-DS (24). See `docs/schema_retrieval_decision.md`.
+
+## 3. What this changes about the project's claims
+
+- **Do not quote 44%, 60%, or any EX figure as capability** until the ground
+  truths are audited. Quote it as "measured on `phase_c2`, whose ground truths
+  contain at least one demonstrated error and several under-specified
+  questions."
+- **The fixture-authoring lesson generalises.** `limitations.md` already records
+  "a fixture authored by the same reasoning as the prompt shares the prompt's
+  blind spots" (M9's 60/60 while routing was broken). This is the same defect in
+  the fixture's ANSWERS rather than its questions, and it went unseen for the
+  same reason: nothing independent ever checked them.
+- **Frontier credits are still worth getting** — but their value is now
+  *after* the fixture audit, not before it.
+
+## 4. Unchanged
+
+The security, verification and seam work stands. Four providers behind one
+seam, 40/40 adversarial, deployment parity, flag-state guards, CI. None of that
+is affected by the fixture finding, and it remains the strongest part of the
+project.
+
+---
+
+
 **Purpose.** Everything technical about this build is recorded in
 `metrics-report.md`, `limitations.md`, `open_items.md` and the phase logs. What
 was *not* written down anywhere is the **reasoning** — what this project
