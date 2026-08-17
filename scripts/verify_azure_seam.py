@@ -30,9 +30,19 @@ import os
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(REPO_ROOT / "orchestrator"))
-os.environ.setdefault("CONFIG_DIR", str(REPO_ROOT / "config"))
+# Runs on the host (wiring checks) or INSIDE the orchestrator container
+# (--smoke, which needs the openai package and the mounted secret). Same
+# dual-path shape verify_tenancy.py uses.
+#   host      : python3 scripts/verify_azure_seam.py
+#   in-container: docker compose exec -T orchestrator python3 - --smoke < scripts/verify_azure_seam.py
+if Path("/app/main.py").exists() and Path("/app/llm").exists():
+    ORCH_DIR, CONFIG_DIR = Path("/app"), Path("/app/config")
+    REPO_ROOT = Path("/app")
+else:
+    REPO_ROOT = Path(__file__).resolve().parent.parent
+    ORCH_DIR, CONFIG_DIR = REPO_ROOT / "orchestrator", REPO_ROOT / "config"
+sys.path.insert(0, str(ORCH_DIR))
+os.environ.setdefault("CONFIG_DIR", str(CONFIG_DIR))
 
 passed = 0
 failed = 0
@@ -155,5 +165,99 @@ def main() -> int:
     return 0 if failed == 0 else 1
 
 
+def smoke() -> int:
+    """
+    ONE real completion against Azure, and a plain-English diagnosis when it
+    fails. Run this before any 25-query probe: every Azure setup mistake
+    produces a distinct error, and finding out from a single 2-second call
+    beats finding out 8 minutes into a benchmark.
+
+    Must run INSIDE the orchestrator container -- that is where the openai
+    package lives and where /run/secrets/azure_openai_api_key is mounted, so
+    it tests the path that will actually serve queries rather than a
+    host-side approximation.
+    """
+    import asyncio
+    import time
+
+    from config_loader import flags
+    from llm.provider import get_agent_llm
+    from llm.adapters.azure_adapter import AzureConfigError
+
+    provider = str(flags.llm.provider)
+    print("=" * 72)
+    print(f"Azure smoke test — one live completion (provider = {provider!r})")
+    print("=" * 72)
+
+    if provider != "azure":
+        print(f"\n  flags.llm.provider is {provider!r}, not 'azure'.")
+        print("  Set it to \"azure\" in config/flags.toml and restart the")
+        print("  orchestrator, or this would test the wrong provider.")
+        return 1
+
+    role = "sql"
+    model = None
+    try:
+        model = flags.llm.models.azure.sql
+        print(f"\n  role={role}  deployment={model!r}")
+        print(f"  endpoint={flags.llm.azure.endpoint}")
+        print(f"  api_version={flags.llm.azure.api_version}")
+        llm = get_agent_llm(role)
+    except AzureConfigError as exc:
+        print(f"\n  ✗ CONFIG INCOMPLETE\n    {exc}")
+        return 1
+    except Exception as exc:
+        print(f"\n  ✗ {type(exc).__name__}: {exc}")
+        return 1
+
+    async def _one():
+        return await llm.complete(
+            system="You are a terse assistant.",
+            messages=[{"role": "user", "content": "Reply with the single word: ok"}],
+            max_tokens=16,
+        )
+
+    t0 = time.time()
+    try:
+        resp = asyncio.run(_one())
+    except Exception as exc:
+        name = type(exc).__name__
+        text = str(exc)
+        print(f"\n  ✗ CALL FAILED: {name}\n    {text[:400]}")
+        print("\n  Most likely cause:")
+        low = text.lower()
+        if "404" in text or "not found" in low or "deploymentnotfound" in low.replace(" ", ""):
+            print("    The DEPLOYMENT NAME does not exist in this resource.")
+            print(f"    flags.llm.models.azure.{role} = {model!r} must match the name")
+            print("    shown in Foundry → Deployments exactly (it is the name YOU")
+            print("    typed when deploying, not the base model id).")
+        elif "401" in text or "unauthor" in low or "access denied" in low:
+            print("    The KEY is wrong, or belongs to a different resource than")
+            print("    the endpoint. Re-copy both from the same deployment page.")
+        elif "invalid_api_version" in low or "api-version" in low or "400" in text:
+            print("    The api_version is not accepted. Copy the exact value the")
+            print("    portal shows next to the deployment into flags.llm.azure.api_version.")
+        elif "429" in text or "rate" in low or "quota" in low:
+            print("    Rate limit or zero quota on the deployment. Check the")
+            print("    deployment's tokens-per-minute allocation in the portal.")
+        elif "getaddrinfo" in low or "connect" in low or "name resolution" in low:
+            print("    The endpoint host is unreachable — check it is the full")
+            print("    https://<resource>.openai.azure.com/ form, and that this")
+            print("    container has outbound network access.")
+        else:
+            print("    Unrecognised. The raw error above is the ground truth.")
+        return 1
+
+    elapsed = time.time() - t0
+    print(f"\n  ✓ LIVE COMPLETION OK in {elapsed:.2f}s")
+    print(f"    reply      : {resp.text[:60]!r}")
+    print(f"    tokens in  : {resp.tokens_in}")
+    print(f"    tokens out : {resp.tokens_out}")
+    print("\n  The provider seam is live end to end. Next:")
+    print("    python3 scripts/diagnose_m4.py --out docs/m4_diagnosis_azure.json")
+    print("    (25 queries — the probe that tells you whether the model was the ceiling)")
+    return 0
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(smoke() if "--smoke" in sys.argv else main())
