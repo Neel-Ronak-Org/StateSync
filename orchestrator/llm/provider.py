@@ -102,9 +102,13 @@ def get_agent_llm(role: str) -> "ChatModel":
         from llm.adapters.azure_adapter import AzureAdapter
         return AzureAdapter(model=model)
 
+    if provider == "gemini":
+        from llm.adapters.gemini_adapter import GeminiAdapter
+        return GeminiAdapter(model=model)
+
     raise RuntimeError(
         f"Unknown LLM provider {provider!r}. "
-        "Valid values: 'local', 'anthropic', 'azure'. "
+        "Valid values: 'local', 'anthropic', 'azure', 'gemini'. "
         "Check flags.llm.provider in config/flags.toml."
     )
 
@@ -146,6 +150,18 @@ def validate_llm_config() -> None:
             "  Azure model names above are DEPLOYMENT names. If a call returns "
             "404 DeploymentNotFound, the deployment name in "
             "flags.llm.models.azure.* does not match the Foundry portal."
+        )
+    elif provider == "gemini":
+        # One failure mode only (the key), unlike Azure's four -- Gemini
+        # addresses models by published name, so there is no deployment-name
+        # trap. A wrong model name surfaces as a 404 naming the model.
+        from llm.adapters.gemini_adapter import GeminiAdapter
+        GeminiAdapter._read_api_key()      # raises GeminiConfigError if absent
+        logger.info("  Gemini API key: present ✓")
+        logger.info(
+            "  NOTE: the free tier is rate-limited PER MINUTE. A full fixture "
+            "run issues ~5.2 calls/query; the adapter retries 429 with backoff "
+            "(models.gemini_max_retries)."
         )
     else:
         logger.info(

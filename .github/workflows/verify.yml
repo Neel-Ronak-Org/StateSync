@@ -71,9 +71,9 @@ jobs:
         # a pass, and the summary counts it separately.
         run: python3 scripts/verify_seams.py --no-live
 
-      - name: Azure provider seam (wired, and fails for the right reason)
+      - name: Hosted provider seams — azure + gemini (wired, fail for the right reason)
         # Runs without any credential, by design.
-        run: python3 scripts/verify_azure_seam.py
+        run: python3 scripts/verify_provider_seam.py
 
       - name: Shipped flag state (self-test, both directions)
         run: python3 scripts/shipped_flags.py --self-test

@@ -148,12 +148,14 @@ services:
       # this is read ONLY when that provider is selected -- a stack running
       # provider="local" never opens it, so the placeholder file is harmless.
       - AZURE_OPENAI_API_KEY_FILE=/run/secrets/azure_openai_api_key
+      - GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key
       - CONFIG_DIR=/app/config
     volumes:
       - ./config:/app/config:ro
     secrets:
       - anthropic_api_key
       - azure_openai_api_key
+      - gemini_api_key
     depends_on:
       mcp:
         condition: service_healthy
@@ -243,3 +245,5 @@ secrets:
     file: ./secrets/anthropic_api_key
   azure_openai_api_key:
     file: ./secrets/azure_openai_api_key
+  gemini_api_key:
+    file: ./secrets/gemini_api_key

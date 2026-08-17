@@ -46,3 +46,24 @@ Verify the wiring without a key at all:
 ```bash
 python3 scripts/verify_azure_seam.py
 ```
+
+### Google Gemini (BD1 seam, provider = "gemini")
+
+```bash
+# Free key from Google AI Studio: aistudio.google.com/apikey
+echo "<your-gemini-key>" > secrets/gemini_api_key
+```
+
+No endpoint or version to configure — Gemini addresses models by published
+name. Set `provider = "gemini"` in `config/flags.toml` and you are done.
+
+**The free tier is rate-limited per MINUTE.** A full fixture run issues ~5.2
+LLM calls per query, so 429s mid-run are expected, not exceptional; the
+adapter retries with exponential backoff (`models.gemini_max_retries`).
+
+Verify the wiring with no key at all, then one live call once you have one:
+
+```bash
+python3 scripts/verify_provider_seam.py --provider gemini
+docker compose exec -T orchestrator python3 - --provider gemini --smoke < scripts/verify_provider_seam.py
+```

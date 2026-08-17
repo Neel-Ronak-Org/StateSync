@@ -14,6 +14,9 @@ dependencies = [
     # Azure OpenAI / AI Foundry adapter (BD1 seam). Imported lazily inside
     # AzureAdapter.__init__, so a provider="local" stack never loads it.
     "openai>=1.40.0",
+    # Gemini adapter (BD1 seam). Lazily imported inside GeminiAdapter.__init__,
+    # so a provider="local" stack never loads it.
+    "google-genai>=1.0.0",
     "jsonschema>=4.22.0",
     "tomllib>=2.0.0 ; python_version < '3.11'",
     "digipin>=2.1.1",

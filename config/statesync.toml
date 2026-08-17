@@ -165,3 +165,10 @@ azure_timeout_s           = 60
 # The SDK retries 429/5xx itself. Kept low deliberately -- a graded run that
 # silently retries is a graded run whose token accounting is wrong.
 azure_max_retries         = 2
+# Gemini. The FREE tier is limited per MINUTE, and a full fixture run issues
+# ~5.2 LLM calls per query, so 429s are expected mid-run rather than
+# exceptional. Retries use exponential backoff from the base delay below.
+# Scoring a rate limit as a wrong answer would be a pure measurement artifact.
+gemini_timeout_s          = 120
+gemini_max_retries        = 5
+gemini_retry_base_delay_s = 4.0

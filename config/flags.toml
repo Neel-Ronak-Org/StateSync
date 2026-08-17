@@ -10,7 +10,7 @@
 # never appear in reported metrics or panel demos. Always run on anthropic for
 # any result you intend to show.
 [llm]
-provider = "local"          # "local" | "anthropic" | "azure"
+provider = "local"          # "local" | "anthropic" | "azure" | "gemini"
 ollama_url = "http://host.docker.internal:11434"
 
 # Azure OpenAI / AI Foundry (BD1 seam, third implementation).
@@ -48,6 +48,20 @@ memory_summarizer = "gpt-4o-mini"
 normalizer        = "gpt-4o-mini"
 decomposer        = "gpt-4o-mini"
 judge             = "gpt-4o"
+
+# Gemini addresses models by PUBLISHED NAME -- no deployment-name indirection,
+# unlike Azure. Free tier is rate-limited per MINUTE, so a full fixture run
+# will hit 429s; the adapter backs off and retries (models.gemini_max_retries).
+# Raise `sql` to a stronger model if the free tier allows it -- that is the
+# role where M4's remaining failures live.
+[llm.models.gemini]
+supervisor        = "gemini-2.5-flash"
+sql               = "gemini-2.5-flash"
+synthesizer       = "gemini-2.5-flash"
+memory_summarizer = "gemini-2.5-flash"
+normalizer        = "gemini-2.5-flash"
+decomposer        = "gemini-2.5-flash"
+judge             = "gemini-2.5-flash"
 
 [llm.models.anthropic]
 supervisor        = "claude-opus-4-5"
