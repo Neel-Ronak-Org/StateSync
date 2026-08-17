@@ -3,7 +3,7 @@
     "derived_from": "fixtures/golden/phase_c2.json",
     "generated": "2026-08-17",
     "why_a_second_file": "phase_c2.json is the fixture every published M4/EX number was measured against. It is NOT edited: editing a fixture after seeing results is how a number gets quietly improved. This corrected copy runs ALONGSIDE it so both numbers exist and the delta is visible, the same way execution_accuracy was added beside the two existing scorers rather than replacing them.",
-    "how_found": "The first hosted-model probe left 6 failures. Opening all 6 against the database showed 5 were instrument defects, not model errors. That prompted executing and reading all 25 ground truths.",
+    "how_found": "The first hosted-model probe left 6 failures. Opening all 6 against the database showed 5 were instrument defects, not model errors. That prompted executing and reading all 25 ground truths. A second pass with scripts/attribute_failures.py -- which compares the TABLE SET of generated vs reference SQL -- found two further under-specified projections (c2g_09, c2g_24) that reading the fixture by hand had missed, because both look correct until you notice the reference joins a table purely to fetch a name the question never requests.",
     "known_remaining_weakness": "c2g_03, c2g_10 and c2g_18 have ground truths returning ZERO rows. Under standard EX any query returning zero rows scores correct, so 3 of 25 are trivially passable. Not fixed here: it needs either different questions or seeded data, and both are judgment calls for the owner rather than corrections with an evident right answer.",
     "corrections": [
       {
@@ -61,6 +61,22 @@
           "ground_truth_sql"
         ],
         "original_ground_truth_sql": "SELECT seller_id, display_name, display_name_local FROM sellers WHERE display_name_local IS NOT NULL ORDER BY seller_id"
+      },
+      {
+        "id": "c2g_09",
+        "why": "PROJECTION UNDER-SPECIFIED -- found by scripts/attribute_failures.py, missed by the manual audit. 'Which buyer apps' is answerable from orders.buyer_app_id alone; the reference joins network_participants purely to fetch legal_name, a column the question never asks for. So the reference forces a JOIN the question does not imply, and the model was scored down for not guessing it. Ground truth unchanged.",
+        "changed": [
+          "text"
+        ],
+        "original_text": "Which buyer apps have placed orders totalling more than 10000 in value?"
+      },
+      {
+        "id": "c2g_24",
+        "why": "PROJECTION UNDER-SPECIFIED -- also found by attribute_failures.py. 'Each seller' is answerable by grouping catalog_items.seller_id; the reference joins sellers only for display_name. Same forced-join pattern as c2g_09/c2g_14. Ground truth unchanged.",
+        "changed": [
+          "text"
+        ],
+        "original_text": "How many catalog items does each seller have priced above 1000?"
       }
     ]
   },
@@ -156,7 +172,7 @@
     {
       "id": "c2g_09",
       "lang": "en",
-      "text": "Which buyer apps have placed orders totalling more than 10000 in value?",
+      "text": "List the participant_id, legal_name and total order value for buyer apps that have placed orders totalling more than 10000 in value.",
       "expected_route": "sql",
       "ground_truth_sql": "SELECT np.participant_id, np.legal_name, SUM(o.order_value) AS total_value FROM network_participants np JOIN orders o ON o.buyer_app_id = np.participant_id GROUP BY np.participant_id, np.legal_name HAVING SUM(o.order_value) > 10000 ORDER BY total_value DESC",
       "expected_row_count": 5,
@@ -321,7 +337,7 @@
     {
       "id": "c2g_24",
       "lang": "en",
-      "text": "How many catalog items does each seller have priced above 1000?",
+      "text": "For each seller, list the seller_id, display name and the count of catalog items priced above 1000.",
       "expected_route": "sql",
       "ground_truth_sql": "SELECT s.seller_id, s.display_name, COUNT(*) AS item_count FROM sellers s JOIN catalog_items ci ON ci.seller_id = s.seller_id WHERE ci.unit_price > 1000 GROUP BY s.seller_id, s.display_name ORDER BY item_count DESC",
       "expected_row_count": 29,
