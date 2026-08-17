@@ -33,3 +33,7 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Real-data corpora. Never committed: 126MB, and CC BY-NC-SA licensed.
+# Fetch with scripts/fetch_olist.sh; checksums are committed instead.
+data/olist/
