@@ -172,3 +172,10 @@ azure_max_retries         = 2
 gemini_timeout_s          = 120
 gemini_max_retries        = 5
 gemini_retry_base_delay_s = 4.0
+# Gemini 3.x are THINKING models and thinking tokens count against
+# max_output_tokens. "minimal" is the only control that actually zeroes them on
+# gemini-3.6-flash (thinking_budget=0 is rejected; thinking_budget=N does not
+# constrain; "low" still spends ~119). Empty string omits the parameter.
+# Raising this requires raising the [sql] max_tokens_* caps too -- a BD under
+# A0.3 -- because thinking silently eats the visible-output budget.
+gemini_thinking_level     = "minimal"

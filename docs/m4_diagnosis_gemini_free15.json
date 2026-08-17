@@ -1,0 +1,3884 @@
+{
+  "generated_by": "scripts/diagnose_m4.py",
+  "flag_provenance": {
+    "llm": {
+      "provider": "gemini",
+      "models": {
+        "supervisor": "gemini-3.1-flash-lite",
+        "sql": "gemini-3.5-flash-lite",
+        "synthesizer": "gemini-3-flash-preview",
+        "memory_summarizer": "gemini-flash-latest",
+        "normalizer": "gemini-flash-lite-latest",
+        "decomposer": "gemini-flash-latest",
+        "judge": "gemini-flash-latest"
+      }
+    },
+    "flag_state": {
+      "memory.enabled": "false",
+      "normalization.enabled": "true",
+      "tenancy.enforced": "false",
+      "evaluation.vision_scorer.enabled": "false"
+    },
+    "shipped": true,
+    "disk_deviations": {},
+    "live_staleness": null,
+    "allow_nonshipped": false
+  },
+  "report_schema": 2,
+  "schema_note": "v2: rows are persisted (v1 stored only counts); standard_ex is now the shipped ExecutionAccuracyScorer, with v1's within-row-sorted definition retained as standard_ex_legacy_valueset; the 'unrecovered error' category no longer fires on repaired queries.",
+  "n": 15,
+  "strict_ex": {
+    "correct": 8,
+    "accuracy": 0.5333
+  },
+  "standard_ex": {
+    "correct": 9,
+    "accuracy": 0.6,
+    "definition": "orchestrator/scorers.py ExecutionAccuracyScorer"
+  },
+  "standard_ex_legacy_valueset": {
+    "correct": 9,
+    "accuracy": 0.6,
+    "definition": "pre-2026-08-16 in-script definition; sorts values WITHIN each row, so (5,3) matches (3,5). Not BIRD's. Retained only to keep the published 40%/44% traceable."
+  },
+  "mean_value_recall": 0.811,
+  "mean_value_recall_warning": "Unaligned, cross-column, de-duplicated. Inflated by construction; see score_value_recall's docstring. Not a capability metric.",
+  "mean_row_recall": 0.6667,
+  "failure_categories": {
+    "correct": 8,
+    "right row COUNT, wrong values": 3,
+    "correct under standard EX; strict scorer counts column width": 1,
+    "right values but WRONG ROW COUNT (missing aggregation/filter)": 1,
+    "right values, wider/narrower projection": 1,
+    "SQL execution error (unrecovered)": 1
+  },
+  "results": [
+    {
+      "id": "c2g_01",
+      "text": "Which sellers have never had a dispute raised against their orders?",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT s.seller_id, s.display_name\nFROM sellers s\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM orders o\n    JOIN disputes d ON o.order_id = d.order_id\n    WHERE o.seller_id = s.seller_id\n)\nLIMIT 1000",
+      "ground_truth_sql": "SELECT s.seller_id, s.display_name FROM sellers s WHERE NOT EXISTS (SELECT 1 FROM orders o JOIN disputes d ON d.order_id = o.order_id WHERE o.seller_id = s.seller_id) ORDER BY s.seller_id",
+      "generated_row_count": 1,
+      "reference_row_count": 1,
+      "generated_cols": 2,
+      "reference_cols": 2,
+      "generated_rows": [
+        {
+          "seller_id": "S019",
+          "display_name": "Seller Store 19"
+        }
+      ],
+      "reference_rows": [
+        {
+          "seller_id": "S019",
+          "display_name": "Seller Store 19"
+        }
+      ],
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "c2g_02",
+      "text": "What is the total order value per logistics provider?",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT lp.provider_id, lp.display_name, SUM(o.order_value) AS total_order_value FROM logistics_providers lp JOIN fulfillments f ON lp.provider_id = f.provider_id JOIN orders o ON f.order_id = o.order_id GROUP BY lp.provider_id, lp.display_name LIMIT 1000",
+      "ground_truth_sql": "SELECT lp.provider_id, lp.display_name, SUM(o.order_value) AS total_order_value FROM logistics_providers lp JOIN fulfillments f ON f.provider_id = lp.provider_id JOIN orders o ON o.order_id = f.order_id GROUP BY lp.provider_id, lp.display_name ORDER BY total_order_value DESC",
+      "generated_row_count": 10,
+      "reference_row_count": 10,
+      "generated_cols": 3,
+      "reference_cols": 3,
+      "generated_rows": [
+        {
+          "provider_id": "LP010",
+          "display_name": "FastShip 10",
+          "total_order_value": 1535239.94
+        },
+        {
+          "provider_id": "LP001",
+          "display_name": "FastShip 1",
+          "total_order_value": 1402092.17
+        },
+        {
+          "provider_id": "LP007",
+          "display_name": "FastShip 7",
+          "total_order_value": 1526215.54
+        },
+        {
+          "provider_id": "LP006",
+          "display_name": "FastShip 6",
+          "total_order_value": 1311317.1
+        },
+        {
+          "provider_id": "LP002",
+          "display_name": "FastShip 2",
+          "total_order_value": 1624542.11
+        },
+        {
+          "provider_id": "LP008",
+          "display_name": "FastShip 8",
+          "total_order_value": 1089830.61
+        },
+        {
+          "provider_id": "LP004",
+          "display_name": "FastShip 4",
+          "total_order_value": 1567210.84
+        },
+        {
+          "provider_id": "LP005",
+          "display_name": "FastShip 5",
+          "total_order_value": 1237263.33
+        },
+        {
+          "provider_id": "LP003",
+          "display_name": "FastShip 3",
+          "total_order_value": 1456621.45
+        },
+        {
+          "provider_id": "LP009",
+          "display_name": "FastShip 9",
+          "total_order_value": 1336315.6
+        }
+      ],
+      "reference_rows": [
+        {
+          "provider_id": "LP002",
+          "display_name": "FastShip 2",
+          "total_order_value": 1624542.11
+        },
+        {
+          "provider_id": "LP004",
+          "display_name": "FastShip 4",
+          "total_order_value": 1567210.84
+        },
+        {
+          "provider_id": "LP010",
+          "display_name": "FastShip 10",
+          "total_order_value": 1535239.94
+        },
+        {
+          "provider_id": "LP007",
+          "display_name": "FastShip 7",
+          "total_order_value": 1526215.54
+        },
+        {
+          "provider_id": "LP003",
+          "display_name": "FastShip 3",
+          "total_order_value": 1456621.45
+        },
+        {
+          "provider_id": "LP001",
+          "display_name": "FastShip 1",
+          "total_order_value": 1402092.17
+        },
+        {
+          "provider_id": "LP009",
+          "display_name": "FastShip 9",
+          "total_order_value": 1336315.6
+        },
+        {
+          "provider_id": "LP006",
+          "display_name": "FastShip 6",
+          "total_order_value": 1311317.1
+        },
+        {
+          "provider_id": "LP005",
+          "display_name": "FastShip 5",
+          "total_order_value": 1237263.33
+        },
+        {
+          "provider_id": "LP008",
+          "display_name": "FastShip 8",
+          "total_order_value": 1089830.61
+        }
+      ],
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "c2g_03",
+      "text": "List fulfillments that are still pending with no delivery events recorded.",
+      "category": "correct under standard EX; strict scorer counts column width",
+      "strict_ex": false,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT f.fulfillment_id, f.order_id, f.provider_id, f.promised_at, f.delivered_at, f.status, f.attempt_count FROM fulfillments f WHERE f.status ILIKE '%pending%' AND NOT EXISTS (SELECT 1 FROM delivery_events de WHERE de.fulfillment_id = f.fulfillment_id) LIMIT 1000",
+      "ground_truth_sql": "SELECT f.fulfillment_id, f.order_id FROM fulfillments f WHERE f.status = 'pending' AND NOT EXISTS (SELECT 1 FROM delivery_events de WHERE de.fulfillment_id = f.fulfillment_id) ORDER BY f.fulfillment_id",
+      "generated_row_count": 0,
+      "reference_row_count": 0,
+      "generated_cols": 7,
+      "reference_cols": 2,
+      "generated_rows": [],
+      "reference_rows": [],
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [
+        {
+          "attempt": 0,
+          "category": "empty_result",
+          "message": "Query executed successfully but returned zero rows."
+        }
+      ],
+      "final_attempt": 1
+    },
+    {
+      "id": "c2g_04",
+      "text": "Which cities have both a seller and a logistics provider hub located in them?",
+      "category": "right values but WRONG ROW COUNT (missing aggregation/filter)",
+      "strict_ex": false,
+      "standard_ex": false,
+      "standard_ex_legacy_valueset": false,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT DISTINCT l1.city\nFROM locations l1\nJOIN sellers s ON l1.location_id = s.location_id\nINTERSECT\nSELECT DISTINCT l2.city\nFROM locations l2\nJOIN logistics_providers lp ON l2.location_id = lp.hub_location_id",
+      "ground_truth_sql": "SELECT DISTINCT l.city FROM locations l WHERE EXISTS (SELECT 1 FROM sellers s WHERE s.location_id = l.location_id) AND EXISTS (SELECT 1 FROM logistics_providers lp WHERE lp.hub_location_id = l.location_id) ORDER BY l.city",
+      "generated_row_count": 8,
+      "reference_row_count": 5,
+      "generated_cols": 1,
+      "reference_cols": 1,
+      "generated_rows": [
+        {
+          "city": "Lucknow"
+        },
+        {
+          "city": "Visakhapatnam"
+        },
+        {
+          "city": "Kolkata"
+        },
+        {
+          "city": "Agra"
+        },
+        {
+          "city": "Hyderabad"
+        },
+        {
+          "city": "Indore"
+        },
+        {
+          "city": "Chennai"
+        },
+        {
+          "city": "Delhi"
+        }
+      ],
+      "reference_rows": [
+        {
+          "city": "Hyderabad"
+        },
+        {
+          "city": "Indore"
+        },
+        {
+          "city": "Kolkata"
+        },
+        {
+          "city": "Lucknow"
+        },
+        {
+          "city": "Visakhapatnam"
+        }
+      ],
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "c2g_05",
+      "text": "What is the average order value for B2B orders versus B2C orders?",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT o.order_channel, AVG(o.order_value) AS avg_order_value FROM orders o GROUP BY o.order_channel LIMIT 1000",
+      "ground_truth_sql": "SELECT order_channel, AVG(order_value) AS avg_order_value FROM orders GROUP BY order_channel ORDER BY order_channel",
+      "generated_row_count": 2,
+      "reference_row_count": 2,
+      "generated_cols": 2,
+      "reference_cols": 2,
+      "generated_rows": [
+        {
+          "order_channel": "b2b",
+          "avg_order_value": 25987.83896797153
+        },
+        {
+          "order_channel": "b2c",
+          "avg_order_value": 25219.57598513011
+        }
+      ],
+      "reference_rows": [
+        {
+          "order_channel": "b2b",
+          "avg_order_value": 25987.83896797153
+        },
+        {
+          "order_channel": "b2c",
+          "avg_order_value": 25219.57598513011
+        }
+      ],
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "c2g_06",
+      "text": "How many disputes remain unresolved, with no resolution date?",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT count(*) FROM disputes AS d WHERE d.resolved_at IS NULL",
+      "ground_truth_sql": "SELECT COUNT(*) AS unresolved_count FROM disputes WHERE resolved_at IS NULL",
+      "generated_row_count": 1,
+      "reference_row_count": 1,
+      "generated_cols": 1,
+      "reference_cols": 1,
+      "generated_rows": [
+        {
+          "count": 32
+        }
+      ],
+      "reference_rows": [
+        {
+          "unresolved_count": 32
+        }
+      ],
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "c2g_07",
+      "text": "List the top 3 sellers by total number of distinct catalog items sold.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT s.seller_id, s.display_name, COUNT(DISTINCT ci.item_id) AS item_count FROM sellers s JOIN catalog_items ci ON s.seller_id = ci.seller_id GROUP BY s.seller_id, s.display_name ORDER BY item_count DESC LIMIT 3",
+      "ground_truth_sql": "SELECT s.seller_id, s.display_name, COUNT(DISTINCT ci.item_id) AS distinct_items FROM sellers s JOIN catalog_items ci ON ci.seller_id = s.seller_id GROUP BY s.seller_id, s.display_name ORDER BY distinct_items DESC LIMIT 3",
+      "generated_row_count": 3,
+      "reference_row_count": 3,
+      "generated_cols": 3,
+      "reference_cols": 3,
+      "generated_rows": [
+        {
+          "seller_id": "S020",
+          "display_name": "Seller Store 20",
+          "item_count": 8
+        },
+        {
+          "seller_id": "S007",
+          "display_name": "Seller Store 7",
+          "item_count": 7
+        },
+        {
+          "seller_id": "S008",
+          "display_name": "Seller Store 8",
+          "item_count": 6
+        }
+      ],
+      "reference_rows": [
+        {
+          "seller_id": "S020",
+          "display_name": "Seller Store 20",
+          "distinct_items": 8
+        },
+        {
+          "seller_id": "S007",
+          "display_name": "Seller Store 7",
+          "distinct_items": 7
+        },
+        {
+          "seller_id": "S008",
+          "display_name": "Seller Store 8",
+          "distinct_items": 6
+        }
+      ],
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "c2g_08",
+      "text": "What percentage of fulfillments were delivered after their promised time?",
+      "category": "right row COUNT, wrong values",
+      "strict_ex": false,
+      "standard_ex": false,
+      "standard_ex_legacy_valueset": false,
+      "value_recall": 0.0,
+      "row_recall": 0.0,
+      "generated_sql": "SELECT \n    ROUND(\n        100.0 * COUNT(CASE WHEN f.delivered_at > f.promised_at THEN 1 END) / NULLIF(COUNT(f.fulfillment_id), 0),\n        2\n    ) AS delayed_percentage\nFROM fulfillments f",
+      "ground_truth_sql": "SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE delivered_at IS NOT NULL AND delivered_at > promised_at) / NULLIF(COUNT(*) FILTER (WHERE delivered_at IS NOT NULL), 0), 2) AS pct_late FROM fulfillments",
+      "generated_row_count": 1,
+      "reference_row_count": 1,
+      "generated_cols": 1,
+      "reference_cols": 1,
+      "generated_rows": [
+        {
+          "delayed_percentage": 43.09
+        }
+      ],
+      "reference_rows": [
+        {
+          "pct_late": 73.37
+        }
+      ],
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "c2g_09",
+      "text": "Which buyer apps have placed orders totalling more than 10000 in value?",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT t1.buyer_app_id, t2.legal_name, SUM(t1.order_value) AS total_order_value FROM orders AS t1 JOIN network_participants AS t2 ON t1.buyer_app_id = t2.participant_id GROUP BY t1.buyer_app_id, t2.legal_name HAVING SUM(t1.order_value) > 10000 LIMIT 1000",
+      "ground_truth_sql": "SELECT np.participant_id, np.legal_name, SUM(o.order_value) AS total_value FROM network_participants np JOIN orders o ON o.buyer_app_id = np.participant_id GROUP BY np.participant_id, np.legal_name HAVING SUM(o.order_value) > 10000 ORDER BY total_value DESC",
+      "generated_row_count": 5,
+      "reference_row_count": 5,
+      "generated_cols": 3,
+      "reference_cols": 3,
+      "generated_rows": [
+        {
+          "buyer_app_id": "BA005",
+          "legal_name": "BuyerApp 5 Pvt Ltd",
+          "total_order_value": 2737623.66
+        },
+        {
+          "buyer_app_id": "BA001",
+          "legal_name": "BuyerApp 1 Pvt Ltd",
+          "total_order_value": 3018300.05
+        },
+        {
+          "buyer_app_id": "BA002",
+          "legal_name": "BuyerApp 2 Pvt Ltd",
+          "total_order_value": 2875887.12
+        },
+        {
+          "buyer_app_id": "BA004",
+          "legal_name": "BuyerApp 4 Pvt Ltd",
+          "total_order_value": 3017408.96
+        },
+        {
+          "buyer_app_id": "BA003",
+          "legal_name": "BuyerApp 3 Pvt Ltd",
+          "total_order_value": 2437428.9
+        }
+      ],
+      "reference_rows": [
+        {
+          "participant_id": "BA001",
+          "legal_name": "BuyerApp 1 Pvt Ltd",
+          "total_value": 3018300.05
+        },
+        {
+          "participant_id": "BA004",
+          "legal_name": "BuyerApp 4 Pvt Ltd",
+          "total_value": 3017408.96
+        },
+        {
+          "participant_id": "BA002",
+          "legal_name": "BuyerApp 2 Pvt Ltd",
+          "total_value": 2875887.12
+        },
+        {
+          "participant_id": "BA005",
+          "legal_name": "BuyerApp 5 Pvt Ltd",
+          "total_value": 2737623.66
+        },
+        {
+          "participant_id": "BA003",
+          "legal_name": "BuyerApp 3 Pvt Ltd",
+          "total_value": 2437428.9
+        }
+      ],
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "c2g_10",
+      "text": "List sellers whose contracted SLA hours has not been set.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT t1.seller_id, t1.display_name FROM sellers AS t1 WHERE t1.contracted_sla_hours IS NULL LIMIT 1000",
+      "ground_truth_sql": "SELECT seller_id, display_name FROM sellers WHERE contracted_sla_hours IS NULL ORDER BY seller_id",
+      "generated_row_count": 0,
+      "reference_row_count": 0,
+      "generated_cols": 2,
+      "reference_cols": 2,
+      "generated_rows": [],
+      "reference_rows": [],
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [
+        {
+          "attempt": 0,
+          "category": "empty_result",
+          "message": "Query executed successfully but returned zero rows."
+        }
+      ],
+      "final_attempt": 1
+    },
+    {
+      "id": "c2g_11",
+      "text": "What is the total number of delivery events per event type?",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT de.event_type, COUNT(de.event_id) AS total_events FROM delivery_events de GROUP BY de.event_type ORDER BY total_events DESC LIMIT 1000",
+      "ground_truth_sql": "SELECT event_type, COUNT(*) AS event_count FROM delivery_events GROUP BY event_type ORDER BY event_count DESC",
+      "generated_row_count": 6,
+      "reference_row_count": 6,
+      "generated_cols": 2,
+      "reference_cols": 2,
+      "generated_rows": [
+        {
+          "event_type": "picked_up",
+          "total_events": 325
+        },
+        {
+          "event_type": "attempted",
+          "total_events": 323
+        },
+        {
+          "event_type": "in_transit",
+          "total_events": 322
+        },
+        {
+          "event_type": "returned",
+          "total_events": 319
+        },
+        {
+          "event_type": "delivered",
+          "total_events": 317
+        },
+        {
+          "event_type": "out_for_delivery",
+          "total_events": 311
+        }
+      ],
+      "reference_rows": [
+        {
+          "event_type": "picked_up",
+          "event_count": 325
+        },
+        {
+          "event_type": "attempted",
+          "event_count": 323
+        },
+        {
+          "event_type": "in_transit",
+          "event_count": 322
+        },
+        {
+          "event_type": "returned",
+          "event_count": 319
+        },
+        {
+          "event_type": "delivered",
+          "event_count": 317
+        },
+        {
+          "event_type": "out_for_delivery",
+          "event_count": 311
+        }
+      ],
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "c2g_12",
+      "text": "Which fulfillments required more than one delivery attempt?",
+      "category": "right row COUNT, wrong values",
+      "strict_ex": false,
+      "standard_ex": false,
+      "standard_ex_legacy_valueset": false,
+      "value_recall": 0.499,
+      "row_recall": 0.0,
+      "generated_sql": "SELECT f.fulfillment_id FROM fulfillments AS f WHERE f.attempt_count > 1 LIMIT 1000",
+      "ground_truth_sql": "SELECT fulfillment_id, order_id, attempt_count FROM fulfillments WHERE attempt_count > 1 ORDER BY attempt_count DESC",
+      "generated_row_count": 362,
+      "reference_row_count": 362,
+      "generated_cols": 1,
+      "reference_cols": 3,
+      "generated_rows": [
+        {
+          "fulfillment_id": "FUL0002"
+        },
+        {
+          "fulfillment_id": "FUL0007"
+        },
+        {
+          "fulfillment_id": "FUL0008"
+        },
+        {
+          "fulfillment_id": "FUL0010"
+        },
+        {
+          "fulfillment_id": "FUL0011"
+        },
+        {
+          "fulfillment_id": "FUL0013"
+        },
+        {
+          "fulfillment_id": "FUL0015"
+        },
+        {
+          "fulfillment_id": "FUL0019"
+        },
+        {
+          "fulfillment_id": "FUL0020"
+        },
+        {
+          "fulfillment_id": "FUL0023"
+        },
+        {
+          "fulfillment_id": "FUL0025"
+        },
+        {
+          "fulfillment_id": "FUL0026"
+        },
+        {
+          "fulfillment_id": "FUL0027"
+        },
+        {
+          "fulfillment_id": "FUL0029"
+        },
+        {
+          "fulfillment_id": "FUL0030"
+        },
+        {
+          "fulfillment_id": "FUL0031"
+        },
+        {
+          "fulfillment_id": "FUL0033"
+        },
+        {
+          "fulfillment_id": "FUL0034"
+        },
+        {
+          "fulfillment_id": "FUL0037"
+        },
+        {
+          "fulfillment_id": "FUL0039"
+        },
+        {
+          "fulfillment_id": "FUL0041"
+        },
+        {
+          "fulfillment_id": "FUL0042"
+        },
+        {
+          "fulfillment_id": "FUL0044"
+        },
+        {
+          "fulfillment_id": "FUL0045"
+        },
+        {
+          "fulfillment_id": "FUL0047"
+        },
+        {
+          "fulfillment_id": "FUL0049"
+        },
+        {
+          "fulfillment_id": "FUL0050"
+        },
+        {
+          "fulfillment_id": "FUL0051"
+        },
+        {
+          "fulfillment_id": "FUL0052"
+        },
+        {
+          "fulfillment_id": "FUL0053"
+        },
+        {
+          "fulfillment_id": "FUL0054"
+        },
+        {
+          "fulfillment_id": "FUL0058"
+        },
+        {
+          "fulfillment_id": "FUL0061"
+        },
+        {
+          "fulfillment_id": "FUL0063"
+        },
+        {
+          "fulfillment_id": "FUL0064"
+        },
+        {
+          "fulfillment_id": "FUL0065"
+        },
+        {
+          "fulfillment_id": "FUL0066"
+        },
+        {
+          "fulfillment_id": "FUL0069"
+        },
+        {
+          "fulfillment_id": "FUL0070"
+        },
+        {
+          "fulfillment_id": "FUL0071"
+        },
+        {
+          "fulfillment_id": "FUL0072"
+        },
+        {
+          "fulfillment_id": "FUL0073"
+        },
+        {
+          "fulfillment_id": "FUL0076"
+        },
+        {
+          "fulfillment_id": "FUL0077"
+        },
+        {
+          "fulfillment_id": "FUL0078"
+        },
+        {
+          "fulfillment_id": "FUL0081"
+        },
+        {
+          "fulfillment_id": "FUL0083"
+        },
+        {
+          "fulfillment_id": "FUL0084"
+        },
+        {
+          "fulfillment_id": "FUL0085"
+        },
+        {
+          "fulfillment_id": "FUL0087"
+        },
+        {
+          "fulfillment_id": "FUL0088"
+        },
+        {
+          "fulfillment_id": "FUL0091"
+        },
+        {
+          "fulfillment_id": "FUL0096"
+        },
+        {
+          "fulfillment_id": "FUL0097"
+        },
+        {
+          "fulfillment_id": "FUL0098"
+        },
+        {
+          "fulfillment_id": "FUL0100"
+        },
+        {
+          "fulfillment_id": "FUL0101"
+        },
+        {
+          "fulfillment_id": "FUL0102"
+        },
+        {
+          "fulfillment_id": "FUL0103"
+        },
+        {
+          "fulfillment_id": "FUL0104"
+        },
+        {
+          "fulfillment_id": "FUL0105"
+        },
+        {
+          "fulfillment_id": "FUL0109"
+        },
+        {
+          "fulfillment_id": "FUL0110"
+        },
+        {
+          "fulfillment_id": "FUL0111"
+        },
+        {
+          "fulfillment_id": "FUL0112"
+        },
+        {
+          "fulfillment_id": "FUL0115"
+        },
+        {
+          "fulfillment_id": "FUL0116"
+        },
+        {
+          "fulfillment_id": "FUL0117"
+        },
+        {
+          "fulfillment_id": "FUL0118"
+        },
+        {
+          "fulfillment_id": "FUL0119"
+        },
+        {
+          "fulfillment_id": "FUL0120"
+        },
+        {
+          "fulfillment_id": "FUL0124"
+        },
+        {
+          "fulfillment_id": "FUL0128"
+        },
+        {
+          "fulfillment_id": "FUL0129"
+        },
+        {
+          "fulfillment_id": "FUL0132"
+        },
+        {
+          "fulfillment_id": "FUL0135"
+        },
+        {
+          "fulfillment_id": "FUL0136"
+        },
+        {
+          "fulfillment_id": "FUL0137"
+        },
+        {
+          "fulfillment_id": "FUL0139"
+        },
+        {
+          "fulfillment_id": "FUL0140"
+        },
+        {
+          "fulfillment_id": "FUL0141"
+        },
+        {
+          "fulfillment_id": "FUL0142"
+        },
+        {
+          "fulfillment_id": "FUL0144"
+        },
+        {
+          "fulfillment_id": "FUL0145"
+        },
+        {
+          "fulfillment_id": "FUL0146"
+        },
+        {
+          "fulfillment_id": "FUL0147"
+        },
+        {
+          "fulfillment_id": "FUL0148"
+        },
+        {
+          "fulfillment_id": "FUL0149"
+        },
+        {
+          "fulfillment_id": "FUL0150"
+        },
+        {
+          "fulfillment_id": "FUL0151"
+        },
+        {
+          "fulfillment_id": "FUL0152"
+        },
+        {
+          "fulfillment_id": "FUL0153"
+        },
+        {
+          "fulfillment_id": "FUL0154"
+        },
+        {
+          "fulfillment_id": "FUL0156"
+        },
+        {
+          "fulfillment_id": "FUL0158"
+        },
+        {
+          "fulfillment_id": "FUL0159"
+        },
+        {
+          "fulfillment_id": "FUL0160"
+        },
+        {
+          "fulfillment_id": "FUL0161"
+        },
+        {
+          "fulfillment_id": "FUL0162"
+        },
+        {
+          "fulfillment_id": "FUL0166"
+        },
+        {
+          "fulfillment_id": "FUL0167"
+        },
+        {
+          "fulfillment_id": "FUL0169"
+        },
+        {
+          "fulfillment_id": "FUL0170"
+        },
+        {
+          "fulfillment_id": "FUL0171"
+        },
+        {
+          "fulfillment_id": "FUL0172"
+        },
+        {
+          "fulfillment_id": "FUL0173"
+        },
+        {
+          "fulfillment_id": "FUL0174"
+        },
+        {
+          "fulfillment_id": "FUL0176"
+        },
+        {
+          "fulfillment_id": "FUL0177"
+        },
+        {
+          "fulfillment_id": "FUL0178"
+        },
+        {
+          "fulfillment_id": "FUL0179"
+        },
+        {
+          "fulfillment_id": "FUL0180"
+        },
+        {
+          "fulfillment_id": "FUL0181"
+        },
+        {
+          "fulfillment_id": "FUL0182"
+        },
+        {
+          "fulfillment_id": "FUL0183"
+        },
+        {
+          "fulfillment_id": "FUL0184"
+        },
+        {
+          "fulfillment_id": "FUL0187"
+        },
+        {
+          "fulfillment_id": "FUL0188"
+        },
+        {
+          "fulfillment_id": "FUL0189"
+        },
+        {
+          "fulfillment_id": "FUL0190"
+        },
+        {
+          "fulfillment_id": "FUL0191"
+        },
+        {
+          "fulfillment_id": "FUL0192"
+        },
+        {
+          "fulfillment_id": "FUL0193"
+        },
+        {
+          "fulfillment_id": "FUL0196"
+        },
+        {
+          "fulfillment_id": "FUL0197"
+        },
+        {
+          "fulfillment_id": "FUL0198"
+        },
+        {
+          "fulfillment_id": "FUL0199"
+        },
+        {
+          "fulfillment_id": "FUL0200"
+        },
+        {
+          "fulfillment_id": "FUL0201"
+        },
+        {
+          "fulfillment_id": "FUL0202"
+        },
+        {
+          "fulfillment_id": "FUL0203"
+        },
+        {
+          "fulfillment_id": "FUL0204"
+        },
+        {
+          "fulfillment_id": "FUL0206"
+        },
+        {
+          "fulfillment_id": "FUL0207"
+        },
+        {
+          "fulfillment_id": "FUL0208"
+        },
+        {
+          "fulfillment_id": "FUL0209"
+        },
+        {
+          "fulfillment_id": "FUL0211"
+        },
+        {
+          "fulfillment_id": "FUL0212"
+        },
+        {
+          "fulfillment_id": "FUL0214"
+        },
+        {
+          "fulfillment_id": "FUL0215"
+        },
+        {
+          "fulfillment_id": "FUL0216"
+        },
+        {
+          "fulfillment_id": "FUL0217"
+        },
+        {
+          "fulfillment_id": "FUL0218"
+        },
+        {
+          "fulfillment_id": "FUL0220"
+        },
+        {
+          "fulfillment_id": "FUL0221"
+        },
+        {
+          "fulfillment_id": "FUL0222"
+        },
+        {
+          "fulfillment_id": "FUL0223"
+        },
+        {
+          "fulfillment_id": "FUL0224"
+        },
+        {
+          "fulfillment_id": "FUL0225"
+        },
+        {
+          "fulfillment_id": "FUL0226"
+        },
+        {
+          "fulfillment_id": "FUL0227"
+        },
+        {
+          "fulfillment_id": "FUL0228"
+        },
+        {
+          "fulfillment_id": "FUL0229"
+        },
+        {
+          "fulfillment_id": "FUL0230"
+        },
+        {
+          "fulfillment_id": "FUL0231"
+        },
+        {
+          "fulfillment_id": "FUL0232"
+        },
+        {
+          "fulfillment_id": "FUL0233"
+        },
+        {
+          "fulfillment_id": "FUL0234"
+        },
+        {
+          "fulfillment_id": "FUL0235"
+        },
+        {
+          "fulfillment_id": "FUL0236"
+        },
+        {
+          "fulfillment_id": "FUL0237"
+        },
+        {
+          "fulfillment_id": "FUL0238"
+        },
+        {
+          "fulfillment_id": "FUL0241"
+        },
+        {
+          "fulfillment_id": "FUL0242"
+        },
+        {
+          "fulfillment_id": "FUL0243"
+        },
+        {
+          "fulfillment_id": "FUL0245"
+        },
+        {
+          "fulfillment_id": "FUL0246"
+        },
+        {
+          "fulfillment_id": "FUL0254"
+        },
+        {
+          "fulfillment_id": "FUL0255"
+        },
+        {
+          "fulfillment_id": "FUL0259"
+        },
+        {
+          "fulfillment_id": "FUL0260"
+        },
+        {
+          "fulfillment_id": "FUL0261"
+        },
+        {
+          "fulfillment_id": "FUL0262"
+        },
+        {
+          "fulfillment_id": "FUL0263"
+        },
+        {
+          "fulfillment_id": "FUL0264"
+        },
+        {
+          "fulfillment_id": "FUL0265"
+        },
+        {
+          "fulfillment_id": "FUL0267"
+        },
+        {
+          "fulfillment_id": "FUL0269"
+        },
+        {
+          "fulfillment_id": "FUL0270"
+        },
+        {
+          "fulfillment_id": "FUL0271"
+        },
+        {
+          "fulfillment_id": "FUL0272"
+        },
+        {
+          "fulfillment_id": "FUL0273"
+        },
+        {
+          "fulfillment_id": "FUL0274"
+        },
+        {
+          "fulfillment_id": "FUL0276"
+        },
+        {
+          "fulfillment_id": "FUL0277"
+        },
+        {
+          "fulfillment_id": "FUL0281"
+        },
+        {
+          "fulfillment_id": "FUL0282"
+        },
+        {
+          "fulfillment_id": "FUL0283"
+        },
+        {
+          "fulfillment_id": "FUL0286"
+        },
+        {
+          "fulfillment_id": "FUL0287"
+        },
+        {
+          "fulfillment_id": "FUL0288"
+        },
+        {
+          "fulfillment_id": "FUL0290"
+        },
+        {
+          "fulfillment_id": "FUL0292"
+        },
+        {
+          "fulfillment_id": "FUL0293"
+        },
+        {
+          "fulfillment_id": "FUL0294"
+        },
+        {
+          "fulfillment_id": "FUL0295"
+        },
+        {
+          "fulfillment_id": "FUL0296"
+        },
+        {
+          "fulfillment_id": "FUL0297"
+        },
+        {
+          "fulfillment_id": "FUL0299"
+        },
+        {
+          "fulfillment_id": "FUL0302"
+        },
+        {
+          "fulfillment_id": "FUL0303"
+        },
+        {
+          "fulfillment_id": "FUL0304"
+        },
+        {
+          "fulfillment_id": "FUL0305"
+        },
+        {
+          "fulfillment_id": "FUL0306"
+        },
+        {
+          "fulfillment_id": "FUL0309"
+        },
+        {
+          "fulfillment_id": "FUL0310"
+        },
+        {
+          "fulfillment_id": "FUL0311"
+        },
+        {
+          "fulfillment_id": "FUL0312"
+        },
+        {
+          "fulfillment_id": "FUL0314"
+        },
+        {
+          "fulfillment_id": "FUL0316"
+        },
+        {
+          "fulfillment_id": "FUL0317"
+        },
+        {
+          "fulfillment_id": "FUL0320"
+        },
+        {
+          "fulfillment_id": "FUL0322"
+        },
+        {
+          "fulfillment_id": "FUL0323"
+        },
+        {
+          "fulfillment_id": "FUL0325"
+        },
+        {
+          "fulfillment_id": "FUL0328"
+        },
+        {
+          "fulfillment_id": "FUL0329"
+        },
+        {
+          "fulfillment_id": "FUL0330"
+        },
+        {
+          "fulfillment_id": "FUL0332"
+        },
+        {
+          "fulfillment_id": "FUL0333"
+        },
+        {
+          "fulfillment_id": "FUL0335"
+        },
+        {
+          "fulfillment_id": "FUL0336"
+        },
+        {
+          "fulfillment_id": "FUL0337"
+        },
+        {
+          "fulfillment_id": "FUL0340"
+        },
+        {
+          "fulfillment_id": "FUL0341"
+        },
+        {
+          "fulfillment_id": "FUL0342"
+        },
+        {
+          "fulfillment_id": "FUL0343"
+        },
+        {
+          "fulfillment_id": "FUL0345"
+        },
+        {
+          "fulfillment_id": "FUL0346"
+        },
+        {
+          "fulfillment_id": "FUL0347"
+        },
+        {
+          "fulfillment_id": "FUL0348"
+        },
+        {
+          "fulfillment_id": "FUL0349"
+        },
+        {
+          "fulfillment_id": "FUL0350"
+        },
+        {
+          "fulfillment_id": "FUL0355"
+        },
+        {
+          "fulfillment_id": "FUL0356"
+        },
+        {
+          "fulfillment_id": "FUL0358"
+        },
+        {
+          "fulfillment_id": "FUL0359"
+        },
+        {
+          "fulfillment_id": "FUL0361"
+        },
+        {
+          "fulfillment_id": "FUL0362"
+        },
+        {
+          "fulfillment_id": "FUL0363"
+        },
+        {
+          "fulfillment_id": "FUL0364"
+        },
+        {
+          "fulfillment_id": "FUL0366"
+        },
+        {
+          "fulfillment_id": "FUL0368"
+        },
+        {
+          "fulfillment_id": "FUL0369"
+        },
+        {
+          "fulfillment_id": "FUL0372"
+        },
+        {
+          "fulfillment_id": "FUL0374"
+        },
+        {
+          "fulfillment_id": "FUL0375"
+        },
+        {
+          "fulfillment_id": "FUL0377"
+        },
+        {
+          "fulfillment_id": "FUL0380"
+        },
+        {
+          "fulfillment_id": "FUL0381"
+        },
+        {
+          "fulfillment_id": "FUL0382"
+        },
+        {
+          "fulfillment_id": "FUL0383"
+        },
+        {
+          "fulfillment_id": "FUL0385"
+        },
+        {
+          "fulfillment_id": "FUL0387"
+        },
+        {
+          "fulfillment_id": "FUL0388"
+        },
+        {
+          "fulfillment_id": "FUL0389"
+        },
+        {
+          "fulfillment_id": "FUL0390"
+        },
+        {
+          "fulfillment_id": "FUL0393"
+        },
+        {
+          "fulfillment_id": "FUL0394"
+        },
+        {
+          "fulfillment_id": "FUL0398"
+        },
+        {
+          "fulfillment_id": "FUL0401"
+        },
+        {
+          "fulfillment_id": "FUL0402"
+        },
+        {
+          "fulfillment_id": "FUL0403"
+        },
+        {
+          "fulfillment_id": "FUL0404"
+        },
+        {
+          "fulfillment_id": "FUL0406"
+        },
+        {
+          "fulfillment_id": "FUL0407"
+        },
+        {
+          "fulfillment_id": "FUL0409"
+        },
+        {
+          "fulfillment_id": "FUL0410"
+        },
+        {
+          "fulfillment_id": "FUL0412"
+        },
+        {
+          "fulfillment_id": "FUL0413"
+        },
+        {
+          "fulfillment_id": "FUL0416"
+        },
+        {
+          "fulfillment_id": "FUL0417"
+        },
+        {
+          "fulfillment_id": "FUL0418"
+        },
+        {
+          "fulfillment_id": "FUL0419"
+        },
+        {
+          "fulfillment_id": "FUL0420"
+        },
+        {
+          "fulfillment_id": "FUL0422"
+        },
+        {
+          "fulfillment_id": "FUL0423"
+        },
+        {
+          "fulfillment_id": "FUL0424"
+        },
+        {
+          "fulfillment_id": "FUL0425"
+        },
+        {
+          "fulfillment_id": "FUL0426"
+        },
+        {
+          "fulfillment_id": "FUL0427"
+        },
+        {
+          "fulfillment_id": "FUL0428"
+        },
+        {
+          "fulfillment_id": "FUL0429"
+        },
+        {
+          "fulfillment_id": "FUL0430"
+        },
+        {
+          "fulfillment_id": "FUL0433"
+        },
+        {
+          "fulfillment_id": "FUL0434"
+        },
+        {
+          "fulfillment_id": "FUL0435"
+        },
+        {
+          "fulfillment_id": "FUL0440"
+        },
+        {
+          "fulfillment_id": "FUL0441"
+        },
+        {
+          "fulfillment_id": "FUL0442"
+        },
+        {
+          "fulfillment_id": "FUL0444"
+        },
+        {
+          "fulfillment_id": "FUL0445"
+        },
+        {
+          "fulfillment_id": "FUL0446"
+        },
+        {
+          "fulfillment_id": "FUL0447"
+        },
+        {
+          "fulfillment_id": "FUL0448"
+        },
+        {
+          "fulfillment_id": "FUL0451"
+        },
+        {
+          "fulfillment_id": "FUL0452"
+        },
+        {
+          "fulfillment_id": "FUL0453"
+        },
+        {
+          "fulfillment_id": "FUL0454"
+        },
+        {
+          "fulfillment_id": "FUL0455"
+        },
+        {
+          "fulfillment_id": "FUL0456"
+        },
+        {
+          "fulfillment_id": "FUL0457"
+        },
+        {
+          "fulfillment_id": "FUL0458"
+        },
+        {
+          "fulfillment_id": "FUL0459"
+        },
+        {
+          "fulfillment_id": "FUL0460"
+        },
+        {
+          "fulfillment_id": "FUL0461"
+        },
+        {
+          "fulfillment_id": "FUL0462"
+        },
+        {
+          "fulfillment_id": "FUL0464"
+        },
+        {
+          "fulfillment_id": "FUL0465"
+        },
+        {
+          "fulfillment_id": "FUL0466"
+        },
+        {
+          "fulfillment_id": "FUL0467"
+        },
+        {
+          "fulfillment_id": "FUL0468"
+        },
+        {
+          "fulfillment_id": "FUL0469"
+        },
+        {
+          "fulfillment_id": "FUL0470"
+        },
+        {
+          "fulfillment_id": "FUL0472"
+        },
+        {
+          "fulfillment_id": "FUL0474"
+        },
+        {
+          "fulfillment_id": "FUL0475"
+        },
+        {
+          "fulfillment_id": "FUL0479"
+        },
+        {
+          "fulfillment_id": "FUL0480"
+        },
+        {
+          "fulfillment_id": "FUL0481"
+        },
+        {
+          "fulfillment_id": "FUL0482"
+        },
+        {
+          "fulfillment_id": "FUL0484"
+        },
+        {
+          "fulfillment_id": "FUL0485"
+        },
+        {
+          "fulfillment_id": "FUL0486"
+        },
+        {
+          "fulfillment_id": "FUL0487"
+        },
+        {
+          "fulfillment_id": "FUL0488"
+        },
+        {
+          "fulfillment_id": "FUL0489"
+        },
+        {
+          "fulfillment_id": "FUL0490"
+        },
+        {
+          "fulfillment_id": "FUL0492"
+        },
+        {
+          "fulfillment_id": "FUL0493"
+        },
+        {
+          "fulfillment_id": "FUL0497"
+        },
+        {
+          "fulfillment_id": "FUL0500"
+        },
+        {
+          "fulfillment_id": "FUL0502"
+        },
+        {
+          "fulfillment_id": "FUL0503"
+        },
+        {
+          "fulfillment_id": "FUL0505"
+        },
+        {
+          "fulfillment_id": "FUL0506"
+        },
+        {
+          "fulfillment_id": "FUL0507"
+        },
+        {
+          "fulfillment_id": "FUL0508"
+        },
+        {
+          "fulfillment_id": "FUL0509"
+        },
+        {
+          "fulfillment_id": "FUL0510"
+        },
+        {
+          "fulfillment_id": "FUL0511"
+        },
+        {
+          "fulfillment_id": "FUL0517"
+        },
+        {
+          "fulfillment_id": "FUL0518"
+        },
+        {
+          "fulfillment_id": "FUL0519"
+        },
+        {
+          "fulfillment_id": "FUL0520"
+        },
+        {
+          "fulfillment_id": "FUL0522"
+        },
+        {
+          "fulfillment_id": "FUL0524"
+        },
+        {
+          "fulfillment_id": "FUL0525"
+        },
+        {
+          "fulfillment_id": "FUL0527"
+        },
+        {
+          "fulfillment_id": "FUL0529"
+        },
+        {
+          "fulfillment_id": "FUL0532"
+        },
+        {
+          "fulfillment_id": "FUL0533"
+        },
+        {
+          "fulfillment_id": "FUL0534"
+        },
+        {
+          "fulfillment_id": "FUL0535"
+        },
+        {
+          "fulfillment_id": "FUL0536"
+        },
+        {
+          "fulfillment_id": "FUL0540"
+        },
+        {
+          "fulfillment_id": "FUL0541"
+        },
+        {
+          "fulfillment_id": "FUL0543"
+        },
+        {
+          "fulfillment_id": "FUL0547"
+        },
+        {
+          "fulfillment_id": "FUL0548"
+        },
+        {
+          "fulfillment_id": "FUL0549"
+        },
+        {
+          "fulfillment_id": "FUL0550"
+        }
+      ],
+      "reference_rows": [
+        {
+          "fulfillment_id": "FUL0282",
+          "order_id": "ORD0282",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0283",
+          "order_id": "ORD0283",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0286",
+          "order_id": "ORD0286",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0010",
+          "order_id": "ORD0010",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0288",
+          "order_id": "ORD0288",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0044",
+          "order_id": "ORD0044",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0162",
+          "order_id": "ORD0162",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0293",
+          "order_id": "ORD0293",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0020",
+          "order_id": "ORD0020",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0295",
+          "order_id": "ORD0295",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0296",
+          "order_id": "ORD0296",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0297",
+          "order_id": "ORD0297",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0167",
+          "order_id": "ORD0167",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0169",
+          "order_id": "ORD0169",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0303",
+          "order_id": "ORD0303",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0304",
+          "order_id": "ORD0304",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0047",
+          "order_id": "ORD0047",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0306",
+          "order_id": "ORD0306",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0309",
+          "order_id": "ORD0309",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0310",
+          "order_id": "ORD0310",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0096",
+          "order_id": "ORD0096",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0097",
+          "order_id": "ORD0097",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0098",
+          "order_id": "ORD0098",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0316",
+          "order_id": "ORD0316",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0317",
+          "order_id": "ORD0317",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0320",
+          "order_id": "ORD0320",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0174",
+          "order_id": "ORD0174",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0176",
+          "order_id": "ORD0176",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0177",
+          "order_id": "ORD0177",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0328",
+          "order_id": "ORD0328",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0178",
+          "order_id": "ORD0178",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0100",
+          "order_id": "ORD0100",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0101",
+          "order_id": "ORD0101",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0333",
+          "order_id": "ORD0333",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0181",
+          "order_id": "ORD0181",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0336",
+          "order_id": "ORD0336",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0337",
+          "order_id": "ORD0337",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0102",
+          "order_id": "ORD0102",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0183",
+          "order_id": "ORD0183",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0342",
+          "order_id": "ORD0342",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0343",
+          "order_id": "ORD0343",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0345",
+          "order_id": "ORD0345",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0346",
+          "order_id": "ORD0346",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0184",
+          "order_id": "ORD0184",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0348",
+          "order_id": "ORD0348",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0349",
+          "order_id": "ORD0349",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0103",
+          "order_id": "ORD0103",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0188",
+          "order_id": "ORD0188",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0189",
+          "order_id": "ORD0189",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0023",
+          "order_id": "ORD0023",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0359",
+          "order_id": "ORD0359",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0361",
+          "order_id": "ORD0361",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0362",
+          "order_id": "ORD0362",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0363",
+          "order_id": "ORD0363",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0050",
+          "order_id": "ORD0050",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0011",
+          "order_id": "ORD0011",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0193",
+          "order_id": "ORD0193",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0196",
+          "order_id": "ORD0196",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0197",
+          "order_id": "ORD0197",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0374",
+          "order_id": "ORD0374",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0375",
+          "order_id": "ORD0375",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0377",
+          "order_id": "ORD0377",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0380",
+          "order_id": "ORD0380",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0381",
+          "order_id": "ORD0381",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0382",
+          "order_id": "ORD0382",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0110",
+          "order_id": "ORD0110",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0026",
+          "order_id": "ORD0026",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0053",
+          "order_id": "ORD0053",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0388",
+          "order_id": "ORD0388",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0389",
+          "order_id": "ORD0389",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0201",
+          "order_id": "ORD0201",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0393",
+          "order_id": "ORD0393",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0202",
+          "order_id": "ORD0202",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0115",
+          "order_id": "ORD0115",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0204",
+          "order_id": "ORD0204",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0116",
+          "order_id": "ORD0116",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0403",
+          "order_id": "ORD0403",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0404",
+          "order_id": "ORD0404",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0406",
+          "order_id": "ORD0406",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0407",
+          "order_id": "ORD0407",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0117",
+          "order_id": "ORD0117",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0410",
+          "order_id": "ORD0410",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0054",
+          "order_id": "ORD0054",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0058",
+          "order_id": "ORD0058",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0416",
+          "order_id": "ORD0416",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0211",
+          "order_id": "ORD0211",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0418",
+          "order_id": "ORD0418",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0419",
+          "order_id": "ORD0419",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0420",
+          "order_id": "ORD0420",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0061",
+          "order_id": "ORD0061",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0423",
+          "order_id": "ORD0423",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0214",
+          "order_id": "ORD0214",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0215",
+          "order_id": "ORD0215",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0426",
+          "order_id": "ORD0426",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0063",
+          "order_id": "ORD0063",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0428",
+          "order_id": "ORD0428",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0064",
+          "order_id": "ORD0064",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0430",
+          "order_id": "ORD0430",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0433",
+          "order_id": "ORD0433",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0129",
+          "order_id": "ORD0129",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0220",
+          "order_id": "ORD0220",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0440",
+          "order_id": "ORD0440",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0441",
+          "order_id": "ORD0441",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0221",
+          "order_id": "ORD0221",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0444",
+          "order_id": "ORD0444",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0445",
+          "order_id": "ORD0445",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0027",
+          "order_id": "ORD0027",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0447",
+          "order_id": "ORD0447",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0223",
+          "order_id": "ORD0223",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0451",
+          "order_id": "ORD0451",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0135",
+          "order_id": "ORD0135",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0225",
+          "order_id": "ORD0225",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0454",
+          "order_id": "ORD0454",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0226",
+          "order_id": "ORD0226",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0136",
+          "order_id": "ORD0136",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0228",
+          "order_id": "ORD0228",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0137",
+          "order_id": "ORD0137",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0066",
+          "order_id": "ORD0066",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0231",
+          "order_id": "ORD0231",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0461",
+          "order_id": "ORD0461",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0462",
+          "order_id": "ORD0462",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0029",
+          "order_id": "ORD0029",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0013",
+          "order_id": "ORD0013",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0234",
+          "order_id": "ORD0234",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0467",
+          "order_id": "ORD0467",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0468",
+          "order_id": "ORD0468",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0469",
+          "order_id": "ORD0469",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0470",
+          "order_id": "ORD0470",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0472",
+          "order_id": "ORD0472",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0474",
+          "order_id": "ORD0474",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0475",
+          "order_id": "ORD0475",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0479",
+          "order_id": "ORD0479",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0480",
+          "order_id": "ORD0480",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0142",
+          "order_id": "ORD0142",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0482",
+          "order_id": "ORD0482",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0484",
+          "order_id": "ORD0484",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0236",
+          "order_id": "ORD0236",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0486",
+          "order_id": "ORD0486",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0144",
+          "order_id": "ORD0144",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0145",
+          "order_id": "ORD0145",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0489",
+          "order_id": "ORD0489",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0071",
+          "order_id": "ORD0071",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0242",
+          "order_id": "ORD0242",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0493",
+          "order_id": "ORD0493",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0497",
+          "order_id": "ORD0497",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0500",
+          "order_id": "ORD0500",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0502",
+          "order_id": "ORD0502",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0503",
+          "order_id": "ORD0503",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0505",
+          "order_id": "ORD0505",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0506",
+          "order_id": "ORD0506",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0507",
+          "order_id": "ORD0507",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0072",
+          "order_id": "ORD0072",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0245",
+          "order_id": "ORD0245",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0073",
+          "order_id": "ORD0073",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0511",
+          "order_id": "ORD0511",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0517",
+          "order_id": "ORD0517",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0254",
+          "order_id": "ORD0254",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0149",
+          "order_id": "ORD0149",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0259",
+          "order_id": "ORD0259",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0031",
+          "order_id": "ORD0031",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0524",
+          "order_id": "ORD0524",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0525",
+          "order_id": "ORD0525",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0261",
+          "order_id": "ORD0261",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0262",
+          "order_id": "ORD0262",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0532",
+          "order_id": "ORD0532",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0533",
+          "order_id": "ORD0533",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0263",
+          "order_id": "ORD0263",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0033",
+          "order_id": "ORD0033",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0536",
+          "order_id": "ORD0536",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0540",
+          "order_id": "ORD0540",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0541",
+          "order_id": "ORD0541",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0543",
+          "order_id": "ORD0543",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0008",
+          "order_id": "ORD0008",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0548",
+          "order_id": "ORD0548",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0549",
+          "order_id": "ORD0549",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0002",
+          "order_id": "ORD0002",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0037",
+          "order_id": "ORD0037",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0269",
+          "order_id": "ORD0269",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0270",
+          "order_id": "ORD0270",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0271",
+          "order_id": "ORD0271",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0154",
+          "order_id": "ORD0154",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0273",
+          "order_id": "ORD0273",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0274",
+          "order_id": "ORD0274",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0039",
+          "order_id": "ORD0039",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0158",
+          "order_id": "ORD0158",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0041",
+          "order_id": "ORD0041",
+          "attempt_count": 3
+        },
+        {
+          "fulfillment_id": "FUL0550",
+          "order_id": "ORD0550",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0007",
+          "order_id": "ORD0007",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0015",
+          "order_id": "ORD0015",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0019",
+          "order_id": "ORD0019",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0025",
+          "order_id": "ORD0025",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0030",
+          "order_id": "ORD0030",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0034",
+          "order_id": "ORD0034",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0042",
+          "order_id": "ORD0042",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0045",
+          "order_id": "ORD0045",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0049",
+          "order_id": "ORD0049",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0051",
+          "order_id": "ORD0051",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0052",
+          "order_id": "ORD0052",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0065",
+          "order_id": "ORD0065",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0069",
+          "order_id": "ORD0069",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0070",
+          "order_id": "ORD0070",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0076",
+          "order_id": "ORD0076",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0077",
+          "order_id": "ORD0077",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0078",
+          "order_id": "ORD0078",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0081",
+          "order_id": "ORD0081",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0083",
+          "order_id": "ORD0083",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0084",
+          "order_id": "ORD0084",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0085",
+          "order_id": "ORD0085",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0087",
+          "order_id": "ORD0087",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0088",
+          "order_id": "ORD0088",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0091",
+          "order_id": "ORD0091",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0104",
+          "order_id": "ORD0104",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0105",
+          "order_id": "ORD0105",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0109",
+          "order_id": "ORD0109",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0111",
+          "order_id": "ORD0111",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0112",
+          "order_id": "ORD0112",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0118",
+          "order_id": "ORD0118",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0119",
+          "order_id": "ORD0119",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0120",
+          "order_id": "ORD0120",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0124",
+          "order_id": "ORD0124",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0128",
+          "order_id": "ORD0128",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0132",
+          "order_id": "ORD0132",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0139",
+          "order_id": "ORD0139",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0140",
+          "order_id": "ORD0140",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0141",
+          "order_id": "ORD0141",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0146",
+          "order_id": "ORD0146",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0147",
+          "order_id": "ORD0147",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0148",
+          "order_id": "ORD0148",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0150",
+          "order_id": "ORD0150",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0151",
+          "order_id": "ORD0151",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0152",
+          "order_id": "ORD0152",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0153",
+          "order_id": "ORD0153",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0156",
+          "order_id": "ORD0156",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0159",
+          "order_id": "ORD0159",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0160",
+          "order_id": "ORD0160",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0161",
+          "order_id": "ORD0161",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0166",
+          "order_id": "ORD0166",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0170",
+          "order_id": "ORD0170",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0171",
+          "order_id": "ORD0171",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0172",
+          "order_id": "ORD0172",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0173",
+          "order_id": "ORD0173",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0179",
+          "order_id": "ORD0179",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0180",
+          "order_id": "ORD0180",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0182",
+          "order_id": "ORD0182",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0187",
+          "order_id": "ORD0187",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0190",
+          "order_id": "ORD0190",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0191",
+          "order_id": "ORD0191",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0192",
+          "order_id": "ORD0192",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0198",
+          "order_id": "ORD0198",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0199",
+          "order_id": "ORD0199",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0200",
+          "order_id": "ORD0200",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0203",
+          "order_id": "ORD0203",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0206",
+          "order_id": "ORD0206",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0207",
+          "order_id": "ORD0207",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0208",
+          "order_id": "ORD0208",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0209",
+          "order_id": "ORD0209",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0212",
+          "order_id": "ORD0212",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0216",
+          "order_id": "ORD0216",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0217",
+          "order_id": "ORD0217",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0218",
+          "order_id": "ORD0218",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0222",
+          "order_id": "ORD0222",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0224",
+          "order_id": "ORD0224",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0227",
+          "order_id": "ORD0227",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0229",
+          "order_id": "ORD0229",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0230",
+          "order_id": "ORD0230",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0232",
+          "order_id": "ORD0232",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0233",
+          "order_id": "ORD0233",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0235",
+          "order_id": "ORD0235",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0237",
+          "order_id": "ORD0237",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0238",
+          "order_id": "ORD0238",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0241",
+          "order_id": "ORD0241",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0243",
+          "order_id": "ORD0243",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0246",
+          "order_id": "ORD0246",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0255",
+          "order_id": "ORD0255",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0260",
+          "order_id": "ORD0260",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0264",
+          "order_id": "ORD0264",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0265",
+          "order_id": "ORD0265",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0267",
+          "order_id": "ORD0267",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0272",
+          "order_id": "ORD0272",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0276",
+          "order_id": "ORD0276",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0277",
+          "order_id": "ORD0277",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0281",
+          "order_id": "ORD0281",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0287",
+          "order_id": "ORD0287",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0290",
+          "order_id": "ORD0290",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0292",
+          "order_id": "ORD0292",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0294",
+          "order_id": "ORD0294",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0299",
+          "order_id": "ORD0299",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0302",
+          "order_id": "ORD0302",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0305",
+          "order_id": "ORD0305",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0311",
+          "order_id": "ORD0311",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0312",
+          "order_id": "ORD0312",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0314",
+          "order_id": "ORD0314",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0322",
+          "order_id": "ORD0322",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0323",
+          "order_id": "ORD0323",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0325",
+          "order_id": "ORD0325",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0329",
+          "order_id": "ORD0329",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0330",
+          "order_id": "ORD0330",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0332",
+          "order_id": "ORD0332",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0335",
+          "order_id": "ORD0335",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0340",
+          "order_id": "ORD0340",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0341",
+          "order_id": "ORD0341",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0347",
+          "order_id": "ORD0347",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0350",
+          "order_id": "ORD0350",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0355",
+          "order_id": "ORD0355",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0356",
+          "order_id": "ORD0356",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0358",
+          "order_id": "ORD0358",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0364",
+          "order_id": "ORD0364",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0366",
+          "order_id": "ORD0366",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0368",
+          "order_id": "ORD0368",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0369",
+          "order_id": "ORD0369",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0372",
+          "order_id": "ORD0372",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0383",
+          "order_id": "ORD0383",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0385",
+          "order_id": "ORD0385",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0387",
+          "order_id": "ORD0387",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0390",
+          "order_id": "ORD0390",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0394",
+          "order_id": "ORD0394",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0398",
+          "order_id": "ORD0398",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0401",
+          "order_id": "ORD0401",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0402",
+          "order_id": "ORD0402",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0409",
+          "order_id": "ORD0409",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0412",
+          "order_id": "ORD0412",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0413",
+          "order_id": "ORD0413",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0417",
+          "order_id": "ORD0417",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0422",
+          "order_id": "ORD0422",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0424",
+          "order_id": "ORD0424",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0425",
+          "order_id": "ORD0425",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0427",
+          "order_id": "ORD0427",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0429",
+          "order_id": "ORD0429",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0434",
+          "order_id": "ORD0434",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0435",
+          "order_id": "ORD0435",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0442",
+          "order_id": "ORD0442",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0446",
+          "order_id": "ORD0446",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0448",
+          "order_id": "ORD0448",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0452",
+          "order_id": "ORD0452",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0453",
+          "order_id": "ORD0453",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0455",
+          "order_id": "ORD0455",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0456",
+          "order_id": "ORD0456",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0457",
+          "order_id": "ORD0457",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0458",
+          "order_id": "ORD0458",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0459",
+          "order_id": "ORD0459",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0460",
+          "order_id": "ORD0460",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0464",
+          "order_id": "ORD0464",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0465",
+          "order_id": "ORD0465",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0466",
+          "order_id": "ORD0466",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0481",
+          "order_id": "ORD0481",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0485",
+          "order_id": "ORD0485",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0487",
+          "order_id": "ORD0487",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0488",
+          "order_id": "ORD0488",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0490",
+          "order_id": "ORD0490",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0492",
+          "order_id": "ORD0492",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0508",
+          "order_id": "ORD0508",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0509",
+          "order_id": "ORD0509",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0510",
+          "order_id": "ORD0510",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0518",
+          "order_id": "ORD0518",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0519",
+          "order_id": "ORD0519",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0520",
+          "order_id": "ORD0520",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0522",
+          "order_id": "ORD0522",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0527",
+          "order_id": "ORD0527",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0529",
+          "order_id": "ORD0529",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0534",
+          "order_id": "ORD0534",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0535",
+          "order_id": "ORD0535",
+          "attempt_count": 2
+        },
+        {
+          "fulfillment_id": "FUL0547",
+          "order_id": "ORD0547",
+          "attempt_count": 2
+        }
+      ],
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "c2g_13",
+      "text": "List the 5 most recent disputes along with the seller name on the related order.",
+      "category": "right values, wider/narrower projection",
+      "strict_ex": false,
+      "standard_ex": false,
+      "standard_ex_legacy_valueset": false,
+      "value_recall": 1.0,
+      "row_recall": 0.0,
+      "generated_sql": "SELECT \n    d.dispute_id,\n    d.order_id,\n    d.raised_at,\n    d.category,\n    s.display_name AS seller_name\nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nORDER BY d.raised_at DESC\nLIMIT 5",
+      "ground_truth_sql": "SELECT d.dispute_id, d.raised_at, s.display_name FROM disputes d JOIN orders o ON o.order_id = d.order_id JOIN sellers s ON s.seller_id = o.seller_id ORDER BY d.raised_at DESC LIMIT 5",
+      "generated_row_count": 5,
+      "reference_row_count": 5,
+      "generated_cols": 5,
+      "reference_cols": 3,
+      "generated_rows": [
+        {
+          "dispute_id": "DIS0014",
+          "order_id": "ORD0492",
+          "raised_at": "2026-07-14T06:36:48.879238+00:00",
+          "category": "wrong_item",
+          "seller_name": "Seller Store 30"
+        },
+        {
+          "dispute_id": "DIS0030",
+          "order_id": "ORD0497",
+          "raised_at": "2026-07-13T09:26:51.991476+00:00",
+          "category": "not_delivered",
+          "seller_name": "Seller Store 26"
+        },
+        {
+          "dispute_id": "DIS0006",
+          "order_id": "ORD0004",
+          "raised_at": "2026-07-13T07:34:51.380366+00:00",
+          "category": "damaged_goods",
+          "seller_name": "Seller Store 22"
+        },
+        {
+          "dispute_id": "DIS0035",
+          "order_id": "ORD0132",
+          "raised_at": "2026-07-13T03:01:10.572423+00:00",
+          "category": "late_delivery",
+          "seller_name": "Seller Store 8"
+        },
+        {
+          "dispute_id": "DIS0080",
+          "order_id": "ORD0023",
+          "raised_at": "2026-07-13T00:30:51.798389+00:00",
+          "category": "not_delivered",
+          "seller_name": "Seller Store 18"
+        }
+      ],
+      "reference_rows": [
+        {
+          "dispute_id": "DIS0014",
+          "raised_at": "2026-07-14T06:36:48.879238+00:00",
+          "display_name": "Seller Store 30"
+        },
+        {
+          "dispute_id": "DIS0030",
+          "raised_at": "2026-07-13T09:26:51.991476+00:00",
+          "display_name": "Seller Store 26"
+        },
+        {
+          "dispute_id": "DIS0006",
+          "raised_at": "2026-07-13T07:34:51.380366+00:00",
+          "display_name": "Seller Store 22"
+        },
+        {
+          "dispute_id": "DIS0035",
+          "raised_at": "2026-07-13T03:01:10.572423+00:00",
+          "display_name": "Seller Store 8"
+        },
+        {
+          "dispute_id": "DIS0080",
+          "raised_at": "2026-07-13T00:30:51.798389+00:00",
+          "display_name": "Seller Store 18"
+        }
+      ],
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "c2g_14",
+      "text": "How many orders did each buyer app place through the b2b channel?",
+      "category": "right row COUNT, wrong values",
+      "strict_ex": false,
+      "standard_ex": false,
+      "standard_ex_legacy_valueset": false,
+      "value_recall": 0.667,
+      "row_recall": 0.0,
+      "generated_sql": "SELECT t1.buyer_app_id, COUNT(t1.order_id) AS order_count FROM orders AS t1 WHERE t1.order_channel = 'b2b' GROUP BY t1.buyer_app_id LIMIT 1000",
+      "ground_truth_sql": "SELECT np.participant_id, np.legal_name, COUNT(*) AS b2b_order_count FROM network_participants np JOIN orders o ON o.buyer_app_id = np.participant_id WHERE o.order_channel = 'b2b' GROUP BY np.participant_id, np.legal_name ORDER BY b2b_order_count DESC",
+      "generated_row_count": 5,
+      "reference_row_count": 5,
+      "generated_cols": 2,
+      "reference_cols": 3,
+      "generated_rows": [
+        {
+          "buyer_app_id": "BA001",
+          "order_count": 60
+        },
+        {
+          "buyer_app_id": "BA004",
+          "order_count": 61
+        },
+        {
+          "buyer_app_id": "BA003",
+          "order_count": 49
+        },
+        {
+          "buyer_app_id": "BA005",
+          "order_count": 53
+        },
+        {
+          "buyer_app_id": "BA002",
+          "order_count": 58
+        }
+      ],
+      "reference_rows": [
+        {
+          "participant_id": "BA004",
+          "legal_name": "BuyerApp 4 Pvt Ltd",
+          "b2b_order_count": 61
+        },
+        {
+          "participant_id": "BA001",
+          "legal_name": "BuyerApp 1 Pvt Ltd",
+          "b2b_order_count": 60
+        },
+        {
+          "participant_id": "BA002",
+          "legal_name": "BuyerApp 2 Pvt Ltd",
+          "b2b_order_count": 58
+        },
+        {
+          "participant_id": "BA005",
+          "legal_name": "BuyerApp 5 Pvt Ltd",
+          "b2b_order_count": 53
+        },
+        {
+          "participant_id": "BA003",
+          "legal_name": "BuyerApp 3 Pvt Ltd",
+          "b2b_order_count": 49
+        }
+      ],
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "c2g_15",
+      "text": "Which sellers have a Devanagari display name recorded?",
+      "category": "SQL execution error (unrecovered)",
+      "strict_ex": false,
+      "standard_ex": false,
+      "standard_ex_legacy_valueset": false,
+      "value_recall": 0.0,
+      "row_recall": 0.0,
+      "generated_sql": "SELECT s.seller_id, s.display_name, s.display_name_local FROM sellers AS s WHERE s.display_name_local ~ '\\p{Devanagari}' LIMIT 1000",
+      "ground_truth_sql": "SELECT seller_id, display_name, display_name_local FROM sellers WHERE display_name_local IS NOT NULL ORDER BY seller_id",
+      "generated_row_count": 0,
+      "reference_row_count": 30,
+      "generated_cols": 0,
+      "reference_cols": 3,
+      "generated_rows": [],
+      "reference_rows": [
+        {
+          "seller_id": "S001",
+          "display_name": "Seller Store 1",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 1"
+        },
+        {
+          "seller_id": "S002",
+          "display_name": "Seller Store 2",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 2"
+        },
+        {
+          "seller_id": "S003",
+          "display_name": "Seller Store 3",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 3"
+        },
+        {
+          "seller_id": "S004",
+          "display_name": "Seller Store 4",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 4"
+        },
+        {
+          "seller_id": "S005",
+          "display_name": "Seller Store 5",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 5"
+        },
+        {
+          "seller_id": "S006",
+          "display_name": "Seller Store 6",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 6"
+        },
+        {
+          "seller_id": "S007",
+          "display_name": "Seller Store 7",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 7"
+        },
+        {
+          "seller_id": "S008",
+          "display_name": "Seller Store 8",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 8"
+        },
+        {
+          "seller_id": "S009",
+          "display_name": "Seller Store 9",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 9"
+        },
+        {
+          "seller_id": "S010",
+          "display_name": "Seller Store 10",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 10"
+        },
+        {
+          "seller_id": "S011",
+          "display_name": "Seller Store 11",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 11"
+        },
+        {
+          "seller_id": "S012",
+          "display_name": "Seller Store 12",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 12"
+        },
+        {
+          "seller_id": "S013",
+          "display_name": "Seller Store 13",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 13"
+        },
+        {
+          "seller_id": "S014",
+          "display_name": "Seller Store 14",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 14"
+        },
+        {
+          "seller_id": "S015",
+          "display_name": "Seller Store 15",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 15"
+        },
+        {
+          "seller_id": "S016",
+          "display_name": "Seller Store 16",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 16"
+        },
+        {
+          "seller_id": "S017",
+          "display_name": "Seller Store 17",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 17"
+        },
+        {
+          "seller_id": "S018",
+          "display_name": "Seller Store 18",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 18"
+        },
+        {
+          "seller_id": "S019",
+          "display_name": "Seller Store 19",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 19"
+        },
+        {
+          "seller_id": "S020",
+          "display_name": "Seller Store 20",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 20"
+        },
+        {
+          "seller_id": "S021",
+          "display_name": "Seller Store 21",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 21"
+        },
+        {
+          "seller_id": "S022",
+          "display_name": "Seller Store 22",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 22"
+        },
+        {
+          "seller_id": "S023",
+          "display_name": "Seller Store 23",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 23"
+        },
+        {
+          "seller_id": "S024",
+          "display_name": "Seller Store 24",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 24"
+        },
+        {
+          "seller_id": "S025",
+          "display_name": "Seller Store 25",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 25"
+        },
+        {
+          "seller_id": "S026",
+          "display_name": "Seller Store 26",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 26"
+        },
+        {
+          "seller_id": "S027",
+          "display_name": "Seller Store 27",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 27"
+        },
+        {
+          "seller_id": "S028",
+          "display_name": "Seller Store 28",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 28"
+        },
+        {
+          "seller_id": "S029",
+          "display_name": "Seller Store 29",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 29"
+        },
+        {
+          "seller_id": "S030",
+          "display_name": "Seller Store 30",
+          "display_name_local": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 30"
+        }
+      ],
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [
+        {
+          "attempt": 0,
+          "category": "unclassified",
+          "message": "invalid regular expression: invalid escape \\ sequence"
+        }
+      ],
+      "final_attempt": 0
+    }
+  ]
+}

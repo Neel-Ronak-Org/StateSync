@@ -653,3 +653,80 @@ The evidence points at reverting, and reverting now would still be premature:
 **Decide after the Azure probe, with both fixtures measured on the graded
 model.** Recorded here so the decision is made on data rather than on whichever
 number someone happens to look at first.
+
+---
+
+# First hosted-model probe (2026-08-17): the model IS part of the ceiling
+
+## Provider history, because it shaped the result
+
+Azure was the intended graded provider. **The subscription cannot provision AI
+resources** — an Azure-managed policy (`RequestDisallowedByAzure`) blocks
+Cognitive Services *and* AI Foundry accounts on Azure for Students across every
+region tried, while permitting resource groups. No self-serve fix.
+
+Gemini was the documented fallback (`PROJECT_DIRECTION.md` §4). It works — with
+one constraint that shapes everything below.
+
+## The free tier is 20 requests per DAY, per model, per project
+
+Not per minute. Measured from the API's own error:
+
+```
+quotaId:    GenerateRequestsPerDayPerProjectPerModel-FreeTier
+quotaValue: 20
+```
+
+The pipeline issues ~5.2 LLM calls per query, so **one model for all seven
+roles caps the pipeline at ~4 queries/day.** The adapter's exponential backoff —
+written for a per-minute limit — is useless against a daily cap and merely
+wastes wall-clock. A first full-25 attempt misrouted every query; each
+"misroute" was a 429 in disguise. It was killed and **nothing from it is
+recorded.**
+
+**Mitigation, legitimate and already in the design:** quota is per MODEL, and
+`[llm.models.gemini]` assigns a model per role. Seven roles across seven models
+gives each its own bucket. The `sql` role is the bottleneck (1–4 calls/query on
+retries), which caps a free-tier run at **~15 queries**, not 25.
+
+## Result — paired on the SAME 15 queries
+
+Compared against `m4_diagnosis_v2_corrected.json` restricted to `c2g_01..c2g_15`,
+so this is a paired comparison, not a mismatched one.
+
+| | local `qwen2.5:7b` | Gemini (mixed) | delta |
+|---|---|---|---|
+| strict EX (C2-V8) | 5/15 = 33.3% | **8/15 = 53.3%** | **+20.0pp** |
+| standard EX (BIRD) | 6/15 = 40.0% | **9/15 = 60.0%** | **+20.0pp** |
+
+Per-query: **gained** `c2g_01`, `c2g_02`, `c2g_07`, `c2g_09`; **lost**
+`c2g_15`; 9 unchanged. Net +3 queries.
+
+`c2g_01` is worth naming: the local model returned 30 rows against a 1-row
+ground truth (a missing aggregation — the query whose mislabelling as an
+"unrecovered SQL error" this audit corrected). The hosted model gets it right.
+
+## Read this before quoting the number
+
+1. **n = 15. One query is 6.7pp.** +20pp is three net queries. Directional, not
+   precise.
+2. **This is a MIXED-MODEL pipeline**, not "Gemini X scores 60%". Every role ran
+   a different model to spread quota; the exact mapping is in the report's
+   `flag_provenance.llm.models`.
+3. **It is a FLOOR, not a ceiling.** The `sql` role — where M4's failures live —
+   ran `gemini-3.5-flash-lite`, the *weakest* tier available. Every "pro" model
+   returns 429 on free tier. A single strong model would plausibly do better.
+4. **One regression, reported:** `c2g_15` went correct → incorrect.
+
+## What it establishes
+
+The 7B was **a real part of the ceiling, not the whole of it.** Six of the 15
+queries still fail on a hosted model, so architecture and prompt work retain
+headroom — but the "prompt interventions merely relocate errors" pattern
+(schema comments, projection discipline) now has its explanation: on a 7B there
+was nothing left to relocate *from*.
+
+**Next, and it is cheap:** enable billing on the Gemini project. It removes the
+daily cap entirely, and the full 25-query probe is ~130 calls at ~5k tokens
+each — well under $1. That buys a single-model, full-fixture, quotable number
+instead of this mixed-model 15-query floor.

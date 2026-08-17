@@ -10,7 +10,7 @@
 # never appear in reported metrics or panel demos. Always run on anthropic for
 # any result you intend to show.
 [llm]
-provider = "local"          # "local" | "anthropic" | "azure" | "gemini"
+provider = "gemini"          # "local" | "anthropic" | "azure" | "gemini"
 ollama_url = "http://host.docker.internal:11434"
 
 # Azure OpenAI / AI Foundry (BD1 seam, third implementation).
@@ -54,14 +54,31 @@ judge             = "gpt-4o"
 # will hit 429s; the adapter backs off and retries (models.gemini_max_retries).
 # Raise `sql` to a stronger model if the free tier allows it -- that is the
 # role where M4's remaining failures live.
+# PINNED, deliberately not "gemini-flash-latest". An alias silently changes
+# under you; a metric has to name the model that produced it or it is not
+# reproducible. Verified live 2026-08-17 against this key: 3.6-flash, 3.5-flash,
+# 3-flash-preview and flash-lite all generate; gemini-3.7-flash returned 503
+# UNAVAILABLE; every "pro" model returned 429 -- the FREE TIER HAS NO PRO QUOTA.
+# So flash is not a cost choice here, it is the only tier available.
 [llm.models.gemini]
-supervisor        = "gemini-2.5-flash"
-sql               = "gemini-2.5-flash"
-synthesizer       = "gemini-2.5-flash"
-memory_summarizer = "gemini-2.5-flash"
-normalizer        = "gemini-2.5-flash"
-decomposer        = "gemini-2.5-flash"
-judge             = "gemini-2.5-flash"
+# ROLES SPREAD ACROSS DISTINCT MODELS ON PURPOSE. Free-tier quota is
+# GenerateRequestsPerDayPerProjectPerModel = 20 -- per DAY, per MODEL. One
+# model for all seven roles caps the whole pipeline at ~4 queries/day. Each
+# role on its own model gives each its own bucket, which is the config working
+# as designed, not a workaround.
+#
+# READ THIS BEFORE QUOTING A NUMBER FROM THIS CONFIG: a run here is a
+# MIXED-MODEL pipeline, not "Gemini X scored N". flag_provenance in every
+# report records the exact per-role mapping. For a single-model graded run,
+# enable billing (removes the cap; the 25-query probe is well under $1) and
+# set all seven to one model.
+supervisor        = "gemini-3.1-flash-lite"
+sql               = "gemini-3.5-flash-lite"
+synthesizer       = "gemini-3-flash-preview"
+memory_summarizer = "gemini-flash-latest"
+normalizer        = "gemini-flash-lite-latest"
+decomposer        = "gemini-flash-latest"
+judge             = "gemini-flash-latest"
 
 [llm.models.anthropic]
 supervisor        = "claude-opus-4-5"

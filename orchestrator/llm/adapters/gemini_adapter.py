@@ -42,8 +42,14 @@ _PLACEHOLDER_PREFIX = "REPLACE"
 # Substrings that mark a rate-limit / quota rejection across the SDK's error
 # shapes. Matched case-insensitively against the exception text because the
 # SDK raises several types for the same underlying condition.
+# 429 (per-minute free-tier limit) AND 503 (model temporarily overloaded) are
+# both TRANSIENT and both retryable. Observed live while choosing a model:
+# gemini-3.7-flash returned 503 UNAVAILABLE while 3.6-flash served fine, and
+# every "pro" model returned 429 -- the free tier has no pro quota at all.
+# Without 503 here, one overloaded moment mid-run scores as a wrong answer.
 _RATE_LIMIT_MARKERS = ("429", "resource_exhausted", "resource exhausted",
-                       "rate limit", "quota", "too many requests")
+                       "rate limit", "quota", "too many requests",
+                       "503", "unavailable", "overloaded")
 
 # How much of a retry exception to put in the log line. Presentation, not
 # behaviour: no caller reads it and no result depends on it, so it is not a
@@ -139,10 +145,31 @@ class GeminiAdapter:
         """
         from google.genai import types
 
+        # THINKING TOKENS COUNT AGAINST max_output_tokens, which breaks the
+        # ChatModel contract every other adapter honours: max_tokens means
+        # VISIBLE output. Measured on gemini-3.6-flash at this project's own
+        # budgets: max_output_tokens=128 (max_tokens_supervisor) spent 102-119
+        # tokens thinking and returned '' -- the Supervisor would have emitted
+        # nothing and routing would fail. thinking_level="high" returned
+        # truncated garbage ('", so no extra spaces') from the same budget.
+        #
+        # thinking_level="minimal" reports thoughts_token_count=None and
+        # returns correct output, so max_tokens means what the locked constants
+        # in Appendix 1 assume. thinking_budget=N does NOT constrain (110-121
+        # thoughts regardless) and thinking_budget=0 is rejected outright (400),
+        # so this is the only control that works on this model.
+        #
+        # Raising the level is a deliberate, separately-labelled experiment that
+        # also needs the token constants raised (a BD under A0.3) -- not a
+        # default, because a truncated answer would score as a model failure
+        # when it is a budget artifact.
+        level = str(getattr(cfg.models, "gemini_thinking_level", "") or "").strip()
         config = types.GenerateContentConfig(
             system_instruction=system,
             temperature=cfg.models.temperature,
             max_output_tokens=max_tokens,
+            **({"thinking_config": types.ThinkingConfig(thinking_level=level)}
+               if level else {}),
         )
         contents = self._to_contents(messages)
 
@@ -174,11 +201,23 @@ class GeminiAdapter:
 
         text = (response.text or "").strip()
         usage = getattr(response, "usage_metadata", None)
+        # Thinking tokens are BILLED as output and are invisible in
+        # candidates_token_count. Excluding them would understate real cost and
+        # make token-budget accounting wrong exactly where it matters.
+        thoughts = getattr(usage, "thoughts_token_count", 0) or 0
+        visible = getattr(usage, "candidates_token_count", 0) or 0
+        if thoughts and not text:
+            logger.warning(
+                "Gemini returned EMPTY text after %d thinking tokens against a "
+                "max_tokens of %d. The budget was consumed by reasoning. Lower "
+                "models.gemini_thinking_level or raise the role's token cap.",
+                thoughts, max_tokens,
+            )
         return LLMResponse(
             text=text,
             # Counts are optional in the response schema; a missing count must
             # not crash a completed query, and 0 undercounts rather than
             # inventing a number.
             tokens_in=getattr(usage, "prompt_token_count", 0) or 0,
-            tokens_out=getattr(usage, "candidates_token_count", 0) or 0,
+            tokens_out=visible + thoughts,
         )

@@ -246,6 +246,18 @@ def smoke(name: str) -> int:
             print("    Unrecognised. The raw error above is the ground truth.")
         return 1
 
+    # An empty reply is a FAILURE, not a pass. The first version of this check
+    # printed OK for text='' / tokens_out=0 on a Gemini thinking model that had
+    # spent its whole budget reasoning -- a vacuous pass, in the script written
+    # to prevent vacuous passes.
+    if not resp.text.strip():
+        print(f"\n  ✗ EMPTY REPLY after {time.time()-t0:.2f}s "
+              f"(tokens in={resp.tokens_in} out={resp.tokens_out})")
+        print("    The call succeeded but produced no text. On a thinking model")
+        print("    the token budget was consumed by reasoning: lower")
+        print("    models.gemini_thinking_level, or raise the role's max_tokens.")
+        return 1
+
     print(f"\n  ✓ LIVE COMPLETION OK in {time.time()-t0:.2f}s")
     print(f"    reply      : {resp.text[:60]!r}")
     print(f"    tokens in  : {resp.tokens_in}")

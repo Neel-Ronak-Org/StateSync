@@ -145,6 +145,22 @@ def live_staleness() -> dict[str, object] | None:
     }
 
 
+def _llm_provenance() -> dict[str, object]:
+    """provider + the model per role, straight out of flags.toml."""
+    text = FLAGS_PATH.read_text()
+    m = re.search(r'^\s*provider\s*=\s*"([^"]+)"', text, re.M)
+    provider = m.group(1) if m else None
+    models: dict[str, str] = {}
+    if provider:
+        block = re.search(rf"\[llm\.models\.{re.escape(provider)}\]\n((?:.*\n)*?)(?=\[|\Z)", text)
+        if block:
+            for line in block.group(1).splitlines():
+                kv = re.match(r'\s*(\w+)\s*=\s*"([^"]+)"', line)
+                if kv:
+                    models[kv.group(1)] = kv.group(2)
+    return {"provider": provider, "models": models}
+
+
 def require_shipped_flags(script: str, allow_nonshipped: bool = False,
                           check_live: bool = True) -> dict[str, object]:
     """
@@ -158,7 +174,12 @@ def require_shipped_flags(script: str, allow_nonshipped: bool = False,
     deviations = disk_deviations(state)
     stale = live_staleness() if check_live else None
 
+    # The provider and per-role model names belong in provenance for the same
+    # reason the flag state does: a number that cannot name the model that
+    # produced it is not reproducible. Read from the same flags file, so this
+    # cannot disagree with what the orchestrator loaded.
     record: dict[str, object] = {
+        "llm": _llm_provenance(),
         "flag_state": state,
         "shipped": not deviations and not stale,
         "disk_deviations": deviations,
