@@ -39,6 +39,41 @@ first from "28% capability" to "a strict scorer" (`PROJECT_DIRECTION` §2), now
 from "a strict scorer" to "an unsound fixture". Each move was found by opening
 the evidence rather than re-reading the number.
 
+## 1a. RESULTS — 2026-08-18, after real data landed
+
+| | |
+|---|---|
+| **1** — audit every ground truth | ✅ done. 12 of 25 defective. Corrected fixture worth **+16pp** on the same model. |
+| **2** — specify projections | ✅ done, folded into `phase_c2_v2`. |
+| **3** — real data | ✅ **done.** Olist, 1.45M rows, loaded, agent-queryable, fixture built, both providers measured. |
+| **4** — Hinglish `x`/`x_local` | ❌ still open. Live wrong-answer bug. |
+| **5** — auth + CI stack tier | ⚠️ CI deterministic tier shipped; auth not started. |
+| **6** — M2/D-V6/C2-V1 | ⏸ model-gated, still waiting. |
+| **7** — schema retrieval | ⏸ trigger measured at 449 tokens vs the 8,000 threshold. Correctly unbuilt. |
+
+**The headline finding, and it reframes the spending plan.** Paired on the same
+18 real-data questions, local `qwen2.5:7b` scored **88.9%** and Gemini
+**94.4%** — a one-query difference at n=18. The same comparison on synthetic
+`phase_c2` showed **+20pp**. The model gap did not shrink because the models
+changed; it shrank because the *questions* did. Most of what looked like a
+capability gap was a fixture punishing under-specification, and a stronger
+model was partly buying its way out of ambiguity.
+
+Ranked by measured effect on this project's numbers:
+
+| intervention | effect |
+|---|---|
+| fixing the fixture's ground truths | **+16.0pp** |
+| 7B → hosted model (synthetic, under-specified questions) | +20.0pp |
+| 7B → hosted model (real data, well-specified questions) | **+5.5pp = one query** |
+| 7B → 14B general, local | +0.0pp |
+| 7B → 14B coder, local | −8.0pp |
+
+**So: instrument quality is worth as much as the frontier model, and a bigger
+local model is worth nothing.** Spend credits on hard multi-hop joins and
+genuinely ambiguous questions — not on ordinary aggregates over real data,
+where a free local model is equivalent.
+
 ## 2. Model-independent priorities, ranked
 
 **1 — Audit every ground truth in the reported fixtures. Highest value.**

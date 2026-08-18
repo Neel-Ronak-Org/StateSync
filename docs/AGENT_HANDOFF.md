@@ -273,8 +273,15 @@ contact with a real one.
 **Stack:** LangGraph orchestrator · MCP tool server (sole credential holder) ·
 Postgres + PostGIS + pgvector · Qdrant · evaluator · nginx frontend · Ollama.
 
-**Data: 100% synthetic.** 550 orders, 30 sellers, 18 documents, 36 chunks.
-All fixtures self-authored (~287 queries). Never run against a standard benchmark.
+**Data: TWO corpora as of 2026-08-18.**
+- *synthetic* — 550 orders, 30 sellers, 18 documents, 36 chunks, in `public`.
+- *real* — **Olist, 1,451,414 rows** (99,441 orders / 3,095 sellers / 100,000
+  reviews) in schema `olist`, checksum-verified, CC BY-NC-SA (NON-COMMERCIAL).
+  Point the agent at it with `schema_retriever.target_schema = "olist"`.
+  It is deliberately outside `public`, so the A5 fingerprint cannot see it.
+
+Fixtures remain self-authored. Still never run against a standard benchmark
+(BIRD/Spider).
 
 **Model:** `qwen2.5:7b` local. Every quality number is provisional on it.
 
@@ -282,7 +289,9 @@ All fixtures self-authored (~287 queries). Never run against a standard benchmar
 
 | | | |
 |---|---|---|
-| standard EX (BIRD/Spider definition) | **44%** | re-verified 2026-08-16 under the *shipped* `ExecutionAccuracyScorer`; the earlier figure came from a looser in-script definition (`f46e0bf`) and the number happens to be identical |
+| standard EX — **real data** (olist, n=18) | **local 7B 88.9% · Gemini 94.4%** |
+| standard EX — synthetic, CORRECTED fixture (`phase_c2_v2`, n=25) | **60.0%** |
+| standard EX — synthetic, original fixture (n=25) | 44% | re-verified 2026-08-16 under the *shipped* `ExecutionAccuracyScorer`; the earlier figure came from a looser in-script definition (`f46e0bf`) and the number happens to be identical |
 | strict EX (this project's scorer) | 36% | unchanged |
 | mean value recall | 74% | **weak metric — do not read as capability.** Unaligned and de-duplicated: a query returning 30 rows for a 1-row answer scores 1.00. Mean *row* recall is **48%** |
 | M8 adversarial | **40/40** | was 36/36; +4 payload-count assertions that close a class-empties-silently hole (`dc2e31f`) |
