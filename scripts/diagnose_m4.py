@@ -92,6 +92,39 @@ def _fixture_label(path: Path) -> str:
         return str(path)
 
 
+def _checkpoint(out: Path, results: list, total: int, args, prov) -> None:
+    """
+    Write what has completed so far, after EVERY query.
+
+    Model calls are the expensive, rate-limited, unrepeatable part of a run; a
+    JSON write costs nothing. This script has already lost two complete runs to
+    holding results in memory until the end -- once to an exception while
+    BUILDING the report, once to a hosted-provider quota wall that aborted at
+    query 1. Partial results are labelled `partial: true` and carry
+    `completed`/`total`, so a truncated run can never be mistaken for a whole
+    one. The final write overwrites this with partial: false.
+
+    Deliberately swallows its own errors: a checkpoint that crashes the run it
+    exists to protect would be worse than no checkpoint.
+    """
+    try:
+        out.write_text(json.dumps({
+            "generated_by": "scripts/diagnose_m4.py",
+            "partial": True,
+            "completed": len(results),
+            "total": total,
+            "fixture": _fixture_label(args.fixture),
+            "flag_provenance": prov,
+            "report_schema": 2,
+            "note": ("PARTIAL -- run still in progress or aborted. Scores are over "
+                     "the completed subset only and are NOT comparable to a full "
+                     "run. Re-run to completion, or compare per-query."),
+            "results": results,
+        }, indent=2, default=str) + "\n")
+    except Exception:
+        pass
+
+
 def mcp_run_select(sql: str) -> dict:
     payload = json.dumps({
         "jsonrpc": "2.0", "id": "1", "method": "data.run_select",
@@ -345,9 +378,19 @@ def main() -> int:
         print(f"  [{i:2d}/{len(queries)}] {q['id']}  strict={int(strict)} "
               f"stdEX={int(std)} recall={recall:.2f}  {cat}{flag}")
 
+        # CHECKPOINT AFTER EVERY QUERY. This script has already destroyed one
+        # complete 25-query run by raising while BUILDING the report at the end,
+        # and a hosted-provider quota wall makes an abort mid-run likely rather
+        # than hypothetical -- a full-25 Gemini attempt died on query 1 and lost
+        # everything. Model calls are the expensive, rate-limited, unrepeatable
+        # part; a JSON write is free. Never hold completed work in memory
+        # waiting for a run to finish.
+        _checkpoint(args.out, results, len(queries), args, flag_provenance)
+
     n = len(queries)
     report = {
         "generated_by": "scripts/diagnose_m4.py",
+        "partial": False,
         # NOT `relative_to(REPO_ROOT)`. That raises on a relative path, and it
         # raised HERE -- after all 25 queries had run -- destroying a complete
         # 25-minute run at the final write. Fifth instance in this repo of
