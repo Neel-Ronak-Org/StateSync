@@ -10,7 +10,7 @@
 # never appear in reported metrics or panel demos. Always run on anthropic for
 # any result you intend to show.
 [llm]
-provider = "gemini"        # "local" | "anthropic" | "azure" | "gemini"
+provider = "local"          # "local" | "anthropic" | "azure" | "gemini"
 ollama_url = "http://host.docker.internal:11434"
 
 # Azure OpenAI / AI Foundry (BD1 seam, third implementation).
@@ -130,7 +130,7 @@ judge             = "gpt-4o"
 # model: D-V3 proved English passes the gate byte-identical 20/20, so the call
 # is a measured no-op costing ~24% of the request budget.
 supervisor        = "gemini-3.5-flash"
-sql               = "gemini-3.6-flash"
+sql               = "gemini-3.5-flash-lite"  # 500 RPD. The sql role makes 3-4 calls/query (interrogation draft + generation + retries), so a 20-RPD Flash model is exhausted by ~5 queries -- measured, not estimated.
 synthesizer       = "gemini-3-flash-preview"  # NOT "gemini-3-flash": that is the DASHBOARD display name and 404s as an API id
 memory_summarizer = "gemini-3.1-flash-lite"
 normalizer        = "gemini-3.1-flash-lite"
