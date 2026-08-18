@@ -1,0 +1,210 @@
+# StateSync v2 — strategy
+
+**Status: current. Written 2026-08-18, after v1 was declared complete.**
+
+This supersedes `docs/PROJECT_DIRECTION.md`, which is retained as the **v1
+record** and should not be edited further. That file is now three layers of
+corrections stacked on an original — accurate history, unusable as direction.
+This one is written once, flat, and revised in place.
+
+No dates anywhere. Every workstream has a **completion condition** and a
+**cut-line** instead, because "we could also add X" without "X is done when Y"
+is how v1 ended with eight seams and six empty ones.
+
+---
+
+## 1. What v2 is
+
+> **A conversational analytics agent over real e-commerce data, with verifiable
+> read-only guarantees.**
+
+Two words are new. **Conversational** — v1 answers one question and forgets it;
+every real analytics tool is a dialogue. **Real** — v1 was 100% synthetic until
+its final day.
+
+The third clause is not new and is the reason the project is worth continuing:
+the security and verification properties are genuinely above the norm, and they
+survived contact with a corpus they were never designed for.
+
+## 2. What v1 established — do not re-derive these
+
+| | |
+|---|---|
+| single-turn EX, real data (Olist, 18 q, well-specified) | **local 7B 88.9% · hosted 94.4%** |
+| single-turn EX, synthetic corrected fixture (25 q) | 60.0% |
+| single-turn EX, synthetic original fixture | 44.0% |
+| adversarial suite | 40/40 |
+| corpora | synthetic 550 orders · **Olist 1,451,414 real rows** |
+| providers behind one seam | local · anthropic · azure · gemini |
+
+**Ranked by measured effect — this table is the reason v2 is shaped the way it
+is:**
+
+| intervention | effect |
+|---|---|
+| fixing the fixture's ground truths | **+16.0pp** |
+| 7B → hosted, under-specified questions | +20.0pp |
+| 7B → hosted, **well-specified** questions | **+5.5pp — one query** |
+| 7B → 14B general (local) | +0.0pp |
+| 7B → 14B coder (local) | −8.0pp |
+
+Read down that column: **instrument quality is worth as much as a frontier
+model, and a bigger local model is worth nothing.** Twelve of twenty-five
+questions in a fixture this project authored were defective. That finding is
+the spine of the paper in §6 and the reason §3's fixture work is not optional.
+
+## 3. Workstream A — Multi-turn conversation (the capability leap)
+
+v1 is single-turn by construction. Real usage is
+*"how many orders?"* → *"and by state?"* → *"just the delivered ones."*
+
+**Build:**
+- session-scoped conversation state (LangGraph state and `MCPSession` already
+  carry a session id; the history does not persist across turns)
+- context carryover — prior question, prior SQL, prior result shape
+- **reference resolution** — anaphora (*"those"*, *"it"*), ellipsis (*"and by
+  state?"*), and refinement (*"just the delivered ones"*)
+- **clarification** — when a follow-up is genuinely unresolvable, ask rather
+  than guess. A wrong guess on turn 2 poisons every later turn.
+
+**Test with established vocabulary, not invented metrics.** Multi-turn
+text-to-SQL has prior art (SParC, CoSQL) and their metrics are the right ones:
+
+| metric | definition | why |
+|---|---|---|
+| **QM** (question match) | % of individual turns correct | comparable to single-turn EX |
+| **IM** (interaction match) | % of conversations where **every** turn is correct | the honest headline; compounds errors |
+| **reference resolution rate** | of turns containing an anaphor/ellipsis, % resolved to the right entity | isolates the new capability |
+| **error propagation rate** | given a wrong turn *n*, how often turn *n+1* is wrong **because of it** | diagnosis, not just verification |
+
+**QM is never reported without IM.** Quoting the flattering half of a pair is
+precisely the failure v1 spent three days undoing.
+
+**Completion condition.** The system sustains ≥3-turn conversations over the
+Olist corpus with reference resolution measured; QM, IM, reference-resolution
+rate and error-propagation rate all reported from one run, with per-role model
+provenance.
+
+**Cut-line.** If clarification proves expensive, ship without it and record the
+guess-rate instead — but never ship silent guessing unrecorded.
+
+## 4. Workstream B — Correctness
+
+**B1. The `x` / `x_local` defect.** A live wrong-answer bug: asked
+*"Lucknow mein kitne sellers hain?"* the system invents a Devanagari string,
+matches `city_local`, returns 0, and answers confidently. Reproduced on three
+independent models, so the cause is the schema carrying no signal about which
+column holds which script — not any model's weakness.
+
+*Completion:* the acceptance condition already fixed in `open_items.md`
+(English line up, D-V2 ≥ 81.25%, D-V1 treatment ≥ 65.0%) **plus** the Hinglish
+half no worse. Pre-committed so it cannot be renegotiated after seeing results.
+
+**B2. The hard fixture.** Every fixture here is mostly single-table aggregates.
+BD6 records 2-hop joins as this system's measured weakness across four
+independent checks, and the 94.4% headline has never been tested against them.
+15–20 questions over Olist: three-table joins, correlated subqueries, window
+functions, deliberately ambiguous phrasings — built with `gen_olist_fixture.py`'s
+safeguards (projections named, denominators stated, zero-row references
+rejected).
+
+*Completion:* run on ≥2 providers, failures classified with
+`attribute_failures.py`. **This tells us whether 94.4% is real or an artifact of
+easy questions, and it must happen before any number is put in the report.**
+
+**B3. Hinglish over real data.** *"Sao Paulo mein kitne sellers hain?"* — asking
+code-mixed questions of the Olist corpus isolates the **language** capability
+from the **data origin**, and lands it on real Latin-script city names with 611
+spellings including `sao paulop`. That is the Bangalore/Bengaluru/Banglore
+variance the v1 docs called realistic and untested.
+
+## 5. Workstream C — Credibility
+
+**C1. Production floor.** No authentication, no rate limiting on an
+unauthenticated `/query` that costs tokens per call, no audit log of who asked
+what. None of these differentiate — their **absence** disqualifies.
+*Completion:* auth on the UI and API, per-identity audit log, rate limit;
+adversarial suite re-run and still 40/40.
+
+**C2. Indian corpus.** With a Kaggle account, order-level Indian e-commerce data
+is reachable. **Caveat that decides how it is used:** these sets are typically
+*flat, denormalized single tables* — weak for text-to-SQL, which needs joins.
+Olist keeps the relational job; the Indian set carries the domain angle
+(geography, ONDC vocabulary, DIGIPIN).
+*Completion:* loaded with the same checksum + row-count discipline as Olist,
+licence recorded, dirt surveyed before any question is written.
+
+**C3. The three deliverables.** A repo a reviewer can navigate, a report that
+carries the findings, a demo that shows a conversation. *Completion:* a README
+finishable in five minutes containing architecture, one demo, the effect table
+from §2, and the honest limitations.
+
+## 6. The paper track — design discipline required FROM NOW
+
+The aim is a **submission**, so the experimental design tightens immediately.
+A paper kept "in the back of the mind" does not get written — not for lack of
+discipline, but because the data was collected in non-comparable ways and by
+the time you want to write, you cannot.
+
+**The claim:** *fixture specification quality accounts for as much accuracy
+variance in text-to-SQL evaluation as a frontier-model upgrade.*
+
+Evidence held: 12/25 defective in one self-authored fixture; repair worth
++16.0pp; the model gap collapsing +20.0pp → +5.5pp once questions are
+well-specified.
+
+**What makes it publishable rather than an anecdote:** replication. v2 authors
+**two new fixtures** (B2 hard, and A's multi-turn set). Auditing both with the
+same protocol and reporting the defect rate and its accuracy cost turns one
+observation into three independent measurements on independently authored
+fixtures — including one on a *harder task*.
+
+**Four rules, binding from now:**
+1. **One variable per run.** The coder:14b conclusion was over-claimed because
+   two things changed at once. Never again.
+2. **Paired runs.** Same questions, same corpus, same scorer; vary the provider
+   or the fixture, never both.
+3. **Provenance in every artifact.** `flag_provenance` already records provider,
+   per-role models and flag state. Do not add a report that lacks it.
+4. **Never edit a fixture in place.** Corrected copies alongside, with an
+   `_audit` trail and the original preserved — the `phase_c2_v2` protocol.
+
+## 7. What "successful" means — the bar, per deliverable
+
+**Repo.** CI green on every push. Every claim in the README traceable to a
+committed artifact. A stranger can bring the stack up from the README alone —
+the clean-machine condition v1 never actually performed.
+
+**Report.** Three findings, each with the run behind it: the effect table from
+§2; whether 94.4% survives hard questions; multi-turn QM **and** IM. Every
+number names its fixture, its scorer and its model. No number appears without
+its caveat attached at the point of use.
+
+**Demo.** A ≥3-turn conversation over 1.45M real rows, ending in a chart, with
+the trace visible. If a viewer cannot tell it is a conversation, the workstream
+is not done.
+
+**Paper.** Defect rates and their accuracy cost measured on **three
+independently authored fixtures**, at least one multi-turn. Below that it is a
+technical report, which is still worth writing — but it is not a submission and
+should not be called one.
+
+## 8. Explicitly cut — with reasons, so they are not silently reopened
+
+| cut | why |
+|---|---|
+| **BIRD / Spider** | Three blockers measured (`benchmark_readiness.md`). The dialect one mostly dissolves — gold result sets can be computed offline in SQLite — so a subset run becomes cheap **once C1's per-request database routing exists**. Revisit then, as a line item, never as the project. |
+| **TPC-DS** | Proposed for licence-free scale; made redundant by the Indian corpus and Olist. Row count is the weakest of our gaps. |
+| **A bigger local model** | Measured: +0.0pp for double the parameters, −8.0pp for a coder tune. Retired. |
+| **CSR-RAG / schema-scale retrieval** | Trigger pre-committed at 8,000 tokens; Olist measures **449**. Stays unbuilt until something fires it. |
+| **Devanagari as the headline multilingual metric** | Real Indian enterprise data is Latin-script. Devanagari stays supported, Hinglish becomes the metric. |
+
+## 9. Rules carried forward from v1 — non-negotiable
+
+- Do not break the product.
+- **Never alter a verification, fixture or scorer to make a number look better.**
+  Add a correctly-defined one alongside and report both.
+- Verify with commands; do not assert from memory.
+- Measure before and after anything that could move a metric.
+- Report regressions honestly, including your own.
+- Restore shipped flag state after every experiment; the guard enforces it.

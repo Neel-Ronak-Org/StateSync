@@ -8,8 +8,11 @@ time on those conversations and does not want them replayed.
 **Read in this order:**
 
 1. **This file** — history, what is settled, what the owner actually thinks.
-2. `docs/PROJECT_DIRECTION.md` — the revised strategy (2026-08-16). **This
-   supersedes the original strategy document wherever they disagree.**
+2. **`docs/V2_STRATEGY.md`** — the CURRENT strategy. What v2 is, what v1
+   established, the three workstreams with completion conditions, the metrics,
+   the success bar, and what is explicitly cut. **Start here for direction.**
+3. `docs/PROJECT_DIRECTION.md` — the **v1 record, superseded**. Read only for
+   how the thinking changed; do not act on its priorities.
 3. `docs/StateSync_Strategy_Document.md` — the *original* vision and the
    15-source literature grounding. Still the reference for *why* components
    exist; **out of date on priorities**.
