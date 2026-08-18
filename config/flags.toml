@@ -158,7 +158,7 @@ judge             = "claude-opus-4-5"     # E1: bench_grounding.py context preci
 enabled                         = false  # D13 control path for M1/M2; see comment above
 
 [normalization]
-enabled                         = false  # TEMPORARILY off for the English-only olist run: D-V3 proved English passes the gate byte-identical 20/20, so this call is a measured no-op costing ~24% of a scarce request budget. RESTORE to true after.
+enabled                         = true   # D13 control path for M3
 provider                        = "prompt"  # D2 provider slot; resolved at process start
 
 [spatial]
@@ -171,7 +171,7 @@ provider                        = "direct"   # D7 CSR-RAG slot; resolved at proc
 # Only `public` participates in the A5 fingerprint, so pointing this at olist
 # does NOT move it -- but trajectory memory keyed on that fingerprint is then
 # meaningless, so keep memory.enabled=false for olist runs.
-target_schema                   = "olist"    # TEMP: pointed at the real corpus for this run. RESTORE to "public".
+target_schema                   = "public"
 
 [ingestion]
 source                          = "local"    # IngestionSource slot (A8, Appendix 4); resolved by scripts/ingest.py at operator-run time
