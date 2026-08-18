@@ -106,24 +106,36 @@ judge             = "gpt-4o"
 # UNAVAILABLE; every "pro" model returned 429 -- the FREE TIER HAS NO PRO QUOTA.
 # So flash is not a cost choice here, it is the only tier available.
 [llm.models.gemini]
-# ROLES SPREAD ACROSS DISTINCT MODELS ON PURPOSE. Free-tier quota is
-# GenerateRequestsPerDayPerProjectPerModel = 20 -- per DAY, per MODEL. One
-# model for all seven roles caps the whole pipeline at ~4 queries/day. Each
-# role on its own model gives each its own bucket, which is the config working
-# as designed, not a workaround.
+# ROLE ASSIGNMENT DRIVEN BY MEASURED LIMITS, not guesses. From the AI Studio
+# "Rate limits by model" dashboard (2026-08-17):
 #
-# READ THIS BEFORE QUOTING A NUMBER FROM THIS CONFIG: a run here is a
-# MIXED-MODEL pipeline, not "Gemini X scored N". flag_provenance in every
-# report records the exact per-role mapping. For a single-model graded run,
-# enable billing (removes the cap; the 25-query probe is well under $1) and
-# set all seven to one model.
-supervisor        = "gemini-3.1-flash-lite"
-sql               = "gemini-3.5-flash-lite"
-synthesizer       = "gemini-3-flash-preview"
-memory_summarizer = "gemini-flash-latest"
-normalizer        = "gemini-flash-lite-latest"
-decomposer        = "gemini-flash-latest"
-judge             = "gemini-flash-latest"
+#   tier          RPM    RPD     TPM
+#   Flash          5      20     250K
+#   Flash-Lite    15     500     250K
+#
+# TPM is irrelevant here -- peak observed use was 19.9K of 250K (8%).
+# The binding constraints are RPM (fixed by models.gemini_rpm pacing) and RPD.
+#
+# EACH MODEL HAS ITS OWN BUDGET, so three roles on three DIFFERENT Flash models
+# get 20 RPD each rather than sharing one. An 18-query run needs ~18 supervisor
+# and ~18 synthesizer calls -- both inside 20 -- so both get the strong tier.
+#
+# `sql` is the role that decides the number, so it gets a Flash model too, even
+# though retries can push it to ~22 calls against a 20 RPD cap. That is a
+# deliberate trade: BETTER QUALITY ON 16-18 QUERIES BEATS WORSE QUALITY ON 18,
+# and diagnose_m4 now checkpoints after every query, so hitting the wall banks
+# everything completed rather than losing the run (it lost one that way).
+#
+# The normalizer is DISABLED for these English-only fixtures rather than given a
+# model: D-V3 proved English passes the gate byte-identical 20/20, so the call
+# is a measured no-op costing ~24% of the request budget.
+supervisor        = "gemini-3.5-flash"
+sql               = "gemini-3.6-flash"
+synthesizer       = "gemini-3-flash"
+memory_summarizer = "gemini-3.1-flash-lite"
+normalizer        = "gemini-3.1-flash-lite"
+decomposer        = "gemini-3.5-flash-lite"
+judge             = "gemini-3.5-flash-lite"
 
 [llm.models.anthropic]
 supervisor        = "claude-opus-4-5"

@@ -31,6 +31,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time
 
 from config_loader import cfg, flags
 from llm.adapters.base import ChatModel, LLMResponse
@@ -55,6 +56,40 @@ _RATE_LIMIT_MARKERS = ("429", "resource_exhausted", "resource exhausted",
 # behaviour: no caller reads it and no result depends on it, so it is not a
 # configurable constant under A0.2.
 _LOG_EXCERPT_CHARS = 120  # noqa: literals — log truncation, not a domain constant
+
+
+# Pacing state is MODULE-level and keyed by MODEL, not per adapter instance.
+# provider.get_agent_llm is lru_cached per ROLE, so two roles sharing one model
+# hold two adapter objects -- a per-instance limiter would let them each spend
+# the model's full RPM budget and burst to double the limit.
+# Unit conversion, not a domain constant: RPM is defined per minute.
+_SECONDS_PER_MINUTE = 60.0  # noqa: literals — unit conversion, not configurable
+
+_LAST_CALL: dict[str, float] = {}
+_PACE_LOCK = asyncio.Lock()
+
+
+async def _pace(model: str, rpm: int) -> None:
+    """Sleep until this MODEL may legally be called again.
+
+    Prevents the 429 rather than reacting to it. The free tier's binding limit
+    is per-minute, and the pipeline issues ~4 calls per query with no natural
+    gap between them.
+    """
+    if rpm <= 0:
+        return
+    min_gap = _SECONDS_PER_MINUTE / rpm
+    async with _PACE_LOCK:
+        now = time.monotonic()
+        last = _LAST_CALL.get(model)
+        # `None` rather than a large negative sentinel: a sentinel is a magic
+        # number the config lint correctly objects to, and "never called" is a
+        # different state from "called long ago", not a very old timestamp.
+        wait = min_gap if last is None else min_gap - (now - last)
+        if wait > 0 and last is not None:
+            logger.debug("Pacing %s: sleeping %.1fs to stay under %d RPM", model, wait, rpm)
+            await asyncio.sleep(wait)
+        _LAST_CALL[model] = time.monotonic()
 
 
 class GeminiConfigError(RuntimeError):
@@ -179,6 +214,7 @@ class GeminiAdapter:
 
         for attempt in range(attempts):
             try:
+                await _pace(self.model, int(getattr(cfg.models, "gemini_rpm", 0) or 0))
                 response = await self._client.aio.models.generate_content(
                     model=self.model, contents=contents, config=config,
                 )

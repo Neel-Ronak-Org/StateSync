@@ -179,3 +179,13 @@ gemini_retry_base_delay_s = 4.0
 # Raising this requires raising the [sql] max_tokens_* caps too -- a BD under
 # A0.3 -- because thinking silently eats the visible-output budget.
 gemini_thinking_level     = "minimal"
+# CLIENT-SIDE PACING. The free tier's binding constraint is REQUESTS PER MINUTE,
+# not per day -- measured from the AI Studio dashboard: Flash models 5 RPM /
+# 20 RPD, Flash-Lite 15 RPM / 500 RPD, TPM 250K (peak use 19.9K, never close).
+# The pipeline fires ~4 calls back to back per query, so with no pacing it
+# exceeds 5 RPM on the FIRST query and every later 429 is self-inflicted.
+# Retry-with-backoff reacts to that; pacing prevents it.
+#
+# Set to the LOWEST tier in use (Flash = 5). Raise to 15 when every configured
+# model is Flash-Lite. A wrong value here costs throughput, never correctness.
+gemini_rpm                = 5
