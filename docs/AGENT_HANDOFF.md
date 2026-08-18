@@ -13,12 +13,12 @@ time on those conversations and does not want them replayed.
    the success bar, and what is explicitly cut. **Start here for direction.**
 3. `docs/PROJECT_DIRECTION.md` — the **v1 record, superseded**. Read only for
    how the thinking changed; do not act on its priorities.
-3. `docs/StateSync_Strategy_Document.md` — the *original* vision and the
+4. `docs/StateSync_Strategy_Document.md` — the *original* vision and the
    15-source literature grounding. Still the reference for *why* components
    exist; **out of date on priorities**.
-4. `docs/metrics-report.md`, `docs/limitations.md`, `docs/open_items.md` — the
+5. `docs/metrics-report.md`, `docs/limitations.md`, `docs/open_items.md` — the
    measured state, honestly recorded.
-5. `docs/StateSync_Build_Spec.md` — the locked spec (binding rules A0.1–A0.6).
+6. `docs/StateSync_Build_Spec.md` — the locked spec (binding rules A0.1–A0.6).
 
 ---
 
