@@ -320,6 +320,20 @@ def main() -> int:
     for i, q in enumerate(queries, 1):
         gt_sql = q.get("ground_truth_sql") or ""
         gt = mcp_run_select(gt_sql) if gt_sql else {"ok": False, "rows": [], "columns": []}
+        # TRUNCATION MAKES A RESULT UNSCOREABLE, and silently so. With a
+        # server-side row cap, WHICH rows come back depends on ORDER BY -- so
+        # two equally-correct queries differing only in ordering return
+        # different 1000-row prefixes and score as different. Demonstrated
+        # against olist.orders (99,441 rows): identical queries matched, the
+        # same correct answer with a different ORDER BY did not.
+        #
+        # No fixture here exceeds the cap (max 566 rows), so this has never
+        # bitten -- but BIRD/Spider return large result sets routinely, and a
+        # benchmark number computed over truncated results would be quietly
+        # wrong. Flagged per query rather than raising the cap, because an
+        # unbounded cap is a data-plane risk and the honest answer is
+        # "unscoreable", not a guess.
+        gt_truncated = bool(gt.get("truncated"))
         ref_rows = gt.get("rows", []) or []
         ref_cols = gt.get("columns", []) or (list(ref_rows[0]) if ref_rows else [])
 
@@ -368,6 +382,8 @@ def main() -> int:
             # 25 fresh model calls.
             "generated_rows": gen["rows"][:MAX_ROWS_PERSISTED],
             "reference_rows": ref_rows[:MAX_ROWS_PERSISTED],
+            "reference_truncated": gt_truncated,
+            "unscoreable_truncated": gt_truncated,
             "generated_rows_truncated": len(gen["rows"]) > MAX_ROWS_PERSISTED,
             "reference_rows_truncated": len(ref_rows) > MAX_ROWS_PERSISTED,
             "errors": [{"attempt": e.get("attempt"), "category": e.get("category"),
