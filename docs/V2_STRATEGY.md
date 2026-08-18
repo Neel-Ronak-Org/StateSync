@@ -88,6 +88,76 @@ provenance.
 **Cut-line.** If clarification proves expensive, ship without it and record the
 guess-rate instead — but never ship silent guessing unrecorded.
 
+## 3a. Workstream A2 — The unstructured half (CORRECTION, added 2026-08-18)
+
+**This section exists because the first draft of this document omitted it, and
+the owner caught it.** §3 described multi-turn as if the system were SQL-only.
+It is not, and the omission mattered.
+
+**What actually exists** — it is not forgotten, and "no tests" is wrong:
+`orchestrator/nodes/unstructured_knowledge.py`, the `docs` and `hybrid` routes,
+`scripts/ingest.py`, and M6 in `scripts/bench_grounding.py`, which DOES include
+a hallucination check — faithfulness scored by an LLM judge against a rubric
+frozen in `fixtures/rubrics/faithfulness.json`, plus context precision, recall,
+and a count of ungrounded-but-true answers.
+
+**What is genuinely wrong with it, and it is worse than "forgotten":**
+
+| | |
+|---|---|
+| corpus | **18 documents, 36 chunks** — while the SQL side now has 1,451,414 real rows |
+| context precision | **0.622** — ~38% of retrieved context is irrelevant |
+| faithfulness | 0.8125 |
+| provenance | measured **pre-`da6e49f`**, never re-measured; flagged stale in `metrics-report.md` |
+
+The asymmetry is the finding: v2's predecessor spent three days making the
+structured half real and did not touch the unstructured half once. A
+"conversational analytics agent" with a 36-chunk knowledge base is half a
+product.
+
+**The corpus problem is already solved and nobody noticed.** `olist.order_reviews`
+holds **41,755 real free-text customer reviews** (Portuguese, messy, embedded
+carriage returns) — 1,160× the current chunk count, already loaded, already
+checksummed. Ingesting them makes the retrieval side real at zero acquisition
+cost.
+
+**Caveat that decides what it can be used for:** reviews average 70 characters
+(max 208). That is **short-form text, not documents**. It is a real corpus for
+retrieval-at-scale, grounding and faithfulness — *"what are customers saying
+about late delivery"* is a genuine analyst question. It is **not** a substitute
+for policy/SOP retrieval, where a threshold lives in a paragraph. Those stay
+synthetic, and no real source has been found.
+
+### Cross-modal multi-turn — the owner's point, and it sharpens §3
+
+The interesting conversation is not SQL-only:
+
+> **Turn 1** *"What does our SLA policy say about late deliveries?"* → `docs`
+> **Turn 2** *"How many orders breached it last month?"* → `sql`, **with the
+> threshold carried from turn 1's retrieved document**
+
+That is **cross-modal context carryover**: a SQL turn whose correctness depends
+on a value extracted from a document turn. It is strictly harder than the
+SQL-only carryover §3 describes, it is what the `hybrid` route was built for
+and has never been tested conversationally, and it is what an analyst actually
+does.
+
+It also creates an evaluation problem worth reporting: **how do you score a
+turn whose ground truth depends on retrieval succeeding two turns earlier?**
+Error propagation *across modalities* — a wrong threshold from turn 1 produces
+perfectly-formed, confidently wrong SQL in turn 2. The error-propagation metric
+in §3 must therefore attribute across routes, not just across turns.
+
+**Completion condition.** Reviews ingested with the same discipline as the
+relational load (row counts asserted, dirt surveyed). M6 re-measured on the
+current build over the REAL corpus, reported next to the 36-chunk figure so the
+change from toy to real is visible. At least one cross-modal conversation in
+the multi-turn fixture, with its error propagation attributed by route.
+
+**Cut-line.** If cross-modal carryover proves expensive, ship same-modality
+multi-turn and report the cross-modal case as measured-and-failing — never
+quietly omit it from the fixture.
+
 ## 4. Workstream B — Correctness
 
 **B1. The `x` / `x_local` defect.** A live wrong-answer bug: asked
