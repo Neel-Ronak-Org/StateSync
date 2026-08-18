@@ -80,7 +80,7 @@ from classifiers.error_classifier import classify_error
 from llm.provider import get_agent_llm
 from mcp_client import MCPSession, data_run_select, data_sample_rows, schema_list_tables
 from memory_store import get_trajectory_store
-from schema_retriever import get_schema_retriever
+from schema_retriever import get_schema_retriever, target_schema
 from spatial_resolver import get_spatial_resolver
 
 logger = logging.getLogger(__name__)
@@ -380,7 +380,8 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
 
     async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url) as session:
         # Always needed: fingerprint (memory key on attempt 0) and table list.
-        tables_result = await schema_list_tables(session)
+        _schema = target_schema()
+        tables_result = await schema_list_tables(session, _schema)
         schema_fingerprint: str = tables_result.get("fingerprint", "")
         table_names = [t["name"] for t in tables_result.get("tables", [])]
         trajectory_steps += 1
@@ -411,7 +412,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 )
             else:
                 retriever = get_schema_retriever()
-                schema_context, table_descriptions = await retriever.retrieve(session, table_names)
+                schema_context, table_descriptions = await retriever.retrieve(session, table_names, _schema)
                 trajectory_steps += len(table_names)
                 context_block = f"Schema:\n{schema_context}"
 
@@ -457,6 +458,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 for target in targets:
                     sample_result = await data_sample_rows(
                         session, target["table"], columns=target["columns"],
+                        schema=_schema,
                     )
                     new_interrogation_samples.append({
                         "table": target["table"],
@@ -472,7 +474,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             # no memory re-consultation, no interrogation (already in state
             # from attempt 0, if any -- not re-sampled).
             retriever = get_schema_retriever()
-            schema_context, _ = await retriever.retrieve(session, table_names)
+            schema_context, _ = await retriever.retrieve(session, table_names, _schema)
             trajectory_steps += len(table_names)
             context_block = f"Schema:\n{schema_context}"
 

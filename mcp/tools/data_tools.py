@@ -185,6 +185,7 @@ async def sample_rows(
     table: str,
     columns: list[str] | None = None,
     limit: int | None = None,
+    schema: str | None = None,
 ) -> dict[str, Any]:
     """
     A4.3 data.sample_rows
@@ -194,6 +195,17 @@ async def sample_rows(
     import re as _re
     if not _re.match(r'^[a-z_][a-z0-9_]{0,62}$', table):
         raise ValueError(f"Invalid table name: {table!r}")
+    # Schema qualification. `orders` exists in BOTH public (A5 synthetic) and
+    # olist (real), with DIFFERENT columns -- so an unqualified sample silently
+    # hits public and fails with "column customer_id does not exist" while the
+    # agent believes it is inspecting the real corpus. Validated against the
+    # same allowlist the discovery tools use, so this cannot become a way to
+    # reach pg_catalog.
+    from tools.schema_tools import ALLOWED_SCHEMAS, DEFAULT_SCHEMA
+    schema = schema or DEFAULT_SCHEMA
+    if schema not in ALLOWED_SCHEMAS:
+        raise ValueError(
+            f"Schema {schema!r} is not allowed. Allowed: {sorted(ALLOWED_SCHEMAS)}.")
 
     # Enforce caps
     effective_limit_in = limit if limit is not None else _cfg.mcp.sample_rows_default_limit
@@ -208,7 +220,7 @@ async def sample_rows(
     else:
         col_list = "*"
 
-    sql = f'SELECT {col_list} FROM "{table}" LIMIT {effective_limit}'
+    sql = f'SELECT {col_list} FROM "{schema}"."{table}" LIMIT {effective_limit}'
 
     # Run through Layer 1 gate (even though we built the SQL, belt-and-suspenders)
     rejection = _check_layer1(sql)
@@ -224,8 +236,8 @@ async def sample_rows(
         truncated = len(result_rows) >= effective_limit
 
         logger.debug(
-            "data.sample_rows: table=%s limit=%d returned=%d",
-            table, effective_limit, len(result_rows),
+            "data.sample_rows: table=%s.%s limit=%d returned=%d",
+            schema, table, effective_limit, len(result_rows),
         )
         return {"rows": result_rows, "truncated": truncated}
 

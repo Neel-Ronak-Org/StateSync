@@ -10,7 +10,7 @@
 # never appear in reported metrics or panel demos. Always run on anthropic for
 # any result you intend to show.
 [llm]
-provider = "local"          # "local" | "anthropic" | "azure" | "gemini"
+provider = "gemini"        # "local" | "anthropic" | "azure" | "gemini"
 ollama_url = "http://host.docker.internal:11434"
 
 # Azure OpenAI / AI Foundry (BD1 seam, third implementation).
@@ -131,7 +131,7 @@ judge             = "gpt-4o"
 # is a measured no-op costing ~24% of the request budget.
 supervisor        = "gemini-3.5-flash"
 sql               = "gemini-3.6-flash"
-synthesizer       = "gemini-3-flash"
+synthesizer       = "gemini-3-flash-preview"  # NOT "gemini-3-flash": that is the DASHBOARD display name and 404s as an API id
 memory_summarizer = "gemini-3.1-flash-lite"
 normalizer        = "gemini-3.1-flash-lite"
 decomposer        = "gemini-3.5-flash-lite"
@@ -158,7 +158,7 @@ judge             = "claude-opus-4-5"     # E1: bench_grounding.py context preci
 enabled                         = false  # D13 control path for M1/M2; see comment above
 
 [normalization]
-enabled                         = true   # D13 control path for M3
+enabled                         = false  # TEMPORARILY off for the English-only olist run: D-V3 proved English passes the gate byte-identical 20/20, so this call is a measured no-op costing ~24% of a scarce request budget. RESTORE to true after.
 provider                        = "prompt"  # D2 provider slot; resolved at process start
 
 [spatial]
@@ -166,6 +166,12 @@ provider                        = "digipin"  # Spatial resolver slot; resolved a
 
 [schema_retriever]
 provider                        = "direct"   # D7 CSR-RAG slot; resolved at process start
+# Which corpus the SQL agent is shown. "public" = A5's synthetic ONDC schema
+# (the shipped default); "olist" = the real-data corpus from migration 007.
+# Only `public` participates in the A5 fingerprint, so pointing this at olist
+# does NOT move it -- but trajectory memory keyed on that fingerprint is then
+# meaningless, so keep memory.enabled=false for olist runs.
+target_schema                   = "olist"    # TEMP: pointed at the real corpus for this run. RESTORE to "public".
 
 [ingestion]
 source                          = "local"    # IngestionSource slot (A8, Appendix 4); resolved by scripts/ingest.py at operator-run time

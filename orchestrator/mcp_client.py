@@ -112,14 +112,18 @@ class MCPProtocolError(Exception):
 # These are the only callsites for MCP tools in the orchestrator.
 # Node code imports these; it does not call MCPSession.call directly.
 
-async def schema_list_tables(session: MCPSession) -> dict[str, Any]:
-    """A4.1 schema.list_tables"""
-    return await session.call("schema.list_tables")
+async def schema_list_tables(session: MCPSession, schema: str | None = None) -> dict[str, Any]:
+    """A4.1 schema.list_tables. `schema` defaults server-side to public (A5)."""
+    return await session.call("schema.list_tables", {"schema": schema} if schema else {})
 
 
-async def schema_describe_table(session: MCPSession, table: str) -> dict[str, Any]:
-    """A4.2 schema.describe_table"""
-    return await session.call("schema.describe_table", {"table": table})
+async def schema_describe_table(session: MCPSession, table: str,
+                                schema: str | None = None) -> dict[str, Any]:
+    """A4.2 schema.describe_table. `schema` defaults server-side to public (A5)."""
+    params: dict[str, Any] = {"table": table}
+    if schema:
+        params["schema"] = schema
+    return await session.call("schema.describe_table", params)
 
 
 async def data_sample_rows(
@@ -127,13 +131,16 @@ async def data_sample_rows(
     table: str,
     columns: list[str] | None = None,
     limit: int | None = None,
+    schema: str | None = None,
 ) -> dict[str, Any]:
-    """A4.3 data.sample_rows"""
+    """A4.3 data.sample_rows. `schema` defaults server-side to public (A5)."""
     params: dict[str, Any] = {"table": table}
     if columns is not None:
         params["columns"] = columns
     if limit is not None:
         params["limit"] = limit
+    if schema:
+        params["schema"] = schema
     return await session.call("data.sample_rows", params)
 
 

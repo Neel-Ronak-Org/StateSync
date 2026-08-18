@@ -27,6 +27,16 @@ logger = logging.getLogger(__name__)
 
 _VALID_PROVIDERS = frozenset({"direct"})
 
+# The schema the agent is pointed at. "public" is A5's application schema and
+# the shipped default; "olist" is the real-data corpus (migration 007). Only
+# `public` participates in the A5 fingerprint -- see tests/test_schema_scoping.py.
+DEFAULT_SCHEMA = "public"
+
+
+def target_schema() -> str:
+    """Which corpus the SQL agent should be shown, from config."""
+    return str(getattr(flags.schema_retriever, "target_schema", DEFAULT_SCHEMA))
+
 
 @runtime_checkable
 class SchemaRetriever(Protocol):
@@ -65,13 +75,21 @@ class DirectSchemaRetriever:
 
     async def retrieve(
         self, session: MCPSession, table_names: list[str],
+        schema: str | None = None,
     ) -> tuple[str, list[dict]]:
         schema_parts: list[str] = []
         descriptions: list[dict] = []
         for tname in table_names:
-            desc = await schema_describe_table(session, tname)
+            desc = await schema_describe_table(session, tname, schema)
             descriptions.append(desc)
-            schema_parts.append(_format_table(tname, desc))
+            # QUALIFY the name when the corpus is not the default schema.
+            # Without this the agent is handed "TABLE orders:" and writes
+            # `FROM orders`, which resolves through search_path to PUBLIC --
+            # so it queries the 550-row synthetic corpus while being scored
+            # against 99,441 real rows. Observed exactly that on the first
+            # Olist run before the qualification was added.
+            label = tname if not schema or schema == DEFAULT_SCHEMA else f"{schema}.{tname}"
+            schema_parts.append(_format_table(label, desc))
         return "\n\n".join(schema_parts), descriptions
 
 
