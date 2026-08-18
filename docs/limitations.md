@@ -263,6 +263,65 @@ load — this is the evidence for why synthetic numbers do not transfer:
 | 610 products have a NULL category | |
 | `product_name_lenght` is **misspelled in the source** | kept verbatim; renaming would be cleaning |
 
+## "Does it work on production-level data?" — measured answer (2026-08-18)
+
+Asked directly, and the honest answer separates two claims that are easy to
+conflate.
+
+**REAL data: yes, demonstrated.** 17/18 questions answered correctly over
+1,451,414 rows of real Brazilian e-commerce transactions, including 7 questions
+that deliberately probe real-world dirt (orders marked delivered with no
+delivery date, orders with no line items, 611 spellings of seller_city, NULL
+categories, 28% duplicate geolocation rows). A free local 7B scored 16/18 on
+the same set.
+
+**PRODUCTION-LEVEL: no. Four dimensions, measured not assumed.**
+
+*1 — Data-plane scale: PASSES, with room.* Probed on the real corpus:
+
+| query | time |
+|---|---|
+| scan 1,000,163-row table | 0.09s |
+| GROUP BY over 1M rows | 0.11s |
+| 3-table join, 112K items → aggregate | 0.23s |
+| 1M × 99K join (deliberately expensive) | 0.93s |
+
+The 15s statement timeout is nowhere near binding and the 1000-row cap engages
+correctly (`truncated: true`). **But 1.45M rows is not production scale.** Real
+warehouses are 10²–10⁴× larger, and nothing here has been run against one. The
+largest single table is 1M rows.
+
+*2 — Schema scale: UNTESTED at production size.* 9 tables / 52 columns → ~449
+tokens of schema context. `docs/schema_retrieval_decision.md` pre-committed a
+build trigger at 8,000 tokens; this is 5% of it. Real enterprise schemas are
+100s of tables, and the selective retriever that would need is deliberately
+unbuilt.
+
+*3 — Operational readiness: ABSENT, and this is the honest blocker.* Verified
+by grep, not memory:
+
+| | |
+|---|---|
+| authentication | **none.** No login, no JWT, no session. Anyone who reaches port 3000 is an analyst |
+| API abuse controls | **none.** `/query` is unauthenticated and unthrottled, and every call costs LLM tokens |
+| audit log | **none.** No record of who asked what — the first thing a regulated buyer asks for |
+| multi-user | not supported; tenancy exists at the MCP boundary but there are no users |
+| observability | structured logs only; no metrics endpoint, no alerting |
+| backup / restore | not documented, never exercised |
+| concurrency | pool_max_size=10, never load-tested; the LLM (~20s/query local) is the real bottleneck, not Postgres (<1s) |
+
+*4 — Workload realism: NARROW.* The 18 questions were authored by this project,
+are single-turn, and are mostly single-table aggregates. No follow-ups, no
+clarification, no ambiguity resolution, and few multi-hop joins — which BD6
+records as the system''s measured weakness.
+
+**The defensible sentence** is: *"an architecture with production-grade security
+and verification properties, demonstrated on real transactional data at 1.45M
+rows, not yet operationally deployable."* The security work genuinely is
+production-grade — three SELECT-only layers held across a schema they had never
+seen, 40/40 adversarial. The operational surface around it is not built, and
+auth is the single largest gap.
+
 ## Environment limitations affecting this build session specifically
 
 Not defects in StateSync's own logic — infrastructure conditions on this
