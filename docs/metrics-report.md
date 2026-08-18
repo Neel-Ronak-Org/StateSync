@@ -88,6 +88,49 @@ fixture silently re-dates every other model-sensitive number in the repo.
 A build identifier belongs in each report so this is visible without a
 timestamp archaeology exercise.
 
+## Real-data results (olist corpus, 2026-08-18)
+
+**The project's first numbers over data it did not author.** 18 questions,
+1,451,414 real rows (`fixtures/golden/olist.json`, `migration 007`). Paired —
+same questions, same corpus, only the provider differs:
+
+| | local `qwen2.5:7b` | Gemini (mixed, per-role) |
+|---|---|---|
+| strict EX | 16/18 = **88.9%** | 17/18 = **94.4%** |
+| standard EX | 16/18 = **88.9%** | 17/18 = **94.4%** |
+| dirt-probing subset (7) | 5/7 | 6/7 |
+
+**+5.5pp is ONE QUERY.** At n=18 a single item moves the score 5.6pp, so the
+two are **indistinguishable on this fixture** — not "the hosted model is
+better".
+
+**Do NOT quote 94.4% next to phase_c2's 60%.** The olist fixture is easier in
+three nameable ways, two deliberate: it was authored *after* the phase_c2 audit
+with every question naming its columns and every denominator stated (so the
+instrument defects worth 16pp there are absent by construction); its questions
+are mostly single-table aggregates rather than the 2-hop joins BD6 records as
+this system's weakness; and its schema is 9 flat tables against 12 with a
+denser FK graph.
+
+**What it does establish:** on real, dirty, 1.45M-row data with well-specified
+questions, this system answers 17 of 18 correctly, and a free local 7B is
+within one query of a hosted model. The same comparison on synthetic phase_c2
+showed a +20pp gap — so most of that gap was the fixture punishing
+under-specification, not analytical capability. A stronger model was partly
+buying its way out of ambiguity.
+
+**Spending consequence:** frontier credits are worth spending on hard
+multi-hop joins and ambiguous questions, not on ordinary analytical aggregates
+over real data, where local is free and equivalent.
+
+Failures are non-overlapping — local missed `ol_003`/`ol_017`, Gemini missed
+`ol_007` (avg of an INTERVAL: 1,085,071 seconds where the question asked for
+days). Neither model is strictly better at this sample size.
+
+Artifacts: `docs/m4_diagnosis_olist_gemini.json`,
+`docs/m4_diagnosis_olist_local7b.json`, both carrying per-role model
+provenance in `flag_provenance`.
+
 ## Model-sensitive metrics (local provisional, pending graded re-baseline)
 
 | Metric | Local (provisional) | Graded (pending) | Procedure | Local date |
