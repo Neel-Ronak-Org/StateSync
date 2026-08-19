@@ -88,6 +88,94 @@ provenance.
 **Cut-line.** If clarification proves expensive, ship without it and record the
 guess-rate instead — but never ship silent guessing unrecorded.
 
+## 3b. Workstream A — design decisions (added 2026-08-18)
+
+### Multi-turn is NOT a new route
+
+Routes decide **which engine answers this question**. Multi-turn is orthogonal
+state that *every* route needs. A `conversation` route would leave the `sql`
+route with no memory — a category error.
+
+**The design: contextual query rewriting, placed BEFORE the supervisor.** A
+follow-up is rewritten into a standalone question — *"and by state?"* → *"How
+many orders by customer state?"* — after which **the entire existing pipeline
+runs unchanged**. Supervisor routes it, the specialist answers it, nothing
+downstream is touched. Largest coverage for the smallest change, and
+`/query` already accepts `session_id` and threads it to `MCPSession`, so half
+the plumbing exists.
+
+**Its failure mode is this project's signature one, so it gets its own metric.**
+A wrong rewrite is *invisible*: it yields a well-formed question that routes
+correctly, executes correctly, and answers something nobody asked. Silent wrong
+answer. **Rewrite fidelity** — did the standalone question preserve the user's
+intent — is therefore measured separately and never folded into turn accuracy.
+A run may not report QM/IM without it.
+
+### Session state, history, and the audit log are ONE table
+
+Conversation history is the **audit log** `limitations.md` records as missing.
+One artifact, two claims: user-facing history, and the compliance record a
+regulated buyer asks for first.
+
+**Gated on auth.** "Whose history?" is unanswerable without identity, which
+fixes the order: auth → history → everything else.
+
+**It is also an exfiltration target**, and that is a design input rather than an
+afterthought: stored questions describe the business, stored answers contain
+real rows. Same tenant scoping as the data plane, and a breach costs more once
+this exists.
+
+### OPEN QUESTION — resume and staleness. Decide before history ships.
+
+A conversation resumed days later sits on data that has moved.
+
+- Show the stored answer → a stale number in a fresh-looking session. Silent
+  wrong answer, in a new place.
+- Re-run the query → the conversation contradicts what it said last time.
+
+**There is no free option.** Whichever is chosen must be visible in the UI
+(answers stamped with when they were computed, at minimum). Recorded as open
+rather than guessed.
+
+### DEFERRED — session-scoped document upload, with a specific reason
+
+Genuinely useful, demos well, and it is **the largest security change available
+in this project**. Not deferred out of general caution:
+
+- **M8 Class 1 tests injection through data** — adversarial text seeded into
+  columns the agent later retrieves. A user-uploaded document is that exact
+  attack surface, except the attacker supplies it directly. Shipping upload
+  hands over the seeding mechanism the adversarial suite currently owns.
+- There is **no file ingress of any kind** today, and no write path. The
+  strongest claim this project has is three SELECT-only layers with write
+  capability deliberately absent.
+- Needs isolation finer than tenant scoping, plus a deletion policy or storage
+  grows without bound.
+
+**Comes after auth, with its own threat model and its own M8 class.** Not
+before, and never casually.
+
+### PDF export — solves a DIFFERENT problem than the one stated
+
+The stated motivation was *"why would you want it lost at every refresh."* That
+is a **persistence** problem and **history storage solves it completely**; PDF
+does nothing for refresh-loss. PDF solves *getting the analysis to someone who
+does not have the tool* — sharing and archiving. Both are real; they are not the
+same need, and this is the lower-value half.
+
+Pure polish for the research and security stories; genuinely valuable for the
+demo and employability ones. Cheaper than it looks — `vl-convert` already
+renders Vega specs to PNG for the vision scorer, so chart-to-image is solved and
+only assembly remains. **Last in the sequence, and first to be cut.**
+
+### Sequence
+
+**auth → history/audit → multi-turn rewriting → cross-modal turns → session
+upload → PDF.** Auth first because history is meaningless without identity;
+multi-turn before upload because upload is the security-expensive one and
+multi-turn is the capability that matters; PDF last because it is the only item
+that is purely polish.
+
 ## 3a. Workstream A2 — The unstructured half (CORRECTION, added 2026-08-18)
 
 **This section exists because the first draft of this document omitted it, and
