@@ -60,11 +60,21 @@ ORCHESTRATOR_CONTAINER = "statesync-orchestrator-1"
 # The single source of truth. scripts/verify_seams.py's F-V6 imports this
 # rather than keeping its own copy -- two hand-maintained lists of the same
 # constants is the drift that BD4/BD5/BD7 are all instances of.
+#
+# Values are the parsed (unquoted) form: booleans as "true"/"false", strings
+# bare. read_flag_state() matches TOML booleans OR quoted strings under the
+# same regex and strips the quotes, so a string-valued flag is guarded no
+# differently from a boolean one.
 SHIPPED_DEFAULTS: dict[tuple[str, str], str] = {
     ("memory", "enabled"): "false",                     # NOTE-1, docs/spec-gaps.md
     ("normalization", "enabled"): "true",               # D13 control path for M3
     ("tenancy", "enforced"): "false",                   # D6, single-tenant as shipped
     ("evaluation.vision_scorer", "enabled"): "false",   # D11 stretch, off
+    # audit 001 F-001-1: this is the flag 80d35c8 introduced to select the
+    # corpus the SQL agent is shown (public=synthetic, olist=real). Its wrong
+    # value is what produced 80d35c8's silent wrong-corpus measurement, and
+    # until now nothing guarded it or recorded it in a report's provenance.
+    ("schema_retriever", "target_schema"): "public",
 }
 
 
@@ -75,15 +85,25 @@ class FlagStateError(RuntimeError):
 def read_flag_state(flags_text: str | None = None) -> dict[str, str | None]:
     """Parse the guarded flags out of flags.toml. A key that cannot be found
     reads as None, which never equals an expected value, so a parse failure
-    fails the guard rather than silently passing it."""
+    fails the guard rather than silently passing it.
+
+    The value alternation (true|false|quoted-string) covers both flag shapes
+    in SHIPPED_DEFAULTS. The skip-group changed from `?` to `*` (audit 001
+    F-001-1) so a key can sit behind more than one comment line before it --
+    `schema_retriever.target_schema` has five; the four boolean flags this
+    guarded before all have zero, so their match is unchanged."""
     if flags_text is None:
         flags_text = FLAGS_PATH.read_text()
     state: dict[str, str | None] = {}
     for section, key in SHIPPED_DEFAULTS:
-        pattern = (rf"\[{re.escape(section)}\]\s*\n(?:[^\[]*?\n)?\s*"
-                   rf"{re.escape(key)}\s*=\s*(true|false)")
+        pattern = (rf"\[{re.escape(section)}\]\s*\n(?:[^\[]*?\n)*\s*"
+                   rf"{re.escape(key)}\s*=\s*(true|false|\"[^\"]*\")")
         m = re.search(pattern, flags_text)
-        state[f"{section}.{key}"] = m.group(1) if m else None
+        if m is None:
+            state[f"{section}.{key}"] = None
+        else:
+            val = m.group(1)
+            state[f"{section}.{key}"] = val[1:-1] if val.startswith('"') else val
     return state
 
 
@@ -258,6 +278,22 @@ def _self_test() -> int:
         "[memory]\nenabled                         = true")
     check("flipping memory.enabled is detected (the flag that was committed wrong once)",
           flipped_mem != real and "memory.enabled" in disk_deviations(read_flag_state(flipped_mem)))
+
+    # audit 001 F-001-1: schema_retriever.target_schema is a STRING flag, not a
+    # boolean -- exercised separately because it is the value alternation and
+    # the multi-line comment skip (both added for this flag) that could regress
+    # silently while the four boolean flags above kept passing.
+    check("the shipped flags.toml resolves schema_retriever.target_schema (string flag, "
+          "behind 5 comment lines -- the multi-line skip)",
+          read_flag_state(real)["schema_retriever.target_schema"] == "public")
+    flipped_schema = real.replace(
+        'target_schema                   = "public"',
+        'target_schema                   = "olist"')
+    check("flipping schema_retriever.target_schema to olist is detected "
+          "(the flag whose wrong value produced 80d35c8's silent wrong-corpus run)",
+          flipped_schema != real
+          and "schema_retriever.target_schema" in disk_deviations(read_flag_state(flipped_schema)),
+          str(disk_deviations(read_flag_state(flipped_schema))))
 
     check("an unparseable flags file fails rather than passing vacuously",
           bool(disk_deviations(read_flag_state("[memory]\n# nothing here\n"))))
