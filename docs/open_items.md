@@ -509,3 +509,29 @@ against. `metrics-report.md` records it and says "do not revert on these numbers
 alone" — both effects are small-n. That judgement stands; what is recorded here
 is that the regression is **owed**, independently of whether B1 ever happens.
 
+### `attribute_failures.py` has no `WITH`-clause awareness — added 2026-08-20, cycle 001
+
+**Status: open, unfixed, low urgency — worked around once, will recur.**
+
+`_TABLE_RE = re.compile(r"\b(?:FROM|JOIN)\s+([a-zA-Z_][a-zA-Z0-9_]*)", re.I)`
+has no concept of a `WITH ... AS (...)` CTE, so a reference SQL that names a
+CTE (e.g. `ranked`, `order_totals`) is parsed as if that name were a real
+missing table. Found on `fixtures/golden/olist_hard.json`'s three
+window-function questions (`oh_wf01`/`oh_wf03`/`oh_wf04`, all of which use a
+CTE): the tool flagged all three `wrong_tables`, but reading the model's
+actual generated SQL showed it selected the correct real tables in every
+case — the true classification is `same_tables` (a genuine SQL-syntax
+capability gap), 0/3 not 3/3. Caught and corrected in the write-up
+(`docs/metrics-report.md` § "Hard-fixture results") by manual inspection this
+time; nothing in the tool itself prevents the same misclassification on the
+next CTE-using ground truth.
+
+**Fix, not attempted here:** strip or ignore identifiers introduced by a
+`WITH name AS (` clause before extracting FROM/JOIN identifiers — a few lines,
+same file. Left unbuilt because it is a diagnostic-tool quality improvement,
+not a defect that invalidates any published number now that this instance is
+caught, and cycle 001's scope was the fixture and the measurement, not the
+tooling underneath `attribute_failures.py`. Worth an hour in a future cycle
+that touches this tool for any other reason, or immediately before the next
+fixture that ships a CTE in its ground truth.
+
