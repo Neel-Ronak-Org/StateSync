@@ -5,6 +5,27 @@ re-derive decisions that are already made, re-litigate questions already
 settled, or re-discover findings already written down. The owner has spent real
 time on those conversations and does not want them replayed.
 
+## ▶ Before you read anything else
+
+**`docs/CYCLE_PROTOCOL.md` governs how a session here is run.** Read it now.
+In short:
+
+1. **Audit first, on this file and the repo alone.** Write
+   `docs/audits/NNN.md`. `docs/cycles/*` — the previous agents' briefings — are
+   **sealed** until you have. `python3 scripts/cycle.py unseal NNN` enforces it.
+2. **Then unseal, plan, and freeze acceptance criteria** before writing code:
+   `python3 scripts/cycle.py freeze NNN`.
+3. **Then build**, appending deviations as they happen.
+4. **Then brief** the next cycle, in the same file.
+
+The seal withholds the previous agent's *confidence*, never its *claims*.
+Everything you need in order to check something is in this file. Nothing that
+tells you where to look is.
+
+`python3 scripts/cycle.py status` shows where the current cycle stands.
+
+---
+
 **Read in this order:**
 
 1. **This file** — history, what is settled, what the owner actually thinks.
@@ -34,6 +55,10 @@ What is actually binding:
 - Do not alter a verification, fixture or scorer to make a number look better.
 - Verify with commands; do not assert from memory.
 - Report regressions honestly, including your own.
+- Do not move an acceptance criterion after it has been frozen. Append a
+  DEVIATION instead (`CYCLE_PROTOCOL.md` §4.4) — moving a goalpost mid-build is
+  the same class of act as editing a scorer, and is prohibited on the same
+  grounds.
 
 Everything else — including this file, `PROJECT_DIRECTION.md`, the priorities,
 and my reasoning — is a starting position. **If you find a fault, a loophole, a
@@ -368,3 +393,8 @@ engineering problem and solving it is a genuine contribution.
   "The code in the repo is the code that is running" was an unverified
   assumption under every other verification, and it has been false twice.
 - **Commit after each item closes**, with the reasoning in the message.
+- **Run the cycle protocol.** `docs/CYCLE_PROTOCOL.md` — audit before briefing,
+  freeze criteria before building, one `docs/cycles/NNN.md` per session written
+  in three passes rather than one end-of-session dump. Its §6 checklist is ten
+  failure classes this repo has actually produced, each with the commit that
+  produced it; walking it is the cheapest audit available.

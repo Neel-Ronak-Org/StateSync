@@ -78,6 +78,9 @@ jobs:
       - name: Shipped flag state (self-test, both directions)
         run: python3 scripts/shipped_flags.py --self-test
 
+      - name: Cycle protocol guard (seal + criteria freeze, both directions)
+        run: python3 scripts/cycle.py --self-test
+
       - name: State what CI did NOT cover
         if: always()
         run: |
