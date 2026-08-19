@@ -416,3 +416,96 @@ less is the same trade in a new costume.
 
 **Not re-baseline-gated** — this is a schema-content question, not a
 model-quality one, though a stronger model may well need less hand-holding.
+
+---
+
+### ✎ AMENDED 2026-08-20, audit 001 (F-001-3). The D-V1 clause is re-anchored; the D-V2 clause is NOT touched.
+
+**The problem.** The bar above was written against the pre-`da6e49f` build.
+`da6e49f` (projection discipline) then **shipped**, and took D-V1 treatment
+65.0% → 55.0% (`docs/metrics-report.md`, "M3 re-measured on the current
+build"). The word in the clause is *hold*. On the build that ships it is a
+**+10.0pp improvement demand**, and nothing anywhere said so.
+
+**The decisive fact — which clause still discriminates:**
+
+```
+$ python3 -c "
+import json
+runs={'pre-da6e49f (bar was written here)':'docs/bench_multilingual_report.json',
+      'migration 005 (REJECTED)':'docs/bench_multilingual_report_migration005.json',
+      'SHIPPED build (post-projfix)':'docs/bench_multilingual_report_postprojfix.json'}
+for label,f in runs.items():
+    d=json.load(open(f))
+    t=d['dv1_treatment']['accuracy']; v=d['dv2_entity_preservation']['rate']
+    print(f'{label:34} D-V1 {t:.1%} -> {\"PASS\" if t>=0.65 else \"FAIL\"}   D-V2 {v:.1%} -> {\"PASS\" if v>=0.8125 else \"FAIL\"}')"
+
+pre-da6e49f (bar was written here)  D-V1 65.0% -> PASS   D-V2 81.2% -> PASS
+migration 005 (REJECTED)            D-V1 55.0% -> FAIL   D-V2 62.5% -> FAIL
+SHIPPED build (post-projfix)        D-V1 55.0% -> FAIL   D-V2 81.2% -> PASS
+```
+
+**`D-V2 ≥ 81.25%` still separates the two perfectly.** It is the clause that
+actually rejected migration 005, and it passes the shipped build. **It is left
+exactly as written**, and so is the English-line clause.
+
+**`D-V1 ≥ 65.0%` no longer separates anything.** It fails the rejected
+migration and the shipped product *equally*. A criterion that rejects the
+status quo has no discriminating power left; it cannot tell the change we want
+from the change we threw out.
+
+**Why re-anchoring it is not the goalpost-move this repo prohibits.** That act
+is *changing a criterion because you dislike a result you have already seen*.
+No B1 attempt has been made and there is no result. What moved was the
+**build**, underneath a criterion whose anchor was an absolute number from a
+build that no longer exists. And the safety test is explicit: **does this let
+migration 005 back in? No.** 005 fails on D-V2 (62.5% < 81.25%) independently,
+so the owner decision in `CYCLE_PROTOCOL.md` §4.3 is untouched. That test is
+the reason this amendment is safe, and it is why the D-V2 clause was not
+re-anchored even though it could have been by the same argument.
+
+**The amended condition.** The original intent — *"anything less is the same
+trade in a new costume"* — was a **no-regression guard**, written as an
+absolute only because 65.0% happened to be the current value. It is restored as
+a guard, against an anchor that cannot rot:
+
+1. **D-V2 entity preservation ≥ 81.25%.** Unchanged, absolute, as pre-committed.
+2. **The English reference line must improve** over the paired pre-measurement.
+3. **D-V1 treatment must not fall below the paired pre-measurement** taken on
+   the same build immediately before the attempt — replacing `≥ 65.0%`.
+4. **The Hinglish half must be no worse** than that same pre-measurement.
+
+Clauses 2–4 are **paired**: the "before" is measured on the build the fix will
+be applied to, *before the fix is written*. That is `V2_STRATEGY` §6 rule 2
+applied to an acceptance condition — it cannot rot when the build moves, and it
+cannot be gamed, because the baseline is fixed before the change exists. An
+M3 re-run is therefore a **precondition** of any B1 attempt, not an optional
+extra: the last measurement is 2026-08-17.
+
+**What must NOT be silently absorbed by this.** Read as an improvement target,
+the old 65.0% would have forced whoever attempted B1 to also recover
+`da6e49f`'s −10.0pp D-V1 regression. Re-anchoring releases that obligation, so
+the regression is hereby carried as an open item **in its own right** rather
+than dissolved into a lowered bar — see below. It is not fixed and it is not
+forgiven.
+
+**Scope, per F-001-7.** The `x`/`x_local` defect also fires on **English**
+questions — three independent local models project `city_local` on
+`phase_c2_v2`, the fixture whose 60.0% is published. B1's condition is measured
+only on `phase_d_multilingual` and cannot see it. The English manifestation is
+therefore **measured and reported** on any B1 attempt (it costs nothing; the
+`phase_c2_v2` run already happens) but is **not** made a gating clause — there
+is no evidence on which to set a bar, and inventing one is how the first bar
+rotted.
+
+### `da6e49f`'s D-V1 regression — carried separately, not absorbed
+
+**Status: open, unfixed, deliberately not folded into the B1 bar above.**
+
+Projection discipline shipped on the strength of +8pp strict / +4pp standard EX
+on `phase_c2`, and cost **−10.0pp D-V1 treatment** and −5.0pp on the English
+reference line, measured afterwards on a fixture it was never validated
+against. `metrics-report.md` records it and says "do not revert on these numbers
+alone" — both effects are small-n. That judgement stands; what is recorded here
+is that the regression is **owed**, independently of whether B1 ever happens.
+
