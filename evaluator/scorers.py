@@ -24,6 +24,7 @@ All weights load from config/statesync.toml [scoring] (A0.2).
 from __future__ import annotations
 
 import logging
+from collections import Counter
 from typing import Any, Protocol, runtime_checkable
 
 from config_loader import cfg
@@ -291,8 +292,23 @@ class ExecutionAccuracyScorer:
             "reference_row_count": len(ref),
             # Reported so a near-miss is visible rather than collapsed to 0.0:
             # the fraction of reference rows present in the generated result.
+            #
+            # MULTISET, matching `match` above -- audit 001 F-001-5. Until now
+            # this de-duplicated (set intersection over set(ref)), one line
+            # below a comment on `match` arguing duplicate rows are meaningful.
+            # A reference with a duplicate row could recall it once and be
+            # scored as if every copy were recovered. Counter & Counter takes
+            # the per-value MIN of the two counts (multiset intersection), so a
+            # duplicate in ref only counts as recalled once per matching copy
+            # actually present in gen. Measured before shipping this change:
+            # 0 of 237 previously-scored queries across every committed
+            # docs/m4_diagnosis*.json report contain a duplicate reference row,
+            # so this is a byte-for-byte no-op on every published row_recall /
+            # mean_row_recall to date -- verified by recomputing both
+            # definitions over every committed report, not inferred.
             "row_recall": (
-                len(set(ref) & set(gen)) / len(set(ref)) if ref else (1.0 if not gen else 0.0)
+                sum((Counter(gen) & Counter(ref)).values()) / len(ref)
+                if ref else (1.0 if not gen else 0.0)
             ),
         }
 

@@ -132,6 +132,36 @@ def test_execution_accuracy_reports_row_recall_so_a_near_miss_stays_visible():
     assert out["row_recall"] == pytest.approx(0.5)
 
 
+def test_execution_accuracy_row_recall_is_a_multiset_not_a_set():
+    """
+    Audit 001 F-001-5. `match` (two tests above) already treats duplicate rows
+    as meaningful -- sorted(), not set(). row_recall used to disagree with its
+    own neighbour: it de-duplicated via `set(ref) & set(gen)`, so a reference
+    containing the same row twice could have that row recalled ONCE and be
+    reported as if both copies were recovered.
+
+    reference has ("a", 1) TWICE and ("a", 2) once -- 3 rows, one duplicated
+    value. generated recovers ("a", 1) once.
+
+      SET semantics (the bug):    1 distinct value in common / 2 distinct
+                                   values in ref = 0.5
+      MULTISET semantics (fixed): min(1 in gen, 2 in ref) = 1 row recovered,
+                                   with multiplicity / 3 rows in ref = 1/3
+
+    0.5 here would mean the fix regressed back to the set-based definition.
+    Measured before this test was written: 0 of 237 previously-scored queries
+    across every committed docs/m4_diagnosis*.json report contain a duplicate
+    reference row, so the fix this test pins moved no published number --
+    verified by recomputing both definitions over every committed report, not
+    inferred from this synthetic case.
+    """
+    ref = [{"a": 1}, {"a": 1}, {"a": 2}]
+    gen = [{"a": 1}]
+    out = ExecutionAccuracyScorer().score(gen, ref)
+    assert out["match"] is False
+    assert out["row_recall"] == pytest.approx(1 / 3)
+
+
 # ── execution: deliberately stricter, alias-sensitive ────────────────────────
 
 def test_execution_scorer_is_alias_sensitive_and_that_is_deliberate():
