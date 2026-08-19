@@ -30,12 +30,18 @@ survived contact with a corpus they were never designed for.
 
 | | |
 |---|---|
-| single-turn EX, real data (Olist, 18 q, well-specified) | **local 7B 88.9% · hosted 94.4%** |
+| single-turn EX, real data (Olist, 18 q, well-specified) | **local 7B 88.9% · hosted 94.4%** ⚠ |
 | single-turn EX, synthetic corrected fixture (25 q) | 60.0% |
 | single-turn EX, synthetic original fixture | 44.0% |
 | adversarial suite | 40/40 |
 | corpora | synthetic 550 orders · **Olist 1,451,414 real rows** |
 | providers behind one seam | local · anthropic · azure · gemini |
+
+**⚠ 88.9%/94.4% was measured with `normalization.enabled = false`, against a
+shipped default of `true`** — both arms, so the paired comparison itself is
+unaffected, but neither number is the shipped configuration. Full caveat and
+evidence: `docs/metrics-report.md` "Real-data results", added by audit 001
+F-001-2.
 
 **Ranked by measured effect — this table is the reason v2 is shaped the way it
 is:**

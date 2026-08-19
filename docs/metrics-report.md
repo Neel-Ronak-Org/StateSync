@@ -100,6 +100,21 @@ same questions, same corpus, only the provider differs:
 | standard EX | 16/18 = **88.9%** | 17/18 = **94.4%** |
 | dirt-probing subset (7) | 5/7 | 6/7 |
 
+**⚠ Both arms ran with `normalization.enabled = false`, against a shipped
+default of `true`** (`docs/m4_diagnosis_olist_local7b.json` and
+`docs/m4_diagnosis_olist_gemini.json`, `flag_provenance.shipped: false`,
+`disk_deviations: {"normalization.enabled": {"expected": "true", "found":
+"false"}}`). Added by audit 001, F-001-2 — the harness recorded this
+faithfully; nothing at the point of publication did. **The paired comparison
+above (88.9% vs. 94.4%) is unaffected**, since both arms share the same
+deviation. What is NOT established is that either number matches what the
+shipped configuration would score — that has not been measured. Disabling the
+normalizer here is a deliberate choice recorded in `config/flags.toml`
+(`[llm.models.gemini]`: "D-V3 proved English passes the gate byte-identical
+20/20, so the call is a measured no-op") but that evidence covers the
+*synthetic* multilingual fixture on the *local 7B*; extending it to Olist and
+to Gemini is an untested extrapolation, not a re-confirmation.
+
 **+5.5pp is ONE QUERY.** At n=18 a single item moves the score 5.6pp, so the
 two are **indistinguishable on this fixture** — not "the hosted model is
 better".

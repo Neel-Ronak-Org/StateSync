@@ -317,7 +317,7 @@ Fixtures remain self-authored. Still never run against a standard benchmark
 
 | | | |
 |---|---|---|
-| standard EX — **real data** (olist, n=18) | **local 7B 88.9% · Gemini 94.4%** |
+| standard EX — **real data** (olist, n=18) | **local 7B 88.9% · Gemini 94.4%** | ⚠ measured with `normalization.enabled=false`, shipped default is `true` — both arms, so the pairing holds but neither number is the shipped config; audit 001 F-001-2, full caveat in `docs/metrics-report.md` |
 | standard EX — synthetic, CORRECTED fixture (`phase_c2_v2`, n=25) | **60.0%** |
 | standard EX — synthetic, original fixture (n=25) | 44% | re-verified 2026-08-16 under the *shipped* `ExecutionAccuracyScorer`; the earlier figure came from a looser in-script definition (`f46e0bf`) and the number happens to be identical |
 | strict EX (this project's scorer) | 36% | unchanged |
