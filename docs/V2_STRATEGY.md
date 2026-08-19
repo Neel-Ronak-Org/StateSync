@@ -276,6 +276,17 @@ rejected).
 `attribute_failures.py`. **This tells us whether 94.4% is real or an artifact of
 easy questions, and it must happen before any number is put in the report.**
 
+**✎ MEASURED 2026-08-20 (cycle 001, Workstream B2).** `fixtures/golden/olist_hard.json`,
+16 questions, safeguards from `gen_olist_hard_fixture.py` plus a fourth (no
+LIMIT-boundary metric tie — checked automatically, one violation found and
+fixed pre-shipment). Run paired on local `qwen2.5:7b` and Gemini, failures
+classified. **The answer diverges by provider: 88.9% does not survive harder
+questions (falls to 50.0%, −38.9pp); 94.4% does (100.0% on this sample,
++5.5pp).** Full numbers, failure classification (including a genuine
+`attribute_failures.py` false-positive found and corrected by reading the
+actual SQL), and the fixture's own defect audit (1/16, found before scoring):
+`docs/metrics-report.md` § "Hard-fixture results".
+
 **B3. Hinglish over real data.** *"Sao Paulo mein kitne sellers hain?"* — asking
 code-mixed questions of the Olist corpus isolates the **language** capability
 from the **data origin**, and lands it on real Latin-script city names with 611

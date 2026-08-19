@@ -264,6 +264,115 @@ Supervisor's routing prompt.
 
 ---
 
+## Hard-fixture results (olist_hard corpus, 2026-08-20)
+
+**Cycle 001, Workstream B2. Answers the question `V2_STRATEGY.md` §4 B2 asks
+before any number goes in the report: does 88.9%/94.4% survive harder
+questions, or is it an artifact of easy ones?** For the local model: no, by a
+wide margin. For the hosted model: yes.
+
+`fixtures/golden/olist_hard.json`, 16 questions, same real Olist corpus as
+`olist.json` but every question requires at least a join across ≥3 tables, a
+correlated subquery, or a window function
+(`scripts/gen_olist_hard_fixture.py`). Paired with the easy fixture's
+configuration exactly — **both arms ran with `normalization.enabled = false`
+and `schema_retriever.target_schema = "olist"`**, both deviations from the
+shipped default (`flag_provenance.disk_deviations` in both source reports;
+`target_schema` guarded since audit 001 F-001-1 / cycle 001 A1, so this
+deviation is now on record where it never was before):
+
+| | local `qwen2.5:7b` | Gemini (mixed, per-role) |
+|---|---|---|
+| strict EX | 8/16 = **50.0%** | 16/16 = **100.0%** |
+| standard EX | 8/16 = **50.0%** | 16/16 = **100.0%** |
+| mean row recall | 51.2% | 100.0% |
+
+**⚠ This is a 38.9pp drop for the local model, against a 5.5pp GAIN for
+Gemini**, comparing to the easy fixture's 88.9%/94.4%. The easy-fixture gap
+between providers was one query (`metrics-report.md`, "Real-data results");
+here it is 8 of 16. **88.9% does not survive harder questions. 94.4%, on this
+one hard-fixture sample, does** — though n=16 with 0 failures means the upper
+bound on Gemini's true error rate here is not tightly pinned by this sample
+alone.
+
+**Failures classified** (`scripts/attribute_failures.py
+docs/m4_diagnosis_olist_hard_local7b.json docs/m4_diagnosis_olist_hard_gemini.json`):
+
+| | local 7B | Gemini |
+|---|---|---|
+| correct | 8 | 16 |
+| wrong_tables (proxy) | 3 | 0 |
+| same_tables | 5 | 0 |
+| no_sql | 0 | 0 |
+
+**The 3 "wrong_tables" are a tool artifact, not a genuine finding — verified
+by reading the actual SQL, not taken from the proxy.**
+`attribute_failures.py`'s table-extraction regex
+(`\b(?:FROM|JOIN)\s+([a-zA-Z_][a-zA-Z0-9_]*)`) has no awareness of a `WITH`
+CTE, so it counted `ranked` and `order_totals` — the CTE names in this
+fixture's own ground-truth SQL for `oh_wf01`/`oh_wf03`/`oh_wf04` — as
+"missing tables" the model failed to select. Reading the model's actual SQL
+for all three shows it selected the CORRECT real tables
+(`olist.order_items`, `olist.products`, `olist.sellers`,
+`olist.order_payments`, `olist.orders`, `olist.customers` — matching the
+reference in every case) and attempted the right window-function shape
+(`ROW_NUMBER()`/`RANK() OVER (PARTITION BY ...)`), but the SQL itself failed
+to execute: an outer-query alias reference the parser couldn't resolve
+(`oh_wf01`, `unknown_table` on `oi`), a bad window-frame clause on the first
+attempt (`oh_wf03`, `"frame start cannot be UNBOUNDED FOLLOWING"`), and a
+genuine ambiguous-column / wrong-join-key bug (`oh_wf04`, joining back to
+`customers` on `customer_state` rather than `customer_id`, which is both
+ambiguous and semantically wrong). **The correct classification for all
+three is `same_tables`** (intent arrived, the SQL over the right tables was
+wrong) **— the true split is 0 wrong_tables / 8 same_tables**, not 3/5. Every
+one of the local model's 8 failures on this fixture is a genuine SQL-writing
+capability gap on nested-subquery and window-function syntax, none of them a
+misunderstanding of what was asked. This is a real, previously-unknown
+limitation of `attribute_failures.py` on any ground truth using a CTE —
+recorded here since the tool's own docstring says the proxy "does not
+adjudicate individual cases," and this cross-check is exactly why not.
+
+**Fixture defect rate, audited the same way `phase_c2` was** (`V2_STRATEGY.md`
+§6's replication claim — this is the second independently-authored fixture):
+**1 of 16 (6.25%)**, found and fixed BEFORE any model was scored, not
+discovered afterward. `oh_wf01` asked for "the single highest-priced
+order_item" per category; 15 of ~74 real categories have a genuine multi-way
+tie at the category max price (e.g. `audio` has 6 products tied at 598.99),
+which the SQL resolved deterministically (lowest `product_id`) but the
+original question text did not say — fixed by stating the tie-break in the
+question. The 5 categories that made this fixture's shipped top-5 are not
+among the tied ones (checked directly), so the ground truth as shipped was
+never actually wrong — but the wording was, and it is the kind of latent
+ambiguity `oh_wf03`/`oh_wf04` were also checked for and found clean (zero
+partition-internal ties in either). One more item recorded, judged NOT a
+defect: `oh_j04` (distinct sellers per `payment_type`) attributes an order's
+sellers to every payment type it used when an order splits across types
+(2,246 of 99,441 orders do) — the question's wording ("involved in payments
+of that type") does not claim exclusivity, so this is the natural reading,
+documented for consistency with how `oh_wf04`'s multi-payment-row fan-out was
+also called out rather than left implicit.
+
+**Replication table (`V2_STRATEGY.md` §6):**
+
+| fixture | authored | n | defects found | defect rate |
+|---|---|---|---|---|
+| `phase_c2` (synthetic) | pre-audit | 25 | 12 | 48.0% |
+| `olist` (real, easy) | 2026-08-17 | 18 | 0 | 0.0% |
+| `olist_hard` (real, hard) | 2026-08-20 | 16 | 1 | 6.25% |
+
+**Does not establish:** a fixture defect rate of 6.25% on 16 questions is one
+finding at small n, not a stable rate — the honest reading is "closer to
+olist.json's 0% than to phase_c2's 48%," which is itself informative (the
+safeguards this project built after the phase_c2 audit continue to work), not
+"defects now occur at 6.25% generally." The 38.9pp local-model drop is a
+single paired measurement on one model version (`qwen2.5:7b`) and one
+provider's mixed-role Gemini configuration; it is not yet re-measured on
+Anthropic or Azure, and BD6's 2-hop-join weakness (the reason this workstream
+exists) was measured on different fixtures entirely, so this is corroborating
+evidence for that finding, not a replication of it in the strict sense.
+
+---
+
 *Report generated as part of Phase F (`docs/phase_f_log.md`). Do not hand-edit
 the Local (provisional) column after a graded run — append a Graded value
 instead, per `docs/rebaseline_runbook.md` §5.*
