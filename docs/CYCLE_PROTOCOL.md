@@ -177,3 +177,51 @@ Stated so a followed protocol never implies more than it means.
   truncated by design (§3.3); "not found" is not "not there".
 - **Concurrency between sessions.** §6 class 9. No in-repo guard sees another
   Claude session. Check `ps aux | grep -E "bench_|check_|diagnose_"` and ask.
+
+---
+
+## 8. The opening prompt
+
+Paste this as the first message of a new session, substituting `NNN`. It is
+kept here so it is not retyped — and retyped slightly differently — each cycle.
+
+> You are opening cycle **NNN** on StateSync. Read `docs/CYCLE_PROTOCOL.md`
+> first; it governs this session. Then `docs/AGENT_HANDOFF.md`.
+>
+> **You are the auditor until you say otherwise.** Do not read anything in
+> `docs/cycles/` — those are previous agents' briefings and they are sealed
+> until your audit is written. `python3 scripts/cycle.py status` shows the
+> state.
+>
+> **Move 1.** Fill in `docs/audits/NNN.md`. Walk all ten failure classes in
+> protocol §6 — finding nothing in a class is a result, skipping it is not.
+> Every finding needs a command transcript and the mandatory "Does not
+> establish" line. Rank each finding (§3.3) and bucket it (§4.1); a TRADEOFF
+> must cite evidence that predates your audit (§4.2). Commit the audit.
+>
+> **Move 2.** `python3 scripts/cycle.py unseal NNN`. If it refuses, it will say
+> why. Then read `docs/cycles/*` and tell me what the previous agent believed
+> that your audit contradicts — that gap is the most valuable output of this
+> move.
+>
+> **Move 3.** Propose the plan. Put acceptance criteria between the
+> `CRITERIA:BEGIN`/`CRITERIA:END` markers in `docs/cycles/NNN.md`. **Stop and
+> show me before freezing** — §7 says a wrong plan is what this protocol cannot
+> catch, so that check is mine. Then `python3 scripts/cycle.py freeze NNN` and
+> commit.
+>
+> **Move 4.** I will switch the model. You build against the frozen criteria,
+> appending DEVIATION entries as they occur rather than from memory afterwards.
+>
+> **Move 5.** Write the outcome and confidence sections, including your own
+> regressions by name.
+>
+> Binding throughout: do not break the product · never alter a verification,
+> fixture or scorer to make a number look better · measure before and after
+> anything that could move a metric · report regressions including your own ·
+> commit per item with the reasoning in the message · ask before reversing a
+> decision I made (§4.3 lists them). Be blunt; do not soften findings.
+>
+> Check for other running work before any measurement — `ps aux | grep -E
+> "bench_|check_|diagnose_"` — and ask me. Two sessions in one repo has
+> contaminated a run before and no in-repo guard can see it.
