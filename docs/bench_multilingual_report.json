@@ -1,4 +1,26 @@
 {
+  "flag_provenance": {
+    "_reconstructed": true,
+    "_reconstruction_note": "Audit 001 F-001-4. This file has no flag_provenance because scripts/shipped_flags.py did not exist when this run was made: its content is the shipped-configuration M3 run recovered from commit 5a7bb90 (2026-08-16 04:13:52 +0530, \"M3 re-measured after the routing fix\"; relabelled onto this canonical path by 2161bc2, byte-identical, no value touched), and shipped_flags.py was introduced at 0711c28 (2026-08-16 21:38:41 +0530) -- over 17 hours later. The fields below are RECONSTRUCTED from `git show 5a7bb90:config/flags.toml`, not captured by the harness, because the harness had no mechanism to capture them yet. Verified: provider=\"local\" and all seven [llm.models.local] roles = \"qwen2.5:7b\", identical to the shipped config today; memory.enabled=false, normalization.enabled=true, tenancy.enforced=false, evaluation.vision_scorer.enabled=false -- all matching shipped defaults. schema_retriever.target_schema did not exist in config/flags.toml at this commit (introduced later, 80d35c8) and is omitted rather than guessed. No measured value in this report was altered by this annotation.",
+    "llm": {
+      "provider": "local",
+      "models": {
+        "supervisor": "qwen2.5:7b",
+        "sql": "qwen2.5:7b",
+        "synthesizer": "qwen2.5:7b",
+        "memory_summarizer": "qwen2.5:7b",
+        "normalizer": "qwen2.5:7b",
+        "decomposer": "qwen2.5:7b",
+        "judge": "qwen2.5:7b"
+      }
+    },
+    "flag_state": {
+      "memory.enabled": "false",
+      "normalization.enabled": "true",
+      "tenancy.enforced": "false",
+      "evaluation.vision_scorer.enabled": "false"
+    }
+  },
   "dv1_control": {
     "correct": 16,
     "total": 40,

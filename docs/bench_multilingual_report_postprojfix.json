@@ -1,5 +1,19 @@
 {
   "flag_provenance": {
+    "_llm_reconstructed": true,
+    "_llm_reconstruction_note": "Audit 001 F-001-4. This flag_provenance block WAS produced live by require_shipped_flags() at commit 4389a01 (2026-08-17 02:15:10 +0530, \"M3 on the current build: the projection change cost 10 points on the arm that ships\") -- the flag_state/shipped/disk_deviations/live_staleness/allow_nonshipped fields below are original and untouched. Only the llm key is added here: _llm_provenance() did not exist in shipped_flags.py until 4e294e6, added after this run. RECONSTRUCTED from `git show 4389a01:config/flags.toml`: provider=\"local\", all seven [llm.models.local] roles = \"qwen2.5:7b\", identical to the shipped config today. No original field in this block was altered.",
+    "llm": {
+      "provider": "local",
+      "models": {
+        "supervisor": "qwen2.5:7b",
+        "sql": "qwen2.5:7b",
+        "synthesizer": "qwen2.5:7b",
+        "memory_summarizer": "qwen2.5:7b",
+        "normalizer": "qwen2.5:7b",
+        "decomposer": "qwen2.5:7b",
+        "judge": "qwen2.5:7b"
+      }
+    },
     "flag_state": {
       "memory.enabled": "false",
       "normalization.enabled": "true",
