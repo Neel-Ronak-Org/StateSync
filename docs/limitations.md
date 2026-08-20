@@ -96,11 +96,15 @@ Recorded honestly in `docs/metrics-report.md`; summarized here per F-V8:
   width, 2 are the strict scorer alone, 1 is routing. The measurement artifact
   is now smaller than the model error, which is the opposite of the direction
   `PROJECT_DIRECTION.md` §2 originally argued.
-- **M6 (E1-V3, grounding): moderate.** Context precision 0.622, faithfulness
-  0.8125 (F-V3 run; 0.769 at E1, 0.831 at the first Phase F run). One clearly-diagnosed, partially-fixed root cause (aggregate queries
-  not echoing an ID column for targeted retrieval); a second, deeper cause
-  (a specific entity-name-to-table-mapping failure, "FastShip 1") accepted as
-  measured model variance after four distinct, root-caused fix attempts.
+- **M6 (E1-V3, grounding): moderate, and three of its four published
+  components were measured by a defective instrument until cycle 003 —
+  see the entry below.** Context precision **0.622 over 15 scored** (not
+  16 — `e1_hybrid_001` is excluded by design), recall 0.80 (F-V3 run; 0.769
+  at E1, 0.831 at the first Phase F run). One clearly-diagnosed,
+  partially-fixed root cause (aggregate queries not echoing an ID column for
+  targeted retrieval); a second, deeper cause (a specific
+  entity-name-to-table-mapping failure, "FastShip 1") accepted as measured
+  model variance after four distinct, root-caused fix attempts.
 - **M7 (E2-V1, chart quality): measured, and low at 0.4850** (local,
   provisional). Task 10 built the chart emission this metric was waiting on.
   The A7 validity half is a clean binary **PASS at 30/30**. The quality figure
@@ -165,6 +169,85 @@ matter just as much: a number is only as trustworthy as the thing producing it.
   `tests/test_scorer_semantics.py` asserts C2-V8 keeps distinguishing empty
   results with different column counts, so a future "cleanup" cannot quietly
   relax it and raise M4.
+
+- **M6 (E1-V3, `scripts/bench_grounding.py`) was the only metric with no
+  test, no entry in this section, and a gate that cannot fail — audit 003
+  found three of its four published components measuring something other
+  than their name, and cycle 003 repaired the instrument without moving the
+  published numbers.** `docs/bench_grounding_report.json` (0.622 / 0.80 /
+  0.8125 / 4) is unchanged; two fresh runs sit alongside it as
+  `docs/bench_grounding_report_003_m1.json` (unmodified harness, a noise
+  baseline — reproduced 0.622 / 0.80 / 0.8125 / 4 exactly, and all 16
+  synthesizer answers were byte-identical to the published run) and
+  `docs/bench_grounding_report_003_m2.json` (repaired harness).
+
+  1. **The faithfulness judge never saw the SQL rows a hybrid answer's own
+     synthesizer prompt included**, while being told document passages were
+     "what the system actually saw." 5 of 6 ungrounded claims in the
+     published run were SQL-derived; 4 were single values independently
+     verified exactly correct against the corpus. **Not fixed by changing
+     `faithfulness_score`** — that stays exactly as specified (verified by
+     `tests/test_grounding_scorer.py::test_faithfulness_score_untouched_by_repair`
+     and by `fixtures/rubrics/faithfulness.json`'s md5 being unchanged). A
+     second score, `mean_faithfulness_all_sources`, is computed alongside it
+     under a new rubric (`fixtures/rubrics/faithfulness_v2.json`) that also
+     shows the SQL. M2: **0.8958** (docs-only, unchanged definition) /
+     **0.875** (all-sources) over the same 16 queries and the same 16
+     synthesizer answers as the published run.
+
+     The docs-only number moving from the published 0.8125 to 0.8958 is
+     **not itself the all-sources fix** — that pass is the separate,
+     additional score above. It happened because item 2's reference repair
+     shares its prompt text with this judge call too, and at least one
+     instance of it is not noise: `e1_hybrid_006`'s true answer is **0**
+     disputes (verified live against the corpus), and the OLD row-count
+     reference caused the judge to credit the wrong claim "1 dispute" as
+     both grounded and factually correct — identically in both the
+     published run and the M1 noise baseline. Under the repaired reference
+     the same judge call correctly marks it ungrounded and incorrect,
+     which is `e1_hybrid_006`'s own score moving 1.0 → 0.5 — the one query
+     in this comparison that moved down, and the reason is a fix, not
+     drift. Four others moved up. This is read as evidence the repair
+     changes judging quality for the better on at least this instance, not
+     as proof the whole 0.8125 → 0.8958 delta is signal rather than
+     variance — see "What this does not establish" below.
+  2. **The "database ground truth" the judge's factual-correctness check was
+     shown was the string `row_count=N`** — a row COUNT, not an answer
+     value — for every query with a SQL ground truth. Three claims that are
+     exactly correct (S014 = 2 disputes, S001 = 17 orders, S025 = 11 orders,
+     each independently re-verified) were scored factually incorrect against
+     it. Fixed: the ground-truth SQL is now executed read-only through the
+     same MCP path the orchestrator itself uses, and the judge is shown the
+     actual returned rows.
+  3. **`total_ungrounded_but_true` was an unvalidated integer the judge typed
+     once**, separate from and sometimes disagreeing with the itemised
+     `claims` array it also emitted — 2 of 16 published queries disagreed
+     (judge said 4 total; its claims supported 2). Fixed: now recomputed from
+     the claims array; M2 reproduces the same recount (**2**, against the
+     judge's own self-report of 4 on identical inputs) with the disagreement
+     count now surfaced (`ubt_disagreement_count`) rather than silently
+     absorbed.
+  4. **Context precision divides by CITED chunks**, capped at
+     `citation_max_chunks = 3`. With 2 `expected_chunk_ids` per fixture entry
+     that alone puts a 0.667 ceiling under every doc-route query; 7 of 8 sat
+     exactly on it **with recall 1.0** in every run measured. The published
+     "~38% of retrieved context is irrelevant" gloss (`V2_STRATEGY.md`) was
+     computed from the cited figure but described the retrieved one — over
+     the chunks actually retrieved, M2 measures **0.364**, and the per-run
+     ceiling given this run's citations was **0.778**, not 1.0. The original
+     `mean_context_precision` definition is unchanged and still published;
+     `mean_context_precision_over_retrieved` and
+     `max_attainable_context_precision` are reported alongside it, not
+     instead of it.
+
+  **What this does not establish.** None of the above reproduces on a second
+  independent model sample beyond the one M1/M2 pair — the judge is
+  `qwen2.5:7b`, non-deterministic, and 8 of the 16 v1 faithfulness scores
+  *did* change between M1 and M2 even though the scoring code for that pass
+  is byte-identical, which is itself informative about how much run-to-run
+  judge variance this metric carries independent of any instrument change.
+  Full write-up and per-query detail: `docs/audits/003.md`,
+  `docs/cycles/003.md`.
 
 - **`empty_result` is classified as a retryable error even when empty is the
   correct answer.** `c2g_10`'s true answer is zero rows, and the correction
