@@ -15,6 +15,11 @@ as the historical record and do not edit them to match this summary.
 | [Task 10 / E2-V1 — M7 quality](#task-10--e2-v1--m7-quality) | Synthesizer still emits `chart: null` on every route; M7 chart-quality score cannot be measured until it's taught to populate `chart` | **Built and measured 2026-08-15** (`a00d0d1`). A7 30/30 (binary PASS); M7 0.4850 local provisional. Graded number still owed | **Yes** (graded number only) | Part F, `F-V3` (M7 row); graded number per `rebaseline_runbook.md` |
 | [Schema column semantics](#schema-column-semantics-reverted) | The model cannot distinguish `locations.city` (English) from `city_local` (Indic script) and nothing tells it; ~4 of 8 English-line misses. A comment-based fix was built, measured, and REVERTED for damaging entity preservation | Open — mechanism known, fix unvalidated | No | Needs a script-neutral wording measured on BOTH the English line and D-V2 |
 | [CSP `unsafe-inline`](#csp-unsafe-inline-in-script-src-raised-by-the-trace-renderer-xss-fix) | `script-src` still allows `'unsafe-inline'` because the app is one inline `<script>`; this is what would have made the (now-fixed) trace-renderer sink executable | **CLOSED 2026-08-16** (`9d73b7c`) — script extracted to `frontend/app.js`, `'unsafe-inline'` dropped, `verify_e2.py` 30/30. This row read "Open" for four commits after the fix shipped | No | Beyond F1 Scope; improvement, not a spec requirement |
+| [c2g_04 row-count drift](#c2g_04-row-count-drift) | `phase_c2_v2.json`'s `c2g_04` keeps `expected_row_count = 5` while its own corrected SQL returns 8 and the correction's prose says 8 — the corrected fixture contradicts itself in one field | Open — no consumer reads it today, so zero blast radius; a future harness that trusts the field inherits a wrong number silently | No | Audit 004 F-004-7 |
+| [Fixture corpus declaration unasserted](#fixture-corpus-declaration-unasserted) | `fixture_corpus()` treats absence of `_about.corpus` as a positive claim of `public`. True for all 11 fixtures today (verified); asserted by nothing, so a new olist-targeting fixture that omits the field passes the guard clean | Open — latent; this is `80d35c8`'s failure mode returning through the one door cycle 002's A3 left open | No | Audit 004 F-004-8 |
+| [`m4_diagnosis_v2_corrected.json` is misnamed](#m4_diagnosis_v2_correctedjson-is-misnamed) | Despite the filename, it is a run of the ORIGINAL `phase_c2.json`, not `phase_c2_v2.json` — verified by content (its `c2g_04` ground truth is the location-join SQL). Its 44.0% is correct for what it actually measured | Open — flagged in `metrics-report.md`'s own M4 row; artifact deliberately not renamed or touched | No | Cycle 004 DEVIATION 2 |
+| [Citations carry no support relation](#citations-carry-no-support-relation) | `build_citations` lists `retrievals[:citation_max_chunks]` with no relevance filter. Cycle 004 C1 fixed the *label* ("Sources" → "Retrieved Context"); the mechanism is unchanged | Label fixed 2026-08-20; **mechanism open by design** — filtering would alter the exact set M6's context precision measures | No | Audit 004 F-004-5 |
+| [Three unfailable fixture queries](#three-unfailable-fixture-queries) | `c2g_03`/`c2g_10`/`c2g_18` return zero rows; standard EX scores any empty result correct against an empty reference. 23/23 passes across every run ever made. Published 60.0%; 54.5% over the 22 that can fail | Disclosed at every publication point 2026-08-20 (cycle 004 B2). **Fix is an owner judgment call**, per the fixture's own `_audit` — leave them, or replace the questions | No | Audit 004 F-004-3 |
 | [M3 regression](#m3-regression) | D-V1 lift halved and D-V2 entity preservation dropped since Phase D. **Separation run done:** memory-flip candidate REFUTED; ~20 of the 35 lost English points traced to `c2g_10` misrouting; residual ~15 points still unattributed | Partly closed — one cause identified and shared with `c2g_10`, residual open | No for the identified cause (a routing defect, fixable now); the residual is re-measured by the graded re-baseline anyway | Routing half → fix with `c2g_10`; residual → needs a draft-first toggle that does not yet exist |
 
 ---
@@ -581,3 +586,157 @@ instrument broke vs. the system scored badly) is the one `run_step`'s
 exit-code contract currently cannot express. Left unbuilt because cycle
 003's frozen criteria scoped A5 to the scorer's semantics, not the
 harness's exit contract, and because no committed number is affected today.
+
+---
+
+## c2g_04 row-count drift
+
+*Added 2026-08-21, cycle 004 (audit 004 F-004-7).*
+
+`fixtures/golden/phase_c2_v2.json` is the model this project holds up for
+correcting a fixture honestly — `V2_STRATEGY.md:391` calls it "the
+`phase_c2_v2` protocol". Its `c2g_04` correction replaced a location-join
+ground truth (5 rows) with a city-match one, and the correction's own `why`
+records the new count: *"matching by city is the plain reading **(8 rows)**"*.
+The `changed` list is `["ground_truth_sql"]`. **`expected_row_count` was left
+at `5`.** Verified by executing all 25 references live: 24 of 25 match their
+frozen count, `c2g_04` returns 8 against a stored 5.
+
+**Blast radius today is zero**, which is why this is open rather than fixed.
+Every consumer was traced: `diagnose_m4.py` and `check_c2v8.py` both execute
+the reference SQL live and score against those rows (`check_c2v8.py:109`
+touches the field only to fill a `None`, and points at `phase_c2.json`
+anyway); `verify_b.sh:81` is the one place it is load-bearing and it reads
+`phase_b.json`.
+
+**Why it is still worth closing.** A future harness that trusts the field —
+the obvious one being a cheap pre-flight that skips executing references —
+inherits a wrong number silently, and the field's own generator
+(`gen_phase_d_fixtures.py:10`, *"never guessed"*) exists precisely because
+that matters.
+
+---
+
+## Fixture corpus declaration unasserted
+
+*Added 2026-08-21, cycle 004 (audit 004 F-004-8).*
+
+Cycle 002's A3 (`cefe045`) closed audit 002's F-002-3 by tying
+`schema_retriever.target_schema` to the fixture actually being run.
+`fixture_corpus()` resolves a fixture to a corpus by reading `_about.corpus`,
+and treats **absence of the field as a positive claim of `public`** —
+documented deliberately at `shipped_flags.py:170-173`. That is sound *given*
+that every olist-targeting fixture declares the field.
+
+**Nothing asserts that.** Checked by hand across all eleven fixtures
+(cross-referencing whether each one's SQL actually references `olist.`
+against what the guard resolves): all eleven are consistent today, so nothing
+in the repo is currently mis-guarded. `tests/test_fixture_corpus_guard.py`'s
+six cases all run against named or synthetic fixtures; none sweeps
+`fixtures/golden/` and asserts the invariant.
+
+A new olist-targeting fixture that omits `_about.corpus` — the natural thing
+to forget, since ten of eleven fixtures legitimately omit it — resolves to
+`public`, matches the shipped default, and passes the guard clean. That is
+`80d35c8`'s failure mode returning through the one door A3 left open.
+
+**Note on the right assertion.** A grep-for-`olist.` sweep is the obvious
+implementation and probably the wrong one: a future fixture could target a
+third schema entirely. The general invariant — *a fixture declares the corpus
+its ground truth was written against* — is what matters, not the substring.
+
+---
+
+## `m4_diagnosis_v2_corrected.json` is misnamed
+
+*Added 2026-08-21, cycle 004 (DEVIATION 2 — found while sourcing B2's fix,
+flagged rather than acted on).*
+
+`docs/m4_diagnosis_v2_corrected.json` reads as "v2, corrected" and is cited
+by `metrics-report.md`'s M4 row for **44.0%**. It is a run of the
+**original** `fixtures/golden/phase_c2.json`, not `phase_c2_v2.json`.
+Verified by content, not by filename: its `c2g_04` ground truth is the
+original location-join SQL (5 rows), where `phase_c2_v2`'s is the corrected
+city-match INTERSECT (8 rows). The `v2` in the name refers to the **report
+schema** version (`schema_note`: *"v2: rows are persisted (v1 stored only
+counts)"*), not the fixture.
+
+**The 44.0% is not wrong** — it is the original fixture's number, which is
+exactly what `AGENT_HANDOFF.md` separately and correctly labels "standard EX
+— synthetic, original fixture". The corrected fixture's number is 60.0%,
+from `m4_diagnosis_v2fixture_7b.json`, which does carry a `fixture` field
+naming its source.
+
+**Not fixed in cycle 004**: renaming or re-sourcing a committed artifact was
+outside that cycle's frozen scope, and the file is not a fixture, rubric or
+scorer it was licensed to touch. Flagged in `metrics-report.md`'s own M4 row
+so a reader hits the warning where they hit the number.
+
+---
+
+## Citations carry no support relation
+
+*Added 2026-08-21, cycle 004 (audit 004 F-004-5). Label half fixed; mechanism
+half open **by design**.*
+
+`build_citations` (`orchestrator/nodes/synthesizer.py:350`) takes
+`retrievals[:citation_max_chunks]` in retrieval order and applies no
+relevance filter of any kind — the answer is never consulted. Until cycle
+004 the frontend presented that list under the heading **"Sources"**.
+
+Live instance, from the published M6 run: `e1_doc_004` asks *"What committed
+transit time does FastShip 1's SLA annexure specify for the Metro Mumbai
+zone?"* FastShip 1 is **LP001**; the fixture expects
+`doc_sla_annexure_LP001_c000/c001`; the actual cited list is
+`doc_sla_annexure_LP003_c000/c001` and `doc_sla_annexure_LP007_c000` — two
+**other logistics providers'** contracts. Not a topic drift: the wrong
+company's SLA annexure, same document family, same table shape, different
+number in it.
+
+**Fixed (cycle 004 C1):** the heading now reads "Retrieved Context", which
+stops claiming a support relation the mechanism does not provide. Verified
+live in a browser.
+
+**Deliberately NOT fixed, and this is the part that is open:** filtering
+what gets listed would alter the exact retrieval set `mean_context_precision`
+measures — a metric change wearing a UI fix's clothes. Closing this properly
+means deciding what a citation *should* mean here (top-k retrieval, or
+answer-supporting), and measuring M6 before and after, because the change
+moves the number by construction.
+
+---
+
+## Three unfailable fixture queries
+
+*Added 2026-08-21, cycle 004 (audit 004 F-004-3). Disclosed, not fixed — the
+fix is an owner judgment call and was routed there by the fixture itself.*
+
+`c2g_03`, `c2g_10` and `c2g_18` have ground truths returning **zero rows**,
+each for a real reason in the data (0 of 30 sellers have a null
+`contracted_sla_hours`; `max(order_items.quantity)` is exactly 5 against a
+`> 5` predicate; all 19 `pending` fulfillments have delivery events). Under
+`ExecutionAccuracyScorer`, `sorted([]) == sorted([])`, so **any** generated
+SQL returning nothing scores 1.0 against them regardless of projection,
+column count or semantics — confirmed by direct call.
+
+They have never failed: **23 of 23** scoring opportunities across all eight
+committed `m4_diagnosis*.json` reports and four model configurations. In the
+published 60.0% run, two of the three pass while returning a visibly
+different projection from the reference (4 cols vs 2, 4 cols vs 3).
+
+Every synthetic standard-EX figure this project publishes therefore sits on a
+floor of `3/25 = 12.0%` no model can fall below and none earns. Over the 22
+references that can fail, the published 60.0% is **54.5%**.
+
+**Disclosed at every publication point** by cycle 004 B2
+(`AGENT_HANDOFF.md`, `V2_STRATEGY.md`, `metrics-report.md`). **The fixture
+was not edited** — its own `_audit.known_remaining_weakness` names this and
+states the fix "needs either different questions or seeded data, and both are
+judgment calls for the owner rather than corrections with an evident right
+answer." That routing is respected here.
+
+**Note for whoever closes it:** excluding the three and publishing 54.5% is
+*also* a distortion — a question whose correct answer is "none" is a legitimate
+question. The honest options are (a) replace the three questions with ones
+whose answers are non-empty, (b) seed data so the current questions return
+rows, or (c) keep publishing 60.0% with this caveat permanently attached.

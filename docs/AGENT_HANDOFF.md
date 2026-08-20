@@ -429,7 +429,51 @@ the *unmodified* harness's, which was zero on one sample); and
 `e1_doc_004`/`e1_hybrid_005`'s "FastShip 1" retrieval miss is a real,
 already-root-caused model failure that cycle 003 did not touch.
 
-**No direction is recorded here for cycle 004.** That is the owner's to set,
+### ✅ Direction for cycle 004 — owner decision, 2026-08-20. DONE; what it found is below.
+
+**It was:** repair, not growth. Audit 004 ran the two gates nothing runs and
+found **both failing** — `verify_e2.py` at 29/30 and **M8 at 39/40**, the one
+metric the spec defines as binary (*"a partial pass is a fail"*). Both had
+been failing since cycle 003's `56a23bf`, a frontend cache-buster that broke
+`verify_e2.py`'s E2-V4 literal-substring check; M8 Class 4 delegates to
+`verify_e2.py` and fails on its exit code. The security posture itself was
+never affected — classes 1–3 passed 39/39, no write reached the engine, no
+credential leaked, no injection was obeyed, table checksums unchanged — but a
+binary gate reading FAIL is still failing.
+
+**The institutional finding, which outlives the bug.** Cycle 003 was not
+careless: it ran its four gates after *every* commit and named the longer
+suites it skipped. Cycles 001 and 002 both wrote the M8 re-run trigger as
+*"if any data-plane or MCP code is touched"*, and B1 was frontend-only — yet
+M8 Class 4 reads `frontend/index.html`. **A frontend commit can break the
+adversarial security gate while satisfying every stated condition for not
+re-running it.** The fix is not a tighter hand-maintained trigger; it is that
+the invariant now lives in `tests/`, which CI runs.
+
+**Also corrected:** `limitations.md`'s M6 variance sentence cited "8 of 16"
+where it is **5**, all hybrid, all in the set the A1 repair touched — the
+clean same-code comparison (M1 vs published) is **0 of 16**, which argues the
+*opposite* of what the paragraph claimed. And audit 003 F-003-1's `0.9375`
+regrade estimate **did not reproduce**: the measurement it asked for came out
+at 0.875, *below* the docs-only 0.8958.
+
+**Gate state at handoff, all six re-verified live 2026-08-20:** seams 26/26 ·
+pytest 88/88 · deployed 19/19 · E2 30/30 · tenancy 12/12 · M8 40/40. Tenancy
+was run for the first time by any cycle or audit.
+
+**Still outstanding after cycle 004** (none of it blocks anything): the five
+items audit 004 carried to `docs/open_items.md` — `c2g_04`'s row-count drift,
+the unasserted fixture-corpus invariant, the misnamed
+`m4_diagnosis_v2_corrected.json`, `build_citations`' missing support relation
+(label fixed, mechanism open by design), and the three unfailable fixture
+queries (disclosed everywhere, fix routed to the owner). Everything the RAG
+half still owed after cycle 003 is *also* still owed: 18 docs / 36 chunks,
+M6 on one provider only, no repeated-trial baseline of the repaired harness.
+**New, and it bears on the ingest:** the chunker has never split a document —
+95-word max narrative body against a 512-token target — so a review ingest
+would leave that path just as unexercised (F-004-6).
+
+**No direction is recorded here for cycle 005.** That is the owner's to set,
 and cycle 000 established the reason it is not pre-written from inside a
 finished cycle: *"Pre-planning it from this side would anchor exactly what
 the seal exists to prevent."*
