@@ -386,11 +386,21 @@
       <pre id="sql-text"></pre>
     </div>
 
-    <!-- Citations (chunk_id/page for document sources, kind:"sql" for the
-         executed statement above) -- API always returns this array (E1-V4),
-         previously computed and validated but never rendered to the page. -->
+    <!-- Citations (chunk_id/page for retrieved document passages, kind:"sql"
+         for the executed statement above) -- API always returns this array
+         (E1-V4), previously computed and validated but never rendered to the
+         page (audit 003 F-003-5, fixed cycle 003 B1).
+         Labelled "Retrieved Context", not "Sources": build_citations lists
+         the first citation_max_chunks retrievals in retrieval order with NO
+         relevance filter against the answer -- on a retrieval miss it can
+         list a document that supports nothing in the answer (audit 004
+         F-004-5, live example in docs/limitations.md's M6 entry). Changing
+         WHAT is listed here is out of scope: that would filter the exact
+         retrieval set M6's context precision measures, which is a metric
+         change, not a UI fix -- orchestrator/nodes/synthesizer.py's
+         build_citations is deliberately untouched. -->
     <div class="citations-card" id="citations-card">
-      <div class="sql-label">Sources</div>
+      <div class="sql-label">Retrieved Context</div>
       <div class="citation-list" id="citation-list"></div>
     </div>
 
