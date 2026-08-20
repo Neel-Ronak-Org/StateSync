@@ -20,6 +20,7 @@ as the historical record and do not edit them to match this summary.
 | [`m4_diagnosis_v2_corrected.json` is misnamed](#m4_diagnosis_v2_correctedjson-is-misnamed) | Despite the filename, it is a run of the ORIGINAL `phase_c2.json`, not `phase_c2_v2.json` — verified by content (its `c2g_04` ground truth is the location-join SQL). Its 44.0% is correct for what it actually measured | Open — flagged in `metrics-report.md`'s own M4 row; artifact deliberately not renamed or touched | No | Cycle 004 DEVIATION 2 |
 | [Citations carry no support relation](#citations-carry-no-support-relation) | `build_citations` lists `retrievals[:citation_max_chunks]` with no relevance filter. Cycle 004 C1 fixed the *label* ("Sources" → "Retrieved Context"); the mechanism is unchanged | Label fixed 2026-08-20; **mechanism open by design** — filtering would alter the exact set M6's context precision measures | No | Audit 004 F-004-5 |
 | [Three unfailable fixture queries](#three-unfailable-fixture-queries) | `c2g_03`/`c2g_10`/`c2g_18` return zero rows; standard EX scores any empty result correct against an empty reference. 23/23 passes across every run ever made. Published 60.0%; 54.5% over the 22 that can fail | Disclosed at every publication point 2026-08-20 (cycle 004 B2). **Fix is an owner judgment call**, per the fixture's own `_audit` — leave them, or replace the questions | No | Audit 004 F-004-3 |
+| [`c2g_15`'s filter is a no-op](#c2g_15s-filter-is-a-no-op) | "Sellers with a Devanagari display name" matches all 30 sellers, 0 NULLs — a fourth reference that cannot discriminate, by a mechanism distinct from the three above. The shipped 7B's pass is awarded to `WHERE display_name_local IS NOT NULL`, not a script test. Published 60.0% / 54.5%; **52.4% over the 21 references that can both fail and discriminate** | Disclosed at every publication point 2026-08-21 (cycle 005 B1). **Fix is an owner judgment call**, same shape as the row above — seed a Latin-only `display_name_local`, or change the question | No | Audit 005 F-005-2 |
 | [M3 regression](#m3-regression) | D-V1 lift halved and D-V2 entity preservation dropped since Phase D. **Separation run done:** memory-flip candidate REFUTED; ~20 of the 35 lost English points traced to `c2g_10` misrouting; residual ~15 points still unattributed | Partly closed — one cause identified and shared with `c2g_10`, residual open | No for the identified cause (a routing defect, fixable now); the residual is re-measured by the graded re-baseline anyway | Routing half → fix with `c2g_10`; residual → needs a draft-first toggle that does not yet exist |
 
 ---
@@ -740,3 +741,58 @@ answer." That routing is respected here.
 question. The honest options are (a) replace the three questions with ones
 whose answers are non-empty, (b) seed data so the current questions return
 rows, or (c) keep publishing 60.0% with this caveat permanently attached.
+
+---
+
+## `c2g_15`'s filter is a no-op
+
+*Added 2026-08-21, cycle 005 (audit 005 F-005-2). Disclosed, not fixed — same
+shape of owner judgment call as the section above, and routed the same way.*
+
+`c2g_15` asks *"Which sellers have a Devanagari display name recorded?"* On
+this corpus **all 30 sellers match** and **0 are NULL** — the note attached to
+the query in the fixture itself, *"display_name_local is nullable; only some
+seed rows populate it,"* is false. The ground truth's `WHERE display_name_local
+~ '[Devanagari range]'` filter is therefore a no-op: a query that omits it
+entirely returns the identical 30-row result set (confirmed both ways — zero
+rows exist only in one side and not the other, checked with `EXCEPT` in both
+directions).
+
+This is a different mechanism from the three zero-row queries above.
+Those pass because `ExecutionAccuracyScorer` cannot distinguish two empty
+results. This one passes because the reference and a wrong-condition query
+happen to be the *same non-empty* result set on this seed data — the scorer is
+working exactly as designed; the fixture's condition simply cannot be tested
+by this corpus.
+
+**Not hypothetical.** The shipped 7B's committed run
+(`docs/m4_diagnosis_v2fixture_7b.json`) generates
+`WHERE s.display_name_local IS NOT NULL` — not a script test — and is scored
+`correct`, 30/30 rows matching. That pass is one of the fifteen behind the
+published 60.0%. A second model in the committed reports
+(`m4_diagnosis_v2fixture_qwen14b_general.json`) does the same thing.
+
+The other fourteen passing queries were checked against this same class of
+defect and are clean — differences from their ground truth are alias names,
+`ORDER BY`, and the harness's `LIMIT 1000` only.
+
+**Arithmetic, stacked on the section above:**
+
+| basis | figure |
+|---|---|
+| published | 15/25 = **60.0%** |
+| excluding the 3 disclosed unfailable queries | 12/22 = **54.5%** |
+| **also excluding `c2g_15`** | **11/21 = 52.4%** |
+
+**Disclosed at every publication point** 2026-08-21 (cycle 005 B1):
+`AGENT_HANDOFF.md`, `V2_STRATEGY.md`, `metrics-report.md`. **The fixture was
+not edited.** Unlike the three zero-row queries, `c2g_15` is **absent** from
+the fixture's own `_audit.known_remaining_weakness` — nothing before audit 005
+recorded that this query could not discriminate.
+
+**Note for whoever closes it:** the ground-truth SQL is correct; the question
+is undiscriminating *on this corpus*. Unlike the zero-row queries, there is a
+cheap, unambiguous fix available — seed one seller's `display_name_local`
+with a Latin-only value so the filter has something to exclude — that does not
+require replacing the question or accepting a permanently attached caveat.
+That is still a fixture edit, so it is still the owner's call, not made here.
