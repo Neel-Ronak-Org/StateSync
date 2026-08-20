@@ -299,6 +299,26 @@ matter just as much: a number is only as trustworthy as the thing producing it.
   no test exists for the chunker either (`grep -rn "chunk_words\|chunk_overlap"
   tests/` is empty), and none is added by this entry — audit 004 F-004-6.
 
+- **The frontend's citations card lists the first `citation_max_chunks`
+  retrievals with no relevance filter against the answer, and (until cycle
+  004 C1) called them "Sources."** `build_citations`
+  (`orchestrator/nodes/synthesizer.py`) applies no support check: it takes
+  `retrievals[:citation_max_chunks]` in retrieval order, full stop. On a
+  retrieval miss the card lists whatever was retrieved instead, presented with
+  the same confidence as a genuine citation. Live instance: `e1_doc_004` asks
+  *"What committed transit time does FastShip 1's SLA annexure specify for the
+  Metro Mumbai zone?"* — FastShip 1 is **LP001**; the fixture's own
+  `expected_chunk_ids` are `doc_sla_annexure_LP001_c000/c001`; the published
+  run's actual `cited` list is `doc_sla_annexure_LP003_c000/c001`,
+  `doc_sla_annexure_LP007_c000` — two other logistics providers' contracts, not
+  a topic drift but a different company's SLA annexure with a different number
+  in it. **Fixed here:** the card's heading is relabelled "Retrieved Context"
+  (cycle 004 C1), which stops claiming a support relation the mechanism doesn't
+  provide. **Not fixed here, and deliberately:** `build_citations` itself is
+  unchanged — filtering what gets listed would alter the exact retrieval set
+  M6's `mean_context_precision` measures, which is a metric change wearing a
+  UI fix's clothes and is out of this cycle's scope. Audit 004 F-004-5.
+
 - **`empty_result` is classified as a retryable error even when empty is the
   correct answer.** `c2g_10`'s true answer is zero rows, and the correction
   loop still spent a retry on it (`attempt=1`, `category: empty_result`).
