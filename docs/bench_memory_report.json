@@ -761,5 +761,27 @@
     "total_trajectory_steps_reduction_pct": 34.6,
     "paraphrase_hit_count": 10,
     "paraphrase_hit_count_of": 10
+  },
+  "flag_provenance": {
+    "_reconstructed": true,
+    "_reconstruction_note": "Audit 002 F-002-4. This file has no flag_provenance because scripts/shipped_flags.py did not exist when this run was made: its content is from commit 3ca04cbbbb1 (2026-08-16 03:05:33) -- the LATEST of three commits that touched this exact path (5d2bfb7f 2026-08-14, ac67f346 2026-08-15, 3ca04cb 2026-08-16), each of which genuinely re-ran the benchmark (generated_at and per-query token counts differ across all three -- verified by diff, not assumed to be no-op re-saves). shipped_flags.py was introduced at 0711c28 (2026-08-16 21:38:41) -- over 18 hours after this file's content was last written. The fields below are RECONSTRUCTED from `git show 3ca04cbbbb1:config/flags.toml`, the commit that produced the content currently at HEAD. This report's own control/treatment split ALREADY states the flag it deliberately varies (control.flag=\"memory.enabled=false\", treatment.flag=\"memory.enabled=true\") -- the flag_state below describes the base committed config, not either run arm, matching how cycle 001's A2 annotated bench_multilingual_report_migration005.json (which similarly varies a flag deliberately). Verified: provider=\"local\" and all seven [llm.models.local] roles = \"qwen2.5:7b\", identical to the shipped config today; normalization.enabled=true, tenancy.enforced=false, evaluation.vision_scorer.enabled=false all match shipped defaults. memory.enabled is recorded as \"false\" (the shipped/committed default at that commit) with the explicit caveat that BOTH arms of this experiment deliberately override it, per control.flag/treatment.flag above. schema_retriever.target_schema did not exist in config/flags.toml at this commit (introduced later, 80d35c8) and is omitted rather than guessed. This report is the evidence behind the SETTLED decision 'memory.enabled default stays false' (docs/AGENT_HANDOFF.md \u00a73). No measured value in this report was altered by this annotation.",
+    "llm": {
+      "provider": "local",
+      "models": {
+        "supervisor": "qwen2.5:7b",
+        "sql": "qwen2.5:7b",
+        "synthesizer": "qwen2.5:7b",
+        "memory_summarizer": "qwen2.5:7b",
+        "normalizer": "qwen2.5:7b",
+        "decomposer": "qwen2.5:7b",
+        "judge": "qwen2.5:7b"
+      }
+    },
+    "flag_state": {
+      "memory.enabled": "false",
+      "normalization.enabled": "true",
+      "tenancy.enforced": "false",
+      "evaluation.vision_scorer.enabled": "false"
+    }
   }
 }

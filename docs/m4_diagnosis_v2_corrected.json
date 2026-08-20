@@ -20047,5 +20047,27 @@
       "errors": [],
       "final_attempt": 0
     }
-  ]
+  ],
+  "flag_provenance": {
+    "_reconstructed": true,
+    "_reconstruction_note": "Audit 002 F-002-4. This file has no flag_provenance despite being committed (70cbc7bdf7a, 2026-08-16 21:44:22) six minutes AFTER 0711c28 (21:38:41) -- the commit that both introduced shipped_flags.py's guard AND wired diagnose_m4.py to call it and store the result under \"flag_provenance\" (verified: `git show 70cbc7b:scripts/diagnose_m4.py` contains both the require_shipped_flags() call and the report-dict assignment). The report nonetheless carries neither flag_state nor llm. Most likely explanation, NOT proven -- git records when a file was committed, not when the run that produced its content happened: 70cbc7b's own message describes recovering from two prior discarded/contaminated attempts (a two-session collision, then leftover normalization.enabled=false from a killed bench_multilingual run) and states the stack was 'verified in the shipped state first' by hand -- consistent with this run using a diagnose_m4.py snapshot that predates 0711c28's guard wiring, with the code change and the report committed together. The fields below are RECONSTRUCTED from `git show 70cbc7bdf7a:config/flags.toml`: provider=\"local\", all seven [llm.models.local] roles = \"qwen2.5:7b\", memory.enabled=false, normalization.enabled=true, tenancy.enforced=false, evaluation.vision_scorer.enabled=false -- all matching shipped defaults, and matching the commit message's own claim of a shipped-state run. schema_retriever.target_schema did not exist in config/flags.toml at this commit (introduced later, 80d35c8) and is omitted rather than guessed. No measured value in this report was altered by this annotation.",
+    "llm": {
+      "provider": "local",
+      "models": {
+        "supervisor": "qwen2.5:7b",
+        "sql": "qwen2.5:7b",
+        "synthesizer": "qwen2.5:7b",
+        "memory_summarizer": "qwen2.5:7b",
+        "normalizer": "qwen2.5:7b",
+        "decomposer": "qwen2.5:7b",
+        "judge": "qwen2.5:7b"
+      }
+    },
+    "flag_state": {
+      "memory.enabled": "false",
+      "normalization.enabled": "true",
+      "tenancy.enforced": "false",
+      "evaluation.vision_scorer.enabled": "false"
+    }
+  }
 }

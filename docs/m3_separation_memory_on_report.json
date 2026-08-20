@@ -24,7 +24,7 @@
         "all_preserved": true,
         "detail": [
           {
-            "noun": "विक्रेता 1",
+            "noun": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 1",
             "in_preserved_entities": true,
             "in_generated_sql": true
           }
@@ -34,7 +34,7 @@
         "all_preserved": true,
         "detail": [
           {
-            "noun": "विक्रेता 2",
+            "noun": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 2",
             "in_preserved_entities": true,
             "in_generated_sql": true
           }
@@ -44,7 +44,7 @@
         "all_preserved": true,
         "detail": [
           {
-            "noun": "विक्रेता 3",
+            "noun": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 3",
             "in_preserved_entities": true,
             "in_generated_sql": true
           }
@@ -54,7 +54,7 @@
         "all_preserved": true,
         "detail": [
           {
-            "noun": "विक्रेता 4",
+            "noun": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 4",
             "in_preserved_entities": true,
             "in_generated_sql": true
           }
@@ -64,7 +64,7 @@
         "all_preserved": false,
         "detail": [
           {
-            "noun": "विक्रेता 5",
+            "noun": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 5",
             "in_preserved_entities": true,
             "in_generated_sql": false
           }
@@ -74,7 +74,7 @@
         "all_preserved": false,
         "detail": [
           {
-            "noun": "विक्रेता 6",
+            "noun": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 6",
             "in_preserved_entities": true,
             "in_generated_sql": false
           }
@@ -84,7 +84,7 @@
         "all_preserved": true,
         "detail": [
           {
-            "noun": "विक्रेता 7",
+            "noun": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 7",
             "in_preserved_entities": true,
             "in_generated_sql": true
           }
@@ -94,7 +94,7 @@
         "all_preserved": true,
         "detail": [
           {
-            "noun": "विक्रेता 8",
+            "noun": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 8",
             "in_preserved_entities": true,
             "in_generated_sql": true
           }
@@ -104,7 +104,7 @@
         "all_preserved": false,
         "detail": [
           {
-            "noun": "विक्रेता 1",
+            "noun": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 1",
             "in_preserved_entities": true,
             "in_generated_sql": false
           }
@@ -114,7 +114,7 @@
         "all_preserved": false,
         "detail": [
           {
-            "noun": "विक्रेता 3",
+            "noun": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 3",
             "in_preserved_entities": true,
             "in_generated_sql": false
           }
@@ -124,7 +124,7 @@
         "all_preserved": true,
         "detail": [
           {
-            "noun": "मुंबई",
+            "noun": "\u092e\u0941\u0902\u092c\u0908",
             "in_preserved_entities": true,
             "in_generated_sql": true
           }
@@ -134,7 +134,7 @@
         "all_preserved": true,
         "detail": [
           {
-            "noun": "दिल्ली",
+            "noun": "\u0926\u093f\u0932\u094d\u0932\u0940",
             "in_preserved_entities": true,
             "in_generated_sql": true
           }
@@ -144,7 +144,7 @@
         "all_preserved": true,
         "detail": [
           {
-            "noun": "बेंगलुरु",
+            "noun": "\u092c\u0947\u0902\u0917\u0932\u0941\u0930\u0941",
             "in_preserved_entities": true,
             "in_generated_sql": true
           }
@@ -154,7 +154,7 @@
         "all_preserved": false,
         "detail": [
           {
-            "noun": "चेन्नई",
+            "noun": "\u091a\u0947\u0928\u094d\u0928\u0908",
             "in_preserved_entities": false,
             "in_generated_sql": true
           }
@@ -164,7 +164,7 @@
         "all_preserved": true,
         "detail": [
           {
-            "noun": "हैदराबाद",
+            "noun": "\u0939\u0948\u0926\u0930\u093e\u092c\u093e\u0926",
             "in_preserved_entities": true,
             "in_generated_sql": true
           }
@@ -174,7 +174,7 @@
         "all_preserved": true,
         "detail": [
           {
-            "noun": "पुणे",
+            "noun": "\u092a\u0941\u0923\u0947",
             "in_preserved_entities": true,
             "in_generated_sql": true
           }
@@ -452,9 +452,9 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "विक्रेता 1 ने कितने ऑर्डर प्राप्त किए हैं?",
+      "normalized_query": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 1 \u0928\u0947 \u0915\u093f\u0924\u0928\u0947 \u0911\u0930\u094d\u0921\u0930 \u092a\u094d\u0930\u093e\u092a\u094d\u0924 \u0915\u093f\u090f \u0939\u0948\u0902?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(orders.order_id) AS order_count\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name_local ILIKE '%विक्रेता 1%';",
+      "executed_sql": "SELECT COUNT(orders.order_id) AS order_count\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name_local ILIKE '%\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 1%';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -462,9 +462,9 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "विक्रेता 2 ने कितने ऑर्डर प्राप्त किए हैं?",
+      "normalized_query": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 2 \u0928\u0947 \u0915\u093f\u0924\u0928\u0947 \u0911\u0930\u094d\u0921\u0930 \u092a\u094d\u0930\u093e\u092a\u094d\u0924 \u0915\u093f\u090f \u0939\u0948\u0902?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(orders.order_id) AS order_count\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name_local ILIKE '%विक्रेता 2%';",
+      "executed_sql": "SELECT COUNT(orders.order_id) AS order_count\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name_local ILIKE '%\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 2%';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -472,9 +472,9 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "विक्रेता 3 के ऑर्डर का कुल मूल्य कितना है?",
+      "normalized_query": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 3 \u0915\u0947 \u0911\u0930\u094d\u0921\u0930 \u0915\u093e \u0915\u0941\u0932 \u092e\u0942\u0932\u094d\u092f \u0915\u093f\u0924\u0928\u093e \u0939\u0948?",
       "preserved_entities": {},
-      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local::text = 'अरब 3'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local::text = '\u0905\u0930\u092c 3'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -482,9 +482,9 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "विक्रेता 4 के ऑर्डर का कुल मूल्य कितना है?",
+      "normalized_query": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 4 \u0915\u0947 \u0911\u0930\u094d\u0921\u0930 \u0915\u093e \u0915\u0941\u0932 \u092e\u0942\u0932\u094d\u092f \u0915\u093f\u0924\u0928\u093e \u0939\u0948?",
       "preserved_entities": {},
-      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name::text = 'विक्रेता 4'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name::text = '\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 4'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -492,7 +492,7 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "विक्रेता 5 की श्रेणी क्या है?",
+      "normalized_query": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 5 \u0915\u0940 \u0936\u094d\u0930\u0947\u0923\u0940 \u0915\u094d\u092f\u093e \u0939\u0948?",
       "preserved_entities": {},
       "executed_sql": null,
       "candidate_sql": null,
@@ -502,7 +502,7 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "विक्रेता 6 की श्रेणी क्या है?",
+      "normalized_query": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 6 \u0915\u0940 \u0936\u094d\u0930\u0947\u0923\u0940 \u0915\u094d\u092f\u093e \u0939\u0948?",
       "preserved_entities": {},
       "executed_sql": null,
       "candidate_sql": null,
@@ -512,9 +512,9 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "विक्रेता 7 के लिए कितने विवाद दर्ज हुए हैं?",
+      "normalized_query": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 7 \u0915\u0947 \u0932\u093f\u090f \u0915\u093f\u0924\u0928\u0947 \u0935\u093f\u0935\u093e\u0926 \u0926\u0930\u094d\u091c \u0939\u0941\u090f \u0939\u0948\u0902?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local ILIKE '%विक्रेता 7%';",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local ILIKE '%\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 7%';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -522,9 +522,9 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "विक्रेता 8 के लिए कितने विवाद दर्ज हुए हैं?",
+      "normalized_query": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 8 \u0915\u0947 \u0932\u093f\u090f \u0915\u093f\u0924\u0928\u0947 \u0935\u093f\u0935\u093e\u0926 \u0926\u0930\u094d\u091c \u0939\u0941\u090f \u0939\u0948\u0902?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local ILIKE '%विक्रेता 8%';",
+      "executed_sql": "SELECT COUNT(*) \nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local ILIKE '%\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 8%';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -532,7 +532,7 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "विक्रेता 1 की अनुबंधित SLA कितने घंटे की है?",
+      "normalized_query": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 1 \u0915\u0940 \u0905\u0928\u0941\u092c\u0902\u0927\u093f\u0924 SLA \u0915\u093f\u0924\u0928\u0947 \u0918\u0902\u091f\u0947 \u0915\u0940 \u0939\u0948?",
       "preserved_entities": {},
       "executed_sql": null,
       "candidate_sql": null,
@@ -542,7 +542,7 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "विक्रेता 3 की अनुबंधित SLA कितने घंटे की है?",
+      "normalized_query": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 3 \u0915\u0940 \u0905\u0928\u0941\u092c\u0902\u0927\u093f\u0924 SLA \u0915\u093f\u0924\u0928\u0947 \u0918\u0902\u091f\u0947 \u0915\u0940 \u0939\u0948?",
       "preserved_entities": {},
       "executed_sql": null,
       "candidate_sql": null,
@@ -552,7 +552,7 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "मुंबई में कितने ऑर्डर डिलीवर हुए हैं?",
+      "normalized_query": "\u092e\u0941\u0902\u092c\u0908 \u092e\u0947\u0902 \u0915\u093f\u0924\u0928\u0947 \u0911\u0930\u094d\u0921\u0930 \u0921\u093f\u0932\u0940\u0935\u0930 \u0939\u0941\u090f \u0939\u0948\u0902?",
       "preserved_entities": {},
       "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN fulfillments f ON o.order_id = f.order_id\nJOIN delivery_events de ON f.fulfillment_id = de.fulfillment_id\nJOIN locations l ON de.location_id = l.location_id\nWHERE l.city = 'Mumbai';",
       "candidate_sql": null,
@@ -562,7 +562,7 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "दिल्ली में कितने ऑर्डर डिलीवर हुए हैं?",
+      "normalized_query": "\u0926\u093f\u0932\u094d\u0932\u0940 \u092e\u0947\u0902 \u0915\u093f\u0924\u0928\u0947 \u0911\u0930\u094d\u0921\u0930 \u0921\u093f\u0932\u0940\u0935\u0930 \u0939\u0941\u090f \u0939\u0948\u0902?",
       "preserved_entities": {},
       "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN fulfillments f ON o.order_id = f.order_id\nJOIN delivery_events de ON f.fulfillment_id = de.fulfillment_id\nJOIN locations l ON de.location_id = l.location_id\nWHERE l.city_local = 'Dilli';",
       "candidate_sql": null,
@@ -572,7 +572,7 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "बेंगलुरु में कितने विक्रेता स्थित हैं?",
+      "normalized_query": "\u092c\u0947\u0902\u0917\u0932\u0941\u0930\u0941 \u092e\u0947\u0902 \u0915\u093f\u0924\u0928\u0947 \u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e \u0938\u094d\u0925\u093f\u0924 \u0939\u0948\u0902?",
       "preserved_entities": {},
       "executed_sql": "SELECT COUNT(s.seller_id) \nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city_local ILIKE 'Bengaluru';",
       "candidate_sql": null,
@@ -582,7 +582,7 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "चेन्नई में कितने विक्रेता स्थित हैं?",
+      "normalized_query": "\u091a\u0947\u0928\u094d\u0928\u0908 \u092e\u0947\u0902 \u0915\u093f\u0924\u0928\u0947 \u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e \u0938\u094d\u0925\u093f\u0924 \u0939\u0948\u0902?",
       "preserved_entities": {},
       "executed_sql": "SELECT COUNT(s.seller_id) \nFROM sellers s \nJOIN locations l ON s.location_id = l.location_id \nWHERE l.city_local ILIKE '%Chennai%';",
       "candidate_sql": null,
@@ -592,7 +592,7 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "हैदराबाद के ऑर्डर के लिए औसत डिलीवरी देरी कितने घंटे की है?",
+      "normalized_query": "\u0939\u0948\u0926\u0930\u093e\u092c\u093e\u0926 \u0915\u0947 \u0911\u0930\u094d\u0921\u0930 \u0915\u0947 \u0932\u093f\u090f \u0914\u0938\u0924 \u0921\u093f\u0932\u0940\u0935\u0930\u0940 \u0926\u0947\u0930\u0940 \u0915\u093f\u0924\u0928\u0947 \u0918\u0902\u091f\u0947 \u0915\u0940 \u0939\u0948?",
       "preserved_entities": {},
       "executed_sql": "SELECT \n    EXTRACT(EPOCH FROM (de.occurred_at - o.placed_at)) / 3600 AS delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    delivery_events de ON f.fulfillment_id = de.fulfillment_id\nJOIN \n    sellers s ON o.seller_id = s.seller_id\nJOIN \n    locations l ON s.location_id = l.location_id\nWHERE \n    l.city = 'Hyderabad'\nLIMIT 1000;",
       "candidate_sql": null,
@@ -602,7 +602,7 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "पुणे के ऑर्डर के लिए औसत डिलीवरी देरी कितने घंटे की है?",
+      "normalized_query": "\u092a\u0941\u0923\u0947 \u0915\u0947 \u0911\u0930\u094d\u0921\u0930 \u0915\u0947 \u0932\u093f\u090f \u0914\u0938\u0924 \u0921\u093f\u0932\u0940\u0935\u0930\u0940 \u0926\u0947\u0930\u0940 \u0915\u093f\u0924\u0928\u0947 \u0918\u0902\u091f\u0947 \u0915\u0940 \u0939\u0948?",
       "preserved_entities": {},
       "executed_sql": "SELECT AVG(EXTRACT(EPOCH FROM (de.occurred_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM orders o\nJOIN fulfillments f ON o.order_id = f.order_id\nJOIN delivery_events de ON f.fulfillment_id = de.fulfillment_id\nJOIN locations l ON de.location_id = l.location_id\nWHERE l.city_local = 'Pune'\nLIMIT 1000;",
       "candidate_sql": null,
@@ -612,7 +612,7 @@
       "ok": true,
       "match": false,
       "detected_language": "en",
-      "normalized_query": "पिछले 30 दिनों में कितने ऑर्डर असफल या वापस हुए हैं?",
+      "normalized_query": "\u092a\u093f\u091b\u0932\u0947 30 \u0926\u093f\u0928\u094b\u0902 \u092e\u0947\u0902 \u0915\u093f\u0924\u0928\u0947 \u0911\u0930\u094d\u0921\u0930 \u0905\u0938\u092b\u0932 \u092f\u093e \u0935\u093e\u092a\u0938 \u0939\u0941\u090f \u0939\u0948\u0902?",
       "preserved_entities": {},
       "executed_sql": "SELECT o.order_id, o.placed_at\nFROM orders o\nLEFT JOIN disputes d ON o.order_id = d.order_id\nWHERE o.placed_at :: timestamptz >= NOW() - INTERVAL '30 days'\nAND (d.status IS NULL OR d.status IN ('failed', 'returned'))\nLIMIT 1000;",
       "candidate_sql": null,
@@ -622,7 +622,7 @@
       "ok": true,
       "match": true,
       "detected_language": "en",
-      "normalized_query": "पिछले 60 दिनों में कितने विवाद दर्ज हुए हैं?",
+      "normalized_query": "\u092a\u093f\u091b\u0932\u0947 60 \u0926\u093f\u0928\u094b\u0902 \u092e\u0947\u0902 \u0915\u093f\u0924\u0928\u0947 \u0935\u093f\u0935\u093e\u0926 \u0926\u0930\u094d\u091c \u0939\u0941\u090f \u0939\u0948\u0902?",
       "preserved_entities": {},
       "executed_sql": "SELECT COUNT(d.dispute_id) AS dispute_count\nFROM orders o\nLEFT JOIN disputes d ON o.order_id = d.order_id\nWHERE d.raised_at::timestamptz >= NOW() - INTERVAL '60 days'\nLIMIT 1000;",
       "candidate_sql": null,
@@ -632,7 +632,7 @@
       "ok": true,
       "match": true,
       "detected_language": "en",
-      "normalized_query": "कितने ऑर्डर b2b चैनल के हैं?",
+      "normalized_query": "\u0915\u093f\u0924\u0928\u0947 \u0911\u0930\u094d\u0921\u0930 b2b \u091a\u0948\u0928\u0932 \u0915\u0947 \u0939\u0948\u0902?",
       "preserved_entities": {},
       "executed_sql": "SELECT COUNT(*) FROM orders WHERE order_channel = 'b2b';",
       "candidate_sql": null,
@@ -642,7 +642,7 @@
       "ok": true,
       "match": true,
       "detected_language": "en",
-      "normalized_query": "कितने ऑर्डर b2c चैनल के हैं?",
+      "normalized_query": "\u0915\u093f\u0924\u0928\u0947 \u0911\u0930\u094d\u0921\u0930 b2c \u091a\u0948\u0928\u0932 \u0915\u0947 \u0939\u0948\u0902?",
       "preserved_entities": {},
       "executed_sql": "SELECT COUNT(*) AS b2c_orders_count\nFROM orders\nWHERE order_channel = 'b2c';",
       "candidate_sql": null,
@@ -654,7 +654,7 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 9 ne kitne orders receive kiye hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE LOWER(s.display_name) LIKE '%स्टोर 9%';",
+      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE LOWER(s.display_name) LIKE '%\u0938\u094d\u091f\u094b\u0930 9%';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -664,7 +664,7 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 10 ne kitne orders receive kiye hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE LOWER(s.display_name) = 'स्टोर 10'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE LOWER(s.display_name) = '\u0938\u094d\u091f\u094b\u0930 10'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -674,7 +674,7 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 11 ke orders ki total value kitni hai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE LOWER(sellers.display_name) = 'स्टोर 11'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE LOWER(sellers.display_name) = '\u0938\u094d\u091f\u094b\u0930 11'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -684,7 +684,7 @@
       "detected_language": "en",
       "normalized_query": "Seller Store 12 ke orders ki total value kitni hai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE LOWER(sellers.display_name) = 'स्टोर 12'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE LOWER(sellers.display_name) = '\u0938\u094d\u091f\u094b\u0930 12'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -754,7 +754,7 @@
       "detected_language": "en",
       "normalized_query": "Jaipur mein kitne orders deliver hue hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) AS number_of_deliveries\nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nJOIN fulfillments f ON o.order_id = f.order_id\nJOIN delivery_events de ON f.fulfillment_id = de.fulfillment_id\nWHERE l.city_local = 'जयपुर'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(o.order_id) AS number_of_deliveries\nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nJOIN fulfillments f ON o.order_id = f.order_id\nJOIN delivery_events de ON f.fulfillment_id = de.fulfillment_id\nWHERE l.city_local = '\u091c\u092f\u092a\u0941\u0930'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -794,7 +794,7 @@
       "detected_language": "en",
       "normalized_query": "Patna ke orders ke liye average delivery delay kitne hours ki hai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT \n    EXTRACT(EPOCH FROM (f.delivered_at::timestamptz - o.placed_at::timestamptz)) / 3600 AS delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city ILIKE 'पटना%'\nLIMIT 1000;",
+      "executed_sql": "SELECT \n    EXTRACT(EPOCH FROM (f.delivered_at::timestamptz - o.placed_at::timestamptz)) / 3600 AS delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city ILIKE '\u092a\u091f\u0928\u093e%'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 0
     },
@@ -804,7 +804,7 @@
       "detected_language": "en",
       "normalized_query": "Indore ke orders ke liye average delivery delay kitne hours ki hai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = 'इंदोर'::text;",
+      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = '\u0907\u0902\u0926\u094b\u0930'::text;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -854,7 +854,7 @@
       "detected_language": "en",
       "normalized_query": "How many orders has Seller Store 1 received?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'सिलेन्डर स्टोर 1'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = '\u0938\u093f\u0932\u0947\u0928\u094d\u0921\u0930 \u0938\u094d\u091f\u094b\u0930 1'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -864,7 +864,7 @@
       "detected_language": "en",
       "normalized_query": "How many orders has Seller Store 2 received?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = 'सिलेन्डर स्टोर 2'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name = '\u0938\u093f\u0932\u0947\u0928\u094d\u0921\u0930 \u0938\u094d\u091f\u094b\u0930 2'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -874,7 +874,7 @@
       "detected_language": "en",
       "normalized_query": "What is the total order value for Seller Store 3?",
       "preserved_entities": {},
-      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name = 'सिलेन्डर स्टोर 3'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name = '\u0938\u093f\u0932\u0947\u0928\u094d\u0921\u0930 \u0938\u094d\u091f\u094b\u0930 3'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -884,7 +884,7 @@
       "detected_language": "en",
       "normalized_query": "What is the total order value for Seller Store 4?",
       "preserved_entities": {},
-      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name = 'सिलेन्डर स्टोर 4'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name = '\u0938\u093f\u0932\u0947\u0928\u094d\u0921\u0930 \u0938\u094d\u091f\u094b\u0930 4'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -954,7 +954,7 @@
       "detected_language": "en",
       "normalized_query": "How many orders have been delivered to Mumbai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(fulfillments.fulfillment_id)\nFROM orders\nJOIN locations ON locations.location_id = orders.ship_to_location_id\nJOIN fulfillments ON fulfillments.order_id = orders.order_id\nWHERE locations.city::text = 'मुंबई' AND fulfillments.status = 'delivered';",
+      "executed_sql": "SELECT COUNT(fulfillments.fulfillment_id)\nFROM orders\nJOIN locations ON locations.location_id = orders.ship_to_location_id\nJOIN fulfillments ON fulfillments.order_id = orders.order_id\nWHERE locations.city::text = '\u092e\u0941\u0902\u092c\u0908' AND fulfillments.status = 'delivered';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -964,7 +964,7 @@
       "detected_language": "en",
       "normalized_query": "How many orders have been delivered to Delhi?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id)\nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city_local = 'दिल्ली'::text\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(o.order_id)\nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city_local = '\u0926\u093f\u0932\u094d\u0932\u0940'::text\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1004,7 +1004,7 @@
       "detected_language": "en",
       "normalized_query": "What is the average delivery delay in hours for orders to Pune?",
       "preserved_entities": {},
-      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (de.occurred_at - o.placed_at)) / 3600) AS avg_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    delivery_events de ON f.fulfillment_id = de.fulfillment_id\nJOIN \n    locations l ON de.location_id = l.location_id\nWHERE \n    l.city_local = 'पुणे'\nLIMIT 1000;",
+      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (de.occurred_at - o.placed_at)) / 3600) AS avg_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    delivery_events de ON f.fulfillment_id = de.fulfillment_id\nJOIN \n    locations l ON de.location_id = l.location_id\nWHERE \n    l.city_local = '\u092a\u0941\u0923\u0947'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1054,11 +1054,11 @@
       "ok": true,
       "match": true,
       "detected_language": "hi",
-      "normalized_query": "How many orders has विक्रेता 1 received?",
+      "normalized_query": "How many orders has \u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 1 received?",
       "preserved_entities": {
-        "विक्रेता 1": "विक्रेता 1"
+        "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 1": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 1"
       },
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'विक्रेता 1'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = '\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 1'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1066,11 +1066,11 @@
       "ok": true,
       "match": true,
       "detected_language": "hi",
-      "normalized_query": "How many orders has विक्रेता 2 received?",
+      "normalized_query": "How many orders has \u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 2 received?",
       "preserved_entities": {
-        "विक्रेता 2": "विक्रेता 2"
+        "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 2": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 2"
       },
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'विक्रेता 2'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = '\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 2'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1078,11 +1078,11 @@
       "ok": true,
       "match": true,
       "detected_language": "hi",
-      "normalized_query": "What is the total value of orders by विक्रेता 3?",
+      "normalized_query": "What is the total value of orders by \u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 3?",
       "preserved_entities": {
-        "विक्रेता 3": "विक्रेता 3"
+        "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 3": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 3"
       },
-      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name_local = 'विक्रेता 3'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name_local = '\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 3'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1090,11 +1090,11 @@
       "ok": true,
       "match": true,
       "detected_language": "hi",
-      "normalized_query": "What is the total value of orders by विक्रेता 4?",
+      "normalized_query": "What is the total value of orders by \u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 4?",
       "preserved_entities": {
-        "विक्रेता 4": "विक्रेता 4"
+        "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 4": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 4"
       },
-      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name_local = 'विक्रेता 4'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(orders.order_value) AS total_order_value\nFROM orders\nJOIN sellers ON orders.seller_id = sellers.seller_id\nWHERE sellers.display_name_local = '\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 4'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1102,9 +1102,9 @@
       "ok": true,
       "match": false,
       "detected_language": "hi",
-      "normalized_query": "What is the category of विक्रेता 5?",
+      "normalized_query": "What is the category of \u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 5?",
       "preserved_entities": {
-        "विक्रेता 5": "विक्रेता 5"
+        "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 5": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 5"
       },
       "executed_sql": null,
       "candidate_sql": null,
@@ -1114,9 +1114,9 @@
       "ok": true,
       "match": false,
       "detected_language": "hi",
-      "normalized_query": "What is the category of विक्रेता 6?",
+      "normalized_query": "What is the category of \u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 6?",
       "preserved_entities": {
-        "विक्रेता 6": "विक्रेता 6"
+        "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 6": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 6"
       },
       "executed_sql": null,
       "candidate_sql": null,
@@ -1128,9 +1128,9 @@
       "detected_language": "hi",
       "normalized_query": "How many disputes have been registered for seller 7?",
       "preserved_entities": {
-        "विक्रेता 7": "विक्रेता 7"
+        "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 7": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 7"
       },
-      "executed_sql": "SELECT COUNT(d.dispute_id) AS dispute_count\nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'विक्रेता 7';",
+      "executed_sql": "SELECT COUNT(d.dispute_id) AS dispute_count\nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = '\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 7';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1140,9 +1140,9 @@
       "detected_language": "hi",
       "normalized_query": "How many disputes have been registered for seller 8?",
       "preserved_entities": {
-        "विक्रेता 8": "विक्रेता 8"
+        "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 8": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 8"
       },
-      "executed_sql": "SELECT COUNT(d.dispute_id) AS dispute_count\nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'विक्रेता 8';",
+      "executed_sql": "SELECT COUNT(d.dispute_id) AS dispute_count\nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = '\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 8';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1152,7 +1152,7 @@
       "detected_language": "hi",
       "normalized_query": "How many hours is the SLA for seller 1?",
       "preserved_entities": {
-        "विक्रेता 1": "विक्रेता 1"
+        "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 1": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 1"
       },
       "executed_sql": null,
       "candidate_sql": null,
@@ -1164,7 +1164,7 @@
       "detected_language": "hi",
       "normalized_query": "How many hours is the SLA for seller 3?",
       "preserved_entities": {
-        "विक्रेता 3": "विक्रेता 3"
+        "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 3": "\u0935\u093f\u0915\u094d\u0930\u0947\u0924\u093e 3"
       },
       "executed_sql": null,
       "candidate_sql": null,
@@ -1176,9 +1176,9 @@
       "detected_language": "hi",
       "normalized_query": "How many orders have been delivered in Mumbai?",
       "preserved_entities": {
-        "मुंबई": "मुंबई"
+        "\u092e\u0941\u0902\u092c\u0908": "\u092e\u0941\u0902\u092c\u0908"
       },
-      "executed_sql": "SELECT COUNT(fulfillments.order_id) AS delivered_orders_count\nFROM orders\nJOIN locations ON locations.location_id = orders.ship_to_location_id\nJOIN fulfillments ON fulfillments.order_id = orders.order_id\nWHERE locations.city_local = 'मुंबई' AND fulfillments.status = 'delivered'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(fulfillments.order_id) AS delivered_orders_count\nFROM orders\nJOIN locations ON locations.location_id = orders.ship_to_location_id\nJOIN fulfillments ON fulfillments.order_id = orders.order_id\nWHERE locations.city_local = '\u092e\u0941\u0902\u092c\u0908' AND fulfillments.status = 'delivered'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1188,9 +1188,9 @@
       "detected_language": "hi",
       "normalized_query": "How many orders have been delivered in Delhi?",
       "preserved_entities": {
-        "दिल्ली": "दिल्ली"
+        "\u0926\u093f\u0932\u094d\u0932\u0940": "\u0926\u093f\u0932\u094d\u0932\u0940"
       },
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city_local = 'दिल्ली';",
+      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE l.city_local = '\u0926\u093f\u0932\u094d\u0932\u0940';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1200,9 +1200,9 @@
       "detected_language": "hi",
       "normalized_query": "How many sellers are located in Bengaluru?",
       "preserved_entities": {
-        "बेंगलुरु": "बेंगलुरु"
+        "\u092c\u0947\u0902\u0917\u0932\u0941\u0930\u0941": "\u092c\u0947\u0902\u0917\u0932\u0941\u0930\u0941"
       },
-      "executed_sql": "SELECT COUNT(DISTINCT s.seller_id)\nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city_local = 'बेंगलुरु';",
+      "executed_sql": "SELECT COUNT(DISTINCT s.seller_id)\nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city_local = '\u092c\u0947\u0902\u0917\u0932\u0941\u0930\u0941';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1212,9 +1212,9 @@
       "detected_language": "hi",
       "normalized_query": "How many sellers are located in Chennai?",
       "preserved_entities": {
-        "चेन्नई": " Chennai"
+        "\u091a\u0947\u0928\u094d\u0928\u0908": " Chennai"
       },
-      "executed_sql": "SELECT COUNT(s.seller_id) \nFROM sellers s \nJOIN locations l ON s.location_id = l.location_id \nWHERE l.city_local = 'चेन्नई ';",
+      "executed_sql": "SELECT COUNT(s.seller_id) \nFROM sellers s \nJOIN locations l ON s.location_id = l.location_id \nWHERE l.city_local = '\u091a\u0947\u0928\u094d\u0928\u0908 ';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1222,11 +1222,11 @@
       "ok": true,
       "match": false,
       "detected_language": "hi",
-      "normalized_query": "What is the average delivery delay in hours for orders in हैदराबाद?",
+      "normalized_query": "What is the average delivery delay in hours for orders in \u0939\u0948\u0926\u0930\u093e\u092c\u093e\u0926?",
       "preserved_entities": {
-        "हैदराबाद": "हैदराबाद"
+        "\u0939\u0948\u0926\u0930\u093e\u092c\u093e\u0926": "\u0939\u0948\u0926\u0930\u093e\u092c\u093e\u0926"
       },
-      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = 'हैदराबाद'\nLIMIT 1000;",
+      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = '\u0939\u0948\u0926\u0930\u093e\u092c\u093e\u0926'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1234,11 +1234,11 @@
       "ok": true,
       "match": false,
       "detected_language": "hi",
-      "normalized_query": "What is the average delivery delay in hours for orders in पुणे?",
+      "normalized_query": "What is the average delivery delay in hours for orders in \u092a\u0941\u0923\u0947?",
       "preserved_entities": {
-        "पुणे": "पुणे"
+        "\u092a\u0941\u0923\u0947": "\u092a\u0941\u0923\u0947"
       },
-      "executed_sql": "SELECT \n    EXTRACT(EPOCH FROM (f.delivered_at::timestamptz - o.placed_at::timestamptz)) / 3600 AS delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local ILIKE 'पुणे%'\nLIMIT 1000;",
+      "executed_sql": "SELECT \n    EXTRACT(EPOCH FROM (f.delivered_at::timestamptz - o.placed_at::timestamptz)) / 3600 AS delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local ILIKE '\u092a\u0941\u0923\u0947%'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 26
     },
@@ -1248,7 +1248,7 @@
       "detected_language": "hi",
       "normalized_query": "How many orders failed or were returned in the last 30 days?",
       "preserved_entities": {
-        "पिछले 30 दिनों में": "पिछले 30 दिनों में"
+        "\u092a\u093f\u091b\u0932\u0947 30 \u0926\u093f\u0928\u094b\u0902 \u092e\u0947\u0902": "\u092a\u093f\u091b\u0932\u0947 30 \u0926\u093f\u0928\u094b\u0902 \u092e\u0947\u0902"
       },
       "executed_sql": "SELECT COUNT(o.order_id)\nFROM orders o\nLEFT JOIN disputes d ON o.order_id = d.order_id\nWHERE o.placed_at::timestamptz >= NOW() - INTERVAL '30 days'\nAND (d.raised_at IS NOT NULL OR o.order_status IN ('return', 'failure'))\nLIMIT 1000;",
       "candidate_sql": null,
@@ -1260,7 +1260,7 @@
       "detected_language": "hi",
       "normalized_query": "How many disputes were registered in the last 60 days?",
       "preserved_entities": {
-        "पिछले 60 दिनों": "पिछले 60 दिनों"
+        "\u092a\u093f\u091b\u0932\u0947 60 \u0926\u093f\u0928\u094b\u0902": "\u092a\u093f\u091b\u0932\u0947 60 \u0926\u093f\u0928\u094b\u0902"
       },
       "executed_sql": "SELECT COUNT(*) AS dispute_count\nFROM disputes d\nWHERE d.raised_at > NOW() - INTERVAL '60 days' AND d.raised_at < NOW();",
       "candidate_sql": null,
@@ -1298,7 +1298,7 @@
       "preserved_entities": {
         "Seller Store 9": "Seller Store 9"
       },
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'सिलेन्डर स्टोर 9'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = '\u0938\u093f\u0932\u0947\u0928\u094d\u0921\u0930 \u0938\u094d\u091f\u094b\u0930 9'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1310,7 +1310,7 @@
       "preserved_entities": {
         "Seller Store 10": "Seller Store 10"
       },
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'सिलेन्डर स्टोर 10'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = '\u0938\u093f\u0932\u0947\u0928\u094d\u0921\u0930 \u0938\u094d\u091f\u094b\u0930 10'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1322,7 +1322,7 @@
       "preserved_entities": {
         "Seller Store 11": "Seller Store 11"
       },
-      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'सिलेन्डर स्टोर 11'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = '\u0938\u093f\u0932\u0947\u0928\u094d\u0921\u0930 \u0938\u094d\u091f\u094b\u0930 11'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1334,7 +1334,7 @@
       "preserved_entities": {
         "Seller Store 12": "Seller Store 12"
       },
-      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'सिलेन्डर स्टोर 12'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = '\u0938\u093f\u0932\u0947\u0928\u094d\u0921\u0930 \u0938\u094d\u091f\u094b\u0930 12'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1416,7 +1416,7 @@
       "detected_language": "other",
       "normalized_query": "Jaipur mein kitne orders deliver hue hain?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(o.order_id) AS number_of_deliveries\nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nJOIN fulfillments f ON o.order_id = f.order_id\nJOIN delivery_events de ON f.fulfillment_id = de.fulfillment_id\nWHERE l.city_local = 'जयपुर'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(o.order_id) AS number_of_deliveries\nFROM orders o\nJOIN locations l ON o.ship_to_location_id = l.location_id\nJOIN fulfillments f ON o.order_id = f.order_id\nJOIN delivery_events de ON f.fulfillment_id = de.fulfillment_id\nWHERE l.city_local = '\u091c\u092f\u092a\u0941\u0930'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1450,7 +1450,7 @@
       "preserved_entities": {
         "Nagpur": "Nagpur"
       },
-      "executed_sql": "SELECT COUNT(s.seller_id)\nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city_local = 'नागपुर';",
+      "executed_sql": "SELECT COUNT(s.seller_id)\nFROM sellers s\nJOIN locations l ON s.location_id = l.location_id\nWHERE l.city_local = '\u0928\u093e\u0917\u092a\u0941\u0930';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1460,9 +1460,9 @@
       "detected_language": "hi",
       "normalized_query": "What is the average delivery delay in hours for orders from Patna?",
       "preserved_entities": {
-        "Patna": "पतना"
+        "Patna": "\u092a\u0924\u0928\u093e"
       },
-      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local ILIKE 'पटना';",
+      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (f.delivered_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local ILIKE '\u092a\u091f\u0928\u093e';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1472,7 +1472,7 @@
       "detected_language": "hi",
       "normalized_query": "What is the average delivery delay in hours for orders from Indore?",
       "preserved_entities": {
-        "Indore": "इंदौर"
+        "Indore": "\u0907\u0902\u0926\u094c\u0930"
       },
       "executed_sql": "SELECT \n    (f.delivered_at - o.placed_at) * 24 AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = 'Indore'\nGROUP BY \n    (f.delivered_at - o.placed_at) * 24\nLIMIT 1000;",
       "candidate_sql": null,
@@ -1534,7 +1534,7 @@
       "preserved_entities": {
         "Seller Store 1": "Seller Store 1"
       },
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'सिलेन्डर स्टोर 1'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = '\u0938\u093f\u0932\u0947\u0928\u094d\u0921\u0930 \u0938\u094d\u091f\u094b\u0930 1'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1546,7 +1546,7 @@
       "preserved_entities": {
         "Seller Store 2": "Seller Store 2"
       },
-      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'सिलेन्डर स्टोर 2'\nLIMIT 1000;",
+      "executed_sql": "SELECT COUNT(o.order_id) AS order_count\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = '\u0938\u093f\u0932\u0947\u0928\u094d\u0921\u0930 \u0938\u094d\u091f\u094b\u0930 2'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1558,7 +1558,7 @@
       "preserved_entities": {
         "Seller Store 3": "Seller Store 3"
       },
-      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'सिलेन्डर स्टोर 3'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = '\u0938\u093f\u0932\u0947\u0928\u094d\u0921\u0930 \u0938\u094d\u091f\u094b\u0930 3'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1570,7 +1570,7 @@
       "preserved_entities": {
         "Seller Store 4": "Seller Store 4"
       },
-      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = 'सिलेन्डर स्टोर 4'\nLIMIT 1000;",
+      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.display_name_local = '\u0938\u093f\u0932\u0947\u0928\u094d\u0921\u0930 \u0938\u094d\u091f\u094b\u0930 4'\nLIMIT 1000;",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1652,7 +1652,7 @@
       "detected_language": "en",
       "normalized_query": "How many orders have been delivered to Mumbai?",
       "preserved_entities": {},
-      "executed_sql": "SELECT COUNT(fulfillments.fulfillment_id)\nFROM orders\nJOIN locations ON locations.location_id = orders.ship_to_location_id\nJOIN fulfillments ON fulfillments.order_id = orders.order_id\nWHERE locations.city::text = 'मुंबई' AND fulfillments.status = 'delivered';",
+      "executed_sql": "SELECT COUNT(fulfillments.fulfillment_id)\nFROM orders\nJOIN locations ON locations.location_id = orders.ship_to_location_id\nJOIN fulfillments ON fulfillments.order_id = orders.order_id\nWHERE locations.city::text = '\u092e\u0941\u0902\u092c\u0908' AND fulfillments.status = 'delivered';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1710,7 +1710,7 @@
       "preserved_entities": {
         "Pune": "Pune"
       },
-      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (de.occurred_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    delivery_events de ON f.fulfillment_id = de.fulfillment_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = 'पुणे';",
+      "executed_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (de.occurred_at - o.placed_at)) / 3600) AS avg_delivery_delay_hours\nFROM \n    orders o\nJOIN \n    fulfillments f ON o.order_id = f.order_id\nJOIN \n    delivery_events de ON f.fulfillment_id = de.fulfillment_id\nJOIN \n    locations l ON o.ship_to_location_id = l.location_id\nWHERE \n    l.city_local = '\u092a\u0941\u0923\u0947';",
       "candidate_sql": null,
       "row_count": 1
     },
@@ -1757,6 +1757,28 @@
       "executed_sql": "SELECT COUNT(*) AS b2c_order_count\nFROM orders\nWHERE order_channel = 'b2c';",
       "candidate_sql": null,
       "row_count": 1
+    }
+  },
+  "flag_provenance": {
+    "_reconstructed": true,
+    "_reconstruction_note": "Audit 002 F-002-4. This file has no flag_provenance because scripts/shipped_flags.py did not exist when this run was made: its content is from commit c68d8ac94239 (2026-08-15 22:26:43, \"M3 separation run -- Candidate 1 (memory flip) REFUTED\"), and shipped_flags.py was introduced at 0711c28 (2026-08-16 21:38:41) -- over a day later. The fields below are RECONSTRUCTED from `git show c68d8ac94239:config/flags.toml`. This report's own dv1_control/dv1_treatment fields already document the memory.enabled toggle this experiment deliberately runs (that IS the experiment -- 'Candidate 1: flip memory.enabled'); the flag_state below describes the base committed config the same way cycle 001's A2 annotated bench_multilingual_report_migration005.json. Verified: provider=\"local\" and all seven [llm.models.local] roles = \"qwen2.5:7b\", identical to the shipped config today; normalization.enabled=true, tenancy.enforced=false, evaluation.vision_scorer.enabled=false all match shipped defaults. memory.enabled is recorded as \"false\" (the shipped/committed default at that commit); dv1_control/dv1_treatment above state which arm actually ran under which value. schema_retriever.target_schema did not exist in config/flags.toml at this commit (introduced later, 80d35c8) and is omitted rather than guessed. No measured value in this report was altered by this annotation.",
+    "llm": {
+      "provider": "local",
+      "models": {
+        "supervisor": "qwen2.5:7b",
+        "sql": "qwen2.5:7b",
+        "synthesizer": "qwen2.5:7b",
+        "memory_summarizer": "qwen2.5:7b",
+        "normalizer": "qwen2.5:7b",
+        "decomposer": "qwen2.5:7b",
+        "judge": "qwen2.5:7b"
+      }
+    },
+    "flag_state": {
+      "memory.enabled": "false",
+      "normalization.enabled": "true",
+      "tenancy.enforced": "false",
+      "evaluation.vision_scorer.enabled": "false"
     }
   }
 }
