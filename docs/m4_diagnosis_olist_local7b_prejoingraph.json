@@ -1,0 +1,983 @@
+{
+  "generated_by": "scripts/diagnose_m4.py",
+  "partial": false,
+  "fixture": "fixtures/golden/olist.json",
+  "flag_provenance": {
+    "llm": {
+      "provider": "local",
+      "models": {
+        "supervisor": "qwen2.5:7b",
+        "sql": "qwen2.5:7b",
+        "synthesizer": "qwen2.5:7b",
+        "memory_summarizer": "qwen2.5:7b",
+        "normalizer": "qwen2.5:7b",
+        "decomposer": "qwen2.5:7b",
+        "judge": "qwen2.5:7b"
+      }
+    },
+    "flag_state": {
+      "memory.enabled": "false",
+      "normalization.enabled": "false",
+      "tenancy.enforced": "false",
+      "evaluation.vision_scorer.enabled": "false",
+      "schema_retriever.target_schema": "olist"
+    },
+    "shipped": false,
+    "disk_deviations": {
+      "normalization.enabled": {
+        "expected": "true",
+        "found": "false"
+      },
+      "schema_retriever.target_schema": {
+        "expected": "public",
+        "found": "olist"
+      }
+    },
+    "live_staleness": null,
+    "allow_nonshipped": true,
+    "fixture_corpus_check": null
+  },
+  "report_schema": 2,
+  "schema_note": "v2: rows are persisted (v1 stored only counts); standard_ex is now the shipped ExecutionAccuracyScorer, with v1's within-row-sorted definition retained as standard_ex_legacy_valueset; the 'unrecovered error' category no longer fires on repaired queries.",
+  "n": 18,
+  "strict_ex": {
+    "correct": 16,
+    "accuracy": 0.8889
+  },
+  "standard_ex": {
+    "correct": 16,
+    "accuracy": 0.8889,
+    "definition": "orchestrator/scorers.py ExecutionAccuracyScorer"
+  },
+  "standard_ex_legacy_valueset": {
+    "correct": 16,
+    "accuracy": 0.8889,
+    "definition": "pre-2026-08-16 in-script definition; sorts values WITHIN each row, so (5,3) matches (3,5). Not BIRD's. Retained only to keep the published 40%/44% traceable."
+  },
+  "mean_value_recall": 0.8889,
+  "mean_value_recall_warning": "Unaligned, cross-column, de-duplicated. Inflated by construction; see score_value_recall's docstring. Not a capability metric.",
+  "mean_row_recall": 0.8889,
+  "failure_categories": {
+    "correct": 16,
+    "right row COUNT, wrong values": 1,
+    "SQL execution error (unrecovered)": 1
+  },
+  "results": [
+    {
+      "id": "ol_001",
+      "text": "List the order_status and the number of orders in each status.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT order_status, COUNT(*) AS num_orders \nFROM olist.orders \nGROUP BY order_status;",
+      "ground_truth_sql": "SELECT order_status, count(*) AS order_count FROM olist.orders GROUP BY order_status ORDER BY order_count DESC",
+      "generated_row_count": 8,
+      "reference_row_count": 8,
+      "generated_cols": 2,
+      "reference_cols": 2,
+      "generated_rows": [
+        {
+          "order_status": "shipped",
+          "num_orders": 1107
+        },
+        {
+          "order_status": "unavailable",
+          "num_orders": 609
+        },
+        {
+          "order_status": "invoiced",
+          "num_orders": 314
+        },
+        {
+          "order_status": "created",
+          "num_orders": 5
+        },
+        {
+          "order_status": "approved",
+          "num_orders": 2
+        },
+        {
+          "order_status": "processing",
+          "num_orders": 301
+        },
+        {
+          "order_status": "delivered",
+          "num_orders": 96478
+        },
+        {
+          "order_status": "canceled",
+          "num_orders": 625
+        }
+      ],
+      "reference_rows": [
+        {
+          "order_status": "delivered",
+          "order_count": 96478
+        },
+        {
+          "order_status": "shipped",
+          "order_count": 1107
+        },
+        {
+          "order_status": "canceled",
+          "order_count": 625
+        },
+        {
+          "order_status": "unavailable",
+          "order_count": 609
+        },
+        {
+          "order_status": "invoiced",
+          "order_count": 314
+        },
+        {
+          "order_status": "processing",
+          "order_count": 301
+        },
+        {
+          "order_status": "created",
+          "order_count": 5
+        },
+        {
+          "order_status": "approved",
+          "order_count": 2
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "ol_002",
+      "text": "How many orders are there in total? Return a single count.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT COUNT(*) AS total_orders FROM olist.orders",
+      "ground_truth_sql": "SELECT count(*) AS total_orders FROM olist.orders",
+      "generated_row_count": 1,
+      "reference_row_count": 1,
+      "generated_cols": 1,
+      "reference_cols": 1,
+      "generated_rows": [
+        {
+          "total_orders": 99441
+        }
+      ],
+      "reference_rows": [
+        {
+          "total_orders": 99441
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "ol_003",
+      "text": "Among orders whose status is 'delivered', how many have no recorded delivery date? Return a single count.",
+      "category": "right row COUNT, wrong values",
+      "strict_ex": false,
+      "standard_ex": false,
+      "standard_ex_legacy_valueset": false,
+      "value_recall": 0.0,
+      "row_recall": 0.0,
+      "generated_sql": "SELECT COUNT(*) \nFROM olist.orders \nWHERE order_status = 'delivered' AND (order_delivered_carrier_date IS NULL OR order_delivered_customer_date IS NULL);",
+      "ground_truth_sql": "SELECT count(*) AS delivered_without_date FROM olist.orders WHERE order_status = 'delivered' AND order_delivered_customer_date IS NULL",
+      "generated_row_count": 1,
+      "reference_row_count": 1,
+      "generated_cols": 1,
+      "reference_cols": 1,
+      "generated_rows": [
+        {
+          "count": 9
+        }
+      ],
+      "reference_rows": [
+        {
+          "delivered_without_date": 8
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "ol_004",
+      "text": "How many orders have no rows at all in the order_items table? Return a single count.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT COUNT(*) \nFROM olist.orders o\nLEFT JOIN olist.order_items oi ON o.order_id = oi.order_id\nWHERE oi.order_item_id IS NULL\nLIMIT 1000;",
+      "ground_truth_sql": "SELECT count(*) AS orders_without_items FROM olist.orders o WHERE NOT EXISTS (SELECT 1 FROM olist.order_items i WHERE i.order_id = o.order_id)",
+      "generated_row_count": 1,
+      "reference_row_count": 1,
+      "generated_cols": 1,
+      "reference_cols": 1,
+      "generated_rows": [
+        {
+          "count": 775
+        }
+      ],
+      "reference_rows": [
+        {
+          "orders_without_items": 775
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "ol_005",
+      "text": "List the seller_id and the number of order items sold, for the 5 sellers with the most order items.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT o.seller_id, COUNT(o.order_item_id) AS num_order_items_sold\nFROM olist.order_items o\nGROUP BY o.seller_id\nORDER BY num_order_items_sold DESC\nLIMIT 5;",
+      "ground_truth_sql": "SELECT seller_id, count(*) AS item_count FROM olist.order_items GROUP BY seller_id ORDER BY item_count DESC, seller_id LIMIT 5",
+      "generated_row_count": 5,
+      "reference_row_count": 5,
+      "generated_cols": 2,
+      "reference_cols": 2,
+      "generated_rows": [
+        {
+          "seller_id": "6560211a19b47992c3666cc44a7e94c0",
+          "num_order_items_sold": 2033
+        },
+        {
+          "seller_id": "4a3ca9315b744ce9f8e9374361493884",
+          "num_order_items_sold": 1987
+        },
+        {
+          "seller_id": "1f50f920176fa81dab994f9023523100",
+          "num_order_items_sold": 1931
+        },
+        {
+          "seller_id": "cc419e0650a3c5ba77189a1882b7556a",
+          "num_order_items_sold": 1775
+        },
+        {
+          "seller_id": "da8622b14eb17ae2831f4ac5b9dab84a",
+          "num_order_items_sold": 1551
+        }
+      ],
+      "reference_rows": [
+        {
+          "seller_id": "6560211a19b47992c3666cc44a7e94c0",
+          "item_count": 2033
+        },
+        {
+          "seller_id": "4a3ca9315b744ce9f8e9374361493884",
+          "item_count": 1987
+        },
+        {
+          "seller_id": "1f50f920176fa81dab994f9023523100",
+          "item_count": 1931
+        },
+        {
+          "seller_id": "cc419e0650a3c5ba77189a1882b7556a",
+          "item_count": 1775
+        },
+        {
+          "seller_id": "da8622b14eb17ae2831f4ac5b9dab84a",
+          "item_count": 1551
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "ol_006",
+      "text": "List the payment_type and total payment_value for each payment type, highest total first.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT \n    payment_type, \n    SUM(payment_value) AS total_payment_value\nFROM \n    olist.order_payments\nGROUP BY \n    payment_type\nORDER BY \n    total_payment_value DESC\nLIMIT 1000;",
+      "ground_truth_sql": "SELECT payment_type, sum(payment_value) AS total_value FROM olist.order_payments GROUP BY payment_type ORDER BY total_value DESC",
+      "generated_row_count": 5,
+      "reference_row_count": 5,
+      "generated_cols": 2,
+      "reference_cols": 2,
+      "generated_rows": [
+        {
+          "payment_type": "credit_card",
+          "total_payment_value": 12542084.19
+        },
+        {
+          "payment_type": "boleto",
+          "total_payment_value": 2869361.27
+        },
+        {
+          "payment_type": "voucher",
+          "total_payment_value": 379436.87
+        },
+        {
+          "payment_type": "debit_card",
+          "total_payment_value": 217989.79
+        },
+        {
+          "payment_type": "not_defined",
+          "total_payment_value": 0
+        }
+      ],
+      "reference_rows": [
+        {
+          "payment_type": "credit_card",
+          "total_value": 12542084.19
+        },
+        {
+          "payment_type": "boleto",
+          "total_value": 2869361.27
+        },
+        {
+          "payment_type": "voucher",
+          "total_value": 379436.87
+        },
+        {
+          "payment_type": "debit_card",
+          "total_value": 217989.79
+        },
+        {
+          "payment_type": "not_defined",
+          "total_value": 0
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "ol_007",
+      "text": "Considering ONLY orders that have a delivery date recorded, what is the average number of days between purchase and delivery? Return a single average.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT \n    AVG(EXTRACT(EPOCH FROM (o.order_delivered_customer_date - o.order_purchase_timestamp)) / 86400) AS avg_days_between_purchase_and_delivery\nFROM \n    olist.orders o\nWHERE \n    o.order_delivered_customer_date IS NOT NULL;",
+      "ground_truth_sql": "SELECT avg(EXTRACT(EPOCH FROM (order_delivered_customer_date - order_purchase_timestamp)) / 86400.0) AS avg_days FROM olist.orders WHERE order_delivered_customer_date IS NOT NULL",
+      "generated_row_count": 1,
+      "reference_row_count": 1,
+      "generated_cols": 1,
+      "reference_cols": 1,
+      "generated_rows": [
+        {
+          "avg_days_between_purchase_and_delivery": 12.558702304032053
+        }
+      ],
+      "reference_rows": [
+        {
+          "avg_days": 12.558702304032053
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "ol_008",
+      "text": "Considering ONLY orders that have a delivery date recorded, how many were delivered LATER than their estimated delivery date? Return a single count.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT COUNT(*) \nFROM olist.orders o\nWHERE o.order_delivered_customer_date IS NOT NULL \nAND o.order_delivered_customer_date > o.order_estimated_delivery_date;",
+      "ground_truth_sql": "SELECT count(*) AS late_deliveries FROM olist.orders WHERE order_delivered_customer_date IS NOT NULL AND order_delivered_customer_date > order_estimated_delivery_date",
+      "generated_row_count": 1,
+      "reference_row_count": 1,
+      "generated_cols": 1,
+      "reference_cols": 1,
+      "generated_rows": [
+        {
+          "count": 7827
+        }
+      ],
+      "reference_rows": [
+        {
+          "late_deliveries": 7827
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "ol_009",
+      "text": "List the review_score and the number of reviews with that score, from score 1 to 5.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT \n    r.review_score, \n    COUNT(r.review_id) AS num_reviews\nFROM \n    olist.order_reviews r\nWHERE \n    r.review_score BETWEEN 1 AND 5\nGROUP BY \n    r.review_score;",
+      "ground_truth_sql": "SELECT review_score, count(*) AS review_count FROM olist.order_reviews GROUP BY review_score ORDER BY review_score",
+      "generated_row_count": 5,
+      "reference_row_count": 5,
+      "generated_cols": 2,
+      "reference_cols": 2,
+      "generated_rows": [
+        {
+          "review_score": 1,
+          "num_reviews": 11858
+        },
+        {
+          "review_score": 3,
+          "num_reviews": 8287
+        },
+        {
+          "review_score": 5,
+          "num_reviews": 57420
+        },
+        {
+          "review_score": 2,
+          "num_reviews": 3235
+        },
+        {
+          "review_score": 4,
+          "num_reviews": 19200
+        }
+      ],
+      "reference_rows": [
+        {
+          "review_score": 1,
+          "review_count": 11858
+        },
+        {
+          "review_score": 2,
+          "review_count": 3235
+        },
+        {
+          "review_score": 3,
+          "review_count": 8287
+        },
+        {
+          "review_score": 4,
+          "review_count": 19200
+        },
+        {
+          "review_score": 5,
+          "review_count": 57420
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "ol_010",
+      "text": "List the seller_state and the number of sellers in each, for the 5 states with the most sellers.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT s.seller_state, COUNT(*) AS num_sellers\nFROM olist.sellers s\nGROUP BY s.seller_state\nORDER BY num_sellers DESC\nLIMIT 5;",
+      "ground_truth_sql": "SELECT seller_state, count(*) AS seller_count FROM olist.sellers GROUP BY seller_state ORDER BY seller_count DESC, seller_state LIMIT 5",
+      "generated_row_count": 5,
+      "reference_row_count": 5,
+      "generated_cols": 2,
+      "reference_cols": 2,
+      "generated_rows": [
+        {
+          "seller_state": "SP",
+          "num_sellers": 1849
+        },
+        {
+          "seller_state": "PR",
+          "num_sellers": 349
+        },
+        {
+          "seller_state": "MG",
+          "num_sellers": 244
+        },
+        {
+          "seller_state": "SC",
+          "num_sellers": 190
+        },
+        {
+          "seller_state": "RJ",
+          "num_sellers": 171
+        }
+      ],
+      "reference_rows": [
+        {
+          "seller_state": "SP",
+          "seller_count": 1849
+        },
+        {
+          "seller_state": "PR",
+          "seller_count": 349
+        },
+        {
+          "seller_state": "MG",
+          "seller_count": 244
+        },
+        {
+          "seller_state": "SC",
+          "seller_count": 190
+        },
+        {
+          "seller_state": "RJ",
+          "seller_count": 171
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "ol_011",
+      "text": "How many DISTINCT values does seller_city take? Return a single count.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT COUNT(DISTINCT s.seller_city) AS distinct_seller_cities_count\nFROM olist.sellers s\nLIMIT 1000;",
+      "ground_truth_sql": "SELECT count(DISTINCT seller_city) AS distinct_cities FROM olist.sellers",
+      "generated_row_count": 1,
+      "reference_row_count": 1,
+      "generated_cols": 1,
+      "reference_cols": 1,
+      "generated_rows": [
+        {
+          "distinct_seller_cities_count": 611
+        }
+      ],
+      "reference_rows": [
+        {
+          "distinct_cities": 611
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "ol_012",
+      "text": "List the product_category_name and the number of products in it, for the 5 categories with the most products.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT p.product_category_name, COUNT(*) AS num_products\nFROM olist.products p\nGROUP BY p.product_category_name\nORDER BY num_products DESC\nLIMIT 5;",
+      "ground_truth_sql": "SELECT product_category_name, count(*) AS product_count FROM olist.products WHERE product_category_name IS NOT NULL GROUP BY product_category_name ORDER BY product_count DESC, product_category_name LIMIT 5",
+      "generated_row_count": 5,
+      "reference_row_count": 5,
+      "generated_cols": 2,
+      "reference_cols": 2,
+      "generated_rows": [
+        {
+          "product_category_name": "cama_mesa_banho",
+          "num_products": 3029
+        },
+        {
+          "product_category_name": "esporte_lazer",
+          "num_products": 2867
+        },
+        {
+          "product_category_name": "moveis_decoracao",
+          "num_products": 2657
+        },
+        {
+          "product_category_name": "beleza_saude",
+          "num_products": 2444
+        },
+        {
+          "product_category_name": "utilidades_domesticas",
+          "num_products": 2335
+        }
+      ],
+      "reference_rows": [
+        {
+          "product_category_name": "cama_mesa_banho",
+          "product_count": 3029
+        },
+        {
+          "product_category_name": "esporte_lazer",
+          "product_count": 2867
+        },
+        {
+          "product_category_name": "moveis_decoracao",
+          "product_count": 2657
+        },
+        {
+          "product_category_name": "beleza_saude",
+          "product_count": 2444
+        },
+        {
+          "product_category_name": "utilidades_domesticas",
+          "product_count": 2335
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "ol_013",
+      "text": "How many products have no product_category_name recorded? Return a single count.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT COUNT(*) FROM olist.products WHERE product_category_name IS NULL",
+      "ground_truth_sql": "SELECT count(*) AS uncategorised FROM olist.products WHERE product_category_name IS NULL",
+      "generated_row_count": 1,
+      "reference_row_count": 1,
+      "generated_cols": 1,
+      "reference_cols": 1,
+      "generated_rows": [
+        {
+          "count": 610
+        }
+      ],
+      "reference_rows": [
+        {
+          "uncategorised": 610
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "ol_014",
+      "text": "What is the total price and total freight_value across all order items? Return one row with both totals.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT SUM(price) AS total_price, SUM(freight_value) AS total_freight_value\nFROM olist.order_items;",
+      "ground_truth_sql": "SELECT sum(price) AS total_price, sum(freight_value) AS total_freight FROM olist.order_items",
+      "generated_row_count": 1,
+      "reference_row_count": 1,
+      "generated_cols": 2,
+      "reference_cols": 2,
+      "generated_rows": [
+        {
+          "total_price": 13591643.7,
+          "total_freight_value": 2251909.54
+        }
+      ],
+      "reference_rows": [
+        {
+          "total_price": 13591643.7,
+          "total_freight": 2251909.54
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "ol_015",
+      "text": "List the customer_state and the number of orders placed from it, for the 5 states with the most orders.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT c.customer_state, COUNT(o.order_id) AS num_orders\nFROM olist.orders o\nJOIN olist.customers c ON o.customer_id = c.customer_id\nGROUP BY c.customer_state\nORDER BY num_orders DESC\nLIMIT 5;",
+      "ground_truth_sql": "SELECT c.customer_state, count(*) AS order_count FROM olist.orders o JOIN olist.customers c ON c.customer_id = o.customer_id GROUP BY c.customer_state ORDER BY order_count DESC, c.customer_state LIMIT 5",
+      "generated_row_count": 5,
+      "reference_row_count": 5,
+      "generated_cols": 2,
+      "reference_cols": 2,
+      "generated_rows": [
+        {
+          "customer_state": "SP",
+          "num_orders": 41746
+        },
+        {
+          "customer_state": "RJ",
+          "num_orders": 12852
+        },
+        {
+          "customer_state": "MG",
+          "num_orders": 11635
+        },
+        {
+          "customer_state": "RS",
+          "num_orders": 5466
+        },
+        {
+          "customer_state": "PR",
+          "num_orders": 5045
+        }
+      ],
+      "reference_rows": [
+        {
+          "customer_state": "SP",
+          "order_count": 41746
+        },
+        {
+          "customer_state": "RJ",
+          "order_count": 12852
+        },
+        {
+          "customer_state": "MG",
+          "order_count": 11635
+        },
+        {
+          "customer_state": "RS",
+          "order_count": 5466
+        },
+        {
+          "customer_state": "PR",
+          "order_count": 5045
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [
+        {
+          "attempt": 0,
+          "category": "unknown_column",
+          "message": "column o.customer_state does not exist\nLINE 1: SELECT o.customer_state, COUNT(o.order_id) AS num_orders\n               ^"
+        }
+      ],
+      "final_attempt": 1
+    },
+    {
+      "id": "ol_016",
+      "text": "List the order_id and the number of items, for the 3 orders with the most order items.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT oi.order_id, COUNT(*) AS num_items\nFROM olist.order_items oi\nGROUP BY oi.order_id\nORDER BY num_items DESC\nLIMIT 3;",
+      "ground_truth_sql": "SELECT order_id, count(*) AS item_count FROM olist.order_items GROUP BY order_id ORDER BY item_count DESC, order_id LIMIT 3",
+      "generated_row_count": 3,
+      "reference_row_count": 3,
+      "generated_cols": 2,
+      "reference_cols": 2,
+      "generated_rows": [
+        {
+          "order_id": "8272b63d03f5f79c56e9e4120aec44ef",
+          "num_items": 21
+        },
+        {
+          "order_id": "1b15974a0141d54e36626dca3fdc731a",
+          "num_items": 20
+        },
+        {
+          "order_id": "ab14fdcfbe524636d65ee38360e22ce8",
+          "num_items": 20
+        }
+      ],
+      "reference_rows": [
+        {
+          "order_id": "8272b63d03f5f79c56e9e4120aec44ef",
+          "item_count": 21
+        },
+        {
+          "order_id": "1b15974a0141d54e36626dca3fdc731a",
+          "item_count": 20
+        },
+        {
+          "order_id": "ab14fdcfbe524636d65ee38360e22ce8",
+          "item_count": 20
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    },
+    {
+      "id": "ol_017",
+      "text": "How many geolocation rows are there, and how many distinct combinations of zip prefix, latitude and longitude? Return one row with both counts.",
+      "category": "SQL execution error (unrecovered)",
+      "strict_ex": false,
+      "standard_ex": false,
+      "standard_ex_legacy_valueset": false,
+      "value_recall": 0.0,
+      "row_recall": 0.0,
+      "generated_sql": "SELECT \n    COUNT(*) AS total_geolocation_rows, \n    COUNT(DISTINCT geolocation_zip_code_prefix, geolocation_lat, geolocation_lng) AS distinct_combinations\nFROM \n    olist.geolocation;",
+      "ground_truth_sql": "SELECT count(*) AS total_rows, count(DISTINCT (geolocation_zip_code_prefix, geolocation_lat, geolocation_lng)) AS distinct_points FROM olist.geolocation",
+      "generated_row_count": 0,
+      "reference_row_count": 1,
+      "generated_cols": 0,
+      "reference_cols": 2,
+      "generated_rows": [],
+      "reference_rows": [
+        {
+          "total_rows": 1000163,
+          "distinct_points": 720154
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [
+        {
+          "attempt": 0,
+          "category": "type_mismatch",
+          "message": "function count(text, double precision, double precision) does not exist\nLINE 1: SELECT COUNT(*) AS total_geolocation_rows, COUNT(DISTINCT ge...\n                                                   ^\nHINT:  No function matches the given name and argument types. You might need to add explicit type casts"
+        },
+        {
+          "attempt": 1,
+          "category": "type_mismatch",
+          "message": "function count(text, double precision, double precision) does not exist\nLINE 1: SELECT COUNT(*) AS total_geolocation_rows, COUNT(DISTINCT ge...\n                                                   ^\nHINT:  No function matches the given name and argument types. You might need to add explicit type casts"
+        },
+        {
+          "attempt": 2,
+          "category": "type_mismatch",
+          "message": "function count(text, double precision, double precision) does not exist\nLINE 1: SELECT COUNT(*) AS total_geolocation_rows, COUNT(DISTINCT ge...\n                                                   ^\nHINT:  No function matches the given name and argument types. You might need to add explicit type casts"
+        },
+        {
+          "attempt": 3,
+          "category": "type_mismatch",
+          "message": "function count(text, double precision, double precision) does not exist\nLINE 3:     COUNT(DISTINCT geolocation_zip_code_prefix, geolocation_...\n            ^\nHINT:  No function matches the given name and argument types. You might need to add explicit type casts."
+        }
+      ],
+      "final_attempt": 3
+    },
+    {
+      "id": "ol_018",
+      "text": "List the product_category_name and its English translation for 5 categories, ordered by the Portuguese name.",
+      "category": "correct",
+      "strict_ex": true,
+      "standard_ex": true,
+      "standard_ex_legacy_valueset": true,
+      "value_recall": 1.0,
+      "row_recall": 1.0,
+      "generated_sql": "SELECT pt.product_category_name, pt.product_category_name_english \nFROM olist.product_category_name_translation pt \nORDER BY pt.product_category_name \nLIMIT 5;",
+      "ground_truth_sql": "SELECT product_category_name, product_category_name_english FROM olist.product_category_name_translation ORDER BY product_category_name LIMIT 5",
+      "generated_row_count": 5,
+      "reference_row_count": 5,
+      "generated_cols": 2,
+      "reference_cols": 2,
+      "generated_rows": [
+        {
+          "product_category_name": "agro_industria_e_comercio",
+          "product_category_name_english": "agro_industry_and_commerce"
+        },
+        {
+          "product_category_name": "alimentos",
+          "product_category_name_english": "food"
+        },
+        {
+          "product_category_name": "alimentos_bebidas",
+          "product_category_name_english": "food_drink"
+        },
+        {
+          "product_category_name": "artes",
+          "product_category_name_english": "art"
+        },
+        {
+          "product_category_name": "artes_e_artesanato",
+          "product_category_name_english": "arts_and_craftmanship"
+        }
+      ],
+      "reference_rows": [
+        {
+          "product_category_name": "agro_industria_e_comercio",
+          "product_category_name_english": "agro_industry_and_commerce"
+        },
+        {
+          "product_category_name": "alimentos",
+          "product_category_name_english": "food"
+        },
+        {
+          "product_category_name": "alimentos_bebidas",
+          "product_category_name_english": "food_drink"
+        },
+        {
+          "product_category_name": "artes",
+          "product_category_name_english": "art"
+        },
+        {
+          "product_category_name": "artes_e_artesanato",
+          "product_category_name_english": "arts_and_craftmanship"
+        }
+      ],
+      "reference_truncated": false,
+      "unscoreable_truncated": false,
+      "generated_rows_truncated": false,
+      "reference_rows_truncated": false,
+      "errors": [],
+      "final_attempt": 0
+    }
+  ]
+}

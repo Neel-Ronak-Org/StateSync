@@ -476,8 +476,99 @@ This project has measured two schema-context interventions harmful
 discipline) — reasoning about a third is worth nothing on its own record.
 See below for what was actually measured.
 
-*(Workstream B's paired before/after measurement, if run this cycle, is
-appended here — see B4/B5 in `docs/cycles/002.md`.)*
+### Paired before/after measurement (cycle 002, B4/B5) — 2026-08-20
+
+`migrations/008_olist_join_graph.sql` applied: six zero-orphan foreign keys
+plus primary/unique keys on the columns they reference (`customers`,
+`orders`, `products`, `sellers`); `products.product_category_name →
+product_category_name_translation.product_category_name` (13 orphans) left
+deliberately undeclared. **Both fixtures re-run on local `qwen2.5:7b`, one
+variable (the schema constraints), before AND after** — the "before" arm was
+freshly measured, not read from the already-committed report, so run-to-run
+variance is not silently absorbed into the delta. Same flag configuration as
+`ecf5936` (`normalization.enabled=false`, `schema_retriever.target_schema=
+"olist"`, both recorded in `flag_provenance`; `fixture_corpus_check: null` on
+all four runs, confirming the A3 guard saw a correctly-paired fixture/corpus
+and did not interfere):
+
+| | easy (`olist.json`, n=18) | hard (`olist_hard.json`, n=16) |
+|---|---|---|
+| **before** 008 | 16/18 = **88.9%** | 8/16 = **50.0%** |
+| **after** 008 | 14/18 = **77.8%** | 8/16 = **50.0%** |
+| Δ | **−11.1pp** | **0.0pp (net)** |
+
+**Instrument stability, checked before drawing any conclusion:** both
+"before" numbers reproduce the already-published `88.9%`/`50.0%` exactly —
+zero drift between the committed report and a fresh run in the identical
+state. Any change measured "after" is attributable to the schema change, not
+to ordinary re-run noise on these two particular numbers (though a single
+paired run cannot rule out noise on the *specific queries* that flipped —
+see "Does not establish" below).
+
+**The easy fixture regressed, on two questions unrelated to any declared
+edge.** `ol_007` (average delivery days) previously divided by 86400 to
+convert seconds to days; after the migration it returned a raw `INTERVAL`
+subtraction instead, which the scorer no longer matches to the reference
+value. `ol_018` (category name + translation) previously queried
+`product_category_name_translation` alone, correctly; after, it added an
+unnecessary join to `products` — the very column pair this migration
+deliberately left un-keyed. Neither failure is a plausible causal
+consequence of the six edges that *were* declared (`orders`↔`customers`,
+`order_items`↔`orders`/`products`/`sellers`, `order_payments`↔`orders`,
+`order_reviews`↔`orders`); both are on tables/columns unrelated to the
+regression.
+
+**The hard fixture's headline held, but the underlying set moved by two, in
+opposite directions.** `attribute_failures.py` run on both reports (the known
+CTE-blindness on `oh_wf01`/`oh_wf03`/`oh_wf04` applies identically to both —
+see "Hard-fixture results" above; corrected split both times is 0
+wrong_tables / 8 same_tables):
+
+| id | before | after | what changed |
+|---|---|---|---|
+| `oh_j09` | correct | **regressed** — schema-grounding error | Invents `p.product_category_name_english` on `products` instead of joining `product_category_name_translation` — *exactly* the failure mode this experiment hypothesised the join graph would fix. It got worse, not better. |
+| `oh_cs01` | wrong-table error (`olist_sellers`, `olist_order_items` — malformed, unqualified identifiers) | **improved** — correct, properly `olist.`-qualified, cleaner `NOT EXISTS` shape | Unrelated to any declared edge; a correlated-subquery question, not a join question. |
+
+**Neither `oh_j08` nor `oh_j09` was fixed by this experiment — expected, not
+a contradiction.** Both invent a column instead of joining
+`product_category_name_translation`, and that is the *one* edge this
+migration deliberately left undeclared (13 orphans, owner decision). The six
+edges that *were* declared touch different tables entirely. This experiment
+tested whether *those six* help; it does not test whether the seventh would.
+
+**Net: declaring the join graph did not help, and on the paired sample net
+hurt** — driven entirely by the easy-fixture regression, with the hard
+fixture flat. This is the **third** documented instance of a schema/prompt-
+context intervention this project reasoned would help and measured did not:
+`a4293e1` (schema comments) regressed D-V1 treatment 81.25%→62.5%; `da6e49f`
+(projection discipline) was the one exception, +8pp/+4pp; this one regresses
+the easy fixture 11.1pp and leaves the hard fixture's targeted failures
+unfixed. **A plausible confound under 50.0% is not retired here — a
+different one is surfaced**: added schema-context volume appears to cost
+this model accuracy on questions that never touch the added information, the
+same shape as the schema-comments regression.
+
+**Gemini not re-run (B6).** Already 100.0% on the hard fixture with zero
+failures — no headroom to detect improvement, only a possible regression —
+and the easy-fixture free-tier budget was spent on confirming the local
+result across both fixtures' before/after arms instead. **This experiment is
+single-provider.** A regression on a stronger model, if one exists, would not
+have been detected here.
+
+**Does not establish:** this does **not** establish that the six declared
+edges are what CAUSED `ol_007`/`ol_018`'s regression or `oh_cs01`'s
+improvement — a single paired run cannot separate a genuine causal effect of
+the added schema context from ordinary model stochasticity on the *specific*
+queries that flipped, only from stochasticity in the *aggregate* score (which
+the before-arm's exact reproduction of the published numbers rules out at the
+aggregate level). It does not establish that declaring the seventh edge
+(`products` → `product_category_name_translation`) would behave the same way
+— that edge was never declared, by design, and remains untested. It does not
+establish anything about Anthropic, Azure, or a second local model. And it
+does not establish that `migrations/007`'s general reasoning (no constraints
+on genuinely dirty real data) is wrong — six of seven edges here were clean;
+a schema with more genuine referential dirt might show a different trade
+entirely.
 
 ---
 

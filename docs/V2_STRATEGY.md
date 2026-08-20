@@ -306,6 +306,39 @@ from the **data origin**, and lands it on real Latin-script city names with 611
 spellings including `sao paulop`. That is the Bangalore/Bengaluru/Banglore
 variance the v1 docs called realistic and untested.
 
+**✎ MEASURED 2026-08-20 (cycle 002, Workstream B, audit 002 F-002-10).**
+Every real-data number above was measured with **no join graph** in the SQL
+agent's prompt — `olist` declared zero foreign keys where `public` declares
+17. Paired before/after `migrations/008_olist_join_graph.sql` (six
+zero-orphan edges declared; the one dirty edge, 13 orphans, deliberately left
+undeclared — owner decision), local `qwen2.5:7b`, one variable, both arms
+freshly measured (not read from the committed report):
+
+| | easy (`olist.json`, n=18) | hard (`olist_hard.json`, n=16) |
+|---|---|---|
+| before 008 | 88.9% (16/18) | 50.0% (8/16) |
+| after 008 | **77.8% (14/18), −11.1pp** | 50.0% (8/16), net 0 |
+
+**Declaring the join graph did not help, and net hurt.** The easy fixture
+regressed 11.1pp on two single-table/simple-join questions unrelated to any
+newly-declared edge. The hard fixture's headline held at 50.0%, but the
+underlying set shifted: `oh_j09` — previously correct — regressed into
+*exactly* the schema-grounding failure Workstream B hypothesised the join
+graph would fix (inventing a column instead of joining
+`product_category_name_translation`), while an unrelated correlated-subquery
+question improved. Neither of the two schema-grounding failures this
+experiment targeted (`oh_j08`, `oh_j09`) was fixed — expected, since the one
+edge they actually need (`products` → `product_category_name_translation`)
+is the edge left deliberately undeclared; the six edges that *were* declared
+cover different tables entirely. **A plausible confound under 50.0% is not
+retired — a different one is exposed**: extra schema-context volume appears
+to cost the 7B accuracy on questions unrelated to the added edges, the same
+shape as `a4293e1`'s schema-comments regression. Third documented instance of
+a schema/prompt-context intervention this project reasoned would help and
+measured did not. Single-provider (Gemini not re-run — already 100.0% on the
+hard fixture with no headroom to show improvement, per `docs/cycles/002.md`
+B6). Full accounting: `docs/metrics-report.md` § "Real-data join graph".
+
 ## 5. Workstream C — Credibility
 
 **C1. Production floor.** No authentication, no rate limiting on an
