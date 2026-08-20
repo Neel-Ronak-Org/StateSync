@@ -535,3 +535,49 @@ tooling underneath `attribute_failures.py`. Worth an hour in a future cycle
 that touches this tool for any other reason, or immediately before the next
 fixture that ships a CTE in its ground truth.
 
+
+---
+
+## M6's gate cannot fail — added 2026-08-20, cycle 003 (audit 003 F-003-6, residue)
+
+Cycle 003's A5/A6 closed most of F-003-6: M6 now has a test file
+(`tests/test_grounding_scorer.py`, 15 cases — it had **none**, the only
+metric in the repo without one) and an entry in `docs/limitations.md`'s
+instrument-limitations section (it was the only metric absent from it).
+**One part was not closed and is recorded here rather than left implied.**
+
+`scripts/verify_fv3.sh:100` runs `run_step "E1-V3 (M6)" python3
+scripts/bench_grounding.py`, and `run_step` records PASS or FAIL purely on
+the **exit code**. `bench_grounding.py` cannot exit non-zero for any
+*measured* outcome — the only non-zero exits are the flag guard and the
+`--out` collision check, both of which fire before any query runs. So
+`E1-V3 (M6) PASS` in an F-V3 summary means "the script ran to completion",
+not that anything about M6 held.
+
+**This is defensible as far as it goes, which is why it is here and not a
+defect.** E1-V3's spec condition sets **no threshold** on purpose:
+*"Record both scores honestly; the Strategy Document sets no threshold."*
+A gate that cannot fail on a metric with no bar is not obviously wrong.
+
+**What is genuinely unguarded** is the other half of E1-V3's pass condition,
+which is a requirement on source code rather than on a number: *"an
+ungrounded claim is a failure regardless of whether it is factually true —
+**the scoring script must enforce this** rather than crediting lucky
+accuracy."* Cycle 003 added `_recompute_faithfulness_from_claims()` as a
+cross-check and a test that pins it (an implementation crediting
+`factually_correct` instead of `grounded_in_retrieved_context` fails that
+test), so the *claim* is now checked in CI. What still is not: a run whose
+judge parse-failed on every query would score `faithfulness 0.0`, write a
+report, exit 0, and be recorded by F-V3 as **PASS**. A parse failure is
+scored as a quality failure, indistinguishable in the mean from a genuinely
+unfaithful answer. The published run and both cycle-003 runs have **zero**
+parse failures, so no number on record is affected.
+
+**Fix, not attempted here:** have `bench_grounding.py` exit non-zero when
+the instrument itself failed — a parse-failure rate above some small
+threshold, or any query erroring out — as distinct from the measured
+scores, on which it should keep having no opinion. That distinction (the
+instrument broke vs. the system scored badly) is the one `run_step`'s
+exit-code contract currently cannot express. Left unbuilt because cycle
+003's frozen criteria scoped A5 to the scorer's semantics, not the
+harness's exit contract, and because no committed number is affected today.

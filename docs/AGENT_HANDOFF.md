@@ -326,7 +326,8 @@ Fixtures remain self-authored. Still never run against a standard benchmark
 | mean value recall | 74% | **weak metric — do not read as capability.** Unaligned and de-duplicated: a query returning 30 rows for a 1-row answer scores 1.00. Mean *row* recall is **48%** |
 | M8 adversarial | **40/40** | was 36/36; +4 payload-count assertions that close a class-empties-silently hole (`dc2e31f`) |
 | M9 routing | 0.983 | unchanged |
-| gates | seams **25/25** · E2 30/30 · tenancy 12/12 · **deployed 19/19** | seams +1 (flag liveness); `verify_deployed.py` is new (`5301b89`) |
+| **M6 — grounding (the RAG half)** | context precision **0.622** (n=15, over *cited* chunks) · recall **0.80** (n=15) · faithfulness **0.8125** (n=16) · **4** ungrounded-but-true | **This row did not exist in this table until cycle 003 — the unstructured half was absent from the handoff's own metrics list, which is part of why three cycles skipped it.** The four figures above are the published ones and are UNCHANGED (`docs/bench_grounding_report.json` untouched). ⚠ **Audit 003 found three of the four measured by a defective instrument**, repaired in cycle 003 without altering them: precision divides by *cited* chunks (capped at `citation_max_chunks=3`, so 7 of 8 doc queries sit on a 0.667 ceiling **with recall 1.0**; over *retrieved* chunks it is **0.364** and the attainable ceiling was **0.778**, not 1.0); the judge's factual-correctness "ground truth" was the string `row_count=N`, not an answer value, which caused at least one verified live scoring error; and `4` was the judge's own unvalidated self-report, disagreeing with its itemised claims on 2 of 16 — recounting the published run's own claims gives **2**. A second faithfulness score that also shows the judge the SQL a hybrid answer used is now reported alongside. Corpus is still **18 docs / 36 chunks**. Full account: `docs/limitations.md` § M6 entry, `docs/audits/003.md` |
+| gates | seams **26/26** · pytest **68/68** · **deployed 19/19** · E2 30/30 · tenancy 12/12 | seams/pytest/deployed re-verified live 2026-08-20 (cycle 003); **seams was published here as 25/25 and had been 26 since cycle 001 A1** — corrected. pytest was 24 at cycle 000, +15 this cycle (`tests/test_grounding_scorer.py`, M6's first test). E2/tenancy are from the record, **not** re-run this cycle |
 
 **Of the 16 remaining M4 failures, 9 are genuine model errors** — not 5. The
 "unrecovered SQL error" category never fired correctly, and correcting it moved
@@ -392,22 +393,46 @@ contribution; the fix is top-k candidate selection behind the existing seam,
 not a hypergraph. See §5a, which is the authoritative version of this
 paragraph.
 
-### Direction for cycle 003 — owner decision, 2026-08-20
+### ✅ Direction for cycle 003 — owner decision, 2026-08-20. DONE; what it found is below.
 
-**Go after the RAG / unstructured half.** Reasoning, so it is not re-litigated:
-three consecutive cycles have avoided it. Cycle 000 §3.2 named it the thin
-half; cycle 001 did not touch it; audit 001 called it *"the largest hole in
-this audit"*; audit 002 did not reach it either and named it as
-`CYCLE_PROTOCOL.md` §7's **shared blind spot** with three cycles of evidence.
-M6 context precision **0.622** and faithfulness **0.8125** sit on an 18-doc /
-36-chunk corpus, measured on a build superseded by `da6e49f`, and no audit has
-opened `bench_grounding.py`, the rubric, or the LLM-judge path.
+**It was:** go after the RAG / unstructured half, because three consecutive
+cycles had avoided it — cycle 000 §3.2 named it the thin half; cycle 001 did
+not touch it; audit 001 called it *"the largest hole in this audit"*; audit
+002 did not reach it either and named it `CYCLE_PROTOCOL.md` §7's **shared
+blind spot** with three cycles of evidence.
 
-**This directs the WORKSTREAM (move 3), not the AUDIT (move 1).** The audit
-still walks all ten failure classes across the whole repo — narrowing it to
-the RAG half because this line exists would reproduce exactly the anchoring
-the seal is built to prevent. If the audit finds something more urgent
-elsewhere, that finding wins; this is a starting position, per §0.
+**The premise every cycle had inherited was wrong, and that is the finding.**
+Cycle 000 §3.2 diagnosed the weakness as **scale** ("M6 context precision
+0.622 is over 18 documents and 36 chunks — at that scale the number is close
+to uninformative"). Audit 003 opened `bench_grounding.py`, the rubric and the
+LLM-judge path for the first time and found the problem is **instrumentation**,
+independent of corpus size: **three of M6's four published components were
+measuring something other than their name.** See the M6 row in §6, the
+`docs/limitations.md` M6 entry, and `docs/audits/003.md`.
+
+Consequence for sequencing, recorded so it is not re-derived: the obvious
+next move — ingesting `olist.order_reviews`' 41,755 reviews, which
+`V2_STRATEGY.md` §3a proposes as *"1,160× the current chunk count, already
+loaded, already checksummed"* — was **deliberately NOT done in cycle 003**,
+on the grounds that scaling a corpus 1,160× under a broken instrument
+produces a bigger wrong number and destroys the attribution of the repair.
+That was the owner's call to overrule and was not overruled. **The instrument
+is now repaired, so that objection no longer applies** — the ingest is the
+natural next workstream whenever the owner wants it, and it is the one thing
+that would make the RAG half's corpus real.
+
+**Still outstanding on the RAG half after cycle 003** (none of it blocks the
+ingest): the corpus is still 18 docs / 36 chunks; M6 has never been run on
+any provider but the local 7B; the repaired harness has **no** repeated-trial
+baseline, so its own run-to-run variance is unmeasured (cycle 003 measured
+the *unmodified* harness's, which was zero on one sample); and
+`e1_doc_004`/`e1_hybrid_005`'s "FastShip 1" retrieval miss is a real,
+already-root-caused model failure that cycle 003 did not touch.
+
+**No direction is recorded here for cycle 004.** That is the owner's to set,
+and cycle 000 established the reason it is not pre-written from inside a
+finished cycle: *"Pre-planning it from this side would anchor exactly what
+the seal exists to prevent."*
 
 ---
 
