@@ -356,17 +356,58 @@ spending the Azure credits rather than more wording.
    mode on *both* sides, so it can be tested against a pre-committed condition
    that covers both — English line up, D-V2 ≥ 81.25%, D-V1 treatment ≥ 65.0%,
    **and** the Hinglish half no worse. Budget two ~35-minute runs.
-2. **Gemini + Azure providers** behind the BD1 seam. Model-independent, no cost.
-3. **Load Olist** (real Brazilian e-commerce, ~100k orders, 9 tables) — real
-   data, right domain, surfaces schema-scale retrieval immediately.
+2. ✅ **Gemini shipped** behind the BD1 seam (`ea65162`). **Azure is blocked,
+   not deferred:** Azure for Students cannot provision AI resources, so the
+   adapter exists and is unexercised. Anthropic remains unexercised too
+   (the $5 has not been spent).
+3. ✅ **Olist loaded** (`cb2450e`) — 1,451,414 rows in schema `olist`,
+   checksum-verified, CC BY-NC-SA. It did surface a real-data problem
+   immediately, though not the predicted one: see the join-graph experiment
+   in item 6.
 4. **Spider dev → BIRD dev** on Gemini free tier; Anthropic $5 as a
    cross-provider check. The `execution_accuracy` scorer already exists so the
    numbers will be comparable.
 5. **TPC-DS** 1GB → 10GB if production is the chosen path.
+6. **The join-graph question is half-answered and worth finishing cheaply.**
+   `migrations/008` declared six foreign keys plus four primary keys on
+   `olist`, measured net-harmful (easy fixture −11.1pp, hard fixture net 0,
+   neither targeted failure fixed), and was reverted by `migrations/009`.
+   **It added PKs and FKs in one step and no arm isolated them** — and the
+   query that regressed most legibly (`ol_018`) began joining through
+   `products`, which 008 had just given a primary key. Two paired runs
+   (PKs-only, FKs-only) would say which half is responsible, or clear both.
+   The seventh, dirty edge (13 orphans) was never declared and never tested.
+   See `docs/cycles/002.md` §5.1 and §6.
 
-**What breaks first at scale is schema size, not row count.** `describe_table`
-over 200 tables / 2000 columns will not fit a context window. That is the real
-engineering problem and solving it is a genuine contribution.
+**What breaks first at scale is ACCURACY, not context size.** An earlier
+version of this line said `describe_table` over 200 tables / 2000 columns
+"will not fit a context window" — **§5a measured that and it is wrong by
+about an order of magnitude** (~24,900 tokens, comfortable everywhere,
+workable even in the local 7B's 32k). What actually breaks first is the model
+choosing wrong tables out of 200 — already this project's measured weakness
+at *twelve*, and visible on real data at *nine*: two of the eight
+hard-fixture failures are the model inventing a column rather than joining
+the table it was shown (audit 002 F-002-5). Solving that is the genuine
+contribution; the fix is top-k candidate selection behind the existing seam,
+not a hypergraph. See §5a, which is the authoritative version of this
+paragraph.
+
+### Direction for cycle 003 — owner decision, 2026-08-20
+
+**Go after the RAG / unstructured half.** Reasoning, so it is not re-litigated:
+three consecutive cycles have avoided it. Cycle 000 §3.2 named it the thin
+half; cycle 001 did not touch it; audit 001 called it *"the largest hole in
+this audit"*; audit 002 did not reach it either and named it as
+`CYCLE_PROTOCOL.md` §7's **shared blind spot** with three cycles of evidence.
+M6 context precision **0.622** and faithfulness **0.8125** sit on an 18-doc /
+36-chunk corpus, measured on a build superseded by `da6e49f`, and no audit has
+opened `bench_grounding.py`, the rubric, or the LLM-judge path.
+
+**This directs the WORKSTREAM (move 3), not the AUDIT (move 1).** The audit
+still walks all ten failure classes across the whole repo — narrowing it to
+the RAG half because this line exists would reproduce exactly the anchoring
+the seal is built to prevent. If the audit finds something more urgent
+elsewhere, that finding wins; this is a starting position, per §0.
 
 ---
 
