@@ -195,7 +195,8 @@ def main() -> None:
     _args, _ = _ap.parse_known_args()
     try:
         flag_provenance = require_shipped_flags(
-            'bench_memory.py (M1 memory A/B)', allow_nonshipped=_args.allow_nonshipped_flags)
+            'bench_memory.py (M1 memory A/B)',
+            allow_nonshipped=_args.allow_nonshipped_flags, fixture=FIXTURE_PATH)
     except FlagStateError as exc:
         print(exc, file=sys.stderr)
         raise SystemExit(2)

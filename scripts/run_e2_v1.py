@@ -72,7 +72,8 @@ def main() -> int:
     args = ap.parse_args()
     try:
         flag_provenance = require_shipped_flags(
-            'run_e2_v1.py (E2-V1 / M7 chart quality)', allow_nonshipped=args.allow_nonshipped_flags)
+            'run_e2_v1.py (E2-V1 / M7 chart quality)',
+            allow_nonshipped=args.allow_nonshipped_flags, fixture=FIXTURE)
     except FlagStateError as exc:
         print(exc, file=sys.stderr)
         raise SystemExit(2)

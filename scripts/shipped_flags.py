@@ -165,6 +165,30 @@ def live_staleness() -> dict[str, object] | None:
     }
 
 
+def fixture_corpus(fixture_path: Path | str) -> str:
+    """Which corpus a fixture's ground truth was written against, read from
+    its own `_about.corpus` field. Every fixture in this repo except the two
+    `olist*.json` ones declares no `_about.corpus` at all and is written
+    against the shipped synthetic schema -- the field's ABSENCE is the
+    "public" claim, not a gap, so it resolves there rather than to None.
+
+    Audit 002 F-002-3: A1 (cycle 001) guards `schema_retriever.target_schema`
+    against SHIPPED_DEFAULTS in isolation, so a harness pointed at the
+    `olist_hard` fixture while `target_schema="public"` -- 80d35c8's EXACT
+    configuration, since "public" IS the shipped default -- passed that guard
+    clean. This function is what `require_shipped_flags(fixture=...)` uses to
+    close that: it ties the flag to the fixture the harness was actually told
+    to run, not just to its own committed default."""
+    path = Path(fixture_path)
+    try:
+        about = json.loads(path.read_text()).get("_about", {})
+    except (OSError, json.JSONDecodeError, AttributeError):
+        return SHIPPED_DEFAULTS[("schema_retriever", "target_schema")]
+    corpus = str(about.get("corpus") or "")
+    return ("olist" if corpus.startswith("olist")
+            else SHIPPED_DEFAULTS[("schema_retriever", "target_schema")])
+
+
 def _llm_provenance() -> dict[str, object]:
     """provider + the model per role, straight out of flags.toml."""
     text = FLAGS_PATH.read_text()
@@ -182,17 +206,38 @@ def _llm_provenance() -> dict[str, object]:
 
 
 def require_shipped_flags(script: str, allow_nonshipped: bool = False,
-                          check_live: bool = True) -> dict[str, object]:
+                          check_live: bool = True,
+                          fixture: Path | str | None = None) -> dict[str, object]:
     """
     Assert the shipped flag state, or refuse to run.
 
     Returns a provenance record for embedding in the caller's own report, so a
     published number carries the flag state it was measured under instead of
     requiring timestamp archaeology to reconstruct it.
+
+    `fixture`, if given, is checked against `schema_retriever.target_schema`
+    UNCONDITIONALLY (audit 002 F-002-3) -- this is the 80d35c8 failure mode:
+    the SQL agent shown one corpus while scored against another's ground
+    truth, silently, because a fixture/corpus pairing was never a flag
+    DEVIATION in the ordinary sense. `--allow-nonshipped-flags` does not
+    bypass it; a fixture/corpus mismatch is never the point of an experiment,
+    unlike (say) deliberately disabling the normalizer.
     """
     state = read_flag_state()
     deviations = disk_deviations(state)
     stale = live_staleness() if check_live else None
+
+    fixture_mismatch: dict[str, str] | None = None
+    if fixture is not None:
+        wanted = fixture_corpus(fixture)
+        got = (state.get("schema_retriever.target_schema")
+               or SHIPPED_DEFAULTS[("schema_retriever", "target_schema")])
+        if wanted != got:
+            fixture_mismatch = {
+                "fixture": str(fixture),
+                "fixture_corpus": wanted,
+                "target_schema": got,
+            }
 
     # The provider and per-role model names belong in provenance for the same
     # reason the flag state does: a number that cannot name the model that
@@ -205,7 +250,21 @@ def require_shipped_flags(script: str, allow_nonshipped: bool = False,
         "disk_deviations": deviations,
         "live_staleness": stale,
         "allow_nonshipped": bool(allow_nonshipped),
+        "fixture_corpus_check": fixture_mismatch,
     }
+
+    if fixture_mismatch:
+        raise FlagStateError(
+            f"[{script}] REFUSING TO RUN: fixture/corpus mismatch.\n"
+            f"  fixture:                          {fixture_mismatch['fixture']}\n"
+            f"  fixture's corpus (_about.corpus):  {fixture_mismatch['fixture_corpus']!r}\n"
+            f"  schema_retriever.target_schema:    {fixture_mismatch['target_schema']!r}\n"
+            f"  This is the 80d35c8 failure mode: the SQL agent would be shown one\n"
+            f"  corpus while scored against ground truth from another, SILENTLY --\n"
+            f"  the score alone looks like an ordinary bad run.\n"
+            f"  This refusal is UNCONDITIONAL: --allow-nonshipped-flags does not\n"
+            f"  bypass it. Fix schema_retriever.target_schema in config/flags.toml\n"
+            f"  to match the fixture's corpus, then re-run.")
 
     if not deviations and not stale:
         return record
@@ -297,6 +356,71 @@ def _self_test() -> int:
 
     check("an unparseable flags file fails rather than passing vacuously",
           bool(disk_deviations(read_flag_state("[memory]\n# nothing here\n"))))
+
+    # audit 002 F-002-3: A1 (above) guards the FLAG in isolation, so a fixture
+    # pointed at olist while target_schema="public" -- 80d35c8's EXACT
+    # configuration, since "public" IS the shipped default -- passed clean.
+    # fixture_corpus() + require_shipped_flags(fixture=...) close that. Both
+    # directions exercised against REAL committed fixtures, not synthetic
+    # ones -- the mismatch case needs no flag-flipping at all, because the
+    # shipped state itself (target_schema="public") already reproduces
+    # 80d35c8 the moment an olist-corpus fixture is named.
+    olist_easy = REPO_ROOT / "fixtures" / "golden" / "olist.json"
+    olist_hard = REPO_ROOT / "fixtures" / "golden" / "olist_hard.json"
+    public_fixture = REPO_ROOT / "fixtures" / "golden" / "phase_c2.json"
+    check("fixture_corpus() reads olist.json as 'olist'",
+          fixture_corpus(olist_easy) == "olist")
+    check("fixture_corpus() reads olist_hard.json as 'olist'",
+          fixture_corpus(olist_hard) == "olist")
+    check("fixture_corpus() reads a fixture with no _about.corpus as 'public' "
+          "(the field's ABSENCE is the public claim, not a gap)",
+          fixture_corpus(public_fixture) == "public")
+
+    def _raises_fixture_mismatch(fixture_path: Path, allow: bool) -> bool:
+        try:
+            require_shipped_flags("self-test", allow_nonshipped=allow,
+                                   check_live=False, fixture=fixture_path)
+        except FlagStateError as exc:
+            return "fixture/corpus mismatch" in str(exc)
+        return False
+
+    check("REFUSES in 80d35c8's exact configuration: shipped target_schema="
+          "'public' + the olist_hard fixture named",
+          _raises_fixture_mismatch(olist_hard, allow=False),
+          "the score alone would have looked like an ordinary bad run")
+    check("the fixture/corpus refusal is UNCONDITIONAL -- "
+          "--allow-nonshipped-flags does NOT bypass it",
+          _raises_fixture_mismatch(olist_hard, allow=True))
+    check("does NOT refuse when the fixture matches the shipped corpus "
+          "(phase_c2.json, public, against the real shipped state)",
+          not _raises_fixture_mismatch(public_fixture, allow=False))
+
+    # The legitimate case: target_schema DELIBERATELY set to olist (a real
+    # B4-style experiment) paired with an olist fixture must NOT trip the
+    # fixture/corpus refusal -- only the FLAG's own deviation from
+    # SHIPPED_DEFAULTS applies there, and that one IS bypassable via
+    # --allow-nonshipped-flags, unlike the fixture mismatch above. Uses the
+    # same FLAGS_PATH-swap technique as the liveness test below: never
+    # touches config/flags.toml itself.
+    import tempfile as _tempfile
+    _original_path = FLAGS_PATH
+    try:
+        with _tempfile.NamedTemporaryFile("w", suffix=".toml", delete=False) as tmp:
+            tmp.write(flipped_schema)
+            tmp_schema_path = Path(tmp.name)
+        FLAGS_PATH = tmp_schema_path
+        try:
+            require_shipped_flags("self-test", allow_nonshipped=True,
+                                   check_live=False, fixture=olist_hard)
+            paired_ok = True
+        except FlagStateError as exc:
+            paired_ok = "fixture/corpus mismatch" not in str(exc)
+        check("a fixture correctly PAIRED with target_schema=olist does not "
+              "trip the fixture/corpus refusal (only the ordinary, "
+              "bypassable flag-deviation banner applies)", paired_ok)
+        tmp_schema_path.unlink(missing_ok=True)
+    finally:
+        FLAGS_PATH = _original_path
 
     # The liveness half. Exercised in BOTH directions against the real running
     # stack, because this is the half that would have caught today's incident

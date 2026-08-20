@@ -222,7 +222,8 @@ def main() -> None:
     _args, _ = _ap.parse_known_args()
     try:
         flag_provenance = require_shipped_flags(
-            'bench_multilingual.py (M3 D-V1/D-V2/D-V3)', allow_nonshipped=_args.allow_nonshipped_flags)
+            'bench_multilingual.py (M3 D-V1/D-V2/D-V3)',
+            allow_nonshipped=_args.allow_nonshipped_flags, fixture=FIXTURE_PATH)
     except FlagStateError as exc:
         print(exc, file=sys.stderr)
         raise SystemExit(2)

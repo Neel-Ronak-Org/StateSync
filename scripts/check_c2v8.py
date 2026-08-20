@@ -202,7 +202,7 @@ def main() -> None:
     try:
         flag_provenance = require_shipped_flags(
             "check_c2v8.py (M4 query correctness)",
-            allow_nonshipped=args.allow_nonshipped_flags)
+            allow_nonshipped=args.allow_nonshipped_flags, fixture=C2_FIXTURE_PATH)
     except FlagStateError as exc:
         print(exc, file=sys.stderr)
         raise SystemExit(2)

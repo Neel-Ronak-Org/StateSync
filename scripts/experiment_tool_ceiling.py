@@ -274,7 +274,8 @@ async def main() -> int:
     args = parser.parse_args()
     try:
         flag_provenance = require_shipped_flags(
-            'experiment_tool_ceiling.py (M9 routing determinism)', allow_nonshipped=args.allow_nonshipped_flags)
+            'experiment_tool_ceiling.py (M9 routing determinism)',
+            allow_nonshipped=args.allow_nonshipped_flags, fixture=FIXTURE)
     except FlagStateError as exc:
         print(exc, file=sys.stderr)
         raise SystemExit(2)

@@ -300,7 +300,8 @@ def main() -> int:
     try:
         flag_provenance = require_shipped_flags(
             "diagnose_m4.py (M4 three-way diagnosis)",
-            allow_nonshipped=args.allow_nonshipped_flags)
+            allow_nonshipped=args.allow_nonshipped_flags,
+            fixture=args.fixture)
     except FlagStateError as exc:
         print(exc, file=sys.stderr)
         return 2

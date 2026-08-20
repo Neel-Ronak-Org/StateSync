@@ -105,7 +105,8 @@ def main() -> None:
     _args, _ = _ap.parse_known_args()
     try:
         flag_provenance = require_shipped_flags(
-            'check_consistency.py (M2 consistency)', allow_nonshipped=_args.allow_nonshipped_flags)
+            'check_consistency.py (M2 consistency)',
+            allow_nonshipped=_args.allow_nonshipped_flags, fixture=FIXTURE_PATH)
     except FlagStateError as exc:
         print(exc, file=sys.stderr)
         raise SystemExit(2)
