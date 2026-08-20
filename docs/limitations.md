@@ -263,6 +263,33 @@ load — this is the evidence for why synthetic numbers do not transfer:
 | 610 products have a NULL category | |
 | `product_name_lenght` is **misspelled in the source** | kept verbatim; renaming would be cleaning |
 
+**The schema carries no join graph — a confound under every real-data number
+published so far (added cycle 002, audit 002 F-002-10).** `migrations/007`
+declared this deliberately: *"NO CONSTRAINTS, DELIBERATELY … Declaring FKs
+would either reject rows at load time or force cleaning — and the DIRT IS THE
+POINT."* Measured consequence, not previously stated anywhere:
+
+| | `public` (synthetic, shipped default) | `olist` (real) |
+|---|---|---|
+| declared foreign keys | **17**, across 10 tables | **0** |
+| declared primary/unique keys | present on every table | **0** |
+
+`orchestrator/schema_retriever.py`'s `DirectSchemaRetriever._format_table`
+renders a `FOREIGN KEYS:` block in the SQL agent's prompt **only** from
+declared foreign keys — it is the sole join information the prompt carries.
+**Every real-data accuracy number this project has published — 88.9%/94.4%
+(`olist.json`) and 50.0%/100.0% (`olist_hard.json`) — was therefore measured
+with no join graph shown to the model**, on fixtures where all but one
+question requires a join. `docs/schema_retrieval_decision.md`'s planned
+`SelectiveSchemaRetriever` safety mechanism — top-*k* tables *"plus anything
+reachable by a foreign key from them, so join paths survive"* — would be
+**inert** on this corpus for the same reason.
+
+This is recorded here unconditionally, independent of whether it is ever
+measured (`docs/cycles/002.md` Workstream B). `migrations/007`'s reasoning is
+sound as a general principle and not reversed by this entry alone — see the
+cycle for what changed and why.
+
 ## "Does it work on production-level data?" — measured answer (2026-08-18)
 
 Asked directly, and the honest answer separates two claims that are easy to

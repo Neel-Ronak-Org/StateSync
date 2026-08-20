@@ -441,6 +441,46 @@ evidence for that finding, not a replication of it in the strict sense.
 
 ---
 
+## Real-data join graph (cycle 002, Workstream B, audit 002 F-002-10)
+
+**Recorded unconditionally, ahead of any measurement — this section is
+required by `docs/cycles/002.md` criterion B1 regardless of whether B2–B5
+run.** Every real-data accuracy number published in this report —
+88.9%/94.4% above and 50.0%/100.0% in the hard-fixture section — was measured
+against a corpus with **no declared join graph**:
+
+| | `public` (synthetic, shipped default) | `olist` (real) |
+|---|---|---|
+| declared foreign keys | **17**, across 10 tables | **0** |
+| declared primary/unique keys | present on every table | **0** |
+
+`orchestrator/schema_retriever.py`'s `DirectSchemaRetriever._format_table`
+renders join information in the SQL agent's prompt **only** from declared
+foreign keys — this is the sole such signal the prompt carries. All but one
+question in `olist_hard.json` requires a join. Two of the eight local-model
+failures on that fixture (`oh_j08`, `oh_j09`, see "Hard-fixture results"
+above) invent a column on `products` rather than joining
+`product_category_name_translation` — the one table `products` would point
+at if that column pair were a declared foreign key.
+
+`migrations/007`'s no-constraints decision was deliberate and recorded
+(*"the DIRT IS THE POINT"*) and is not reversed by this entry — full
+reasoning, the measured six-of-seven-zero-orphans evidence that decision did
+not have, and the owner's decision on `migrations/008`:
+`docs/cycles/002.md` Workstream B. `docs/limitations.md` carries the same
+table for readers who start there.
+
+**Does not establish that a declared join graph would improve any number.**
+This project has measured two schema-context interventions harmful
+(`a4293e1`, schema comments) and one helpful (`da6e49f`, projection
+discipline) — reasoning about a third is worth nothing on its own record.
+See below for what was actually measured.
+
+*(Workstream B's paired before/after measurement, if run this cycle, is
+appended here — see B4/B5 in `docs/cycles/002.md`.)*
+
+---
+
 *Report generated as part of Phase F (`docs/phase_f_log.md`). Do not hand-edit
 the Local (provisional) column after a graded run — append a Graded value
 instead, per `docs/rebaseline_runbook.md` §5.*
