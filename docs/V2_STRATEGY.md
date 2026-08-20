@@ -31,7 +31,7 @@ survived contact with a corpus they were never designed for.
 | | |
 |---|---|
 | single-turn EX, real data (Olist, 18 q, well-specified) | **local 7B 88.9% · hosted 94.4%** ⚠ |
-| single-turn EX, synthetic corrected fixture (25 q) | 60.0% |
+| single-turn EX, synthetic corrected fixture (25 q) | 60.0% (54.5% over the 22 references that can fail — 3 are unfailable empty-vs-empty matches, audit 004 F-004-3, `AGENT_HANDOFF.md` §6) |
 | single-turn EX, synthetic original fixture | 44.0% |
 | adversarial suite | 40/40 |
 | corpora | synthetic 550 orders · **Olist 1,451,414 real rows** |
