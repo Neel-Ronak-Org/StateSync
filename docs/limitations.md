@@ -242,12 +242,62 @@ matter just as much: a number is only as trustworthy as the thing producing it.
 
   **What this does not establish.** None of the above reproduces on a second
   independent model sample beyond the one M1/M2 pair — the judge is
-  `qwen2.5:7b`, non-deterministic, and 8 of the 16 v1 faithfulness scores
-  *did* change between M1 and M2 even though the scoring code for that pass
-  is byte-identical, which is itself informative about how much run-to-run
-  judge variance this metric carries independent of any instrument change.
-  Full write-up and per-query detail: `docs/audits/003.md`,
+  `qwen2.5:7b` and non-deterministic in general. **Corrected 2026-08-20
+  (audit 004 F-004-4):** this paragraph previously said 8 of the 16 v1
+  faithfulness scores changed between M1 and M2 "even though the scoring code
+  for that pass is byte-identical," offered as evidence of judge variance. Both
+  the count and the framing were wrong. It is **5**, not 8, all five
+  `e1_hybrid_*`, and M2 is the **repaired** harness — item 2 above already
+  states that its reference-text repair "shares its prompt text with this
+  judge call too," so the code producing those five scores was not
+  byte-identical to what produced the published run. **The clean same-code
+  comparison is M1 against the published run**, both on the *unmodified*
+  harness: **0 of 16** v1 faithfulness scores differ, exactly reproducing
+  0.622/0.80/0.8125/4. That is the actual noise-band evidence this paragraph
+  should have cited, and it argues the opposite of the deleted sentence — the
+  0.8125 → 0.8958 move is *more* likely attributable to the A1 repair, not
+  less, on the one sample available. Judge variance on the *repaired* harness
+  specifically remains genuinely unmeasured — no second M2-equivalent run
+  exists — and that gap, not an 8-of-16 drift figure, is the real limitation.
+
+  **The all-sources measurement audit 003's F-003-1 asked for was made, and it
+  did not go the direction predicted.** F-003-1 hand-regraded four claims and
+  estimated a corrected faithfulness of `0.9375` if the judge were shown the
+  SQL rows the synthesizer saw. Cycle 003 built that measurement
+  (`mean_faithfulness_all_sources`, item 1 above). It came out **lower** than
+  the docs-only score on the same 16 answers: **0.875** against **0.8958**, a
+  −4.2pp move concentrated entirely in the hybrid half (0.7917 → 0.7500; the
+  doc half is 1.0000 under both rubrics). Two per-query verdicts changed
+  (`e1_hybrid_005` down, `e1_hybrid_007` up); the four claims F-003-1
+  originally flagged score identically under both rubrics in M2 — they were
+  already fixed by the A1 reference repair, not by revealing the SQL. Neither
+  score is treated as superseding the other; both are published.
+
+  Full write-up and per-query detail: `docs/audits/003.md`, `docs/audits/004.md`,
   `docs/cycles/003.md`.
+
+- **Every M6 number is measured in a corpus regime where a "chunk" is a whole
+  document — the chunker has never split one.** `config/statesync.toml` sets
+  `chunk_target_tokens = 512` / `chunk_overlap_tokens = 64`; the largest
+  narrative body in the shipped 18-document corpus is **95 words**, so
+  `_chunk_words()` (`scripts/ingest.py`) returns a single-element list every
+  time it has ever run — verified live: all 18 documents produce exactly one
+  narrative chunk (plus one table chunk), 36 chunks total, and
+  `chunk_overlap_tokens` has never had an effect on any stored chunk. Context
+  recall / precision therefore measure *did retrieval find the right document,
+  and within it the right one of two halves* — not passage-level location
+  inside a document, because no document in this corpus has an inside. This is
+  independent of the M6 defects `docs/audits/003.md` fixed and of corpus
+  *size* per se: `V2_STRATEGY.md` §3a frames the weakness as scale (18
+  documents / 36 chunks against 1.45M relational rows), which is the same
+  framing `docs/cycles/000.md` §3.2 originally gave the whole half before
+  audit 003 found the problem was instrumentation, not scale. It bears
+  directly on the deferred `olist.order_reviews` ingest (§7 of
+  `AGENT_HANDOFF.md`): a review is short, so ingesting 41,755 of them would
+  leave the split path exactly as unexercised as 18 PDFs do, buying 1,160×
+  scale without buying the thing scale was supposed to test. Not changed here:
+  no test exists for the chunker either (`grep -rn "chunk_words\|chunk_overlap"
+  tests/` is empty), and none is added by this entry — audit 004 F-004-6.
 
 - **`empty_result` is classified as a retryable error even when empty is the
   correct answer.** `c2g_10`'s true answer is zero rows, and the correction
