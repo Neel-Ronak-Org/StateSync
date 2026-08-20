@@ -44,6 +44,7 @@ from schemas.synthesizer_output import (                      # noqa: E402
     validate_synthesizer_output,
     safe_synthesizer_output,
 )
+from frontend_asset_checks import app_js_is_same_origin       # noqa: E402
 
 MALICIOUS = REPO_ROOT / "fixtures" / "malicious_specs.json"
 E2_FIXTURE = REPO_ROOT / "fixtures" / "golden" / "phase_e2.json"
@@ -161,8 +162,14 @@ def e2_v4_csp() -> None:
           "unsafe-inline" not in csp.split("script-src")[1].split(";")[0])
     check("index.html carries no inline <script> body",
           re.search(r"<script(?![^>]*\bsrc=)[^>]*>\s*\S", html) is None)
-    check("app.js is served same-origin, not from a CDN",
-          '<script src="app.js"' in html)
+
+    # Audit 004 F-004-2: the previous version of this check, a literal
+    # substring match, FAILED on a same-origin app.js carrying a
+    # cache-busting query string (56a23bf) and could never have caught an
+    # actually CDN-hosted app.js. app_js_is_same_origin asserts the named
+    # property in both directions -- see scripts/frontend_asset_checks.py.
+    ok, detail = app_js_is_same_origin(html)
+    check("app.js is served same-origin, not from a CDN", ok, detail)
 
 
 # ── E2-V5 ─────────────────────────────────────────────────────────────────────
