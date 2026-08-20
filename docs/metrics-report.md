@@ -557,11 +557,8 @@ have been detected here.
 
 **Does not establish:** this does **not** establish that the six declared
 edges are what CAUSED `ol_007`/`ol_018`'s regression or `oh_cs01`'s
-improvement — a single paired run cannot separate a genuine causal effect of
-the added schema context from ordinary model stochasticity on the *specific*
-queries that flipped, only from stochasticity in the *aggregate* score (which
-the before-arm's exact reproduction of the published numbers rules out at the
-aggregate level). It does not establish that declaring the seventh edge
+improvement — see the stability check below, which narrows but does not
+close this. It does not establish that declaring the seventh edge
 (`products` → `product_category_name_translation`) would behave the same way
 — that edge was never declared, by design, and remains untested. It does not
 establish anything about Anthropic, Azure, or a second local model. And it
@@ -569,6 +566,46 @@ does not establish that `migrations/007`'s general reasoning (no constraints
 on genuinely dirty real data) is wrong — six of seven edges here were clean;
 a schema with more genuine referential dirt might show a different trade
 entirely.
+
+### 008 REVERTED, and a stability check that narrows the noise question
+
+**`migrations/009_revert_olist_join_graph.sql` applied 2026-08-20** (owner
+decision, post-cycle). 008 fixed neither failure it targeted and carried a
+measured cost, so it does not ship — the same treatment `a4293e1` (schema
+comments) received via `migrations/006`. `olist` is back to zero constraints;
+verified after the revert: all 34 ground truths byte-identical, `public`
+untouched (3 FKs on `orders`), A5 fingerprint `cf4caa5c…` unchanged.
+
+**The revert produced a third measurement of the constraint-free state, and
+it is the strongest evidence in this section.** `docs/cycles/002.md` §5.2
+recorded honestly that one paired run could not separate a real effect from
+model stochasticity on the specific queries that flipped. Three independent
+runs of the *identical* constraint-free state now exist:
+
+| run | source | standard EX |
+|---|---|---|
+| cycle 001, published | `m4_diagnosis_olist_local7b.json` | 16/18 = 88.9% |
+| cycle 002 B4, before-arm | `…_prejoingraph.json` | 16/18 = 88.9% |
+| cycle 002, after the revert | `…_postrevert.json` | 16/18 = 88.9% |
+| *(with 008 applied)* | `…_postjoingraph.json` | *14/18 = 77.8%* |
+
+**All 18 queries scored identically in all three constraint-free runs** —
+not merely the same total, the same per-query pass/fail set, including the
+two that 008 flipped (`ol_007`, `ol_018` pass in all three). The only run
+that differs is the one with 008 applied, and it differs on exactly those
+two. On this fixture, with this model, the harness is stable enough that a
+2-query flip is **not** plausibly ordinary re-run noise.
+
+**What this closes, and what it does not.** It closes the aggregate-noise
+question for the easy fixture: `−11.1pp` is very unlikely to be stochastic.
+It does **not** close `docs/cycles/002.md` §5.1 — 008 added four primary keys
+*and* six foreign keys in one step, and no arm isolated them, so *which half*
+caused the regression is still unknown (`ol_018` began joining through
+`products`, which 008 had just given a primary key, so the PK half is a live
+suspect). It does not extend to the hard fixture, which has only two runs of
+the constraint-free state, not three. And 88.9% / 50.0% are **reproducible
+again** as of the revert — the reproducibility debt this experiment created
+is discharged, not merely documented.
 
 ---
 

@@ -290,6 +290,20 @@ measured (`docs/cycles/002.md` Workstream B). `migrations/007`'s reasoning is
 sound as a general principle and not reversed by this entry alone — see the
 cycle for what changed and why.
 
+**✎ MEASURED AND REVERTED, 2026-08-20 (cycle 002).**
+`migrations/008_olist_join_graph.sql` declared the six zero-orphan edges and
+was measured paired, one variable, both arms freshly run. It **fixed neither
+failure it targeted** and cost the easy fixture 11.1pp (88.9% → 77.8%; hard
+fixture net 0). **`migrations/009_revert_olist_join_graph.sql` reverts it** —
+same treatment `a4293e1` got via `migrations/006`, for the same reason. The
+table above therefore describes the corpus as it stands **today**, not merely
+as it stood before the experiment. Three independent runs of the
+constraint-free state now agree on all 18 easy-fixture queries, so the 11.1pp
+cost is very unlikely to be noise; which half of 008 (primary keys or foreign
+keys) caused it was never isolated. Both migrations stay in the repo,
+re-appliable. Full accounting: `docs/metrics-report.md` § "Real-data join
+graph".
+
 ## "Does it work on production-level data?" — measured answer (2026-08-18)
 
 Asked directly, and the honest answer separates two claims that are easy to
