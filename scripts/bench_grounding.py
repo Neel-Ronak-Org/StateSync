@@ -528,7 +528,13 @@ def main() -> None:
         },
     }
     out_path.write_text(json.dumps(report, indent=2, default=str))
-    print(f"\nReport written to {out_path.relative_to(REPO_ROOT)}")
+    # Cycle 003 regression, found by M2 itself crashing on its own --out run:
+    # out_path is whatever the caller typed on the command line and is
+    # relative in the common case (as every M1/M2 invocation this cycle
+    # used); REPORT_PATH is always REPO_ROOT-absolute, and Path.relative_to()
+    # raises rather than resolving when the two are not both anchored the
+    # same way. .resolve() first so a relative --out still prints cleanly.
+    print(f"\nReport written to {out_path.resolve().relative_to(REPO_ROOT)}")
 
 
 if __name__ == "__main__":
