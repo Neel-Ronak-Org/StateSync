@@ -34,6 +34,8 @@ import os
 import re
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -51,6 +53,20 @@ E2_FIXTURE = REPO_ROOT / "fixtures" / "golden" / "phase_e2.json"
 NGINX_CONF = REPO_ROOT / "frontend" / "nginx.conf"
 INDEX_HTML = REPO_ROOT / "frontend" / "index.html"
 APP_JS = REPO_ROOT / "frontend" / "app.js"
+
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+
+# Audit 005 F-005-1: these are the four headers e2_v4_csp's config-text checks
+# describe. Asserted here against a LIVE response, because nginx's add_header
+# inheritance rule silently dropped all four for seven months of commits while
+# every existing check kept reading the config file, where they were (and are)
+# correctly spelled.
+LIVE_SECURITY_HEADERS = [
+    "content-security-policy",
+    "x-frame-options",
+    "x-content-type-options",
+    "referrer-policy",
+]
 
 passed = 0
 failed = 0
@@ -128,17 +144,33 @@ def e2_v3() -> None:
 
 # ── E2-V4 (header half) ───────────────────────────────────────────────────────
 def e2_v4_csp() -> None:
-    section("E2-V4 — CSP forbids unsafe-eval (header inspection)")
+    # Audit 005 F-005-1: everything in this function reads frontend/nginx.conf
+    # as TEXT. It asserts what the config file SAYS, not what a browser
+    # RECEIVES -- those diverged silently from 56a23bf until this cycle,
+    # because nginx does not inherit add_header into a location block that
+    # declares one of its own, and none of these checks can see that. The
+    # property this function's name promises ("CSP forbids unsafe-eval") is
+    # only actually verified by e2_v4_csp_live(), below, which issues a real
+    # request and reads a real response.
+    section("E2-V4 — nginx.conf TEXT contains the intended CSP (config assertion, not a live check)")
     conf = NGINX_CONF.read_text()
     csp_lines = [ln for ln in conf.splitlines() if "Content-Security-Policy" in ln]
-    check("exactly one CSP header directive", len(csp_lines) == 1, f"{len(csp_lines)} found")
+    # Audit 005 A1: the directive is now repeated in every `location` block
+    # that declares its own add_header (server-level plus one per location
+    # that needs it -- see scripts/nginx_header_checks.py for why), so "the
+    # config states one CSP" is now "every repeat states the SAME CSP",
+    # not "there is exactly one line".
+    check("at least one CSP header directive IN THE CONFIG FILE", len(csp_lines) >= 1, f"{len(csp_lines)} found")
     if not csp_lines:
         return
-    csp = csp_lines[0]
-    check("CSP is a single-line header", "\n" not in csp)
-    check("CSP contains no 'unsafe-eval'", "unsafe-eval" not in csp)
-    check("CSP sets object-src 'none'", "object-src 'none'" in csp)
-    check("CSP sets frame-ancestors 'none'", "frame-ancestors 'none'" in csp)
+    stripped = [ln.strip() for ln in csp_lines]
+    check("every repeated CSP directive is identical (ignoring indentation)", len(set(stripped)) == 1,
+          f"{len(set(stripped))} distinct variants across {len(csp_lines)} lines")
+    csp = stripped[0]
+    check("CSP directive text is a single line", "\n" not in csp)
+    check("CSP directive text contains no 'unsafe-eval'", "unsafe-eval" not in csp)
+    check("CSP directive text sets object-src 'none'", "object-src 'none'" in csp)
+    check("CSP directive text sets frame-ancestors 'none'", "frame-ancestors 'none'" in csp)
 
     # The app moved out of index.html into app.js so the CSP could drop
     # 'unsafe-inline' from script-src. These checks follow the code: the
@@ -158,7 +190,7 @@ def e2_v4_csp() -> None:
     # Hardening added after the trace-renderer XSS sink was found: script-src
     # no longer permits inline script, so a future DOM-injection bug cannot
     # reach script execution even if a sink is reintroduced.
-    check("CSP contains no script-src 'unsafe-inline'",
+    check("CSP directive text contains no script-src 'unsafe-inline'",
           "unsafe-inline" not in csp.split("script-src")[1].split(";")[0])
     check("index.html carries no inline <script> body",
           re.search(r"<script(?![^>]*\bsrc=)[^>]*>\s*\S", html) is None)
@@ -169,7 +201,48 @@ def e2_v4_csp() -> None:
     # actually CDN-hosted app.js. app_js_is_same_origin asserts the named
     # property in both directions -- see scripts/frontend_asset_checks.py.
     ok, detail = app_js_is_same_origin(html)
-    check("app.js is served same-origin, not from a CDN", ok, detail)
+    check("app.js is served same-origin, not from a CDN (config assertion)", ok, detail)
+
+
+def _fetch_response_headers(url: str, timeout: float = 5.0) -> dict[str, str] | None:
+    """Lower-cased response header map for a live GET, or None if unreachable."""
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as resp:
+            return {k.lower(): v for k, v in resp.getheaders()}
+    except (urllib.error.URLError, OSError):
+        return None
+
+
+def e2_v4_csp_live() -> None:
+    """
+    Audit 005 F-005-1. This is the check e2_v4_csp() is not: it issues a real
+    HTTP request to the running frontend and reads the actual response headers,
+    rather than reading frontend/nginx.conf as text. The config-text checks
+    above passed throughout the period this would have failed, because nginx
+    silently drops server-level add_header directives inside any location
+    block that declares an add_header of its own -- 56a23bf added
+    `location = /index.html` and `location = /app.js` blocks with only
+    Cache-Control, and every response since then carried zero of the four
+    security headers, on every path. FRONTEND_URL overrides the default
+    (http://localhost:3000, the documented dev/compose address).
+    """
+    section("E2-V4 — CSP forbids unsafe-eval (LIVE response headers — the actual check)")
+    for path in ("/", "/index.html", "/app.js"):
+        url = FRONTEND_URL.rstrip("/") + path
+        headers = _fetch_response_headers(url)
+        if headers is None:
+            check(f"frontend reachable at {path}", False,
+                  f"could not GET {url} — is `docker compose up -d` running?")
+            continue
+        for name in LIVE_SECURITY_HEADERS:
+            check(f"{path}: live response carries {name}", name in headers,
+                  headers.get(name, "ABSENT")[:100])
+        # The one property config-text can genuinely stand in for: whether the
+        # DIRECTIVE the file declares is what the browser actually got, once
+        # we already know a header of that name arrived at all.
+        if "content-security-policy" in headers:
+            check(f"{path}: live CSP contains no 'unsafe-eval'",
+                  "unsafe-eval" not in headers["content-security-policy"])
 
 
 # ── E2-V5 ─────────────────────────────────────────────────────────────────────
@@ -249,6 +322,7 @@ def main() -> int:
     e2_v2()
     e2_v3()
     e2_v4_csp()
+    e2_v4_csp_live()
     e2_v5()
     e2_v6_orchestrator()
 
