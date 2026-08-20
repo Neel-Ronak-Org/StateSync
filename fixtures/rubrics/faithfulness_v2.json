@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "rubric_name": "faithfulness_all_sources",
+  "description": "Audit 003 F-003-1 companion to faithfulness.json, ADDED ALONGSIDE IT, not replacing it. faithfulness.json's own judge call shows the LLM judge document passages only and labels them 'what the system actually saw' -- true for a docs-route answer, false for a hybrid one, whose synthesizer prompt also includes the SQL sub-task's result rows (orchestrator/nodes/synthesizer.py). This rubric scores the same claims against BOTH sources the system actually saw when writing a hybrid answer: the retrieved document passages AND the executed SQL's result rows. faithfulness.json is unmodified and both scores are reported side by side -- this is not a replacement, per this repo's rule against altering a scorer to move a published number (see the commit that introduces this file).",
+  "instructions": "You are given: (1) the user's question, (2) the system's answer_text, (3) the full content of every document passage AND every SQL result row that was actually retrieved/computed and shown to the system when it wrote the answer, and (4) an independent reference (ground truth) for verifying factual correctness, which the system generating the answer did NOT necessarily see in this form. Break the answer into its individual factual claims (a factual claim is any specific, checkable assertion -- a number, a named entity, a status, a date; general framing sentences like 'Here is what I found' are not claims). For each claim, judge two independent things: (a) grounded_in_retrieved_context -- does this specific claim appear in, or follow directly from, EITHER the retrieved document passages OR the SQL result rows in (3)? A claim grounded only by the model's own prior knowledge or invented does not count, even if true, and even if it happens to match the independent reference. (b) factually_correct -- does this claim match the independent reference in (4), regardless of whether it was grounded?",
+  "scoring": {
+    "faithfulness_score": "fraction of claims with grounded_in_retrieved_context = true (0.0-1.0), where 'retrieved_context' means EITHER document passages or SQL result rows. An answer with zero claims scores 1.0 (vacuously faithful -- nothing was asserted ungrounded).",
+    "ungrounded_but_true_count": "count of claims where grounded_in_retrieved_context = false AND factually_correct = true -- the system got lucky against neither source, and would look identical to a hallucination without independent verification.",
+    "context_precision": "computed separately by the bench script from expected_chunk_ids vs. actual citations, not by this judge -- unaffected by this rubric; only the document half of context is ever cited, by design (build_citations)."
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["claims", "faithfulness_score", "ungrounded_but_true_count"],
+    "properties": {
+      "claims": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["claim", "grounded_in_retrieved_context", "factually_correct"],
+          "properties": {
+            "claim": {"type": "string"},
+            "grounded_in_retrieved_context": {"type": "boolean"},
+            "factually_correct": {"type": "boolean"}
+          }
+        }
+      },
+      "faithfulness_score": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+      "ungrounded_but_true_count": {"type": "integer", "minimum": 0}
+    }
+  }
+}
