@@ -324,33 +324,101 @@ genuine ambiguous-column / wrong-join-key bug (`oh_wf04`, joining back to
 `customers` on `customer_state` rather than `customer_id`, which is both
 ambiguous and semantically wrong). **The correct classification for all
 three is `same_tables`** (intent arrived, the SQL over the right tables was
-wrong) **— the true split is 0 wrong_tables / 8 same_tables**, not 3/5. Every
-one of the local model's 8 failures on this fixture is a genuine SQL-writing
+wrong) **— the true split is 0 wrong_tables / 8 same_tables**, not 3/5. This
+is a real, previously-unknown limitation of `attribute_failures.py` on any
+ground truth using a CTE — recorded here since the tool's own docstring says
+the proxy "does not adjudicate individual cases," and this cross-check is
+exactly why not.
+
+**CORRECTED cycle 002 (audit 002 F-002-5).** This section previously stated
+*"every one of the local model's 8 failures … is a genuine SQL-writing
 capability gap on nested-subquery and window-function syntax, none of them a
-misunderstanding of what was asked. This is a real, previously-unknown
-limitation of `attribute_failures.py` on any ground truth using a CTE —
-recorded here since the tool's own docstring says the proxy "does not
-adjudicate individual cases," and this cross-check is exactly why not.
+misunderstanding of what was asked."* That is true of 3 of the 8. Reading all
+eight `generated_sql` values individually (`docs/m4_diagnosis_olist_hard_local7b.json`):
+
+| id | published category | what actually happened |
+|---|---|---|
+| `oh_wf01` | SQL execution error | nested-subquery scope: `missing FROM-clause entry for table "oi"` — the published class, correct |
+| `oh_wf03` | SQL execution error | window-frame syntax: `frame start cannot be UNBOUNDED FOLLOWING` — the published class, correct |
+| `oh_wf04` | SQL execution error | window/join: `column reference "order_id" is ambiguous` — the published class, correct |
+| `oh_j03` | SQL execution error | **reserved-word alias**: `JOIN olist.order_reviews or ON …` — `or` used as a table alias. Not nested, not a window |
+| `oh_j08` | SQL execution error | **schema grounding**: `column p.product_category_name_english does not exist` — invented an English-name column on `products` instead of joining `product_category_name_translation` |
+| `oh_j09` | SQL execution error | **schema grounding**, same cause as `oh_j08`; also wrote `LIMIT 1000` for a question asking for "the 5 categories" |
+| `oh_j07` | right row count, wrong values | **comprehension**: `SUM(oi.order_item_id)` where the reference is `count(oi.order_item_id)` — the question asks for "the total NUMBER of order_items," the model summed an ordinal id; its `HAVING count(o.order_id) > 1` also counts item rows, not orders, so it drifts from the question's own explicit "REPEAT CUSTOMER" definition. Executed cleanly, no syntax error |
+| `oh_wf02` | right row count, wrong values | **comprehension**: `COUNT(*) OVER ()` after `GROUP BY review_score` returns 5 (the number of *groups*), not the review total — the cumulative-percentage denominator is wrong. Executed cleanly, no syntax error |
+
+**Honest split of the 8: 3 nested-subquery/window-function syntax (as
+published), 1 reserved-word alias, 2 schema grounding, 2 comprehension.** Two
+of eight are the model failing to find
+`olist.product_category_name_translation` in a nine-table schema, not a
+syntax gap — see the "Real-data join graph" section below (F-002-10): `olist`
+declares **zero** foreign keys, so nothing points the model at the table it
+needed. Two more are logic errors on questions the fixture went out of its
+way to disambiguate (`oh_j07`'s own note explains the fixture defines "repeat
+customer" explicitly *because* the corpus sets this trap). Routing every
+failure to "SQL syntax" would point a remedy at generation; the schema-
+grounding half points at retrieval instead. **`50.0%` and `100.0%` are
+unchanged — this correction is to the failure ANALYSIS, not the score.**
 
 **Fixture defect rate, audited the same way `phase_c2` was** (`V2_STRATEGY.md`
 §6's replication claim — this is the second independently-authored fixture):
 **1 of 16 (6.25%)**, found and fixed BEFORE any model was scored, not
 discovered afterward. `oh_wf01` asked for "the single highest-priced
-order_item" per category; 15 of ~74 real categories have a genuine multi-way
-tie at the category max price (e.g. `audio` has 6 products tied at 598.99),
-which the SQL resolved deterministically (lowest `product_id`) but the
-original question text did not say — fixed by stating the tie-break in the
-question. The 5 categories that made this fixture's shipped top-5 are not
-among the tied ones (checked directly), so the ground truth as shipped was
-never actually wrong — but the wording was, and it is the kind of latent
-ambiguity `oh_wf03`/`oh_wf04` were also checked for and found clean (zero
-partition-internal ties in either). One more item recorded, judged NOT a
+order_item" per category, and the max PRICE is unambiguous in every category
+— which `product_id` represents it is not, wherever more than one product
+ties at that max. The SQL resolved this deterministically (lowest
+`product_id`) but the original question text did not say — fixed by stating
+the tie-break in the question. The ground truth as shipped was never actually
+wrong (the 5 categories in this fixture's top-5 are not among the tied ones),
+but the wording was.
+
+**CORRECTED cycle 002 (audit 002 F-002-1 / F-002-2).** This paragraph
+previously stated the tie affected *"15 of ~74 real categories … e.g. `audio`
+has 6 products tied at 598.99"*, and credited the automated LIMIT-boundary
+check (safeguard 4) with finding it. Both were wrong. The corpus has **71**
+categories, not ~74, and the 15-category figure counted `order_item` **rows**,
+not distinct products — `audio`'s "6 products tied at 598.99" is 6 rows of
+the *same* product (`product_id` constant), which is not ambiguous, since the
+projected `product_id` is identical either way. The correct figure, now
+verified by an automated partition-tie probe added this cycle
+(`gen_olist_hard_fixture.py` safeguard 5) rather than computed by hand: **4 of
+71** categories have a genuine multi-*product* tie at the category max price
+(`luggage_accessories`, `furniture_mattress_and_upholstery`,
+`fashion_underwear_beach`, `fashion_childrens_clothes`, each 2 products).
+Safeguard 4 (the LIMIT-boundary check) has never fired — re-run over all 13
+questions it applies to, zero ties, zero near-misses — because it asks a
+different question (does the ranking metric tie at the output cut) than
+`oh_wf01`'s actual defect (does the metric tie *within a partition*, before
+the cut). The new safeguard 5 asks the right question and is demonstrated to
+refuse, not just pass: `python3 scripts/gen_olist_hard_fixture.py --self-test`
+(10/10) confirms it detects all 4 tied categories, does not refuse `oh_wf01`
+because the question states its tie-break, and *would* refuse if that
+statement were removed. `oh_wf03`/`oh_wf04` are re-verified the same way,
+automatically, at zero partition-internal ties. **No score changes**: the 5
+categories in `oh_wf01`'s shipped output were never among the tied ones under
+either the wrong count or the correct one.
+
+One more item recorded, judged NOT a
 defect: `oh_j04` (distinct sellers per `payment_type`) attributes an order's
 sellers to every payment type it used when an order splits across types
 (2,246 of 99,441 orders do) — the question's wording ("involved in payments
 of that type") does not claim exclusivity, so this is the natural reading,
 documented for consistency with how `oh_wf04`'s multi-payment-row fan-out was
 also called out rather than left implicit.
+
+**CORRECTED cycle 002 (audit 002 F-002-6).** `V2_STRATEGY.md` §4 B2 specified
+this fixture with *"deliberately ambiguous phrasings."* It was not built that
+way — safeguard 2 (every ambiguous grain or denominator stated in the
+question text) was applied aggressively instead, and the fixture's own notes
+read as a record of ambiguity being designed out (`oh_j03`, `oh_j07`,
+`oh_j09`, `oh_wf01`, `oh_wf04` all document a specific ambiguity the question
+text was written to remove). **`100.0%` on the hard fixture is therefore
+established for unambiguously-worded hard questions, not for questions worded
+the way a user actually writes them** — the opposite of what B2 asked for.
+This is a gap in what was built against the spec, not an error in the
+measurement: the safeguards that removed the ambiguity are the correct
+response to `phase_c2`'s 48% defect rate, and no fixture here has yet
+measured accuracy against genuinely ambiguous real-world phrasing.
 
 **Replication table (`V2_STRATEGY.md` §6):**
 

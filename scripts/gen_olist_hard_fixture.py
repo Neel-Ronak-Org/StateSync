@@ -43,6 +43,37 @@ ONE MORE SAFEGUARD, new to this fixture (audit 001, cycle 001 criterion B2):
      the metric itself ties at the cut, which is the sharper, more honest
      question, and the one the audit named.
 
+     MEASURED (cycle 002, audit 002 F-002-2): this check has never fired.
+     Zero of the 13 questions it applies to tie at the LIMIT boundary. It
+     protects a DIFFERENT ambiguity than the one oh_wf01 actually had --
+     see safeguard 5.
+
+TWO MORE SAFEGUARDS, added in cycle 002 (audit 002 F-002-1/F-002-2/F-002-7):
+
+  5. every "top-1-per-partition" question (a window-ranked CTE filtered to
+     rank = 1 within each PARTITION BY group) is probed for a PARTITION-
+     INTERNAL tie: does more than one row share the max value of the
+     ranking metric WITHIN a partition. This is a different question from
+     safeguard 4 (which asks whether the metric ties at the LIMIT cut,
+     across the whole result). oh_wf01's defect was exactly this shape --
+     15 order_item ROWS tied at a category's max price, but only 4 of the
+     71 categories had that tie across DISTINCT PRODUCTS, which is the
+     thing that actually makes "take the top item" ambiguous -- and
+     safeguard 4 cannot see it, because oh_wf01 never ties at its LIMIT-5
+     cut. Declared per-query via `partition_col`; the script refuses to
+     write the fixture if a partition-internal tie exists and the question
+     does not say how to break it (tracked as `partition_tie_stated`).
+     Demonstrated to actually refuse, not just pass: see the self-test this
+     safeguard ships with, which flips `partition_tie_stated` on oh_wf01 to
+     False against the real corpus and confirms the refusal fires, before
+     restoring it.
+
+  6. every `join3`-labelled question's ground truth is checked for at least
+     three DISTINCT `olist.<table>` references; a label asserting more join
+     complexity than the SQL contains is refused rather than trusted. Found
+     one instance on first run: oh_wf03 was labelled `join3` while joining
+     only `sellers` and `order_items` -- corrected to `["window_function"]`.
+
 CORRELATED SUBQUERIES ARE WRITTEN FOR SPEED, NOT SYNTACTIC PURITY. A naive
 per-row correlated subquery ("this product's price vs the average of its own
 category, recomputed once per row") is O(n^2) here and was clocked hanging
@@ -64,6 +95,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import re
 import sys
 import urllib.request
 from pathlib import Path
@@ -76,7 +108,9 @@ MCP = "http://localhost:8080/rpc"
 # ambiguous grain/denominator in the text too (safeguard 2). `metric_col` is
 # the column name the ORDER BY ranks on -- required for every LIMIT-bearing
 # query, used only by the boundary-tie check (safeguard 4); None for a
-# single-row/scalar query, where "top n" does not apply.
+# single-row/scalar query, where "top n" does not apply. `partition_col` +
+# `partition_tie_probe` + `partition_tie_stated` are safeguard 5 (cycle 002):
+# only set on "top-1-per-partition" window questions.
 QUERIES: list[dict] = [
     # ── JOIN3: a join across >=3 tables ──────────────────────────────────────
     dict(id="oh_j01", hard_classes=["join3"], probes_dirt=False,
@@ -250,18 +284,41 @@ QUERIES: list[dict] = [
              ") SELECT product_category_name_english, product_id, price FROM ranked "
              "WHERE rn = 1 ORDER BY price DESC, product_category_name_english LIMIT 5",
          metric_col="price", limit_n=5,
-         note="B3 audit finding: 15 of the corpus's ~74 categories have a "
-              "genuine multi-product tie at the category max price (e.g. "
-              "'audio' has 6 products tied at 598.99) -- the max PRICE is "
-              "unambiguous but which PRODUCT_ID represents it is not, unless "
-              "stated. None of the 5 categories in this fixture's shipped "
-              "output are among the tied ones (checked directly against the "
-              "corpus), so the ground truth is unaffected -- but the question "
-              "wording is fixed anyway (lowest product_id, matching the SQL's "
-              "own secondary ORDER BY) rather than left latent. wf03 "
-              "(top seller per state) and wf04 (top order per state) were "
-              "checked the same way and have ZERO partition-internal ties -- "
-              "no wording fix needed there."),
+         partition_col="product_category_name_english",
+         partition_tie_probe=(
+             "WITH ranked AS ("
+             "  SELECT t.product_category_name_english AS cat, oi.product_id, oi.price,"
+             "         RANK() OVER (PARTITION BY t.product_category_name_english ORDER BY oi.price DESC) AS rk"
+             "  FROM olist.order_items oi JOIN olist.products p ON p.product_id = oi.product_id"
+             "  JOIN olist.product_category_name_translation t ON t.product_category_name = p.product_category_name)"
+             " SELECT count(*) AS tied_partitions FROM ("
+             "  SELECT cat FROM ranked WHERE rk = 1 GROUP BY cat HAVING count(DISTINCT product_id) > 1) x"),
+         partition_tie_stated=True,
+         note="CORRECTED cycle 002 (audit 002 F-002-1) -- the original text "
+              "here read \"15 of the corpus's ~74 categories have a genuine "
+              "multi-product tie ... e.g. 'audio' has 6 products tied at "
+              "598.99\". Both numbers were measured over ORDER_ITEM ROWS, "
+              "not distinct products, and the corpus has 71 categories, not "
+              "~74. 'audio' is 6 ROWS of the SAME product (product_id "
+              "constant) -- not ambiguous, since the projected product_id is "
+              "identical either way. Corrected, and now checked by the "
+              "automated partition-tie probe (safeguard 5) rather than by "
+              "hand: 4 of 71 categories have a genuine multi-PRODUCT tie at "
+              "the category max price (luggage_accessories, "
+              "furniture_mattress_and_upholstery, fashion_underwear_beach, "
+              "fashion_childrens_clothes -- each 2 distinct products) -- the "
+              "max PRICE is unambiguous in all 71 categories, but which "
+              "PRODUCT_ID represents it is ambiguous in exactly these 4, "
+              "unless stated. None of the 5 categories in this fixture's "
+              "shipped output are among the 4 tied ones (checked directly "
+              "against the corpus, and re-verified live by the partition-tie "
+              "probe every regeneration), so the ground truth is unaffected "
+              "-- but the question wording is fixed anyway (lowest "
+              "product_id, matching the SQL's own secondary ORDER BY) rather "
+              "than left latent. wf03 (top seller per state) and wf04 (top "
+              "order per state) are checked the same way, automatically, and "
+              "have ZERO partition-internal ties -- no wording fix needed "
+              "there."),
     dict(id="oh_wf02", hard_classes=["window_function"], probes_dirt=False,
          text="Using a window function, for each review_score (1 through 5) "
               "list the review_score, the count of reviews with that score, "
@@ -274,7 +331,7 @@ QUERIES: list[dict] = [
          metric_col=None, limit_n=None,
          note="Full 5-row result (scores 1-5), not LIMIT-bound -- ordered by "
               "review_score itself, which is the question's own stated axis."),
-    dict(id="oh_wf03", hard_classes=["window_function", "join3"], probes_dirt=False,
+    dict(id="oh_wf03", hard_classes=["window_function"], probes_dirt=False,
          text="Using a window function, find the single seller with the "
               "highest total order_item price (summed) within EACH "
               "seller_state (partition by state, rank by total price "
@@ -288,7 +345,26 @@ QUERIES: list[dict] = [
              "  GROUP BY s.seller_id, s.seller_state"
              ") SELECT seller_id, seller_state, total_revenue FROM ranked "
              "WHERE rnk = 1 ORDER BY total_revenue DESC, seller_state LIMIT 5",
-         metric_col="total_revenue", limit_n=5),
+         metric_col="total_revenue", limit_n=5,
+         partition_col="seller_state",
+         partition_tie_probe=(
+             "WITH tot AS ("
+             "  SELECT s.seller_id, s.seller_state, sum(oi.price) AS total_revenue"
+             "  FROM olist.sellers s JOIN olist.order_items oi ON oi.seller_id = s.seller_id"
+             "  GROUP BY s.seller_id, s.seller_state),"
+             " ranked AS ("
+             "  SELECT *, RANK() OVER (PARTITION BY seller_state ORDER BY total_revenue DESC) AS rk FROM tot)"
+             " SELECT count(*) AS tied_partitions FROM ("
+             "  SELECT seller_state FROM ranked WHERE rk = 1 GROUP BY seller_state HAVING count(*) > 1) x"),
+         partition_tie_stated=False,
+         note="CORRECTED cycle 002 (audit 002 F-002-7) -- hard_classes here "
+              "read [\"window_function\", \"join3\"]; the ground truth joins "
+              "only `sellers` and `order_items`, two tables, not >=3. "
+              "Corrected to [\"window_function\"] alone; the fixture's join3 "
+              "count (_about.hard_class_counts) moves 12 -> 11 as a result. "
+              "Caught by safeguard 6 (a table-count check on every join3 "
+              "label), added this cycle after the same mistake was found by "
+              "audit, not by the generator, the first time."),
     dict(id="oh_wf04", hard_classes=["window_function", "join3"], probes_dirt=True,
          text="For each order, compute its TOTAL payment_value (the sum of "
               "all payment records for that order -- some orders have more "
@@ -309,6 +385,18 @@ QUERIES: list[dict] = [
              ") SELECT order_id, customer_state, total_payment FROM ranked "
              "WHERE rnk = 1 ORDER BY total_payment DESC, customer_state LIMIT 5",
          metric_col="total_payment", limit_n=5,
+         partition_col="customer_state",
+         partition_tie_probe=(
+             "WITH order_totals AS ("
+             "  SELECT o.order_id, c.customer_state, sum(op.payment_value) AS total_payment"
+             "  FROM olist.orders o JOIN olist.customers c ON c.customer_id = o.customer_id"
+             "  JOIN olist.order_payments op ON op.order_id = o.order_id"
+             "  GROUP BY o.order_id, c.customer_state),"
+             " ranked AS ("
+             "  SELECT *, RANK() OVER (PARTITION BY customer_state ORDER BY total_payment DESC) AS rk FROM order_totals)"
+             " SELECT count(*) AS tied_partitions FROM ("
+             "  SELECT customer_state FROM ranked WHERE rk = 1 GROUP BY customer_state HAVING count(*) > 1) x"),
+         partition_tie_stated=False,
          note="2,961 orders carry more than one payment row (installments); "
               "the question states the per-order SUM explicitly so the "
               "installment fan-out is not left for the model to discover on "
@@ -341,10 +429,102 @@ def _bump_limit(sql: str, n: int, new_n: int) -> str:
     return sql.replace(needle, f"LIMIT {new_n}")
 
 
+def _distinct_tables(sql: str) -> set[str]:
+    """Every `olist.<table>` reference, for safeguard 6 (join3 label check).
+    A regex, not a parser -- adequate here because every ground truth in this
+    file is authored, not model-generated, and always schema-qualifies its
+    tables (the same qualification F-001-1 made mandatory for the agent
+    itself applies to this file's own SQL)."""
+    return set(re.findall(r"\bolist\.([a-zA-Z_][a-zA-Z0-9_]*)", sql))
+
+
+def _check_partition_tie(q: dict) -> tuple[int, str | None]:
+    """Safeguard 5. Returns (tied_partition_count, refusal_message_or_None).
+    Queries with no `partition_col` are not a top-1-per-partition shape and
+    are skipped (0, None)."""
+    if not q.get("partition_col"):
+        return 0, None
+    probe = run(q["partition_tie_probe"])
+    if not probe.get("ok"):
+        return 0, f"partition-tie probe FAILED: {probe.get('error')}"
+    rows = probe.get("rows") or [{}]
+    tied = int(rows[0].get("tied_partitions", 0) or 0)
+    if tied and not q.get("partition_tie_stated"):
+        return tied, (
+            f"PARTITION-INTERNAL TIE: {tied} partition(s) of "
+            f"{q['partition_col']!r} have more than one row tied at the max "
+            f"of {q['metric_col']!r}, and the question does not state how to "
+            f"break the tie (safeguard 5, cycle 002 A2b).")
+    return tied, None
+
+
+def self_test() -> int:
+    """Demonstrates safeguards 5 and 6 can actually REFUSE, not just pass --
+    same standard cycle 001's A5 held itself to (`shipped_flags.py`'s own
+    self-test docstring: "a guard that has only ever been seen to pass is not
+    evidence of anything"). Runs live against the corpus; does not write the
+    fixture or touch the QUERIES list on disk."""
+    ok = fail = 0
+
+    def check(label: str, cond: bool) -> None:
+        nonlocal ok, fail
+        if cond:
+            ok += 1
+            print(f"  ✓ PASS: {label}")
+        else:
+            fail += 1
+            print(f"  ✗ FAIL: {label}")
+
+    by_id = {q["id"]: q for q in QUERIES}
+
+    # -- safeguard 5, the PASSING direction: real corpus, real questions --
+    tied01, msg01 = _check_partition_tie(by_id["oh_wf01"])
+    check("oh_wf01 partition-tie probe finds the 4 known-tied categories",
+          tied01 == 4)
+    check("oh_wf01 does not refuse (tie-break IS stated in the question)",
+          msg01 is None)
+
+    tied03, msg03 = _check_partition_tie(by_id["oh_wf03"])
+    check("oh_wf03 partition-tie probe finds zero ties", tied03 == 0)
+    check("oh_wf03 does not refuse", msg03 is None)
+
+    tied04, msg04 = _check_partition_tie(by_id["oh_wf04"])
+    check("oh_wf04 partition-tie probe finds zero ties", tied04 == 0)
+    check("oh_wf04 does not refuse", msg04 is None)
+
+    # -- safeguard 5, the REFUSING direction: same corpus, tie-break UNSTATED --
+    unstated = dict(by_id["oh_wf01"])
+    unstated["partition_tie_stated"] = False
+    tied_u, msg_u = _check_partition_tie(unstated)
+    check("oh_wf01 WOULD be refused if its tie-break were not stated "
+          "(the guard can fail, not just pass)",
+          tied_u == 4 and msg_u is not None and "PARTITION-INTERNAL TIE" in msg_u)
+
+    # -- safeguard 6, both directions, against the real ground truth SQL --
+    n_wf01 = len(_distinct_tables(by_id["oh_wf01"]["sql"]))
+    check(f"oh_wf01 (labelled join3) has >=3 distinct tables ({n_wf01})",
+          n_wf01 >= 3)
+    n_wf03 = len(_distinct_tables(by_id["oh_wf03"]["sql"]))
+    check(f"oh_wf03 (NOT labelled join3, post-correction) has {n_wf03} "
+          f"distinct table(s), confirming the correction was warranted",
+          n_wf03 < 3)
+
+    bad_label = dict(by_id["oh_wf03"])
+    bad_label["hard_classes"] = ["window_function", "join3"]
+    would_refuse = ("join3" in bad_label["hard_classes"]
+                     and len(_distinct_tables(bad_label["sql"])) < 3)
+    check("re-applying the OLD wrong join3 label to oh_wf03 WOULD be refused "
+          "by safeguard 6 (the guard can fail, not just pass)", would_refuse)
+
+    print(f"\n  {ok} passed, {fail} failed")
+    return 1 if fail else 0
+
+
 def main() -> int:
     print(f"Verifying {len(QUERIES)} ground truths against the live corpus "
-          f"(4 safeguards: named columns, stated grain, executed, no "
-          f"LIMIT-boundary tie)...\n")
+          f"(6 safeguards: named columns, stated grain, executed, no "
+          f"LIMIT-boundary tie, no partition-internal tie, join3 labels "
+          f"match table count)...\n")
     out, failures = [], []
     for q in QUERIES:
         res = run(q["sql"])
@@ -356,6 +536,17 @@ def main() -> int:
         if not rows:
             failures.append((q["id"], "returns ZERO rows -- trivially passable, rejected"))
             continue
+
+        if "join3" in q["hard_classes"]:
+            n_tables = len(_distinct_tables(q["sql"]))
+            if n_tables < 3:
+                failures.append((
+                    q["id"],
+                    f"labelled join3 but the ground truth references only "
+                    f"{n_tables} distinct olist table(s) "
+                    f"({sorted(_distinct_tables(q['sql']))}) -- refusing a "
+                    f"label the SQL doesn't support (safeguard 6)."))
+                continue
 
         tie_note = ""
         if q["limit_n"] is not None:
@@ -385,6 +576,13 @@ def main() -> int:
                         f"or be rewritten (criterion B2)."))
                     continue
                 tie_note = f"  [boundary clean: {nth!r} vs {n_plus_1th!r}]"
+
+        tied, tie_refusal = _check_partition_tie(q)
+        if tie_refusal:
+            failures.append((q["id"], tie_refusal))
+            continue
+        if q.get("partition_col"):
+            tie_note += f"  [partition ties: {tied}]"
 
         print(f"  {q['id']}  {len(rows):>4} rows, {len(cols)} cols  "
               f"[{','.join(q['hard_classes'])}]"
@@ -429,15 +627,26 @@ def main() -> int:
             "self_authored_warning":
                 "These questions and their ground truth were written by the "
                 "same project that is measured against them -- the exact "
-                "condition that produced 12 instrument defects in phase_c2. "
-                "Same three safeguards as fixtures/golden/olist.json (every "
-                "question names its expected columns; every ambiguous grain "
-                "or denominator is stated in the question text; every "
-                "ground truth is executed, with zero-row references "
-                "REJECTED), plus a fourth added for THIS fixture: every "
-                "LIMIT-bearing query is re-run at n+1 and refused if the "
-                "ranking metric ties at the cut, so 'top n' is never "
-                "ambiguous about which n rows are correct.",
+                "condition that produced 12 instrument defects in phase_c2, "
+                "and that produced this fixture's OWN defect (audit 002 "
+                "F-002-1: a wrong statistic in oh_wf01's note, corrected "
+                "cycle 002). Six safeguards now: the original three from "
+                "fixtures/golden/olist.json (every question names its "
+                "expected columns; every ambiguous grain or denominator is "
+                "stated in the question text; every ground truth is "
+                "executed, with zero-row references REJECTED); a fourth "
+                "(cycle 001): every LIMIT-bearing query is re-run at n+1 and "
+                "refused if the ranking metric ties at the cut; a fifth "
+                "(cycle 002, audit 002 F-002-2): every top-1-per-partition "
+                "question is probed for a tie WITHIN a partition at the "
+                "ranking metric's max, refused unless the question states "
+                "its tie-break -- this is the check that would have caught "
+                "oh_wf01's actual defect, and safeguard 4 could not, because "
+                "the two ask different questions; a sixth (cycle 002, audit "
+                "002 F-002-7): every join3 label is checked against the "
+                "ground truth's own distinct-table count. Both new "
+                "safeguards ship with a --self-test that demonstrates they "
+                "can refuse, not just pass.",
             "n": len(out),
             "probes_dirt": sum(1 for q in out if q["probes_dirt"]),
             "hard_class_counts": class_counts,
@@ -451,4 +660,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(self_test() if "--self-test" in sys.argv else main())

@@ -277,14 +277,27 @@ rejected).
 easy questions, and it must happen before any number is put in the report.**
 
 **✎ MEASURED 2026-08-20 (cycle 001, Workstream B2).** `fixtures/golden/olist_hard.json`,
-16 questions, safeguards from `gen_olist_hard_fixture.py` plus a fourth (no
-LIMIT-boundary metric tie — checked automatically, one violation found and
-fixed pre-shipment). Run paired on local `qwen2.5:7b` and Gemini, failures
-classified. **The answer diverges by provider: 88.9% does not survive harder
-questions (falls to 50.0%, −38.9pp); 94.4% does (100.0% on this sample,
-+5.5pp).** Full numbers, failure classification (including a genuine
-`attribute_failures.py` false-positive found and corrected by reading the
-actual SQL), and the fixture's own defect audit (1/16, found before scoring):
+16 questions, safeguards from `gen_olist_hard_fixture.py`. Run paired on local
+`qwen2.5:7b` and Gemini, failures classified. **The answer diverges by
+provider: 88.9% does not survive harder questions (falls to 50.0%, −38.9pp);
+94.4% does (100.0% on this sample, +5.5pp).** Full numbers, failure
+classification (including a genuine `attribute_failures.py` false-positive
+found and corrected by reading the actual SQL), and the fixture's own defect
+audit (1/16, found before scoring): `docs/metrics-report.md` § "Hard-fixture
+results".
+
+**⚠ Two corrections, cycle 002 (audit 002 F-002-2, F-002-6), neither moves the
+accuracy numbers above.** First: the automated LIMIT-boundary tie check (this
+fixture's fourth safeguard) was credited above with finding `oh_wf01`'s
+defect and fixing it pre-shipment — re-run over all 13 questions it applies
+to, it has never fired; it checks a different tie than the one `oh_wf01`
+actually had. A fifth safeguard added this cycle (a partition-internal tie
+probe) is the one that catches it, and is demonstrated to actually refuse,
+not just pass (`--self-test`, 10/10). Second: this section's own spec called
+for *"deliberately ambiguous phrasings,"* and the fixture was not built that
+way — its safeguards remove ambiguity by construction, so `100.0%` is
+established for unambiguously-worded hard questions, not for questions worded
+the way a user actually writes them. Full accounting:
 `docs/metrics-report.md` § "Hard-fixture results".
 
 **B3. Hinglish over real data.** *"Sao Paulo mein kitne sellers hain?"* — asking

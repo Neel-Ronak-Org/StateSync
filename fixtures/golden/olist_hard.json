@@ -4,11 +4,11 @@
     "licence": "CC BY-NC-SA 4.0 (non-commercial). See docs/limitations.md.",
     "authored": "2026-08-20, by scripts/gen_olist_hard_fixture.py",
     "purpose": "Workstream B2 (docs/cycles/001.md criteria B1-B3): a SECOND, harder, independently-authored fixture over the same real corpus as fixtures/golden/olist.json. Every question requires at least a join across >=3 tables, a correlated subquery, or a window function -- see hard_classes on each question. Built to test whether 88.9%/94.4% on the easy fixture is real or an artifact of easy questions (V2_STRATEGY.md B2).",
-    "self_authored_warning": "These questions and their ground truth were written by the same project that is measured against them -- the exact condition that produced 12 instrument defects in phase_c2. Same three safeguards as fixtures/golden/olist.json (every question names its expected columns; every ambiguous grain or denominator is stated in the question text; every ground truth is executed, with zero-row references REJECTED), plus a fourth added for THIS fixture: every LIMIT-bearing query is re-run at n+1 and refused if the ranking metric ties at the cut, so 'top n' is never ambiguous about which n rows are correct.",
+    "self_authored_warning": "These questions and their ground truth were written by the same project that is measured against them -- the exact condition that produced 12 instrument defects in phase_c2, and that produced this fixture's OWN defect (audit 002 F-002-1: a wrong statistic in oh_wf01's note, corrected cycle 002). Six safeguards now: the original three from fixtures/golden/olist.json (every question names its expected columns; every ambiguous grain or denominator is stated in the question text; every ground truth is executed, with zero-row references REJECTED); a fourth (cycle 001): every LIMIT-bearing query is re-run at n+1 and refused if the ranking metric ties at the cut; a fifth (cycle 002, audit 002 F-002-2): every top-1-per-partition question is probed for a tie WITHIN a partition at the ranking metric's max, refused unless the question states its tie-break -- this is the check that would have caught oh_wf01's actual defect, and safeguard 4 could not, because the two ask different questions; a sixth (cycle 002, audit 002 F-002-7): every join3 label is checked against the ground truth's own distinct-table count. Both new safeguards ship with a --self-test that demonstrates they can refuse, not just pass.",
     "n": 16,
-    "probes_dirt": 7,
+    "probes_dirt": 8,
     "hard_class_counts": {
-      "join3": 12,
+      "join3": 11,
       "correlated_subquery": 3,
       "window_function": 4
     }
@@ -63,8 +63,8 @@
       "hard_classes": [
         "join3"
       ],
-      "probes_dirt": false,
-      "note": ""
+      "probes_dirt": true,
+      "note": "B3 audit finding, judged NOT a defect but recorded: 2,246 orders carry more than one DISTINCT payment_type (part voucher, part credit_card, etc.), so such an order's sellers are counted under EVERY payment_type it used, not one. The question does not claim exclusivity ('involved in payments of that type', not 'paid ONLY by that type'), so this is the natural reading rather than an ambiguity -- documented because oh_wf04's multi-payment-row fan-out got the same treatment and consistency matters more than silence here."
     },
     {
       "id": "oh_j05",
@@ -182,7 +182,7 @@
         "join3"
       ],
       "probes_dirt": true,
-      "note": "B3 audit finding: 15 of the corpus's ~74 categories have a genuine multi-product tie at the category max price (e.g. 'audio' has 6 products tied at 598.99) -- the max PRICE is unambiguous but which PRODUCT_ID represents it is not, unless stated. None of the 5 categories in this fixture's shipped output are among the tied ones (checked directly against the corpus), so the ground truth is unaffected -- but the question wording is fixed anyway (lowest product_id, matching the SQL's own secondary ORDER BY) rather than left latent. wf03 (top seller per state) and wf04 (top order per state) were checked the same way and have ZERO partition-internal ties -- no wording fix needed there."
+      "note": "CORRECTED cycle 002 (audit 002 F-002-1) -- the original text here read \"15 of the corpus's ~74 categories have a genuine multi-product tie ... e.g. 'audio' has 6 products tied at 598.99\". Both numbers were measured over ORDER_ITEM ROWS, not distinct products, and the corpus has 71 categories, not ~74. 'audio' is 6 ROWS of the SAME product (product_id constant) -- not ambiguous, since the projected product_id is identical either way. Corrected, and now checked by the automated partition-tie probe (safeguard 5) rather than by hand: 4 of 71 categories have a genuine multi-PRODUCT tie at the category max price (luggage_accessories, furniture_mattress_and_upholstery, fashion_underwear_beach, fashion_childrens_clothes -- each 2 distinct products) -- the max PRICE is unambiguous in all 71 categories, but which PRODUCT_ID represents it is ambiguous in exactly these 4, unless stated. None of the 5 categories in this fixture's shipped output are among the 4 tied ones (checked directly against the corpus, and re-verified live by the partition-tie probe every regeneration), so the ground truth is unaffected -- but the question wording is fixed anyway (lowest product_id, matching the SQL's own secondary ORDER BY) rather than left latent. wf03 (top seller per state) and wf04 (top order per state) are checked the same way, automatically, and have ZERO partition-internal ties -- no wording fix needed there."
     },
     {
       "id": "oh_wf02",
@@ -205,11 +205,10 @@
       "expected_row_count": 5,
       "expected_column_count": 3,
       "hard_classes": [
-        "window_function",
-        "join3"
+        "window_function"
       ],
       "probes_dirt": false,
-      "note": ""
+      "note": "CORRECTED cycle 002 (audit 002 F-002-7) -- hard_classes here read [\"window_function\", \"join3\"]; the ground truth joins only `sellers` and `order_items`, two tables, not >=3. Corrected to [\"window_function\"] alone; the fixture's join3 count (_about.hard_class_counts) moves 12 -> 11 as a result. Caught by safeguard 6 (a table-count check on every join3 label), added this cycle after the same mistake was found by audit, not by the generator, the first time."
     },
     {
       "id": "oh_wf04",
