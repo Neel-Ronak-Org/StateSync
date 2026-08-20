@@ -1269,6 +1269,7 @@ Files: `phase_b.json` (10 en), `phase_c1.json` (30: 10 base + 10 repeat + 10 par
 | `normalization.provider` | `"prompt"` | process start | D2 provider slot |
 | `spatial.provider` | `"digipin"` | process start | Spatial resolver slot |
 | `schema_retriever.provider` | `"direct"` | process start | D7 CSR-RAG slot |
+| `schema_retriever.target_schema` | `"public"` | query entry (`sql_agent.py`, every request) | Which corpus the SQL agent is shown — `"public"` (A5's synthetic schema) or `"olist"` (real data, migration 007). Added `80d35c8` — see BD9 |
 | `ingestion.source` | `"local"` | operator-run (`scripts/ingest.py`) | `IngestionSource` slot (A8, Appendix 4) — added in Part F; E1 shipped the consumer without wiring this flag, closed here (F-V4) |
 | `retrieval.hybrid_decomposition.enabled` | `true` | query entry | D7 cost gate |
 | `evaluation.vision_scorer.enabled` | `false` | process start | D11 stretch |
@@ -1575,6 +1576,36 @@ does not need a vector store's own capabilities.
 `evaluator_data` named volume in `docker-compose.yml`. If evaluation history
 ever needs to be queried cross-service (not just by the evaluator's own
 `GET /history`), that is itself a new decision, not an extension of this one.
+
+## BD9 — `schema_retriever.target_schema` added retroactively to this table (cycle 002, audit 002 F-002-9)
+
+**Decided**: `config/flags.toml`'s own rule states *"changing the existence
+of a flag (adding or removing) does require a BD entry."* `schema_retriever.
+target_schema` was added at `80d35c8` (2026-08-16) — the fix for the SQL
+agent being shown the synthetic corpus while scored against real Olist ground
+truth — without a BD entry and without a row in Appendix 3's flag table.
+Added here retroactively rather than backdated, so the gap is on record
+instead of quietly closed.
+
+**Why the gap happened**: `80d35c8`'s own commit message frames the change as
+"one parameter" threaded through three call sites (`schema.list_tables`,
+`schema_retriever.retrieve()`, `data.sample_rows`) — a plumbing fix, not
+something that registered as "adding a flag" against the rule that requires
+a BD entry for exactly that. Audit 001 (F-001-1) and cycle 001's A1 both
+worked with this flag directly — guarding it in `shipped_flags.py`,
+extending `verify_seams`' F-V6 — without either noticing the missing BD
+entry or the missing spec-table row; audit 002 (F-002-9) is the first pass
+that checked the flag against `flags.toml`'s own procedural rule rather than
+against its runtime behavior.
+
+**No behavior changes here.** The flag's guard (`shipped_flags.py`
+`SHIPPED_DEFAULTS`), its provenance recording, and its runtime read path
+(`orchestrator/schema_retriever.py:target_schema()`) are unaffected — this
+entry and the Appendix 3 row are documentation, closing the same class of gap
+`CYCLE_PROTOCOL.md` §6 class 4 names ("two copies of the shipped-defaults
+table"): the flag existed in three enforcement mechanisms and in none of the
+documents that are supposed to be able to answer "what flags does this system
+have."
 
 ---
 

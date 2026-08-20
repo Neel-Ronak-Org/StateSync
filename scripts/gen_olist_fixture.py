@@ -46,9 +46,16 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT = REPO_ROOT / "fixtures" / "golden" / "olist.json"
 MCP = "http://localhost:8080/rpc"
 
-# Each entry states its projection in the question text. `expect_rows` is the
-# author's expectation, checked against the database below -- a mismatch is a
-# defect in the question or the SQL, caught here rather than in a model run.
+# Each entry states its projection in the question text. `expected_row_count`
+# below is FROZEN from executing the ground truth live -- never guessed, and
+# not checked against any author expectation (there is no `expect_rows` field
+# on these entries; a prior version of this comment claimed one existed and
+# it did not -- corrected cycle 002, audit 002 F-002-8). The safeguard this
+# fixture actually has against a wrong reference is safeguard 3 below: the
+# script refuses to write the fixture if a ground truth fails to execute or
+# returns zero rows. It cannot catch a reference that executes cleanly but
+# answers the wrong question -- that is what `attribute_failures.py` and a
+# manual defect audit are for (this fixture's own `self_authored_warning`).
 QUERIES: list[dict] = [
     dict(id="ol_001", probes_dirt=False,
          text="List the order_status and the number of orders in each status.",
