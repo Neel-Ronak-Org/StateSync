@@ -253,6 +253,30 @@
       color: #c9d1d9; white-space: pre-wrap; word-break: break-all;
     }
 
+    /* Citations display */
+    .citations-card {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      display: none;
+    }
+    .citations-card.visible { display: block; }
+    .citation-list {
+      display: flex; flex-direction: column; gap: 0.4rem;
+    }
+    .citation-item {
+      font-family: var(--mono); font-size: 0.75rem;
+      color: #c9d1d9;
+      display: flex; align-items: baseline; gap: 0.5rem;
+    }
+    .citation-kind {
+      font-size: 0.62rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
     /* Error card */
     .error-card {
       background: rgba(239,68,68,0.08);
@@ -362,6 +386,14 @@
       <pre id="sql-text"></pre>
     </div>
 
+    <!-- Citations (chunk_id/page for document sources, kind:"sql" for the
+         executed statement above) -- API always returns this array (E1-V4),
+         previously computed and validated but never rendered to the page. -->
+    <div class="citations-card" id="citations-card">
+      <div class="sql-label">Sources</div>
+      <div class="citation-list" id="citation-list"></div>
+    </div>
+
     <!-- Chart container (Phase E2 readiness — hidden until chart data arrives) -->
     <div id="chart-container"></div>
   </section>
@@ -372,6 +404,13 @@
   <span>StateSync v0.1.0-phase-b</span>
 </footer>
 
-<script src="app.js" defer></script>
+<!-- ?v= is a manually-bumped cache-buster, not a build hash -- this project
+     has no asset pipeline. nginx.conf's Cache-Control: no-cache (audit 003
+     B1) makes a browser revalidate on every load going forward; this
+     covers the case that fix cannot: a browser that already cached app.js
+     under the OLD no-header rules, whose cache entry's own freshness
+     lifetime was fixed at store time and is unaffected by a later
+     Cache-Control change. Bump the date on any app.js edit. -->
+<script src="app.js?v=20260820" defer></script>
 </body>
 </html>

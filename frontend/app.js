@@ -20,6 +20,8 @@
   const answerText  = document.getElementById('answer-text');
   const sqlCard     = document.getElementById('sql-card');
   const sqlText     = document.getElementById('sql-text');
+  const citCard     = document.getElementById('citations-card');
+  const citList     = document.getElementById('citation-list');
   const errorCard   = document.getElementById('error-card');
   const errorText   = document.getElementById('error-text');
   const traceCard   = document.getElementById('trace-card');
@@ -39,14 +41,45 @@
   function resetUI() {
     answerCard.classList.remove('visible');
     sqlCard.classList.remove('visible');
+    citCard.classList.remove('visible');
     errorCard.classList.remove('visible');
     traceCard.classList.remove('visible');
     chartCont.classList.remove('visible');
     chartCont.innerHTML = '';
     answerText.textContent = '';
     sqlText.textContent = '';
+    citList.textContent = '';
     errorText.textContent = '';
     traceCard.innerHTML = '';
+  }
+
+  // ── Citations renderer ─────────────────────────────────────────────────────
+  // SECURITY: DOM nodes + textContent, same discipline as renderTrace -- a
+  // chunk_id ultimately traces back to ingested document content.
+  //
+  // The API has returned this array since E1-V4 (build_citations, A7-adjacent:
+  // main.py recomputes it at the process boundary so it can't be dropped
+  // in transit) and nothing in the page ever read it -- a document-route
+  // answer reached the user with zero visible source. Audit 003 F-003-5.
+  function renderCitations(citations) {
+    if (!citations || citations.length === 0) return;
+    citList.textContent = '';
+    citations.forEach((c) => {
+      const item = document.createElement('div');
+      item.className = 'citation-item';
+      const kindEl = document.createElement('span');
+      kindEl.className = 'citation-kind';
+      kindEl.textContent = c.kind === 'chunk' ? 'doc' : c.kind;
+      const refEl = document.createElement('span');
+      refEl.className = 'citation-ref';
+      refEl.textContent = c.kind === 'chunk' && c.page != null
+        ? `${c.ref} (p.${c.page})`
+        : c.ref;
+      item.appendChild(kindEl);
+      item.appendChild(refEl);
+      citList.appendChild(item);
+    });
+    citCard.classList.add('visible');
   }
 
   function showLoading(show) {
@@ -338,6 +371,9 @@
         sqlText.textContent = sql;
         sqlCard.classList.add('visible');
       }
+
+      // Citations (kind:"sql" and/or kind:"chunk", per E1-V4)
+      renderCitations(data.citations);
 
       // State trace
       renderTrace(data.state_trace);
