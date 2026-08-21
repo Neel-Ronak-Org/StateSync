@@ -457,6 +457,92 @@ keys) caused it was never isolated. Both migrations stay in the repo,
 re-appliable. Full accounting: `docs/metrics-report.md` § "Real-data join
 graph".
 
+## The review-digest corpus: what it can and cannot support (added cycle 005)
+
+Cycle 005 ingested 2,567 per-seller documents (13,125 chunks) built from
+`olist.order_reviews`, under `documents.doc_type='review_digest'`, into the
+**same** retrieval space the 18-document/36-chunk baseline corpus already
+occupies (`tenant_id='t_capstone_default'` — see `docs/cycles/005.md`
+DEVIATION 1 for why a genuinely separate tenant would have made the corpus
+unretrievable). Three things this corpus does **not** give the system, stated
+before anyone reads a number and assumes otherwise:
+
+**1 — It is Portuguese, verbatim, and this does not make the system support
+Portuguese-language questions.** `review_comment_message` is reproduced
+unsummarised and untranslated (`scripts/gen_olist_review_digests.py`); this
+was a deliberate design choice, not an oversight — see the generator's own
+docstring. Adding a corpus in a language does not add a language-handling
+capability. No routing, normalization, or synthesis code was touched.
+
+**2 — There is no ground truth for review-based questions**, and none was
+written this cycle. `fixtures/golden/phase_e1.json` — the fixture M6 has
+always been measured against — was authored against the 18-document baseline
+and asks nothing about reviews, seller sentiment, or complaint patterns. A
+future cycle that wants to measure retrieval or answer QUALITY over the
+review corpus needs a new fixture with new expected chunk IDs and expected
+claims, authored the way `phase_e1.json` was: by someone who can verify the
+expected answer against the source. Building that fixture in the same cycle
+as the ingest is exactly the "tune against what you report from" pattern this
+project's own §A0.4 forbids, and cycle 003 already made this call once before
+for the same reason (see "Explicitly NOT this cycle" in cycle 003's and
+cycle 005's plans) — deliberately deferred again here.
+
+**3 — M6 after this ingest measures INTERFERENCE, not review-retrieval
+quality**, and the measured answer is a clean null. Both arms below ran the
+unmodified `phase_e1.json` — 16 queries with zero review-related content —
+once against the 18/36 baseline and once against the enlarged 2,585/13,161
+corpus, same flags, same code:
+
+| | before (18 docs / 36 chunks) | after (2,585 docs / 13,161 chunks) |
+|---|---|---|
+| `mean_context_precision` | 0.6222 | 0.6222 |
+| `mean_context_precision_over_retrieved` | 0.3639 | 0.3639 |
+| `mean_context_recall` | 0.80 | 0.80 |
+| `mean_faithfulness` | 0.8958 | 0.8958 |
+| every query's `cited` chunk list | — | **byte-identical to before, all 16/16** |
+| review_digest chunks ever retrieved by any of the 16 queries | — | **0** |
+
+Not a rounding coincidence — verified at the per-query, per-chunk-ID level
+(`docs/cycles/005.md` C6/C7). ~365× more competing vectors in the same
+tenant's retrieval space did not move a single score or a single retrieved
+chunk ID. The plan predicted the opposite (*"I expect context precision to
+fall"*) and committed no criterion requiring it to; it didn't, and that is
+reported as measured, not adjusted after the fact.
+
+**Read plainly, not overclaimed.** This says the review corpus and the E1
+fixture's topics (English SLA/penalty/dispute-resolution policy) are far
+enough apart in `mxbai-embed-large`'s embedding space that top-k retrieval
+never crosses between them **for these 16 specific queries, which were never
+designed to probe cross-topic interference**. It does **not** establish that
+retrieval is robust to scale in general, that a review-adjacent English query
+would retrieve correctly, or that the chunker's now-exercised split path (see
+below) produces chunks of good retrieval quality — none of that was measured.
+
+**What the ingest DID newly exercise, measured directly against the
+database.** `_chunk_words` had never split a document before this cycle
+(F-004-6). It now has: 1,072 of the 2,567 review documents produced more than
+one chunk, the largest producing 294. Separately, `mxbai-embed-large`'s real
+context limit (512 tokens, `ollama show mxbai-embed-large` →
+`bert.context_length=512`) is smaller than `_chunk_words`' 512-WORD
+approximation for this text — Portuguese subword tokenization is denser than
+the approximation assumes, confirmed live (a 1,709-word digest's first chunk
+was rejected outright by the embedding call, HTTP 500,
+`"the input length exceeds the context length"`). 2,119 of the corpus's chunks
+needed the recursive halving fallback added to handle this
+(`scripts/ingest.py::_embed_allowing_split`) before they would embed. Neither
+of these paths has ever been exercised by the original 36-chunk corpus, and
+neither has a quality measurement — only "it eventually embedded successfully"
+is verified, not "the resulting chunk boundary is a good one."
+
+**Reversible by construction, demonstrated not asserted.** Because the corpus
+carries `doc_type='review_digest'` and no baseline document has ever used that
+value, `DELETE FROM document_chunks WHERE document_id IN (SELECT document_id
+FROM documents WHERE doc_type='review_digest')` followed by `DELETE FROM
+documents WHERE doc_type='review_digest'` removes exactly the added corpus and
+nothing else — run live this cycle (`DELETE 13125` then `DELETE 2567`),
+verified immediately after at exactly 18 documents / 36 chunks, then
+re-ingested to restore it. See `docs/cycles/005.md` C5.
+
 ## "Does it work on production-level data?" — measured answer (2026-08-18)
 
 Asked directly, and the honest answer separates two claims that are easy to
