@@ -1,0 +1,3158 @@
+{
+  "flag_provenance": {
+    "llm": {
+      "provider": "local",
+      "models": {
+        "supervisor": "qwen2.5:7b",
+        "sql": "qwen2.5:7b",
+        "synthesizer": "qwen2.5:7b",
+        "memory_summarizer": "qwen2.5:7b",
+        "normalizer": "qwen2.5:7b",
+        "decomposer": "qwen2.5:7b",
+        "judge": "qwen2.5:7b"
+      }
+    },
+    "flag_state": {
+      "memory.enabled": "false",
+      "normalization.enabled": "true",
+      "tenancy.enforced": "false",
+      "evaluation.vision_scorer.enabled": "false",
+      "schema_retriever.target_schema": "public"
+    },
+    "shipped": true,
+    "disk_deviations": {},
+    "live_staleness": null,
+    "allow_nonshipped": false,
+    "fixture_corpus_check": null
+  },
+  "results": {
+    "e1_doc_001": {
+      "ok": true,
+      "expected_route": "docs",
+      "actual_route": "docs",
+      "subtasks": [
+        "What is the contracted delivery SLA for supplier S014 in Metro NCR?"
+      ],
+      "metrics": {
+        "tokens_in": 3182,
+        "tokens_out": 118,
+        "llm_calls": 3,
+        "trajectory_steps": 5,
+        "latency_ms": 13821
+      },
+      "answer_text": "The contracted delivery SLA for supplier S014 in Metro NCR is 36 hours.",
+      "citations": [
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S014_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S014_c001",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S001_c000",
+          "page": 1
+        }
+      ],
+      "retrievals": [
+        {
+          "content": "Supplier Agreement -- Seller Store 14 (Seller ID: S014) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 14 (\"Seller\", Seller ID: S014), operating in the fashion category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S014",
+            "chunk_id": "doc_supplier_agreement_S014_c000",
+            "page": 1,
+            "score": 0.7092419440006064
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 36 hours | 2% penalty |\n| Metro Mumbai | 44 hours | 2% penalty |\n| Tier-2 West | 56 hours | 3% penalty |\n| Rural North | 76 hours | 3% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S014",
+            "chunk_id": "doc_supplier_agreement_S014_c001",
+            "page": 1,
+            "score": 0.6086664199829102
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 1 (Seller ID: S001) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 1 (\"Seller\", Seller ID: S001), operating in the fashion category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c000",
+            "page": 1,
+            "score": 0.6777948141098022
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 40 hours | 3% penalty |\n| Tier-2 West | 41 hours | 4% penalty |\n| Tier-2 South | 64 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c001",
+            "page": 1,
+            "score": 0.619052432831978
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 10 (Seller ID: S010) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 10 (\"Seller\", Seller ID: S010), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S010",
+            "chunk_id": "doc_supplier_agreement_S010_c000",
+            "page": 1,
+            "score": 0.6764556169509888
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 26 hours | 4% penalty |\n| Metro Mumbai | 42 hours | 4% penalty |\n| Tier-2 West | 48 hours | 5% penalty |\n| Tier-2 South | 74 hours | 5% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S010",
+            "chunk_id": "doc_supplier_agreement_S010_c001",
+            "page": 1,
+            "score": 0.6237782464159591
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 20 (Seller ID: S020) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 20 (\"Seller\", Seller ID: S020), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c000",
+            "page": 1,
+            "score": 0.6690487861633301
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 41 hours | 3% penalty |\n| Tier-2 West | 57 hours | 4% penalty |\n| Tier-2 South | 49 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c001",
+            "page": 1,
+            "score": 0.6197279691696167
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 25 (Seller ID: S025) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 25 (\"Seller\", Seller ID: S025), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S025",
+            "chunk_id": "doc_supplier_agreement_S025_c000",
+            "page": 1,
+            "score": 0.663253664970398
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 37 hours | 2% penalty |\n| Metro Mumbai | 53 hours | 2% penalty |\n| Tier-2 West | 57 hours | 3% penalty |\n| Tier-2 South | 79 hours | 3% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S025",
+            "chunk_id": "doc_supplier_agreement_S025_c001",
+            "page": 1,
+            "score": 0.6114983327089757
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 5 (Seller ID: S005) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 5 (\"Seller\", Seller ID: S005), operating in the electronics category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S005",
+            "chunk_id": "doc_supplier_agreement_S005_c000",
+            "page": 1,
+            "score": 0.6617855030830357
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 37 hours | 3% penalty |\n| Metro Mumbai | 52 hours | 3% penalty |\n| Tier-2 West | 63 hours | 4% penalty |\n| Tier-2 South | 64 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S005",
+            "chunk_id": "doc_supplier_agreement_S005_c001",
+            "page": 1,
+            "score": 0.6171201651430182
+          }
+        },
+        {
+          "content": "SLA Annexure -- FastShip 1 (Provider ID: LP001) This SLA Annexure specifies FastShip 1's (LP001) committed transit times and on-time delivery rate by zone, as agreed with the ONDC Network's logistics coordination office. Transit time is measured from hub dispatch to first delivery attempt. On-time rate is a rolling quarterly commitment, reviewed independently of any single fulfillment's recorded delivery timestamps.",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP001",
+            "chunk_id": "doc_sla_annexure_LP001_c000",
+            "page": 1,
+            "score": 0.6408789944910707
+          }
+        },
+        {
+          "content": "| Zone | Committed Transit Time | On-Time Rate |\n| --- | --- | --- |\n| Metro Mumbai | 29 hours | 99% |\n| Tier-2 West | 38 hours | 97% |\n| Tier-2 South | 49 hours | 93% |\n| Rural North | 47 hours | 90% |",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP001",
+            "chunk_id": "doc_sla_annexure_LP001_c001",
+            "page": 1,
+            "score": 0.5555466413497925
+          }
+        },
+        {
+          "content": "SLA Annexure -- FastShip 7 (Provider ID: LP007) This SLA Annexure specifies FastShip 7's (LP007) committed transit times and on-time delivery rate by zone, as agreed with the ONDC Network's logistics coordination office. Transit time is measured from hub dispatch to first delivery attempt. On-time rate is a rolling quarterly commitment, reviewed independently of any single fulfillment's recorded delivery timestamps.",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP007",
+            "chunk_id": "doc_sla_annexure_LP007_c000",
+            "page": 1,
+            "score": 0.6291501709565575
+          }
+        },
+        {
+          "content": "| Zone | Committed Transit Time | On-Time Rate |\n| --- | --- | --- |\n| Metro Mumbai | 29 hours | 99% |\n| Tier-2 West | 41 hours | 95% |\n| Tier-2 South | 53 hours | 93% |\n| Rural North | 53 hours | 84% |",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP007",
+            "chunk_id": "doc_sla_annexure_LP007_c001",
+            "page": 1,
+            "score": 0.5560927987098694
+          }
+        }
+      ],
+      "executed_sql": null,
+      "sql_rows": []
+    },
+    "e1_doc_002": {
+      "ok": true,
+      "expected_route": "docs",
+      "actual_route": "docs",
+      "subtasks": [
+        "What is the ONDC network's return window in days for the electronics category, per the returns policy?"
+      ],
+      "metrics": {
+        "tokens_in": 2987,
+        "tokens_out": 141,
+        "llm_calls": 3,
+        "trajectory_steps": 5,
+        "latency_ms": 8187
+      },
+      "answer_text": "The ONDC network's return window for the electronics category is 10 days, as per the returns policy.",
+      "citations": [
+        {
+          "kind": "chunk",
+          "ref": "doc_policy_returns_refunds_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_policy_returns_refunds_c001",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S005_c000",
+          "page": 1
+        }
+      ],
+      "retrievals": [
+        {
+          "content": "ONDC Network Returns and Refunds Policy This policy sets the return eligibility window and refund processing commitment for each catalog category. These windows are policy commitments to buyers and are not derived from any single seller's contracted SLA.",
+          "provenance": {
+            "document_id": "doc_policy_returns_refunds",
+            "chunk_id": "doc_policy_returns_refunds_c000",
+            "page": 1,
+            "score": 0.7492586374282837
+          }
+        },
+        {
+          "content": "| Category | Return Window (days) | Refund Processing (business days) |\n| --- | --- | --- |\n| fashion | 15 | 5 |\n| electronics | 10 | 7 |\n| grocery | 2 | 3 |\n| home_decor | 12 | 6 |\n| pharma | 0 | 2 |\n| food | 1 | 2 |\n| sports | 15 | 5 |",
+          "provenance": {
+            "document_id": "doc_policy_returns_refunds",
+            "chunk_id": "doc_policy_returns_refunds_c001",
+            "page": 1,
+            "score": 0.7450884802665857
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 5 (Seller ID: S005) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 5 (\"Seller\", Seller ID: S005), operating in the electronics category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S005",
+            "chunk_id": "doc_supplier_agreement_S005_c000",
+            "page": 1,
+            "score": 0.6531248883344203
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 37 hours | 3% penalty |\n| Metro Mumbai | 52 hours | 3% penalty |\n| Tier-2 West | 63 hours | 4% penalty |\n| Tier-2 South | 64 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S005",
+            "chunk_id": "doc_supplier_agreement_S005_c001",
+            "page": 1,
+            "score": 0.5100806507492261
+          }
+        },
+        {
+          "content": "ONDC Network Data Retention and Privacy Policy This policy specifies the retention period the Network commits to for each class of operational data collected in the course of fulfilling orders across the network.",
+          "provenance": {
+            "document_id": "doc_policy_data_retention",
+            "chunk_id": "doc_policy_data_retention_c000",
+            "page": 1,
+            "score": 0.625456690788269
+          }
+        },
+        {
+          "content": "| Data Class | Retention Period |\n| --- | --- |\n| Order transaction records | 7 years |\n| Delivery event logs | 3 years |\n| Dispute narratives | 5 years |\n| Buyer location data | 18 months |\n| Seller onboarding documents | 10 years |",
+          "provenance": {
+            "document_id": "doc_policy_data_retention",
+            "chunk_id": "doc_policy_data_retention_c001",
+            "page": 1,
+            "score": 0.5438437461853027
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 14 (Seller ID: S014) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 14 (\"Seller\", Seller ID: S014), operating in the fashion category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S014",
+            "chunk_id": "doc_supplier_agreement_S014_c000",
+            "page": 1,
+            "score": 0.6245041713414101
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 36 hours | 2% penalty |\n| Metro Mumbai | 44 hours | 2% penalty |\n| Tier-2 West | 56 hours | 3% penalty |\n| Rural North | 76 hours | 3% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S014",
+            "chunk_id": "doc_supplier_agreement_S014_c001",
+            "page": 1,
+            "score": 0.5207895636558533
+          }
+        },
+        {
+          "content": "ONDC Network Dispute Resolution Policy This policy governs how disputes raised against orders on the ONDC Network are triaged and resolved. Every dispute is assigned a category at intake; each category carries its own committed resolution window and escalation tier, independent of when the dispute happens to be marked resolved in operational tracking.",
+          "provenance": {
+            "document_id": "doc_policy_dispute_resolution",
+            "chunk_id": "doc_policy_dispute_resolution_c000",
+            "page": 1,
+            "score": 0.6158150434494019
+          }
+        },
+        {
+          "content": "| Dispute Category | Committed Resolution (business days) | Escalation Tier |\n| --- | --- | --- |\n| late_delivery | 3 | Tier 1 |\n| damaged_goods | 5 | Tier 2 |\n| wrong_item | 4 | Tier 1 |\n| not_delivered | 7 | Tier 2 |\n| refund_delay | 10 | Tier 3 |",
+          "provenance": {
+            "document_id": "doc_policy_dispute_resolution",
+            "chunk_id": "doc_policy_dispute_resolution_c001",
+            "page": 1,
+            "score": 0.5508379340171814
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 1 (Seller ID: S001) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 1 (\"Seller\", Seller ID: S001), operating in the fashion category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c000",
+            "page": 1,
+            "score": 0.614168643951416
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 40 hours | 3% penalty |\n| Tier-2 West | 41 hours | 4% penalty |\n| Tier-2 South | 64 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c001",
+            "page": 1,
+            "score": 0.5062802728247489
+          }
+        },
+        {
+          "content": "ONDC Network Seller Onboarding and Compliance Policy This policy specifies the compliance checks every seller must satisfy at onboarding and on a recurring renewal cycle to remain active on the Network.",
+          "provenance": {
+            "document_id": "doc_policy_seller_compliance",
+            "chunk_id": "doc_policy_seller_compliance_c000",
+            "page": 1,
+            "score": 0.6113520032973302
+          }
+        },
+        {
+          "content": "| Compliance Check | Required Document | Renewal Cycle |\n| --- | --- | --- |\n| GST registration | GST certificate | Annual |\n| Business address verification | Utility bill or lease | Biennial |\n| Bank account verification | Cancelled cheque | Annual |\n| Category-specific licensing | Category license | Annual |",
+          "provenance": {
+            "document_id": "doc_policy_seller_compliance",
+            "chunk_id": "doc_policy_seller_compliance_c001",
+            "page": 1,
+            "score": 0.4417356848716736
+          }
+        }
+      ],
+      "executed_sql": null,
+      "sql_rows": []
+    },
+    "e1_doc_003": {
+      "ok": true,
+      "expected_route": "docs",
+      "actual_route": "docs",
+      "subtasks": [
+        "What penalty does supplier S001's agreement specify for the Metro NCR zone?"
+      ],
+      "metrics": {
+        "tokens_in": 3182,
+        "tokens_out": 119,
+        "llm_calls": 3,
+        "trajectory_steps": 5,
+        "latency_ms": 7647
+      },
+      "answer_text": "Supplier S001's agreement specifies a 3% penalty for the Metro NCR zone.",
+      "citations": [
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S001_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S001_c001",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S010_c000",
+          "page": 1
+        }
+      ],
+      "retrievals": [
+        {
+          "content": "Supplier Agreement -- Seller Store 1 (Seller ID: S001) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 1 (\"Seller\", Seller ID: S001), operating in the fashion category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c000",
+            "page": 1,
+            "score": 0.7373435497283936
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 40 hours | 3% penalty |\n| Tier-2 West | 41 hours | 4% penalty |\n| Tier-2 South | 64 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c001",
+            "page": 1,
+            "score": 0.7026669560273329
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 10 (Seller ID: S010) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 10 (\"Seller\", Seller ID: S010), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S010",
+            "chunk_id": "doc_supplier_agreement_S010_c000",
+            "page": 1,
+            "score": 0.7269713282585144
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 26 hours | 4% penalty |\n| Metro Mumbai | 42 hours | 4% penalty |\n| Tier-2 West | 48 hours | 5% penalty |\n| Tier-2 South | 74 hours | 5% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S010",
+            "chunk_id": "doc_supplier_agreement_S010_c001",
+            "page": 1,
+            "score": 0.7065730269805786
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 20 (Seller ID: S020) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 20 (\"Seller\", Seller ID: S020), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c000",
+            "page": 1,
+            "score": 0.7198507785797119
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 41 hours | 3% penalty |\n| Tier-2 West | 57 hours | 4% penalty |\n| Tier-2 South | 49 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c001",
+            "page": 1,
+            "score": 0.7041269540786743
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 5 (Seller ID: S005) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 5 (\"Seller\", Seller ID: S005), operating in the electronics category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S005",
+            "chunk_id": "doc_supplier_agreement_S005_c000",
+            "page": 1,
+            "score": 0.7159294103362984
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 37 hours | 3% penalty |\n| Metro Mumbai | 52 hours | 3% penalty |\n| Tier-2 West | 63 hours | 4% penalty |\n| Tier-2 South | 64 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S005",
+            "chunk_id": "doc_supplier_agreement_S005_c001",
+            "page": 1,
+            "score": 0.7026860923375517
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 14 (Seller ID: S014) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 14 (\"Seller\", Seller ID: S014), operating in the fashion category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S014",
+            "chunk_id": "doc_supplier_agreement_S014_c000",
+            "page": 1,
+            "score": 0.7118720583991982
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 36 hours | 2% penalty |\n| Metro Mumbai | 44 hours | 2% penalty |\n| Tier-2 West | 56 hours | 3% penalty |\n| Rural North | 76 hours | 3% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S014",
+            "chunk_id": "doc_supplier_agreement_S014_c001",
+            "page": 1,
+            "score": 0.6999883651733398
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 25 (Seller ID: S025) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 25 (\"Seller\", Seller ID: S025), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S025",
+            "chunk_id": "doc_supplier_agreement_S025_c000",
+            "page": 1,
+            "score": 0.7113867998123169
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 37 hours | 2% penalty |\n| Metro Mumbai | 53 hours | 2% penalty |\n| Tier-2 West | 57 hours | 3% penalty |\n| Tier-2 South | 79 hours | 3% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S025",
+            "chunk_id": "doc_supplier_agreement_S025_c001",
+            "page": 1,
+            "score": 0.7006256401911772
+          }
+        }
+      ],
+      "executed_sql": null,
+      "sql_rows": []
+    },
+    "e1_doc_004": {
+      "ok": true,
+      "expected_route": "docs",
+      "actual_route": "docs",
+      "subtasks": [
+        "What committed transit time does FastShip 1's SLA annexure specify for the Metro Mumbai zone?"
+      ],
+      "metrics": {
+        "tokens_in": 3075,
+        "tokens_out": 121,
+        "llm_calls": 3,
+        "trajectory_steps": 5,
+        "latency_ms": 7547
+      },
+      "answer_text": "FastShip 1's SLA annexure specifies a committed transit time of 29 hours for the Metro Mumbai zone.",
+      "citations": [
+        {
+          "kind": "chunk",
+          "ref": "doc_sla_annexure_LP003_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_sla_annexure_LP003_c001",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_sla_annexure_LP007_c000",
+          "page": 1
+        }
+      ],
+      "retrievals": [
+        {
+          "content": "SLA Annexure -- FastShip 3 (Provider ID: LP003) This SLA Annexure specifies FastShip 3's (LP003) committed transit times and on-time delivery rate by zone, as agreed with the ONDC Network's logistics coordination office. Transit time is measured from hub dispatch to first delivery attempt. On-time rate is a rolling quarterly commitment, reviewed independently of any single fulfillment's recorded delivery timestamps.",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP003",
+            "chunk_id": "doc_sla_annexure_LP003_c000",
+            "page": 1,
+            "score": 0.7337479750068215
+          }
+        },
+        {
+          "content": "| Zone | Committed Transit Time | On-Time Rate |\n| --- | --- | --- |\n| Metro Mumbai | 20 hours | 99% |\n| Tier-2 West | 28 hours | 97% |\n| Tier-2 South | 42 hours | 93% |\n| Rural North | 38 hours | 93% |",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP003",
+            "chunk_id": "doc_sla_annexure_LP003_c001",
+            "page": 1,
+            "score": 0.7920501952141421
+          }
+        },
+        {
+          "content": "SLA Annexure -- FastShip 7 (Provider ID: LP007) This SLA Annexure specifies FastShip 7's (LP007) committed transit times and on-time delivery rate by zone, as agreed with the ONDC Network's logistics coordination office. Transit time is measured from hub dispatch to first delivery attempt. On-time rate is a rolling quarterly commitment, reviewed independently of any single fulfillment's recorded delivery timestamps.",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP007",
+            "chunk_id": "doc_sla_annexure_LP007_c000",
+            "page": 1,
+            "score": 0.7530987634331386
+          }
+        },
+        {
+          "content": "| Zone | Committed Transit Time | On-Time Rate |\n| --- | --- | --- |\n| Metro Mumbai | 29 hours | 99% |\n| Tier-2 West | 41 hours | 95% |\n| Tier-2 South | 53 hours | 93% |\n| Rural North | 53 hours | 84% |",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP007",
+            "chunk_id": "doc_sla_annexure_LP007_c001",
+            "page": 1,
+            "score": 0.7910713081913421
+          }
+        },
+        {
+          "content": "SLA Annexure -- FastShip 1 (Provider ID: LP001) This SLA Annexure specifies FastShip 1's (LP001) committed transit times and on-time delivery rate by zone, as agreed with the ONDC Network's logistics coordination office. Transit time is measured from hub dispatch to first delivery attempt. On-time rate is a rolling quarterly commitment, reviewed independently of any single fulfillment's recorded delivery timestamps.",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP001",
+            "chunk_id": "doc_sla_annexure_LP001_c000",
+            "page": 1,
+            "score": 0.7843603854072011
+          }
+        },
+        {
+          "content": "| Zone | Committed Transit Time | On-Time Rate |\n| --- | --- | --- |\n| Metro Mumbai | 29 hours | 99% |\n| Tier-2 West | 38 hours | 97% |\n| Tier-2 South | 49 hours | 93% |\n| Rural North | 47 hours | 90% |",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP001",
+            "chunk_id": "doc_sla_annexure_LP001_c001",
+            "page": 1,
+            "score": 0.7889964110257395
+          }
+        },
+        {
+          "content": "SLA Annexure -- FastShip 5 (Provider ID: LP005) This SLA Annexure specifies FastShip 5's (LP005) committed transit times and on-time delivery rate by zone, as agreed with the ONDC Network's logistics coordination office. Transit time is measured from hub dispatch to first delivery attempt. On-time rate is a rolling quarterly commitment, reviewed independently of any single fulfillment's recorded delivery timestamps.",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP005",
+            "chunk_id": "doc_sla_annexure_LP005_c000",
+            "page": 1,
+            "score": 0.7382869500432356
+          }
+        },
+        {
+          "content": "| Zone | Committed Transit Time | On-Time Rate |\n| --- | --- | --- |\n| Metro Mumbai | 29 hours | 99% |\n| Tier-2 West | 41 hours | 97% |\n| Tier-2 South | 45 hours | 91% |\n| Rural North | 59 hours | 90% |",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP005",
+            "chunk_id": "doc_sla_annexure_LP005_c001",
+            "page": 1,
+            "score": 0.7879624131929187
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 20 (Seller ID: S020) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 20 (\"Seller\", Seller ID: S020), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c000",
+            "page": 1,
+            "score": 0.5879773743166115
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 41 hours | 3% penalty |\n| Tier-2 West | 57 hours | 4% penalty |\n| Tier-2 South | 49 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c001",
+            "page": 1,
+            "score": 0.7545787838352465
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 25 (Seller ID: S025) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 25 (\"Seller\", Seller ID: S025), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S025",
+            "chunk_id": "doc_supplier_agreement_S025_c000",
+            "page": 1,
+            "score": 0.5841079602177177
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 37 hours | 2% penalty |\n| Metro Mumbai | 53 hours | 2% penalty |\n| Tier-2 West | 57 hours | 3% penalty |\n| Tier-2 South | 79 hours | 3% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S025",
+            "chunk_id": "doc_supplier_agreement_S025_c001",
+            "page": 1,
+            "score": 0.7536727190017753
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 5 (Seller ID: S005) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 5 (\"Seller\", Seller ID: S005), operating in the electronics category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S005",
+            "chunk_id": "doc_supplier_agreement_S005_c000",
+            "page": 1,
+            "score": 0.582518679424566
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 37 hours | 3% penalty |\n| Metro Mumbai | 52 hours | 3% penalty |\n| Tier-2 West | 63 hours | 4% penalty |\n| Tier-2 South | 64 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S005",
+            "chunk_id": "doc_supplier_agreement_S005_c001",
+            "page": 1,
+            "score": 0.7531493677750448
+          }
+        }
+      ],
+      "executed_sql": null,
+      "sql_rows": []
+    },
+    "e1_doc_005": {
+      "ok": true,
+      "expected_route": "docs",
+      "actual_route": "docs",
+      "subtasks": [
+        "What is the committed resolution window in business days for a damaged_goods dispute, per the dispute resolution policy?"
+      ],
+      "metrics": {
+        "tokens_in": 2816,
+        "tokens_out": 104,
+        "llm_calls": 3,
+        "trajectory_steps": 5,
+        "latency_ms": 6399
+      },
+      "answer_text": "The committed resolution window for a damaged_goods dispute is 5 business days, as per the ONDC Network Dispute Resolution Policy.",
+      "citations": [
+        {
+          "kind": "chunk",
+          "ref": "doc_policy_dispute_resolution_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_policy_dispute_resolution_c001",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_sop_delivery_exceptions_c000",
+          "page": 1
+        }
+      ],
+      "retrievals": [
+        {
+          "content": "ONDC Network Dispute Resolution Policy This policy governs how disputes raised against orders on the ONDC Network are triaged and resolved. Every dispute is assigned a category at intake; each category carries its own committed resolution window and escalation tier, independent of when the dispute happens to be marked resolved in operational tracking.",
+          "provenance": {
+            "document_id": "doc_policy_dispute_resolution",
+            "chunk_id": "doc_policy_dispute_resolution_c000",
+            "page": 1,
+            "score": 0.6732368067957886
+          }
+        },
+        {
+          "content": "| Dispute Category | Committed Resolution (business days) | Escalation Tier |\n| --- | --- | --- |\n| late_delivery | 3 | Tier 1 |\n| damaged_goods | 5 | Tier 2 |\n| wrong_item | 4 | Tier 1 |\n| not_delivered | 7 | Tier 2 |\n| refund_delay | 10 | Tier 3 |",
+          "provenance": {
+            "document_id": "doc_policy_dispute_resolution",
+            "chunk_id": "doc_policy_dispute_resolution_c001",
+            "page": 1,
+            "score": 0.7497300654810641
+          }
+        },
+        {
+          "content": "Delivery Exception Handling SOP This standard operating procedure specifies the required action and escalation window for each class of delivery exception encountered by logistics providers operating on the Network.",
+          "provenance": {
+            "document_id": "doc_sop_delivery_exceptions",
+            "chunk_id": "doc_sop_delivery_exceptions_c000",
+            "page": 1,
+            "score": 0.5898769742323782
+          }
+        },
+        {
+          "content": "| Exception Type | Required Action | Escalation Window (hours) |\n| --- | --- | --- |\n| Recipient unavailable | Reattempt next business day | 24 |\n| Address undeliverable | Contact buyer app for correction | 12 |\n| Package damaged in transit | Hold and photograph before delivery | 4 |\n| Refused by recipient | Return to origin hub | 48 |",
+          "provenance": {
+            "document_id": "doc_sop_delivery_exceptions",
+            "chunk_id": "doc_sop_delivery_exceptions_c001",
+            "page": 1,
+            "score": 0.7070551689234288
+          }
+        },
+        {
+          "content": "Warehouse Damage Assessment SOP This standard operating procedure governs how warehouse-reported damage is assessed and compensated, by severity tier.",
+          "provenance": {
+            "document_id": "doc_sop_warehouse_damage",
+            "chunk_id": "doc_sop_warehouse_damage_c000",
+            "page": 1,
+            "score": 0.6090286607129191
+          }
+        },
+        {
+          "content": "| Damage Severity | Assessment Window (hours) | Compensation Tier |\n| --- | --- | --- |\n| Cosmetic (packaging only) | 12 | No compensation |\n| Minor (product intact) | 24 | 10% of item value |\n| Major (product unusable) | 48 | 100% of item value |",
+          "provenance": {
+            "document_id": "doc_sop_warehouse_damage",
+            "chunk_id": "doc_sop_warehouse_damage_c001",
+            "page": 1,
+            "score": 0.6727947787764812
+          }
+        },
+        {
+          "content": "ONDC Network Returns and Refunds Policy This policy sets the return eligibility window and refund processing commitment for each catalog category. These windows are policy commitments to buyers and are not derived from any single seller's contracted SLA.",
+          "provenance": {
+            "document_id": "doc_policy_returns_refunds",
+            "chunk_id": "doc_policy_returns_refunds_c000",
+            "page": 1,
+            "score": 0.6237740144864323
+          }
+        },
+        {
+          "content": "| Category | Return Window (days) | Refund Processing (business days) |\n| --- | --- | --- |\n| fashion | 15 | 5 |\n| electronics | 10 | 7 |\n| grocery | 2 | 3 |\n| home_decor | 12 | 6 |\n| pharma | 0 | 2 |\n| food | 1 | 2 |\n| sports | 15 | 5 |",
+          "provenance": {
+            "document_id": "doc_policy_returns_refunds",
+            "chunk_id": "doc_policy_returns_refunds_c001",
+            "page": 1,
+            "score": 0.6689145961727349
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 20 (Seller ID: S020) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 20 (\"Seller\", Seller ID: S020), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c000",
+            "page": 1,
+            "score": 0.6528364030816326
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 41 hours | 3% penalty |\n| Tier-2 West | 57 hours | 4% penalty |\n| Tier-2 South | 49 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c001",
+            "page": 1,
+            "score": 0.5077410633718342
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 1 (Seller ID: S001) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 1 (\"Seller\", Seller ID: S001), operating in the fashion category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c000",
+            "page": 1,
+            "score": 0.6527456848176917
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 40 hours | 3% penalty |\n| Tier-2 West | 41 hours | 4% penalty |\n| Tier-2 South | 64 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c001",
+            "page": 1,
+            "score": 0.5076681962408786
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 14 (Seller ID: S014) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 14 (\"Seller\", Seller ID: S014), operating in the fashion category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S014",
+            "chunk_id": "doc_supplier_agreement_S014_c000",
+            "page": 1,
+            "score": 0.6509303270661441
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 36 hours | 2% penalty |\n| Metro Mumbai | 44 hours | 2% penalty |\n| Tier-2 West | 56 hours | 3% penalty |\n| Rural North | 76 hours | 3% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S014",
+            "chunk_id": "doc_supplier_agreement_S014_c001",
+            "page": 1,
+            "score": 0.5129037789759777
+          }
+        }
+      ],
+      "executed_sql": null,
+      "sql_rows": []
+    },
+    "e1_doc_006": {
+      "ok": true,
+      "expected_route": "docs",
+      "actual_route": "docs",
+      "subtasks": [
+        "What action is required when a delivery exception occurs because the recipient is unavailable, per the delivery exception handling SOP?"
+      ],
+      "metrics": {
+        "tokens_in": 3016,
+        "tokens_out": 126,
+        "llm_calls": 3,
+        "trajectory_steps": 5,
+        "latency_ms": 7671
+      },
+      "answer_text": "When a delivery exception occurs because the recipient is unavailable, per the delivery exception handling SOP, the required action is to reattempt the delivery on the next business day. The escalation window for this type of exception is 24 hours.",
+      "citations": [
+        {
+          "kind": "chunk",
+          "ref": "doc_sop_delivery_exceptions_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_sop_delivery_exceptions_c001",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S005_c000",
+          "page": 1
+        }
+      ],
+      "retrievals": [
+        {
+          "content": "Delivery Exception Handling SOP This standard operating procedure specifies the required action and escalation window for each class of delivery exception encountered by logistics providers operating on the Network.",
+          "provenance": {
+            "document_id": "doc_sop_delivery_exceptions",
+            "chunk_id": "doc_sop_delivery_exceptions_c000",
+            "page": 1,
+            "score": 0.7916150341492907
+          }
+        },
+        {
+          "content": "| Exception Type | Required Action | Escalation Window (hours) |\n| --- | --- | --- |\n| Recipient unavailable | Reattempt next business day | 24 |\n| Address undeliverable | Contact buyer app for correction | 12 |\n| Package damaged in transit | Hold and photograph before delivery | 4 |\n| Refused by recipient | Return to origin hub | 48 |",
+          "provenance": {
+            "document_id": "doc_sop_delivery_exceptions",
+            "chunk_id": "doc_sop_delivery_exceptions_c001",
+            "page": 1,
+            "score": 0.803651833098914
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 5 (Seller ID: S005) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 5 (\"Seller\", Seller ID: S005), operating in the electronics category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S005",
+            "chunk_id": "doc_supplier_agreement_S005_c000",
+            "page": 1,
+            "score": 0.5860693526802111
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 37 hours | 3% penalty |\n| Metro Mumbai | 52 hours | 3% penalty |\n| Tier-2 West | 63 hours | 4% penalty |\n| Tier-2 South | 64 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S005",
+            "chunk_id": "doc_supplier_agreement_S005_c001",
+            "page": 1,
+            "score": 0.4324424476228004
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 20 (Seller ID: S020) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 20 (\"Seller\", Seller ID: S020), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c000",
+            "page": 1,
+            "score": 0.5856678979792758
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 41 hours | 3% penalty |\n| Tier-2 West | 57 hours | 4% penalty |\n| Tier-2 South | 49 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c001",
+            "page": 1,
+            "score": 0.42859027640935765
+          }
+        },
+        {
+          "content": "ONDC Network Dispute Resolution Policy This policy governs how disputes raised against orders on the ONDC Network are triaged and resolved. Every dispute is assigned a category at intake; each category carries its own committed resolution window and escalation tier, independent of when the dispute happens to be marked resolved in operational tracking.",
+          "provenance": {
+            "document_id": "doc_policy_dispute_resolution",
+            "chunk_id": "doc_policy_dispute_resolution_c000",
+            "page": 1,
+            "score": 0.4546282345499746
+          }
+        },
+        {
+          "content": "| Dispute Category | Committed Resolution (business days) | Escalation Tier |\n| --- | --- | --- |\n| late_delivery | 3 | Tier 1 |\n| damaged_goods | 5 | Tier 2 |\n| wrong_item | 4 | Tier 1 |\n| not_delivered | 7 | Tier 2 |\n| refund_delay | 10 | Tier 3 |",
+          "provenance": {
+            "document_id": "doc_policy_dispute_resolution",
+            "chunk_id": "doc_policy_dispute_resolution_c001",
+            "page": 1,
+            "score": 0.5816780231382861
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 10 (Seller ID: S010) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 10 (\"Seller\", Seller ID: S010), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S010",
+            "chunk_id": "doc_supplier_agreement_S010_c000",
+            "page": 1,
+            "score": 0.5813946030861654
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 26 hours | 4% penalty |\n| Metro Mumbai | 42 hours | 4% penalty |\n| Tier-2 West | 48 hours | 5% penalty |\n| Tier-2 South | 74 hours | 5% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S010",
+            "chunk_id": "doc_supplier_agreement_S010_c001",
+            "page": 1,
+            "score": 0.4368854575958038
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 1 (Seller ID: S001) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 1 (\"Seller\", Seller ID: S001), operating in the fashion category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c000",
+            "page": 1,
+            "score": 0.5776448753303479
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 40 hours | 3% penalty |\n| Tier-2 West | 41 hours | 4% penalty |\n| Tier-2 South | 64 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c001",
+            "page": 1,
+            "score": 0.42959262199533854
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 25 (Seller ID: S025) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 25 (\"Seller\", Seller ID: S025), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S025",
+            "chunk_id": "doc_supplier_agreement_S025_c000",
+            "page": 1,
+            "score": 0.576242676229162
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 37 hours | 2% penalty |\n| Metro Mumbai | 53 hours | 2% penalty |\n| Tier-2 West | 57 hours | 3% penalty |\n| Tier-2 South | 79 hours | 3% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S025",
+            "chunk_id": "doc_supplier_agreement_S025_c001",
+            "page": 1,
+            "score": 0.4254545911875679
+          }
+        }
+      ],
+      "executed_sql": null,
+      "sql_rows": []
+    },
+    "e1_doc_007": {
+      "ok": true,
+      "expected_route": "docs",
+      "actual_route": "docs",
+      "subtasks": [
+        "What is the maximum transit time in hours for frozen goods, per the cold chain and perishables handling SOP?"
+      ],
+      "metrics": {
+        "tokens_in": 2933,
+        "tokens_out": 124,
+        "llm_calls": 3,
+        "trajectory_steps": 5,
+        "latency_ms": 7581
+      },
+      "answer_text": "The maximum transit time for frozen goods, as per the Cold Chain and Perishables Handling SOP, is 24 hours. This can be found in the document passage that lists the maximum transit times for different product categories.",
+      "citations": [
+        {
+          "kind": "chunk",
+          "ref": "doc_sop_cold_chain_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_sop_cold_chain_c001",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_sop_delivery_exceptions_c000",
+          "page": 1
+        }
+      ],
+      "retrievals": [
+        {
+          "content": "Cold Chain and Perishables Handling SOP This standard operating procedure specifies the maximum transit time and required temperature range for perishable product categories moved through the Network's logistics providers.",
+          "provenance": {
+            "document_id": "doc_sop_cold_chain",
+            "chunk_id": "doc_sop_cold_chain_c000",
+            "page": 1,
+            "score": 0.8445631265640259
+          }
+        },
+        {
+          "content": "| Product Category | Max Transit Time (hours) | Temperature Range |\n| --- | --- | --- |\n| Fresh produce | 18 | 2-8 C |\n| Dairy | 12 | 2-6 C |\n| Frozen goods | 24 | -18 to -12 C |\n| Pharma (cold chain) | 8 | 2-8 C |",
+          "provenance": {
+            "document_id": "doc_sop_cold_chain",
+            "chunk_id": "doc_sop_cold_chain_c001",
+            "page": 1,
+            "score": 0.7926380161858801
+          }
+        },
+        {
+          "content": "Delivery Exception Handling SOP This standard operating procedure specifies the required action and escalation window for each class of delivery exception encountered by logistics providers operating on the Network.",
+          "provenance": {
+            "document_id": "doc_sop_delivery_exceptions",
+            "chunk_id": "doc_sop_delivery_exceptions_c000",
+            "page": 1,
+            "score": 0.6095151901245117
+          }
+        },
+        {
+          "content": "| Exception Type | Required Action | Escalation Window (hours) |\n| --- | --- | --- |\n| Recipient unavailable | Reattempt next business day | 24 |\n| Address undeliverable | Contact buyer app for correction | 12 |\n| Package damaged in transit | Hold and photograph before delivery | 4 |\n| Refused by recipient | Return to origin hub | 48 |",
+          "provenance": {
+            "document_id": "doc_sop_delivery_exceptions",
+            "chunk_id": "doc_sop_delivery_exceptions_c001",
+            "page": 1,
+            "score": 0.5440040826797485
+          }
+        },
+        {
+          "content": "SLA Annexure -- FastShip 7 (Provider ID: LP007) This SLA Annexure specifies FastShip 7's (LP007) committed transit times and on-time delivery rate by zone, as agreed with the ONDC Network's logistics coordination office. Transit time is measured from hub dispatch to first delivery attempt. On-time rate is a rolling quarterly commitment, reviewed independently of any single fulfillment's recorded delivery timestamps.",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP007",
+            "chunk_id": "doc_sla_annexure_LP007_c000",
+            "page": 1,
+            "score": 0.5770982079833215
+          }
+        },
+        {
+          "content": "| Zone | Committed Transit Time | On-Time Rate |\n| --- | --- | --- |\n| Metro Mumbai | 29 hours | 99% |\n| Tier-2 West | 41 hours | 95% |\n| Tier-2 South | 53 hours | 93% |\n| Rural North | 53 hours | 84% |",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP007",
+            "chunk_id": "doc_sla_annexure_LP007_c001",
+            "page": 1,
+            "score": 0.5214475393295288
+          }
+        },
+        {
+          "content": "SLA Annexure -- FastShip 5 (Provider ID: LP005) This SLA Annexure specifies FastShip 5's (LP005) committed transit times and on-time delivery rate by zone, as agreed with the ONDC Network's logistics coordination office. Transit time is measured from hub dispatch to first delivery attempt. On-time rate is a rolling quarterly commitment, reviewed independently of any single fulfillment's recorded delivery timestamps.",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP005",
+            "chunk_id": "doc_sla_annexure_LP005_c000",
+            "page": 1,
+            "score": 0.5721015504628885
+          }
+        },
+        {
+          "content": "| Zone | Committed Transit Time | On-Time Rate |\n| --- | --- | --- |\n| Metro Mumbai | 29 hours | 99% |\n| Tier-2 West | 41 hours | 97% |\n| Tier-2 South | 45 hours | 91% |\n| Rural North | 59 hours | 90% |",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP005",
+            "chunk_id": "doc_sla_annexure_LP005_c001",
+            "page": 1,
+            "score": 0.5207741415731355
+          }
+        },
+        {
+          "content": "SLA Annexure -- FastShip 1 (Provider ID: LP001) This SLA Annexure specifies FastShip 1's (LP001) committed transit times and on-time delivery rate by zone, as agreed with the ONDC Network's logistics coordination office. Transit time is measured from hub dispatch to first delivery attempt. On-time rate is a rolling quarterly commitment, reviewed independently of any single fulfillment's recorded delivery timestamps.",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP001",
+            "chunk_id": "doc_sla_annexure_LP001_c000",
+            "page": 1,
+            "score": 0.571122544143276
+          }
+        },
+        {
+          "content": "| Zone | Committed Transit Time | On-Time Rate |\n| --- | --- | --- |\n| Metro Mumbai | 29 hours | 99% |\n| Tier-2 West | 38 hours | 97% |\n| Tier-2 South | 49 hours | 93% |\n| Rural North | 47 hours | 90% |",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP001",
+            "chunk_id": "doc_sla_annexure_LP001_c001",
+            "page": 1,
+            "score": 0.5217981934547424
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 20 (Seller ID: S020) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 20 (\"Seller\", Seller ID: S020), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c000",
+            "page": 1,
+            "score": 0.5698835253715515
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 41 hours | 3% penalty |\n| Tier-2 West | 57 hours | 4% penalty |\n| Tier-2 South | 49 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c001",
+            "page": 1,
+            "score": 0.5162268877029419
+          }
+        },
+        {
+          "content": "SLA Annexure -- FastShip 3 (Provider ID: LP003) This SLA Annexure specifies FastShip 3's (LP003) committed transit times and on-time delivery rate by zone, as agreed with the ONDC Network's logistics coordination office. Transit time is measured from hub dispatch to first delivery attempt. On-time rate is a rolling quarterly commitment, reviewed independently of any single fulfillment's recorded delivery timestamps.",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP003",
+            "chunk_id": "doc_sla_annexure_LP003_c000",
+            "page": 1,
+            "score": 0.5675013661384583
+          }
+        },
+        {
+          "content": "| Zone | Committed Transit Time | On-Time Rate |\n| --- | --- | --- |\n| Metro Mumbai | 20 hours | 99% |\n| Tier-2 West | 28 hours | 97% |\n| Tier-2 South | 42 hours | 93% |\n| Rural North | 38 hours | 93% |",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP003",
+            "chunk_id": "doc_sla_annexure_LP003_c001",
+            "page": 1,
+            "score": 0.5246059894561768
+          }
+        }
+      ],
+      "executed_sql": null,
+      "sql_rows": []
+    },
+    "e1_doc_008": {
+      "ok": true,
+      "expected_route": "docs",
+      "actual_route": "docs",
+      "subtasks": [
+        "How often must a seller renew their GST registration compliance, per the seller onboarding and compliance policy?"
+      ],
+      "metrics": {
+        "tokens_in": 2947,
+        "tokens_out": 100,
+        "llm_calls": 3,
+        "trajectory_steps": 5,
+        "latency_ms": 6693
+      },
+      "answer_text": "According to the ONDC Network Seller Onboarding and Compliance Policy, a seller must renew their GST registration compliance annually.",
+      "citations": [
+        {
+          "kind": "chunk",
+          "ref": "doc_policy_seller_compliance_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_policy_seller_compliance_c001",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_policy_data_retention_c000",
+          "page": 1
+        }
+      ],
+      "retrievals": [
+        {
+          "content": "ONDC Network Seller Onboarding and Compliance Policy This policy specifies the compliance checks every seller must satisfy at onboarding and on a recurring renewal cycle to remain active on the Network.",
+          "provenance": {
+            "document_id": "doc_policy_seller_compliance",
+            "chunk_id": "doc_policy_seller_compliance_c000",
+            "page": 1,
+            "score": 0.7440386261963039
+          }
+        },
+        {
+          "content": "| Compliance Check | Required Document | Renewal Cycle |\n| --- | --- | --- |\n| GST registration | GST certificate | Annual |\n| Business address verification | Utility bill or lease | Biennial |\n| Bank account verification | Cancelled cheque | Annual |\n| Category-specific licensing | Category license | Annual |",
+          "provenance": {
+            "document_id": "doc_policy_seller_compliance",
+            "chunk_id": "doc_policy_seller_compliance_c001",
+            "page": 1,
+            "score": 0.7123216390609741
+          }
+        },
+        {
+          "content": "ONDC Network Data Retention and Privacy Policy This policy specifies the retention period the Network commits to for each class of operational data collected in the course of fulfilling orders across the network.",
+          "provenance": {
+            "document_id": "doc_policy_data_retention",
+            "chunk_id": "doc_policy_data_retention_c000",
+            "page": 1,
+            "score": 0.4856683611869812
+          }
+        },
+        {
+          "content": "| Data Class | Retention Period |\n| --- | --- |\n| Order transaction records | 7 years |\n| Delivery event logs | 3 years |\n| Dispute narratives | 5 years |\n| Buyer location data | 18 months |\n| Seller onboarding documents | 10 years |",
+          "provenance": {
+            "document_id": "doc_policy_data_retention",
+            "chunk_id": "doc_policy_data_retention_c001",
+            "page": 1,
+            "score": 0.5845540761947632
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 14 (Seller ID: S014) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 14 (\"Seller\", Seller ID: S014), operating in the fashion category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S014",
+            "chunk_id": "doc_supplier_agreement_S014_c000",
+            "page": 1,
+            "score": 0.5785290850085576
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 36 hours | 2% penalty |\n| Metro Mumbai | 44 hours | 2% penalty |\n| Tier-2 West | 56 hours | 3% penalty |\n| Rural North | 76 hours | 3% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S014",
+            "chunk_id": "doc_supplier_agreement_S014_c001",
+            "page": 1,
+            "score": 0.4919181168079376
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 1 (Seller ID: S001) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 1 (\"Seller\", Seller ID: S001), operating in the fashion category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c000",
+            "page": 1,
+            "score": 0.5760324001312256
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 40 hours | 3% penalty |\n| Tier-2 West | 41 hours | 4% penalty |\n| Tier-2 South | 64 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c001",
+            "page": 1,
+            "score": 0.48871344395199845
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 20 (Seller ID: S020) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 20 (\"Seller\", Seller ID: S020), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c000",
+            "page": 1,
+            "score": 0.5660182237625122
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 41 hours | 3% penalty |\n| Tier-2 West | 57 hours | 4% penalty |\n| Tier-2 South | 49 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c001",
+            "page": 1,
+            "score": 0.4885573387145996
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 25 (Seller ID: S025) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 25 (\"Seller\", Seller ID: S025), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S025",
+            "chunk_id": "doc_supplier_agreement_S025_c000",
+            "page": 1,
+            "score": 0.563681960105896
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 37 hours | 2% penalty |\n| Metro Mumbai | 53 hours | 2% penalty |\n| Tier-2 West | 57 hours | 3% penalty |\n| Tier-2 South | 79 hours | 3% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S025",
+            "chunk_id": "doc_supplier_agreement_S025_c001",
+            "page": 1,
+            "score": 0.48435333277901094
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 10 (Seller ID: S010) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 10 (\"Seller\", Seller ID: S010), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S010",
+            "chunk_id": "doc_supplier_agreement_S010_c000",
+            "page": 1,
+            "score": 0.5635486245155334
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 26 hours | 4% penalty |\n| Metro Mumbai | 42 hours | 4% penalty |\n| Tier-2 West | 48 hours | 5% penalty |\n| Tier-2 South | 74 hours | 5% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S010",
+            "chunk_id": "doc_supplier_agreement_S010_c001",
+            "page": 1,
+            "score": 0.4927292172474145
+          }
+        }
+      ],
+      "executed_sql": null,
+      "sql_rows": []
+    },
+    "e1_hybrid_001": {
+      "ok": true,
+      "expected_route": "hybrid",
+      "actual_route": "hybrid",
+      "subtasks": [
+        "Which sellers had a delivery where the delivered date was later than the promised date in the last quarter? Include seller_id.",
+        "What penalty does a seller's supplier agreement specify for a late delivery?"
+      ],
+      "metrics": {
+        "tokens_in": 5646,
+        "tokens_out": 429,
+        "llm_calls": 5,
+        "trajectory_steps": 18,
+        "latency_ms": 27918
+      },
+      "answer_text": "The sellers who breached their contracted delivery SLA last quarter are S010, S008, S030, S021, S024, S025, S018, S005, S006, S016, S023, S027, S009, S015, S002, S011, S019, S004, S029, S020, S017, S014, S007, S026, S012, S028, S022, and S013. Each of these sellers' agreements specify penalties for breaches in the form of a percentage credit against the order value based on the breached zone's SLA commitment. For example, Seller ID S010 has different penalty rates depending on the zone: 4% for Metro NCR, Metro Mumbai, Tier-2 West, and Tier-2 South zones.",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT s.seller_id \nFROM sellers s\nJOIN orders o ON s.seller_id = o.seller_id\nJOIN fulfillments f ON o.order_id = f.order_id\nWHERE f.delivered_at > f.promised_at AND f.promised_at >= NOW() - INTERVAL '3 months'\nGROUP BY s.seller_id\nLIMIT 1000",
+          "page": null
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S005_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S001_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S025_c000",
+          "page": 1
+        }
+      ],
+      "retrievals": [
+        {
+          "content": "Supplier Agreement -- Seller Store 5 (Seller ID: S005) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 5 (\"Seller\", Seller ID: S005), operating in the electronics category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S005",
+            "chunk_id": "doc_supplier_agreement_S005_c000",
+            "page": 1,
+            "score": 0.7269064567415011
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 1 (Seller ID: S001) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 1 (\"Seller\", Seller ID: S001), operating in the fashion category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c000",
+            "page": 1,
+            "score": 0.7180960346403114
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 25 (Seller ID: S025) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 25 (\"Seller\", Seller ID: S025), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S025",
+            "chunk_id": "doc_supplier_agreement_S025_c000",
+            "page": 1,
+            "score": 0.7166302969080045
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 20 (Seller ID: S020) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 20 (\"Seller\", Seller ID: S020), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c000",
+            "page": 1,
+            "score": 0.7132297329169683
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 10 (Seller ID: S010) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 10 (\"Seller\", Seller ID: S010), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S010",
+            "chunk_id": "doc_supplier_agreement_S010_c000",
+            "page": 1,
+            "score": 0.707135515979797
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 14 (Seller ID: S014) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 14 (\"Seller\", Seller ID: S014), operating in the fashion category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S014",
+            "chunk_id": "doc_supplier_agreement_S014_c000",
+            "page": 1,
+            "score": 0.7050577157667022
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 36 hours | 2% penalty |\n| Metro Mumbai | 44 hours | 2% penalty |\n| Tier-2 West | 56 hours | 3% penalty |\n| Rural North | 76 hours | 3% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S014",
+            "chunk_id": "doc_supplier_agreement_S014_c001",
+            "page": 1,
+            "score": 0.5404895221895274
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 26 hours | 4% penalty |\n| Metro Mumbai | 42 hours | 4% penalty |\n| Tier-2 West | 48 hours | 5% penalty |\n| Tier-2 South | 74 hours | 5% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S010",
+            "chunk_id": "doc_supplier_agreement_S010_c001",
+            "page": 1,
+            "score": 0.5310443602747488
+          }
+        }
+      ],
+      "executed_sql": "SELECT s.seller_id \nFROM sellers s\nJOIN orders o ON s.seller_id = o.seller_id\nJOIN fulfillments f ON o.order_id = f.order_id\nWHERE f.delivered_at > f.promised_at AND f.promised_at >= NOW() - INTERVAL '3 months'\nGROUP BY s.seller_id\nLIMIT 1000",
+      "sql_rows": [
+        {
+          "seller_id": "S010"
+        },
+        {
+          "seller_id": "S008"
+        },
+        {
+          "seller_id": "S030"
+        },
+        {
+          "seller_id": "S021"
+        },
+        {
+          "seller_id": "S024"
+        },
+        {
+          "seller_id": "S025"
+        },
+        {
+          "seller_id": "S018"
+        },
+        {
+          "seller_id": "S005"
+        },
+        {
+          "seller_id": "S006"
+        },
+        {
+          "seller_id": "S016"
+        },
+        {
+          "seller_id": "S023"
+        },
+        {
+          "seller_id": "S027"
+        },
+        {
+          "seller_id": "S009"
+        },
+        {
+          "seller_id": "S015"
+        },
+        {
+          "seller_id": "S002"
+        },
+        {
+          "seller_id": "S011"
+        },
+        {
+          "seller_id": "S019"
+        },
+        {
+          "seller_id": "S004"
+        },
+        {
+          "seller_id": "S029"
+        },
+        {
+          "seller_id": "S020"
+        },
+        {
+          "seller_id": "S017"
+        },
+        {
+          "seller_id": "S014"
+        },
+        {
+          "seller_id": "S007"
+        },
+        {
+          "seller_id": "S026"
+        },
+        {
+          "seller_id": "S012"
+        },
+        {
+          "seller_id": "S028"
+        },
+        {
+          "seller_id": "S022"
+        },
+        {
+          "seller_id": "S013"
+        },
+        {
+          "seller_id": "S003"
+        },
+        {
+          "seller_id": "S001"
+        }
+      ]
+    },
+    "e1_hybrid_002": {
+      "ok": true,
+      "expected_route": "hybrid",
+      "actual_route": "hybrid",
+      "subtasks": [
+        "How many disputes has seller S014 had in total?",
+        "What is the committed resolution window for disputes per the dispute resolution policy?"
+      ],
+      "metrics": {
+        "tokens_in": 4281,
+        "tokens_out": 272,
+        "llm_calls": 5,
+        "trajectory_steps": 18,
+        "latency_ms": 19572
+      },
+      "answer_text": "Seller S014 has had a total of 2 disputes. According to the dispute resolution policy, the committed resolution window for disputes varies by zone as follows:\n\n- Metro NCR: 36 hours\n- Metro Mumbai: 44 hours\n- Tier-2 West: 56 hours\n- Rural North: 76 hours",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT s.seller_id, COUNT(*) \nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.seller_id = 'S014'\nGROUP BY s.seller_id;",
+          "page": null
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S014_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S014_c001",
+          "page": 1
+        }
+      ],
+      "retrievals": [
+        {
+          "content": "Supplier Agreement -- Seller Store 14 (Seller ID: S014) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 14 (\"Seller\", Seller ID: S014), operating in the fashion category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S014",
+            "chunk_id": "doc_supplier_agreement_S014_c000",
+            "page": 1,
+            "score": 0.5552061730377468
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 36 hours | 2% penalty |\n| Metro Mumbai | 44 hours | 2% penalty |\n| Tier-2 West | 56 hours | 3% penalty |\n| Rural North | 76 hours | 3% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S014",
+            "chunk_id": "doc_supplier_agreement_S014_c001",
+            "page": 1,
+            "score": 0.44487950534346754
+          }
+        }
+      ],
+      "executed_sql": "SELECT s.seller_id, COUNT(*) \nFROM disputes d\nJOIN orders o ON d.order_id = o.order_id\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.seller_id = 'S014'\nGROUP BY s.seller_id;",
+      "sql_rows": [
+        {
+          "seller_id": "S014",
+          "count": 2
+        }
+      ]
+    },
+    "e1_hybrid_003": {
+      "ok": true,
+      "expected_route": "hybrid",
+      "actual_route": "hybrid",
+      "subtasks": [
+        "What is seller S005's contracted SLA in hours in the database?",
+        "What does S005's supplier agreement specify for the Metro NCR zone?"
+      ],
+      "metrics": {
+        "tokens_in": 4321,
+        "tokens_out": 255,
+        "llm_calls": 5,
+        "trajectory_steps": 18,
+        "latency_ms": 19879
+      },
+      "answer_text": "Seller S005's contracted SLA in hours is 36, as recorded in the database. According to the supplier agreement for Seller Store 5 (S005), the specified SLA for the Metro NCR zone is 37 hours with a 3% penalty applied if breached.",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT seller_id, contracted_sla_hours FROM sellers WHERE seller_id = 'S005' LIMIT 1000",
+          "page": null
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S005_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S005_c001",
+          "page": 1
+        }
+      ],
+      "retrievals": [
+        {
+          "content": "Supplier Agreement -- Seller Store 5 (Seller ID: S005) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 5 (\"Seller\", Seller ID: S005), operating in the electronics category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S005",
+            "chunk_id": "doc_supplier_agreement_S005_c000",
+            "page": 1,
+            "score": 0.7459545802433417
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 37 hours | 3% penalty |\n| Metro Mumbai | 52 hours | 3% penalty |\n| Tier-2 West | 63 hours | 4% penalty |\n| Tier-2 South | 64 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S005",
+            "chunk_id": "doc_supplier_agreement_S005_c001",
+            "page": 1,
+            "score": 0.6097875186610986
+          }
+        }
+      ],
+      "executed_sql": "SELECT seller_id, contracted_sla_hours FROM sellers WHERE seller_id = 'S005' LIMIT 1000",
+      "sql_rows": [
+        {
+          "seller_id": "S005",
+          "contracted_sla_hours": 36
+        }
+      ]
+    },
+    "e1_hybrid_004": {
+      "ok": true,
+      "expected_route": "hybrid",
+      "actual_route": "hybrid",
+      "subtasks": [
+        "How many orders has seller S001 placed?",
+        "What penalty does seller S001's agreement specify for the Metro NCR zone?"
+      ],
+      "metrics": {
+        "tokens_in": 4284,
+        "tokens_out": 226,
+        "llm_calls": 5,
+        "trajectory_steps": 18,
+        "latency_ms": 18252
+      },
+      "answer_text": "Seller S001 has placed 17 orders. According to the supplier agreement, for orders shipped to the Metro NCR zone, a 3% penalty applies in case of a breach of the committed SLA.",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT seller_id, COUNT(*) \nFROM orders \nWHERE seller_id = 'S001' \nGROUP BY seller_id;",
+          "page": null
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S001_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S001_c001",
+          "page": 1
+        }
+      ],
+      "retrievals": [
+        {
+          "content": "Supplier Agreement -- Seller Store 1 (Seller ID: S001) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 1 (\"Seller\", Seller ID: S001), operating in the fashion category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c000",
+            "page": 1,
+            "score": 0.702662250478931
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 40 hours | 3% penalty |\n| Tier-2 West | 41 hours | 4% penalty |\n| Tier-2 South | 64 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c001",
+            "page": 1,
+            "score": 0.7024721889951201
+          }
+        }
+      ],
+      "executed_sql": "SELECT seller_id, COUNT(*) \nFROM orders \nWHERE seller_id = 'S001' \nGROUP BY seller_id;",
+      "sql_rows": [
+        {
+          "seller_id": "S001",
+          "count": 17
+        }
+      ]
+    },
+    "e1_hybrid_005": {
+      "ok": true,
+      "expected_route": "hybrid",
+      "actual_route": "hybrid",
+      "subtasks": [
+        "How many fulfillments has seller with ID 'FastShip 1' handled in the Metro Mumbai zone?",
+        "What transit time does logistics provider 'FastShip 1' commit to for deliveries in the Metro Mumbai zone?"
+      ],
+      "metrics": {
+        "tokens_in": 5193,
+        "tokens_out": 309,
+        "llm_calls": 5,
+        "trajectory_steps": 19,
+        "latency_ms": 26519
+      },
+      "answer_text": "The SLA Annexure for FastShip 1 (Provider ID: LP001) specifies a committed transit time of 29 hours for the Metro Mumbai zone. However, the number of fulfillments handled by FastShip 1 is not provided in the available document passages. (classified failure: unknown_column)",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT COUNT(*) \nFROM fulfillments f\nJOIN orders o ON f.order_id = o.order_id\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE f.provider_id IN (\n    SELECT provider_id \n    FROM logistics_providers lp\n    JOIN locations hl ON lp.hub_location_id = hl.location_id\n    WHERE hl.city = 'Mumbai'\n) AND f.seller_id = 'FastShip 1'",
+          "page": null
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_sla_annexure_LP007_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_sla_annexure_LP007_c001",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_sla_annexure_LP003_c000",
+          "page": 1
+        }
+      ],
+      "retrievals": [
+        {
+          "content": "SLA Annexure -- FastShip 7 (Provider ID: LP007) This SLA Annexure specifies FastShip 7's (LP007) committed transit times and on-time delivery rate by zone, as agreed with the ONDC Network's logistics coordination office. Transit time is measured from hub dispatch to first delivery attempt. On-time rate is a rolling quarterly commitment, reviewed independently of any single fulfillment's recorded delivery timestamps.",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP007",
+            "chunk_id": "doc_sla_annexure_LP007_c000",
+            "page": 1,
+            "score": 0.6676176389341846
+          }
+        },
+        {
+          "content": "| Zone | Committed Transit Time | On-Time Rate |\n| --- | --- | --- |\n| Metro Mumbai | 29 hours | 99% |\n| Tier-2 West | 41 hours | 95% |\n| Tier-2 South | 53 hours | 93% |\n| Rural North | 53 hours | 84% |",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP007",
+            "chunk_id": "doc_sla_annexure_LP007_c001",
+            "page": 1,
+            "score": 0.7832881212234497
+          }
+        },
+        {
+          "content": "SLA Annexure -- FastShip 3 (Provider ID: LP003) This SLA Annexure specifies FastShip 3's (LP003) committed transit times and on-time delivery rate by zone, as agreed with the ONDC Network's logistics coordination office. Transit time is measured from hub dispatch to first delivery attempt. On-time rate is a rolling quarterly commitment, reviewed independently of any single fulfillment's recorded delivery timestamps.",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP003",
+            "chunk_id": "doc_sla_annexure_LP003_c000",
+            "page": 1,
+            "score": 0.6485695838928223
+          }
+        },
+        {
+          "content": "| Zone | Committed Transit Time | On-Time Rate |\n| --- | --- | --- |\n| Metro Mumbai | 20 hours | 99% |\n| Tier-2 West | 28 hours | 97% |\n| Tier-2 South | 42 hours | 93% |\n| Rural North | 38 hours | 93% |",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP003",
+            "chunk_id": "doc_sla_annexure_LP003_c001",
+            "page": 1,
+            "score": 0.7832469344139099
+          }
+        },
+        {
+          "content": "SLA Annexure -- FastShip 1 (Provider ID: LP001) This SLA Annexure specifies FastShip 1's (LP001) committed transit times and on-time delivery rate by zone, as agreed with the ONDC Network's logistics coordination office. Transit time is measured from hub dispatch to first delivery attempt. On-time rate is a rolling quarterly commitment, reviewed independently of any single fulfillment's recorded delivery timestamps.",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP001",
+            "chunk_id": "doc_sla_annexure_LP001_c000",
+            "page": 1,
+            "score": 0.7146266315766169
+          }
+        },
+        {
+          "content": "| Zone | Committed Transit Time | On-Time Rate |\n| --- | --- | --- |\n| Metro Mumbai | 29 hours | 99% |\n| Tier-2 West | 38 hours | 97% |\n| Tier-2 South | 49 hours | 93% |\n| Rural North | 47 hours | 90% |",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP001",
+            "chunk_id": "doc_sla_annexure_LP001_c001",
+            "page": 1,
+            "score": 0.7828570008277893
+          }
+        },
+        {
+          "content": "SLA Annexure -- FastShip 5 (Provider ID: LP005) This SLA Annexure specifies FastShip 5's (LP005) committed transit times and on-time delivery rate by zone, as agreed with the ONDC Network's logistics coordination office. Transit time is measured from hub dispatch to first delivery attempt. On-time rate is a rolling quarterly commitment, reviewed independently of any single fulfillment's recorded delivery timestamps.",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP005",
+            "chunk_id": "doc_sla_annexure_LP005_c000",
+            "page": 1,
+            "score": 0.6562388734888698
+          }
+        },
+        {
+          "content": "| Zone | Committed Transit Time | On-Time Rate |\n| --- | --- | --- |\n| Metro Mumbai | 29 hours | 99% |\n| Tier-2 West | 41 hours | 97% |\n| Tier-2 South | 45 hours | 91% |\n| Rural North | 59 hours | 90% |",
+          "provenance": {
+            "document_id": "doc_sla_annexure_LP005",
+            "chunk_id": "doc_sla_annexure_LP005_c001",
+            "page": 1,
+            "score": 0.7810334199974963
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 25 (Seller ID: S025) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 25 (\"Seller\", Seller ID: S025), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S025",
+            "chunk_id": "doc_supplier_agreement_S025_c000",
+            "page": 1,
+            "score": 0.5526465177536011
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 37 hours | 2% penalty |\n| Metro Mumbai | 53 hours | 2% penalty |\n| Tier-2 West | 57 hours | 3% penalty |\n| Tier-2 South | 79 hours | 3% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S025",
+            "chunk_id": "doc_supplier_agreement_S025_c001",
+            "page": 1,
+            "score": 0.6951274094061511
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 20 (Seller ID: S020) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 20 (\"Seller\", Seller ID: S020), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c000",
+            "page": 1,
+            "score": 0.5588951110839844
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 41 hours | 3% penalty |\n| Tier-2 West | 57 hours | 4% penalty |\n| Tier-2 South | 49 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c001",
+            "page": 1,
+            "score": 0.6940654516220093
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 5 (Seller ID: S005) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 5 (\"Seller\", Seller ID: S005), operating in the electronics category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S005",
+            "chunk_id": "doc_supplier_agreement_S005_c000",
+            "page": 1,
+            "score": 0.5444163246278863
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 37 hours | 3% penalty |\n| Metro Mumbai | 52 hours | 3% penalty |\n| Tier-2 West | 63 hours | 4% penalty |\n| Tier-2 South | 64 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S005",
+            "chunk_id": "doc_supplier_agreement_S005_c001",
+            "page": 1,
+            "score": 0.6931581703769618
+          }
+        }
+      ],
+      "executed_sql": "SELECT COUNT(*) \nFROM fulfillments f\nJOIN orders o ON f.order_id = o.order_id\nJOIN locations l ON o.ship_to_location_id = l.location_id\nWHERE f.provider_id IN (\n    SELECT provider_id \n    FROM logistics_providers lp\n    JOIN locations hl ON lp.hub_location_id = hl.location_id\n    WHERE hl.city = 'Mumbai'\n) AND f.seller_id = 'FastShip 1'",
+      "sql_rows": []
+    },
+    "e1_hybrid_006": {
+      "ok": true,
+      "expected_route": "hybrid",
+      "actual_route": "hybrid",
+      "subtasks": [
+        "How many disputes does seller S010 have in the damaged_goods category?",
+        "What is the committed resolution window for disputes in the damaged_goods category?"
+      ],
+      "metrics": {
+        "tokens_in": 4827,
+        "tokens_out": 241,
+        "llm_calls": 5,
+        "trajectory_steps": 19,
+        "latency_ms": 19584
+      },
+      "answer_text": "Seller S010 has 1 dispute in the damaged_goods category. The committed resolution window for this category is 5 business days.",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT COUNT(*) \nFROM disputes \nWHERE order_id IN (\n    SELECT order_id \n    FROM order_items \n    JOIN catalog_items ON catalog_items.item_id = order_items.item_id \n    WHERE catalog_items.seller_id = 'S010'\n) \nAND category = 'damaged_goods'",
+          "page": null
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_policy_dispute_resolution_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_policy_dispute_resolution_c001",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_sop_delivery_exceptions_c000",
+          "page": 1
+        }
+      ],
+      "retrievals": [
+        {
+          "content": "ONDC Network Dispute Resolution Policy This policy governs how disputes raised against orders on the ONDC Network are triaged and resolved. Every dispute is assigned a category at intake; each category carries its own committed resolution window and escalation tier, independent of when the dispute happens to be marked resolved in operational tracking.",
+          "provenance": {
+            "document_id": "doc_policy_dispute_resolution",
+            "chunk_id": "doc_policy_dispute_resolution_c000",
+            "page": 1,
+            "score": 0.6664725740519302
+          }
+        },
+        {
+          "content": "| Dispute Category | Committed Resolution (business days) | Escalation Tier |\n| --- | --- | --- |\n| late_delivery | 3 | Tier 1 |\n| damaged_goods | 5 | Tier 2 |\n| wrong_item | 4 | Tier 1 |\n| not_delivered | 7 | Tier 2 |\n| refund_delay | 10 | Tier 3 |",
+          "provenance": {
+            "document_id": "doc_policy_dispute_resolution",
+            "chunk_id": "doc_policy_dispute_resolution_c001",
+            "page": 1,
+            "score": 0.7236754564852118
+          }
+        },
+        {
+          "content": "Delivery Exception Handling SOP This standard operating procedure specifies the required action and escalation window for each class of delivery exception encountered by logistics providers operating on the Network.",
+          "provenance": {
+            "document_id": "doc_sop_delivery_exceptions",
+            "chunk_id": "doc_sop_delivery_exceptions_c000",
+            "page": 1,
+            "score": 0.5932773462864616
+          }
+        },
+        {
+          "content": "| Exception Type | Required Action | Escalation Window (hours) |\n| --- | --- | --- |\n| Recipient unavailable | Reattempt next business day | 24 |\n| Address undeliverable | Contact buyer app for correction | 12 |\n| Package damaged in transit | Hold and photograph before delivery | 4 |\n| Refused by recipient | Return to origin hub | 48 |",
+          "provenance": {
+            "document_id": "doc_sop_delivery_exceptions",
+            "chunk_id": "doc_sop_delivery_exceptions_c001",
+            "page": 1,
+            "score": 0.6863391025470666
+          }
+        },
+        {
+          "content": "Warehouse Damage Assessment SOP This standard operating procedure governs how warehouse-reported damage is assessed and compensated, by severity tier.",
+          "provenance": {
+            "document_id": "doc_sop_warehouse_damage",
+            "chunk_id": "doc_sop_warehouse_damage_c000",
+            "page": 1,
+            "score": 0.6339360039157917
+          }
+        },
+        {
+          "content": "| Damage Severity | Assessment Window (hours) | Compensation Tier |\n| --- | --- | --- |\n| Cosmetic (packaging only) | 12 | No compensation |\n| Minor (product intact) | 24 | 10% of item value |\n| Major (product unusable) | 48 | 100% of item value |",
+          "provenance": {
+            "document_id": "doc_sop_warehouse_damage",
+            "chunk_id": "doc_sop_warehouse_damage_c001",
+            "page": 1,
+            "score": 0.6858954055184658
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 20 (Seller ID: S020) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 20 (\"Seller\", Seller ID: S020), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c000",
+            "page": 1,
+            "score": 0.6332829753497855
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 41 hours | 3% penalty |\n| Tier-2 West | 57 hours | 4% penalty |\n| Tier-2 South | 49 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c001",
+            "page": 1,
+            "score": 0.45892714964475356
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 1 (Seller ID: S001) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 1 (\"Seller\", Seller ID: S001), operating in the fashion category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c000",
+            "page": 1,
+            "score": 0.626630619362671
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 40 hours | 3% penalty |\n| Tier-2 West | 41 hours | 4% penalty |\n| Tier-2 South | 64 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S001",
+            "chunk_id": "doc_supplier_agreement_S001_c001",
+            "page": 1,
+            "score": 0.4590115224725989
+          }
+        },
+        {
+          "content": "Supplier Agreement -- Seller Store 10 (Seller ID: S010) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 10 (\"Seller\", Seller ID: S010), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S010",
+            "chunk_id": "doc_supplier_agreement_S010_c000",
+            "page": 1,
+            "score": 0.6262468846138622
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 26 hours | 4% penalty |\n| Metro Mumbai | 42 hours | 4% penalty |\n| Tier-2 West | 48 hours | 5% penalty |\n| Tier-2 South | 74 hours | 5% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S010",
+            "chunk_id": "doc_supplier_agreement_S010_c001",
+            "page": 1,
+            "score": 0.4680853169015313
+          }
+        }
+      ],
+      "executed_sql": "SELECT COUNT(*) \nFROM disputes \nWHERE order_id IN (\n    SELECT order_id \n    FROM order_items \n    JOIN catalog_items ON catalog_items.item_id = order_items.item_id \n    WHERE catalog_items.seller_id = 'S010'\n) \nAND category = 'damaged_goods'",
+      "sql_rows": [
+        {
+          "count": 1
+        }
+      ]
+    },
+    "e1_hybrid_007": {
+      "ok": true,
+      "expected_route": "hybrid",
+      "actual_route": "hybrid",
+      "subtasks": [
+        "What category is seller S020 assigned to in the sellers table?",
+        "What penalty does seller S020's agreement specify for deliveries in the Rural North zone?"
+      ],
+      "metrics": {
+        "tokens_in": 4297,
+        "tokens_out": 263,
+        "llm_calls": 5,
+        "trajectory_steps": 18,
+        "latency_ms": 18896
+      },
+      "answer_text": "Seller S020 is in the 'food' category. According to the document, for orders shipped to the Rural North zone, there is no specific penalty mentioned. However, the agreement specifies penalties for other zones such as Metro NCR (3% penalty), Metro Mumbai (3% penalty), Tier-2 West (4% penalty), and Tier-2 South (4% penalty).",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT seller_id, category FROM sellers WHERE seller_id = 'S020' LIMIT 1000",
+          "page": null
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S020_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S020_c001",
+          "page": 1
+        }
+      ],
+      "retrievals": [
+        {
+          "content": "Supplier Agreement -- Seller Store 20 (Seller ID: S020) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 20 (\"Seller\", Seller ID: S020), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c000",
+            "page": 1,
+            "score": 0.7225793600082397
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 25 hours | 3% penalty |\n| Metro Mumbai | 41 hours | 3% penalty |\n| Tier-2 West | 57 hours | 4% penalty |\n| Tier-2 South | 49 hours | 4% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S020",
+            "chunk_id": "doc_supplier_agreement_S020_c001",
+            "page": 1,
+            "score": 0.6311020851135254
+          }
+        }
+      ],
+      "executed_sql": "SELECT seller_id, category FROM sellers WHERE seller_id = 'S020' LIMIT 1000",
+      "sql_rows": [
+        {
+          "seller_id": "S020",
+          "category": "food"
+        }
+      ]
+    },
+    "e1_hybrid_008": {
+      "ok": true,
+      "expected_route": "hybrid",
+      "actual_route": "hybrid",
+      "subtasks": [
+        "How many orders has seller S025 placed?",
+        "What penalty does seller S025's supplier agreement specify for the Tier-2 West zone?"
+      ],
+      "metrics": {
+        "tokens_in": 4294,
+        "tokens_out": 220,
+        "llm_calls": 5,
+        "trajectory_steps": 18,
+        "latency_ms": 16704
+      },
+      "answer_text": "Seller S025 has placed 11 orders. The supplier agreement for Seller S025 specifies a 3% penalty for the Tier-2 West zone.",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT seller_id, COUNT(*) \nFROM orders \nWHERE seller_id = 'S025' \nGROUP BY seller_id;",
+          "page": null
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S025_c000",
+          "page": 1
+        },
+        {
+          "kind": "chunk",
+          "ref": "doc_supplier_agreement_S025_c001",
+          "page": 1
+        }
+      ],
+      "retrievals": [
+        {
+          "content": "Supplier Agreement -- Seller Store 25 (Seller ID: S025) This Supplier Agreement is entered into between the ONDC Network (\"Network\") and Seller Store 25 (\"Seller\", Seller ID: S025), operating in the food category. Seller agrees to the following zone-based delivery service level commitments. A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value. These zone-level commitments supplement, and are more granular than, the Seller's general contracted_sla_hours on file with the Network.",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S025",
+            "chunk_id": "doc_supplier_agreement_S025_c000",
+            "page": 1,
+            "score": 0.769924805755903
+          }
+        },
+        {
+          "content": "| Zone | SLA | Penalty |\n| --- | --- | --- |\n| Metro NCR | 37 hours | 2% penalty |\n| Metro Mumbai | 53 hours | 2% penalty |\n| Tier-2 West | 57 hours | 3% penalty |\n| Tier-2 South | 79 hours | 3% penalty |",
+          "provenance": {
+            "document_id": "doc_supplier_agreement_S025",
+            "chunk_id": "doc_supplier_agreement_S025_c001",
+            "page": 1,
+            "score": 0.6154466409023572
+          }
+        }
+      ],
+      "executed_sql": "SELECT seller_id, COUNT(*) \nFROM orders \nWHERE seller_id = 'S025' \nGROUP BY seller_id;",
+      "sql_rows": [
+        {
+          "seller_id": "S025",
+          "count": 11
+        }
+      ]
+    },
+    "e1_sql_001": {
+      "ok": true,
+      "expected_route": "sql",
+      "actual_route": "sql",
+      "subtasks": [],
+      "metrics": {
+        "tokens_in": 5441,
+        "tokens_out": 153,
+        "llm_calls": 5,
+        "trajectory_steps": 18,
+        "latency_ms": 17444
+      },
+      "answer_text": "Seller S008 has placed 14 orders.",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT COUNT(*) \nFROM orders \nWHERE seller_id = 'S008';",
+          "page": null
+        }
+      ],
+      "retrievals": [],
+      "executed_sql": "SELECT COUNT(*) \nFROM orders \nWHERE seller_id = 'S008';",
+      "sql_rows": [
+        {
+          "count": 14
+        }
+      ]
+    },
+    "e1_sql_002": {
+      "ok": true,
+      "expected_route": "sql",
+      "actual_route": "sql",
+      "subtasks": [],
+      "metrics": {
+        "tokens_in": 5460,
+        "tokens_out": 191,
+        "llm_calls": 5,
+        "trajectory_steps": 18,
+        "latency_ms": 16566
+      },
+      "answer_text": "The total order value for seller S012 is $566,769.90.",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.seller_id = 'S012'",
+          "page": null
+        }
+      ],
+      "retrievals": [],
+      "executed_sql": "SELECT SUM(o.order_value) AS total_order_value\nFROM orders o\nJOIN sellers s ON o.seller_id = s.seller_id\nWHERE s.seller_id = 'S012'",
+      "sql_rows": [
+        {
+          "total_order_value": 566769.9
+        }
+      ]
+    },
+    "e1_sql_003": {
+      "ok": true,
+      "expected_route": "sql",
+      "actual_route": "sql",
+      "subtasks": [],
+      "metrics": {
+        "tokens_in": 4624,
+        "tokens_out": 122,
+        "llm_calls": 5,
+        "trajectory_steps": 17,
+        "latency_ms": 9738
+      },
+      "answer_text": "There are 16 disputes categorized as wrong_item.",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT COUNT(*) AS dispute_count\nFROM disputes\nWHERE category = 'wrong_item';",
+          "page": null
+        }
+      ],
+      "retrievals": [],
+      "executed_sql": "SELECT COUNT(*) AS dispute_count\nFROM disputes\nWHERE category = 'wrong_item';",
+      "sql_rows": [
+        {
+          "dispute_count": 16
+        }
+      ]
+    },
+    "e1_sql_004": {
+      "ok": true,
+      "expected_route": "sql",
+      "actual_route": "sql",
+      "subtasks": [],
+      "metrics": {
+        "tokens_in": 4617,
+        "tokens_out": 112,
+        "llm_calls": 5,
+        "trajectory_steps": 17,
+        "latency_ms": 9239
+      },
+      "answer_text": "There are 5 logistics providers that have the b2b_enabled feature.",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT COUNT(*) FROM logistics_providers WHERE b2b_enabled = true",
+          "page": null
+        }
+      ],
+      "retrievals": [],
+      "executed_sql": "SELECT COUNT(*) FROM logistics_providers WHERE b2b_enabled = true",
+      "sql_rows": [
+        {
+          "count": 5
+        }
+      ]
+    },
+    "e1_sql_005": {
+      "ok": true,
+      "expected_route": "sql",
+      "actual_route": "sql",
+      "subtasks": [],
+      "metrics": {
+        "tokens_in": 5133,
+        "tokens_out": 131,
+        "llm_calls": 5,
+        "trajectory_steps": 17,
+        "latency_ms": 12404
+      },
+      "answer_text": "There were 269 orders placed via the b2c channel.",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT COUNT(*) \nFROM orders \nWHERE order_channel = 'b2c'",
+          "page": null
+        }
+      ],
+      "retrievals": [],
+      "executed_sql": "SELECT COUNT(*) \nFROM orders \nWHERE order_channel = 'b2c'",
+      "sql_rows": [
+        {
+          "count": 269
+        }
+      ]
+    },
+    "e1_sql_006": {
+      "ok": true,
+      "expected_route": "sql",
+      "actual_route": "sql",
+      "subtasks": [],
+      "metrics": {
+        "tokens_in": 4997,
+        "tokens_out": 140,
+        "llm_calls": 5,
+        "trajectory_steps": 17,
+        "latency_ms": 12024
+      },
+      "answer_text": "The average order value across all orders, rounded to 2 decimal places, is $25,612.09.",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT ROUND(AVG(order_value::numeric), 2) AS avg_order_value \nFROM orders;",
+          "page": null
+        }
+      ],
+      "retrievals": [],
+      "executed_sql": "SELECT ROUND(AVG(order_value::numeric), 2) AS avg_order_value \nFROM orders;",
+      "sql_rows": [
+        {
+          "avg_order_value": 25612.09
+        }
+      ]
+    },
+    "e1_sql_007": {
+      "ok": true,
+      "expected_route": "sql",
+      "actual_route": "sql",
+      "subtasks": [],
+      "metrics": {
+        "tokens_in": 4465,
+        "tokens_out": 131,
+        "llm_calls": 5,
+        "trajectory_steps": 17,
+        "latency_ms": 10090
+      },
+      "answer_text": "Currently, there are 227 fulfillments pending.",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT COUNT(*) AS pending_fulfillments\nFROM fulfillments\nWHERE delivered_at IS NULL;",
+          "page": null
+        }
+      ],
+      "retrievals": [],
+      "executed_sql": "SELECT COUNT(*) AS pending_fulfillments\nFROM fulfillments\nWHERE delivered_at IS NULL;",
+      "sql_rows": [
+        {
+          "pending_fulfillments": 227
+        }
+      ]
+    },
+    "e1_sql_008": {
+      "ok": true,
+      "expected_route": "sql",
+      "actual_route": "sql",
+      "subtasks": [],
+      "metrics": {
+        "tokens_in": 4700,
+        "tokens_out": 131,
+        "llm_calls": 5,
+        "trajectory_steps": 17,
+        "latency_ms": 10664
+      },
+      "answer_text": "There are 17 sellers in the electronics category.",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT COUNT(s.seller_id) \nFROM sellers s\nJOIN catalog_items ci ON s.seller_id = ci.seller_id\nWHERE ci.category = 'electronics'",
+          "page": null
+        }
+      ],
+      "retrievals": [],
+      "executed_sql": "SELECT COUNT(s.seller_id) \nFROM sellers s\nJOIN catalog_items ci ON s.seller_id = ci.seller_id\nWHERE ci.category = 'electronics'",
+      "sql_rows": [
+        {
+          "count": 17
+        }
+      ]
+    },
+    "e1_sql_009": {
+      "ok": true,
+      "expected_route": "sql",
+      "actual_route": "sql",
+      "subtasks": [],
+      "metrics": {
+        "tokens_in": 4504,
+        "tokens_out": 115,
+        "llm_calls": 5,
+        "trajectory_steps": 17,
+        "latency_ms": 9083
+      },
+      "answer_text": "There are 566 delivery events with a null location_id.",
+      "citations": [
+        {
+          "kind": "sql",
+          "ref": "SELECT COUNT(*) FROM delivery_events WHERE location_id IS NULL",
+          "page": null
+        }
+      ],
+      "retrievals": [],
+      "executed_sql": "SELECT COUNT(*) FROM delivery_events WHERE location_id IS NULL",
+      "sql_rows": [
+        {
+          "count": 566
+        }
+      ]
+    }
+  },
+  "e1v5_decomposition": {
+    "hybrid_fired": 8,
+    "hybrid_total": 8,
+    "non_hybrid_fired": 0,
+    "non_hybrid_total": 17,
+    "mean_llm_calls_by_route": {
+      "sql": 5.0,
+      "docs": 3.0,
+      "hybrid": 5.0
+    }
+  },
+  "e1v3_grounding": {
+    "per_query": {
+      "e1_doc_001": {
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "cited": [
+          "doc_supplier_agreement_S014_c000",
+          "doc_supplier_agreement_S014_c001",
+          "doc_supplier_agreement_S001_c000"
+        ],
+        "hit": [
+          "doc_supplier_agreement_S014_c000",
+          "doc_supplier_agreement_S014_c001"
+        ],
+        "precision_over_retrieved": 0.125,
+        "max_attainable_precision": 0.6666666666666666,
+        "claims": [
+          {
+            "claim": "The contracted delivery SLA for supplier S014 in Metro NCR is 36 hours.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "faithfulness_score": 1.0,
+        "faithfulness_score_recomputed": 1.0,
+        "faithfulness_disagreement": false,
+        "ungrounded_but_true_count": 0,
+        "judge_self_reported_ubt": 0,
+        "ubt_disagreement": false,
+        "faithfulness_all_sources": 1.0,
+        "claims_all_sources": [
+          {
+            "claim": "The contracted delivery SLA for supplier S014 in Metro NCR is 36 hours.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "ungrounded_but_true_all_sources": 0
+      },
+      "e1_doc_002": {
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "cited": [
+          "doc_policy_returns_refunds_c000",
+          "doc_policy_returns_refunds_c001",
+          "doc_supplier_agreement_S005_c000"
+        ],
+        "hit": [
+          "doc_policy_returns_refunds_c000",
+          "doc_policy_returns_refunds_c001"
+        ],
+        "precision_over_retrieved": 0.14285714285714285,
+        "max_attainable_precision": 0.6666666666666666,
+        "claims": [
+          {
+            "claim": "The ONDC network's return window for the electronics category is 10 days",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "faithfulness_score": 1.0,
+        "faithfulness_score_recomputed": 1.0,
+        "faithfulness_disagreement": false,
+        "ungrounded_but_true_count": 0,
+        "judge_self_reported_ubt": 0,
+        "ubt_disagreement": false,
+        "faithfulness_all_sources": 1.0,
+        "claims_all_sources": [
+          {
+            "claim": "The ONDC network's return window for the electronics category is 10 days",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "ungrounded_but_true_all_sources": 0
+      },
+      "e1_doc_003": {
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "cited": [
+          "doc_supplier_agreement_S001_c000",
+          "doc_supplier_agreement_S001_c001",
+          "doc_supplier_agreement_S010_c000"
+        ],
+        "hit": [
+          "doc_supplier_agreement_S001_c000",
+          "doc_supplier_agreement_S001_c001"
+        ],
+        "precision_over_retrieved": 0.16666666666666666,
+        "max_attainable_precision": 0.6666666666666666,
+        "claims": [
+          {
+            "claim": "Supplier S001's agreement specifies a 3% penalty for the Metro NCR zone.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "faithfulness_score": 1.0,
+        "faithfulness_score_recomputed": 1.0,
+        "faithfulness_disagreement": false,
+        "ungrounded_but_true_count": 0,
+        "judge_self_reported_ubt": 0,
+        "ubt_disagreement": false,
+        "faithfulness_all_sources": 1.0,
+        "claims_all_sources": [
+          {
+            "claim": "Supplier S001's agreement specifies a 3% penalty for the Metro NCR zone.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "ungrounded_but_true_all_sources": 0
+      },
+      "e1_doc_004": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "cited": [
+          "doc_sla_annexure_LP003_c000",
+          "doc_sla_annexure_LP003_c001",
+          "doc_sla_annexure_LP007_c000"
+        ],
+        "hit": [],
+        "precision_over_retrieved": 0.14285714285714285,
+        "max_attainable_precision": 0.6666666666666666,
+        "claims": [
+          {
+            "claim": "FastShip 1's SLA annexure specifies a committed transit time of 29 hours for the Metro Mumbai zone.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "faithfulness_score": 1.0,
+        "faithfulness_score_recomputed": 1.0,
+        "faithfulness_disagreement": false,
+        "ungrounded_but_true_count": 0,
+        "judge_self_reported_ubt": 0,
+        "ubt_disagreement": false,
+        "faithfulness_all_sources": 1.0,
+        "claims_all_sources": [
+          {
+            "claim": "FastShip 1's SLA annexure specifies a committed transit time of 29 hours for the Metro Mumbai zone.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "ungrounded_but_true_all_sources": 0
+      },
+      "e1_doc_005": {
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "cited": [
+          "doc_policy_dispute_resolution_c000",
+          "doc_policy_dispute_resolution_c001",
+          "doc_sop_delivery_exceptions_c000"
+        ],
+        "hit": [
+          "doc_policy_dispute_resolution_c000",
+          "doc_policy_dispute_resolution_c001"
+        ],
+        "precision_over_retrieved": 0.14285714285714285,
+        "max_attainable_precision": 0.6666666666666666,
+        "claims": [
+          {
+            "claim": "The committed resolution window for a damaged_goods dispute is 5 business days",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "faithfulness_score": 1.0,
+        "faithfulness_score_recomputed": 1.0,
+        "faithfulness_disagreement": false,
+        "ungrounded_but_true_count": 0,
+        "judge_self_reported_ubt": 0,
+        "ubt_disagreement": false,
+        "faithfulness_all_sources": 1.0,
+        "claims_all_sources": [
+          {
+            "claim": "The committed resolution window for a damaged_goods dispute is 5 business days",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "ungrounded_but_true_all_sources": 0
+      },
+      "e1_doc_006": {
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "cited": [
+          "doc_sop_delivery_exceptions_c000",
+          "doc_sop_delivery_exceptions_c001",
+          "doc_supplier_agreement_S005_c000"
+        ],
+        "hit": [
+          "doc_sop_delivery_exceptions_c000",
+          "doc_sop_delivery_exceptions_c001"
+        ],
+        "precision_over_retrieved": 0.14285714285714285,
+        "max_attainable_precision": 0.6666666666666666,
+        "claims": [
+          {
+            "claim": "When a delivery exception occurs because the recipient is unavailable, per the delivery exception handling SOP, the required action is to reattempt the delivery on the next business day.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "The escalation window for this type of exception is 24 hours.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "faithfulness_score": 1.0,
+        "faithfulness_score_recomputed": 1.0,
+        "faithfulness_disagreement": false,
+        "ungrounded_but_true_count": 0,
+        "judge_self_reported_ubt": 0,
+        "ubt_disagreement": false,
+        "faithfulness_all_sources": 1.0,
+        "claims_all_sources": [
+          {
+            "claim": "When a delivery exception occurs because the recipient is unavailable, per the delivery exception handling SOP, the required action is to reattempt the delivery on the next business day.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "The escalation window for this type of exception is 24 hours.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "ungrounded_but_true_all_sources": 0
+      },
+      "e1_doc_007": {
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "cited": [
+          "doc_sop_cold_chain_c000",
+          "doc_sop_cold_chain_c001",
+          "doc_sop_delivery_exceptions_c000"
+        ],
+        "hit": [
+          "doc_sop_cold_chain_c000",
+          "doc_sop_cold_chain_c001"
+        ],
+        "precision_over_retrieved": 0.14285714285714285,
+        "max_attainable_precision": 0.6666666666666666,
+        "claims": [
+          {
+            "claim": "The maximum transit time for frozen goods, as per the Cold Chain and Perishables Handling SOP, is 24 hours.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "faithfulness_score": 1.0,
+        "faithfulness_score_recomputed": 1.0,
+        "faithfulness_disagreement": false,
+        "ungrounded_but_true_count": 0,
+        "judge_self_reported_ubt": 0,
+        "ubt_disagreement": false,
+        "faithfulness_all_sources": 1.0,
+        "claims_all_sources": [
+          {
+            "claim": "The maximum transit time for frozen goods, as per the Cold Chain and Perishables Handling SOP, is 24 hours.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "ungrounded_but_true_all_sources": 0
+      },
+      "e1_doc_008": {
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "cited": [
+          "doc_policy_seller_compliance_c000",
+          "doc_policy_seller_compliance_c001",
+          "doc_policy_data_retention_c000"
+        ],
+        "hit": [
+          "doc_policy_seller_compliance_c000",
+          "doc_policy_seller_compliance_c001"
+        ],
+        "precision_over_retrieved": 0.14285714285714285,
+        "max_attainable_precision": 0.6666666666666666,
+        "claims": [
+          {
+            "claim": "a seller must renew their GST registration compliance annually",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "faithfulness_score": 1.0,
+        "faithfulness_score_recomputed": 1.0,
+        "faithfulness_disagreement": false,
+        "ungrounded_but_true_count": 0,
+        "judge_self_reported_ubt": 0,
+        "ubt_disagreement": false,
+        "faithfulness_all_sources": 1.0,
+        "claims_all_sources": [
+          {
+            "claim": "According to the ONDC Network Seller Onboarding and Compliance Policy, a seller must renew their GST registration compliance annually.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "ungrounded_but_true_all_sources": 0
+      },
+      "e1_hybrid_001": {
+        "precision": null,
+        "recall": null,
+        "cited": [
+          "doc_supplier_agreement_S005_c000",
+          "doc_supplier_agreement_S001_c000",
+          "doc_supplier_agreement_S025_c000"
+        ],
+        "precision_over_retrieved": null,
+        "max_attainable_precision": null,
+        "claims": [
+          {
+            "claim": "The sellers who breached their contracted delivery SLA last quarter are S010, S008, S030, S021, S024, S025, S018, S005, S006, S016, S023, S027, S009, S015, S002, S011, S019, S004, S029, S020, S017, S014, S007, S026, S012, S028, S022, and S013.",
+            "grounded_in_retrieved_context": false,
+            "factually_correct": null
+          },
+          {
+            "claim": "Each of these sellers' agreements specify penalties for breaches in the form of a percentage credit against the order value based on the breached zone's SLA commitment.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "faithfulness_score": 0.5,
+        "faithfulness_score_recomputed": 0.5,
+        "faithfulness_disagreement": false,
+        "ungrounded_but_true_count": 0,
+        "judge_self_reported_ubt": 1,
+        "ubt_disagreement": true,
+        "faithfulness_all_sources": 0.5,
+        "claims_all_sources": [
+          {
+            "claim": "The sellers who breached their contracted delivery SLA last quarter are S010, S008, S030, S021, S024, S025, S018, S005, S006, S016, S023, S027, S009, S015, S002, S011, S019, S004, S029, S020, S017, S014, S007, S026, S012, S028, S022, and S013.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": false
+          },
+          {
+            "claim": "Each of these sellers' agreements specify penalties for breaches in the form of a percentage credit against the order value based on the breached zone's SLA commitment.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "ungrounded_but_true_all_sources": 0
+      },
+      "e1_hybrid_002": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "cited": [
+          "doc_supplier_agreement_S014_c000",
+          "doc_supplier_agreement_S014_c001"
+        ],
+        "hit": [],
+        "precision_over_retrieved": 0.0,
+        "max_attainable_precision": 1.0,
+        "claims": [
+          {
+            "claim": "Seller S014 has had a total of 2 disputes.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "According to the dispute resolution policy, the committed resolution window for disputes varies by zone as follows:",
+            "grounded_in_retrieved_context": false,
+            "factually_correct": true
+          },
+          {
+            "claim": "- Metro NCR: 36 hours",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "- Metro Mumbai: 44 hours",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "- Tier-2 West: 56 hours",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "- Rural North: 76 hours",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "faithfulness_score": 0.8333333333333334,
+        "faithfulness_score_recomputed": 0.8333333333333334,
+        "faithfulness_disagreement": false,
+        "ungrounded_but_true_count": 1,
+        "judge_self_reported_ubt": 1,
+        "ubt_disagreement": false,
+        "faithfulness_all_sources": 0.8333333333333334,
+        "claims_all_sources": [
+          {
+            "claim": "Seller S014 has had a total of 2 disputes.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "The committed resolution window for disputes varies by zone as follows:",
+            "grounded_in_retrieved_context": false,
+            "factually_correct": true
+          },
+          {
+            "claim": "- Metro NCR: 36 hours",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "- Metro Mumbai: 44 hours",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "- Tier-2 West: 56 hours",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "- Rural North: 76 hours",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "ungrounded_but_true_all_sources": 1
+      },
+      "e1_hybrid_003": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "cited": [
+          "doc_supplier_agreement_S005_c000",
+          "doc_supplier_agreement_S005_c001"
+        ],
+        "hit": [
+          "doc_supplier_agreement_S005_c000",
+          "doc_supplier_agreement_S005_c001"
+        ],
+        "precision_over_retrieved": 1.0,
+        "max_attainable_precision": 1.0,
+        "claims": [
+          {
+            "claim": "Seller S005's contracted SLA in hours is 36",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "S005's supplier agreement specifies for the Metro NCR zone an SLA of 37 hours with a 3% penalty applied if breached",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "faithfulness_score": 1.0,
+        "faithfulness_score_recomputed": 1.0,
+        "faithfulness_disagreement": false,
+        "ungrounded_but_true_count": 0,
+        "judge_self_reported_ubt": 0,
+        "ubt_disagreement": false,
+        "faithfulness_all_sources": 1.0,
+        "claims_all_sources": [
+          {
+            "claim": "Seller S005's contracted SLA in hours is 36",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "S005's supplier agreement specifies for the Metro NCR zone an SLA of 37 hours with a 3% penalty applied if breached",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "ungrounded_but_true_all_sources": 0
+      },
+      "e1_hybrid_004": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "cited": [
+          "doc_supplier_agreement_S001_c000",
+          "doc_supplier_agreement_S001_c001"
+        ],
+        "hit": [
+          "doc_supplier_agreement_S001_c000",
+          "doc_supplier_agreement_S001_c001"
+        ],
+        "precision_over_retrieved": 1.0,
+        "max_attainable_precision": 1.0,
+        "claims": [
+          {
+            "claim": "Seller S001 has placed 17 orders.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "For orders shipped to the Metro NCR zone, a 3% penalty applies in case of a breach of the committed SLA.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "faithfulness_score": 1.0,
+        "faithfulness_score_recomputed": 1.0,
+        "faithfulness_disagreement": false,
+        "ungrounded_but_true_count": 0,
+        "judge_self_reported_ubt": 0,
+        "ubt_disagreement": false,
+        "faithfulness_all_sources": 1.0,
+        "claims_all_sources": [
+          {
+            "claim": "Seller S001 has placed 17 orders.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "A 3% penalty applies for orders shipped to the Metro NCR zone in case of a breach of the committed SLA.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "ungrounded_but_true_all_sources": 0
+      },
+      "e1_hybrid_005": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "cited": [
+          "doc_sla_annexure_LP007_c000",
+          "doc_sla_annexure_LP007_c001",
+          "doc_sla_annexure_LP003_c000"
+        ],
+        "hit": [],
+        "precision_over_retrieved": 0.14285714285714285,
+        "max_attainable_precision": 0.6666666666666666,
+        "claims": [
+          {
+            "claim": "The SLA Annexure for FastShip 1 specifies a committed transit time of 29 hours for the Metro Mumbai zone.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "The number of fulfillments handled by FastShip 1 is not provided in the available document passages.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "faithfulness_score": 1.0,
+        "faithfulness_score_recomputed": 1.0,
+        "faithfulness_disagreement": false,
+        "ungrounded_but_true_count": 0,
+        "judge_self_reported_ubt": 0,
+        "ubt_disagreement": false,
+        "faithfulness_all_sources": 0.5,
+        "claims_all_sources": [
+          {
+            "claim": "The SLA Annexure for FastShip 1 specifies a committed transit time of 29 hours for the Metro Mumbai zone.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "The number of fulfillments handled by FastShip 1 is not provided in the available document passages.",
+            "grounded_in_retrieved_context": false,
+            "factually_correct": true
+          }
+        ],
+        "ungrounded_but_true_all_sources": 1
+      },
+      "e1_hybrid_006": {
+        "precision": 0.6666666666666666,
+        "recall": 1.0,
+        "cited": [
+          "doc_policy_dispute_resolution_c000",
+          "doc_policy_dispute_resolution_c001",
+          "doc_sop_delivery_exceptions_c000"
+        ],
+        "hit": [
+          "doc_policy_dispute_resolution_c000",
+          "doc_policy_dispute_resolution_c001"
+        ],
+        "precision_over_retrieved": 0.16666666666666666,
+        "max_attainable_precision": 0.6666666666666666,
+        "claims": [
+          {
+            "claim": "Seller S010 has 1 dispute in the damaged_goods category.",
+            "grounded_in_retrieved_context": false,
+            "factually_correct": false
+          },
+          {
+            "claim": "The committed resolution window for the damaged_goods category is 5 business days.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "faithfulness_score": 0.5,
+        "faithfulness_score_recomputed": 0.5,
+        "faithfulness_disagreement": false,
+        "ungrounded_but_true_count": 0,
+        "judge_self_reported_ubt": 1,
+        "ubt_disagreement": true,
+        "faithfulness_all_sources": 0.5,
+        "claims_all_sources": [
+          {
+            "claim": "Seller S010 has 1 dispute in the damaged_goods category.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": false
+          },
+          {
+            "claim": "The committed resolution window for the damaged_goods category is 5 business days.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "ungrounded_but_true_all_sources": 0
+      },
+      "e1_hybrid_007": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "cited": [
+          "doc_supplier_agreement_S020_c000",
+          "doc_supplier_agreement_S020_c001"
+        ],
+        "hit": [
+          "doc_supplier_agreement_S020_c000",
+          "doc_supplier_agreement_S020_c001"
+        ],
+        "precision_over_retrieved": 1.0,
+        "max_attainable_precision": 1.0,
+        "claims": [
+          {
+            "claim": "Seller S020 is in the 'food' category.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "For orders shipped to the Rural North zone, there is no specific penalty mentioned.",
+            "grounded_in_retrieved_context": false,
+            "factually_correct": true
+          }
+        ],
+        "faithfulness_score": 0.5,
+        "faithfulness_score_recomputed": 0.5,
+        "faithfulness_disagreement": false,
+        "ungrounded_but_true_count": 1,
+        "judge_self_reported_ubt": 1,
+        "ubt_disagreement": false,
+        "faithfulness_all_sources": 0.6666666666666666,
+        "claims_all_sources": [
+          {
+            "claim": "Seller S020 is in the 'food' category.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "There is no specific penalty mentioned for orders shipped to the Rural North zone.",
+            "grounded_in_retrieved_context": false,
+            "factually_correct": true
+          },
+          {
+            "claim": "The agreement specifies penalties for other zones such as Metro NCR (3% penalty), Metro Mumbai (3% penalty), Tier-2 West (4% penalty), and Tier-2 South (4% penalty).",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "ungrounded_but_true_all_sources": 1
+      },
+      "e1_hybrid_008": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "cited": [
+          "doc_supplier_agreement_S025_c000",
+          "doc_supplier_agreement_S025_c001"
+        ],
+        "hit": [
+          "doc_supplier_agreement_S025_c000",
+          "doc_supplier_agreement_S025_c001"
+        ],
+        "precision_over_retrieved": 1.0,
+        "max_attainable_precision": 1.0,
+        "claims": [
+          {
+            "claim": "Seller S025 has placed 11 orders.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "The supplier agreement for Seller S025 specifies a 3% penalty for the Tier-2 West zone.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "faithfulness_score": 1.0,
+        "faithfulness_score_recomputed": 1.0,
+        "faithfulness_disagreement": false,
+        "ungrounded_but_true_count": 0,
+        "judge_self_reported_ubt": 0,
+        "ubt_disagreement": false,
+        "faithfulness_all_sources": 1.0,
+        "claims_all_sources": [
+          {
+            "claim": "Seller S025 has placed 11 orders.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          },
+          {
+            "claim": "The supplier agreement for Seller S025 specifies a 3% penalty for the Tier-2 West zone.",
+            "grounded_in_retrieved_context": true,
+            "factually_correct": true
+          }
+        ],
+        "ungrounded_but_true_all_sources": 0
+      }
+    },
+    "n_precision_recall_scored": 15,
+    "n_faithfulness_scored": 16,
+    "mean_context_precision": 0.6222222222222221,
+    "mean_context_precision_over_retrieved": 0.3638888888888889,
+    "max_attainable_context_precision": 0.7777777777777778,
+    "mean_context_recall": 0.8,
+    "mean_faithfulness": 0.8958333333333334,
+    "mean_faithfulness_all_sources": 0.875,
+    "total_ungrounded_but_true": 2,
+    "total_judge_self_reported_ubt": 4,
+    "ubt_disagreement_count": 2,
+    "faithfulness_disagreement_count": 0,
+    "total_ungrounded_but_true_all_sources": 3
+  }
+}
