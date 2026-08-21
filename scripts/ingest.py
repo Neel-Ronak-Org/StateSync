@@ -39,6 +39,7 @@ import logging
 import os
 import sys
 import tomllib
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -114,6 +115,45 @@ def _embed(text: str) -> list[float]:
     return vector
 
 
+def _embed_allowing_split(content_md: str, max_split_depth: int = 4) -> list[tuple[str, list[float]]]:
+    """
+    Cycle 005 C3/C4. `mxbai-embed-large`'s REAL context length is 512 TOKENS
+    (`ollama show mxbai-embed-large` -> bert.context_length=512); this file's
+    own `_chunk_words` approximates a token as one whitespace-split WORD,
+    documented above as "coarse but adequate for the corpus size here" -- true
+    for the original small English PDF corpus this project shipped with, not
+    measured true for this one. It failed for real during this cycle's ingest:
+    a 1,709-word review digest's first 512-word chunk was rejected outright --
+    `{"error":"the input length exceeds the context length"}`, HTTP 500 --
+    caught live, not anticipated.
+
+    Rather than guess a smaller `target_tokens` for this corpus (an
+    unprincipled magic number) or lower `config.retrieval.chunk_target_tokens`
+    globally (which would silently re-chunk the BASELINE PDF corpus too,
+    changing what every existing M6 number was measured against, for a
+    problem that corpus never had), a chunk the model actually rejects is
+    halved by word count and retried, recursively, until every piece fits.
+    This is a safety net around the real chunker, not a second one: chunk
+    boundaries from `_chunk_words` are unchanged for every chunk that already
+    fits, which is the overwhelming majority (see the outcome section for the
+    measured split-event count).
+    """
+    try:
+        return [(content_md, _embed(content_md))]
+    except urllib.error.HTTPError as e:
+        body_text = e.read().decode(errors="replace")
+        if "context length" not in body_text.lower() or max_split_depth <= 0:
+            raise
+        words = content_md.split()
+        mid = len(words) // 2
+        if mid == 0:
+            raise
+        return (
+            _embed_allowing_split(" ".join(words[:mid]), max_split_depth - 1)
+            + _embed_allowing_split(" ".join(words[mid:]), max_split_depth - 1)
+        )
+
+
 def _table_to_markdown(rows: list[list[str | None]]) -> str:
     if not rows:
         return ""
@@ -173,6 +213,24 @@ def _extract_document_chunks(pdf_path: Path) -> list[dict[str, Any]]:
     return chunk_specs
 
 
+def _text_to_chunks(text: str) -> list[dict[str, Any]]:
+    """
+    Cycle 005 C3. Returns [{content_md, is_table, page}] for a document whose
+    content arrives as plain text already (e.g. built from DB rows), not a
+    PDF. Calls the SAME _chunk_words chunker _extract_document_chunks uses --
+    the only thing skipped is pdfplumber's page/table extraction, because
+    there is no PDF to extract a page or table FROM. is_table is always
+    False and page is always None: neither concept applies to a document that
+    was never paginated.
+    """
+    target_tokens = _cfg["retrieval"]["chunk_target_tokens"]
+    overlap_tokens = _cfg["retrieval"]["chunk_overlap_tokens"]
+    return [
+        {"content_md": chunk, "is_table": False, "page": None}
+        for chunk in _chunk_words(text, target_tokens, overlap_tokens)
+    ]
+
+
 def ingest(manifest_path: Path) -> None:
     manifest = json.loads(manifest_path.read_text())
     documents_dir = manifest_path.parent
@@ -181,12 +239,22 @@ def ingest(manifest_path: Path) -> None:
     logger.info("Connecting as statesync_ingest...")
     total_chunks = 0
     total_table_chunks = 0
+    total_split_fallbacks = 0
 
     with psycopg.connect(dsn, row_factory=dict_row) as conn:
         with conn.transaction():
             for doc in manifest["documents"]:
-                pdf_path = documents_dir / doc["filename"]
-                logger.info("Ingesting %s (%s)...", doc["filename"], doc["doc_type"])
+                # Cycle 005 C3: a manifest entry carrying "content_md" inline
+                # (a review digest, built from DB rows, not a scanned PDF)
+                # skips PDF extraction entirely but goes through the SAME
+                # _chunk_words chunker and _embed embedding call as the PDF
+                # path below -- neither is bypassed or reimplemented, only
+                # the source-format layer differs.
+                is_inline_text = "content_md" in doc
+                label = doc["document_id"] if is_inline_text else doc["filename"]
+                logger.info("Ingesting %s (%s)...", label, doc["doc_type"])
+
+                tenant_id = doc.get("tenant_id", TENANT_ID)
 
                 conn.execute(
                     """
@@ -196,7 +264,7 @@ def ingest(manifest_path: Path) -> None:
                         title = EXCLUDED.title, doc_type = EXCLUDED.doc_type,
                         source_uri = EXCLUDED.source_uri, party_id = EXCLUDED.party_id
                     """,
-                    {**doc, "tenant_id": TENANT_ID},
+                    {**doc, "tenant_id": tenant_id},
                 )
 
                 # Re-ingest safety: drop this document's existing chunks before
@@ -207,38 +275,58 @@ def ingest(manifest_path: Path) -> None:
                     {"document_id": doc["document_id"]},
                 )
 
-                chunk_specs = _extract_document_chunks(pdf_path)
-                for ordinal, spec in enumerate(chunk_specs):
-                    vector = _embed(spec["content_md"])
-                    chunk_id = f"{doc['document_id']}_c{ordinal:03d}"
-                    conn.execute(
-                        """
-                        INSERT INTO document_chunks
-                            (chunk_id, document_id, tenant_id, ordinal, page, content_md, is_table, embedding)
-                        VALUES
-                            (%(chunk_id)s, %(document_id)s, %(tenant_id)s, %(ordinal)s, %(page)s,
-                             %(content_md)s, %(is_table)s, %(embedding)s)
-                        """,
-                        {
-                            "chunk_id": chunk_id, "document_id": doc["document_id"],
-                            "tenant_id": TENANT_ID, "ordinal": ordinal, "page": spec["page"],
-                            "content_md": spec["content_md"], "is_table": spec["is_table"],
-                            "embedding": "[" + ",".join(repr(float(x)) for x in vector) + "]",
-                        },
-                    )
-                    total_chunks += 1
-                    total_table_chunks += 1 if spec["is_table"] else 0
+                if is_inline_text:
+                    chunk_specs = _text_to_chunks(doc["content_md"])
+                else:
+                    pdf_path = documents_dir / doc["filename"]
+                    chunk_specs = _extract_document_chunks(pdf_path)
 
-                logger.info("  %d chunks (%d table).", len(chunk_specs), sum(1 for c in chunk_specs if c["is_table"]))
+                ordinal = 0
+                for spec in chunk_specs:
+                    pieces = _embed_allowing_split(spec["content_md"])
+                    if len(pieces) > 1:
+                        total_split_fallbacks += 1
+                        logger.warning(
+                            "  chunk exceeded the embedding model's context length; "
+                            "split into %d pieces (see _embed_allowing_split)", len(pieces),
+                        )
+                    for piece_text, vector in pieces:
+                        chunk_id = f"{doc['document_id']}_c{ordinal:03d}"
+                        conn.execute(
+                            """
+                            INSERT INTO document_chunks
+                                (chunk_id, document_id, tenant_id, ordinal, page, content_md, is_table, embedding)
+                            VALUES
+                                (%(chunk_id)s, %(document_id)s, %(tenant_id)s, %(ordinal)s, %(page)s,
+                                 %(content_md)s, %(is_table)s, %(embedding)s)
+                            """,
+                            {
+                                "chunk_id": chunk_id, "document_id": doc["document_id"],
+                                "tenant_id": tenant_id, "ordinal": ordinal, "page": spec["page"],
+                                "content_md": piece_text, "is_table": spec["is_table"],
+                                "embedding": "[" + ",".join(repr(float(x)) for x in vector) + "]",
+                            },
+                        )
+                        ordinal += 1
+                        total_chunks += 1
+                        total_table_chunks += 1 if spec["is_table"] else 0
+
+                logger.info("  %d chunks inserted (%d source specs).", ordinal, len(chunk_specs))
 
         logger.info("Ingestion complete (transaction committed).")
 
     table_pct = 100 * total_table_chunks / total_chunks if total_chunks else 0
     logger.info(
-        "Total: %d documents, %d chunks, %d is_table (%.1f%%). Deliverable 2 requires >= 15%%.",
-        len(manifest["documents"]), total_chunks, total_table_chunks, table_pct,
+        "Total: %d documents, %d chunks, %d is_table (%.1f%%), %d context-length split events.",
+        len(manifest["documents"]), total_chunks, total_table_chunks, table_pct, total_split_fallbacks,
     )
-    if table_pct < 15.0:
+    # Deliverable 2's 15% is_table floor is a property of the PDF policy/SOP/
+    # supplier-agreement corpus (deliberately seeded with tables to make E1-V3
+    # grounding meaningful). A manifest can declare enforce_table_floor=false
+    # for a corpus that is structurally prose-only by construction (a review
+    # digest has no tables) -- defaults to True so the existing manifest.json
+    # is completely unaffected.
+    if manifest.get("enforce_table_floor", True) and table_pct < 15.0:
         logger.error("is_table percentage below the 15%% floor required by Deliverable 2.")
         raise SystemExit(1)
 
