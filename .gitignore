@@ -37,3 +37,11 @@ Thumbs.db
 # Real-data corpora. Never committed: 126MB, and CC BY-NC-SA licensed.
 # Fetch with scripts/fetch_olist.sh; checksums are committed instead.
 data/olist/
+
+# Derivative of the above, verbatim CC BY-NC-SA review text -- 18MB and
+# growing with the corpus. Cycle 006 workstream E (audit 006 F-006-3):
+# was committed for two cycles before anyone checked it against this
+# file's own rule. Deterministic and byte-for-byte reproducible from the
+# checksummed source in ~40s; regenerate on demand, don't commit it.
+# See README.md's ingestion section for the exact command.
+fixtures/documents/olist_review_digests_manifest.json

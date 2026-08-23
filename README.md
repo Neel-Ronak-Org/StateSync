@@ -141,6 +141,28 @@ python scripts/gen_document_corpus.py
 python scripts/ingest.py
 ```
 
+**Optional: the per-seller review-digest corpus** (`olist.order_reviews`,
+2,567 documents — requires the `olist` schema already loaded:
+`scripts/fetch_olist.sh` then `scripts/load_olist.sh`, not otherwise
+documented in this quickstart). Its manifest is **not committed** (`.gitignore`: verbatim CC BY-NC-SA review
+text, same reasoning as `data/olist/` two lines above it) — generate it
+locally, then ingest it the same way:
+```bash
+# 1. Generate the manifest (deterministic, ~40s against the checksummed
+#    olist data; reproduces byte-for-byte on re-run — see the script's
+#    own docstring for how that was verified)
+python scripts/gen_olist_review_digests.py \
+    --out fixtures/documents/olist_review_digests_manifest.json
+
+# 2. Ingest it through the same chunker/embedder as step 6 above
+python scripts/ingest.py --manifest fixtures/documents/olist_review_digests_manifest.json
+```
+Reversible the same way it's isolated: `doc_type='review_digest'` is unique
+to this corpus, so
+`DELETE FROM document_chunks WHERE document_id IN (SELECT document_id FROM documents WHERE doc_type='review_digest'); DELETE FROM documents WHERE doc_type='review_digest';`
+removes exactly this corpus and nothing else (demonstrated live, cycle 006 —
+see `docs/limitations.md`'s review-digest corpus section).
+
 ---
 
 ### 7. Seed the Adversarial Test Corpus (Part F — Security Suite)

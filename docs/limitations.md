@@ -387,6 +387,24 @@ be the data behind a commercial deployment.** That is a real constraint on the
 deployable, this *data* is not sellable. Flagged here rather than discovered
 later by someone who read the strategy document and not the licence.
 
+**A 9.1MB (later 18.4MB) verbatim derivative of this data — `fixtures/
+documents/olist_review_digests_manifest.json` — was committed to this
+repository for two cycles (005 and the start of 006) before this rule was
+checked against it.** Untracked in cycle 006 workstream E (`git rm
+--cached`, added to `.gitignore` beside `data/olist/`); the generator is
+deterministic and reproduces it byte-for-byte in ~40s, so nothing is lost
+by not committing it — see `README.md`'s ingestion section for the exact
+regeneration command. **Untracking does NOT purge git history.** The blob
+is still reachable from every commit between when it was added and when it
+was removed; anyone with access to this repository's history — including
+this repository if it is ever made public — can still retrieve it with
+`git show <commit>:fixtures/documents/olist_review_digests_manifest.json`
+or by checking out an earlier commit. If that matters, it requires a
+history rewrite (e.g. `git filter-repo`), which was NOT done here: it
+rewrites every commit SHA this project's own documentation cites by
+number, and that tradeoff was not this workstream's to make unilaterally
+(`docs/audits/006.md` F-006-3, `docs/cycles/006.md` §2 workstream E).
+
 **The agent can query it, and could before any code changed.** The Layer 1 gate
 is SELECT-only, not table-scoped, so `SELECT ... FROM olist.orders` worked
 immediately while `DELETE FROM olist.orders` was refused — the guarantee
