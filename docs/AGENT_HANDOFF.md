@@ -301,12 +301,25 @@ contact with a real one.
 **Stack:** LangGraph orchestrator · MCP tool server (sole credential holder) ·
 Postgres + PostGIS + pgvector · Qdrant · evaluator · nginx frontend · Ollama.
 
-**Data: TWO corpora as of 2026-08-18.**
-- *synthetic* — 550 orders, 30 sellers, 18 documents, 36 chunks, in `public`.
+**Data: TWO corpora as of 2026-08-18, document corpus enlarged 2026-08-21
+(cycle 005).**
+- *synthetic* — 550 orders, 30 sellers, in `public`. The document corpus
+  within it is no longer 18/36: **18 baseline documents (36 chunks) plus
+  2,567 per-seller review-digest documents (13,125 chunks) built from
+  `olist.order_reviews`**, same `tenant_id='t_capstone_default'`, isolated
+  by `doc_type='review_digest'` (see §7's cycle 005 entry, DEVIATION 1, for
+  why tenant_id isolation was specified and then abandoned mid-build). A5
+  fingerprint unaffected — verified before and after the schema change that
+  admitted the new `doc_type` value. Reversible: `DELETE ... WHERE
+  doc_type='review_digest'` removes exactly the addition, demonstrated live.
 - *real* — **Olist, 1,451,414 rows** (99,441 orders / 3,095 sellers / 100,000
   reviews) in schema `olist`, checksum-verified, CC BY-NC-SA (NON-COMMERCIAL).
   Point the agent at it with `schema_retriever.target_schema = "olist"`.
   It is deliberately outside `public`, so the A5 fingerprint cannot see it.
+  The review digests above are DERIVED from this schema's `order_reviews`
+  table but live in `public`'s `documents`/`document_chunks`, not in `olist`
+  itself — they are retrievable by the live agent today without
+  `target_schema` needing to point anywhere but its shipped default.
 
 Fixtures remain self-authored. Still never run against a standard benchmark
 (BIRD/Spider).
@@ -324,10 +337,10 @@ Fixtures remain self-authored. Still never run against a standard benchmark
 | standard EX — synthetic, original fixture (n=25) | 44% | re-verified 2026-08-16 under the *shipped* `ExecutionAccuracyScorer`; the earlier figure came from a looser in-script definition (`f46e0bf`) and the number happens to be identical |
 | strict EX (this project's scorer) | 36% | unchanged |
 | mean value recall | 74% | **weak metric — do not read as capability.** Unaligned and de-duplicated: a query returning 30 rows for a 1-row answer scores 1.00. Mean *row* recall is **48%** |
-| M8 adversarial | **40/40** — re-run live 2026-08-20 (cycle 004 A3) | was 36/36; +4 payload-count assertions that close a class-empties-silently hole (`dc2e31f`). ⚠ **Was FAILING 39/40 for the whole of cycle 003**, unnoticed until audit 004 (F-004-1): `56a23bf`'s frontend cache-buster broke `verify_e2.py`'s E2-V4 check, and M8 Class 4 delegates to `verify_e2.py`, failing on its exit code. Cause fixed in cycle 004 A1/A2 (below); classes 1–3 and table checksums were clean throughout — this was a reporting failure, not a security regression, but a binary gate reading FAIL is still failing |
+| M8 adversarial | **40/40** — re-run live 2026-08-23 (cycle 005 G4) | was 36/36; +4 payload-count assertions that close a class-empties-silently hole (`dc2e31f`). ⚠ **Was FAILING 39/40 for the whole of cycle 003**, unnoticed until audit 004 (F-004-1): `56a23bf`'s frontend cache-buster broke `verify_e2.py`'s E2-V4 check, and M8 Class 4 delegates to `verify_e2.py`, failing on its exit code. Cause fixed in cycle 004 A1/A2 (below); classes 1–3 and table checksums were clean throughout — this was a reporting failure, not a security regression, but a binary gate reading FAIL is still failing |
 | M9 routing | 0.983 | unchanged |
-| **M6 — grounding (the RAG half)** | context precision **0.622** (n=15, over *cited* chunks) · recall **0.80** (n=15) · faithfulness **0.8125** (n=16) · **4** ungrounded-but-true | **This row did not exist in this table until cycle 003 — the unstructured half was absent from the handoff's own metrics list, which is part of why three cycles skipped it.** The four figures above are the published ones and are UNCHANGED (`docs/bench_grounding_report.json` untouched). ⚠ **Audit 003 found three of the four measured by a defective instrument**, repaired in cycle 003 without altering them: precision divides by *cited* chunks (capped at `citation_max_chunks=3`, so 7 of 8 doc queries sit on a 0.667 ceiling **with recall 1.0**; over *retrieved* chunks it is **0.364** and the attainable ceiling was **0.778**, not 1.0); the judge's factual-correctness "ground truth" was the string `row_count=N`, not an answer value, which caused at least one verified live scoring error; and `4` was the judge's own unvalidated self-report, disagreeing with its itemised claims on 2 of 16 — recounting the published run's own claims gives **2**. A second faithfulness score that also shows the judge the SQL a hybrid answer used is now reported alongside. Corpus is still **18 docs / 36 chunks**. Full account: `docs/limitations.md` § M6 entry, `docs/audits/003.md` |
-| gates | seams **26/26** · pytest **88/88** · **deployed 19/19** · **E2 30/30** · **tenancy 12/12** — all five re-run live 2026-08-20 (cycle 004) | ⚠ **E2 was FAILING 29/30 from cycle 003's `56a23bf` until cycle 004 A1** — `verify_e2.py`'s E2-V4 check asserted a literal substring (`'<script src="app.js"'`) that a legitimate cache-busting query string broke, and that had never once tested for the CDN it was named against (audit 004 F-004-2). Fixed by replacing it with the real two-directional property (`scripts/frontend_asset_checks.py`), now also pinned in `tests/` so a frontend-only commit can't silently break it again. pytest was 68 going into this cycle (24 at cycle 000, additions through cycles 001–003, +15 of those at cycle 003's `test_grounding_scorer.py`), **+20 this cycle** (`tests/test_frontend_asset_checks.py`) = 88. seams/pytest/deployed were re-verified live at cycle 003 too; **this is the first cycle any audit has run tenancy** — first run reproduced 12/12 exactly (`docs/audits/004.md`) |
+| **M6 — grounding (the RAG half)** | context precision **0.622** (n=15, over *cited* chunks) · recall **0.80** (n=15) · faithfulness **0.8125** (n=16) · **4** ungrounded-but-true | **This row did not exist in this table until cycle 003 — the unstructured half was absent from the handoff's own metrics list, which is part of why three cycles skipped it.** The four figures above are the published ones and are UNCHANGED (`docs/bench_grounding_report.json` untouched). ⚠ **Audit 003 found three of the four measured by a defective instrument**, repaired in cycle 003 without altering them: precision divides by *cited* chunks (capped at `citation_max_chunks=3`, so 7 of 8 doc queries sit on a 0.667 ceiling **with recall 1.0**; over *retrieved* chunks it is **0.364** and the attainable ceiling was **0.778**, not 1.0); the judge's factual-correctness "ground truth" was the string `row_count=N`, not an answer value, which caused at least one verified live scoring error; and `4` was the judge's own unvalidated self-report, disagreeing with its itemised claims on 2 of 16 — recounting the published run's own claims gives **2**. A second faithfulness score that also shows the judge the SQL a hybrid answer used is now reported alongside. ⚠ **Corpus is no longer 18 docs / 36 chunks — cycle 005 added 2,567 per-seller review-digest documents (13,125 chunks), same tenant as baseline (`t_capstone_default`; see cycle 005 DEVIATION 1 for why a genuinely distinct tenant would have made the corpus unretrievable), isolated instead by `doc_type='review_digest'`.** The four figures above are UNCHANGED by that ingest — measured both before and after, live, on this same `phase_e1.json` fixture: every summary figure and every one of the 16 queries' retrieved chunk IDs identical, zero review chunks ever retrieved. That is interference on the EXISTING fixture, not a measurement of review-corpus retrieval quality — no ground truth for review-topic questions exists (`docs/limitations.md` § "The review-digest corpus"). Full account: `docs/limitations.md` § M6 entry and § review-digest corpus, `docs/audits/003.md`, `docs/cycles/005.md` C6/C7 |
+| gates | seams **26/26** · pytest **93/93** · **deployed 19/19** · **E2 46/46** · **tenancy 12/12** · **M8 40/40** — all six re-run live 2026-08-23 (cycle 005 G4, after an environment gap — Docker itself had gone down between the build and the final gate run; treated the first, unverifiable completion signal as not done and re-ran everything fresh once the stack was confirmed healthy and the data confirmed to have survived the restart) | ⚠ **E2 was FAILING 29/30 from cycle 003's `56a23bf` until cycle 004 A1** — `verify_e2.py`'s E2-V4 check asserted a literal substring (`'<script src="app.js"'`) that a legitimate cache-busting query string broke, and that had never once tested for the CDN it was named against (audit 004 F-004-2). Fixed by replacing it with the real two-directional property (`scripts/frontend_asset_checks.py`), now also pinned in `tests/` so a frontend-only commit can't silently break it again. pytest was 68 going into cycle 004 (24 at cycle 000, additions through cycles 001–003, +15 of those at cycle 003's `test_grounding_scorer.py`), +20 at cycle 004 (`tests/test_frontend_asset_checks.py`) = 88, **+5 at cycle 005** (`tests/test_nginx_header_checks.py`) = 93. E2's count also moved, **30 → 46**: cycle 005 added a live-response header check (`e2_v4_csp_live`) after finding the frontend had sent **zero** of its four claimed security headers (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy) on every path since `56a23bf` — nginx does not inherit `add_header` into a location block that declares one of its own, and `56a23bf`'s two new location blocks did exactly that. Every prior E2-V4 check read the config file, never a response; fixed in `frontend/nginx.conf`, verified against the live container, not just the repo (audit 005 F-005-1, `docs/cycles/005.md` A1-A5). **This is the first cycle any audit has run tenancy** was cycle 004's claim; still true, tenancy reproduced 12/12 again here |
 
 **Of the 16 remaining M4 failures, 9 are genuine model errors** — not 5. The
 "unrecovered SQL error" category never fired correctly, and correcting it moved
@@ -473,7 +486,91 @@ M6 on one provider only, no repeated-trial baseline of the repaired harness.
 95-word max narrative body against a 512-token target — so a review ingest
 would leave that path just as unexercised (F-004-6).
 
-**No direction is recorded here for cycle 005.** That is the owner's to set,
+### ✅ Direction for cycle 005 — owner delegated the call mid-session, 2026-08-21. DONE; what it found is below.
+
+**It was:** the owner's own instinct, stated while handing off move 3's
+direction call — *"I think it is the review ingest, redesigned"* — which
+audit 005 (below) independently arrived at too, from a different angle
+(F-005-1's CSP finding came first and was fixed ahead of it, but the ingest
+was always going to be the larger piece).
+
+**The redesign mattered more than the ingest.** A raw ingest of the 41,746
+commented `olist.order_reviews` — the form `V2_STRATEGY.md` §3a and cycle
+003 both described — was measured and rejected before being built: comments
+average 11.9 words (max 45) against the 512-token chunk target, so it would
+have left `_chunk_words` exactly as unexercised as F-004-6 found it, one
+document indistinguishable from one chunk. Built instead as **2,567
+per-seller review digests** (one document per seller, all that seller's
+reviews concatenated) — 1,072 of them produced more than one chunk, the
+largest 294, so the chunker split a document for the first time in this
+project's history.
+
+**A real conflict in the plan's own isolation mechanism, found and resolved
+mid-build (DEVIATION 1, `docs/cycles/005.md` §3).** The frozen criteria
+specified a tenant_id genuinely distinct from `t_capstone_default` for
+isolation. Building it surfaced that `orchestrator/main.py` and
+`mcp/tools/vector_tools.py::semantic_search` thread and filter on
+`cfg.tenancy.default_tenant` **unconditionally**, regardless of
+`tenancy.enforced` (A0.6, verbatim) — so a document under a distinct
+tenant_id would never be retrieved by anything, and the whole point of the
+measurement (does adding this corpus interfere with existing retrieval?)
+would have measured nothing. Resolved by ingesting under the same tenant as
+baseline and isolating by `doc_type='review_digest'` instead — zero changes
+to A0.6 or tenant threading, reversibility demonstrated live (`DELETE`
+removed exactly 13,125 chunks / 2,567 documents, verified back to exactly
+18/36, then restored).
+
+**The interference measurement came back a clean null, not a partial one.**
+~365× more competing chunks in the same retrieval space (13,125 vs 36)
+moved *nothing* on the existing 16-query `phase_e1.json` fixture — not the
+aggregate scores, not one query's retrieved chunk IDs, not even a single
+review chunk appearing in any retrieved set that didn't affect a score. The
+plan predicted the opposite (*"I expect context precision to fall"*) and
+required no criterion to move; it didn't. Read plainly, not overclaimed:
+this says the review corpus and the fixture's topics sit far enough apart
+in embedding space that top-k retrieval never crosses between them for
+these 16 queries specifically, which were never designed to probe
+cross-topic interference — it does not establish retrieval is robust to
+scale in general, and no query that WOULD plausibly retrieve a review chunk
+was ever tried (`docs/cycles/005.md` §5.1, the confidence note I would
+weight most).
+
+**Separately, a real product defect fixed ahead of the ingest.** Audit 005
+found the frontend had sent none of its four claimed security headers on
+any path since `56a23bf` — the same commit audit 004 already knew broke two
+other things. `nginx.conf`'s `add_header` does not inherit into a
+`location` block that declares one of its own; `56a23bf`'s two new blocks
+did exactly that. Fixed, and — the actual institutional gap — a check that
+reads a live HTTP response was added where the project had **zero**
+anywhere before; every previous CSP check read the config file as text.
+
+**Gate state at handoff, all six re-verified live 2026-08-23** (after a
+genuine environment gap mid-cycle — real wall-clock time passed, Docker
+itself had gone down, and a background task's "completed" notification
+pointed at a log file that no longer existed; treated as unverified rather
+than trusted, and re-run from a freshly confirmed-healthy stack): seams
+26/26 · pytest 93/93 · deployed 19/19 · E2 46/46 · tenancy 12/12 · M8 40/40.
+
+**Still outstanding after cycle 005** (none of it blocks anything): the four
+remaining items audit 004 carried to `docs/open_items.md` (`c2g_04`'s
+row-count drift, the unasserted fixture-corpus invariant, the misnamed
+`m4_diagnosis_v2_corrected.json`, `build_citations`' missing support
+relation) plus a new one this cycle added alongside the original three
+unfailable queries — `c2g_15`'s filter is a no-op on this data, the
+shipped 7B's pass on it is credited to `WHERE display_name_local IS NOT
+NULL`, and the standard-EX figure this project can defend without caveat
+drops one more notch, to 52.4% over the 21 references that can both fail
+and discriminate. **The RAG half's corpus is no longer synthetic-only** —
+that specific item, outstanding since cycle 000, is closed — but everything
+else it owed is unchanged: M6 on one provider only, and while the repaired
+harness now has a genuine repeated-trial baseline (three runs — cycle 003's
+M2, cycle 005's before-arm, cycle 005's after-arm — all identical on every
+corpus-invariant field), that baseline has never been challenged by a query
+that could plausibly move it. `_embed_allowing_split`'s 2,119 fallback-split
+chunks have never had their boundary quality checked — only that they
+successfully embedded.
+
+**No direction is recorded here for cycle 006.** That is the owner's to set,
 and cycle 000 established the reason it is not pre-written from inside a
 finished cycle: *"Pre-planning it from this side would anchor exactly what
 the seal exists to prevent."*
