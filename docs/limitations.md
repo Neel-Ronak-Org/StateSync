@@ -457,6 +457,60 @@ keys) caused it was never isolated. Both migrations stay in the repo,
 re-appliable. Full accounting: `docs/metrics-report.md` § "Real-data join
 graph".
 
+## Vector retrieval runs on an approximate index — added cycle 006, found investigating an M6 movement
+
+`document_chunks.embedding` is indexed HNSW (`pg_indexes`:
+`USING hnsw (embedding vector_cosine_ops)`) — an **approximate**
+nearest-neighbor structure. This was true before cycle 006; nothing in this
+cycle changed the index type. What changed is that it is now **measured**,
+because cycle 006's B4 re-ingest (adding 7,084 vectors to the existing index)
+moved two of M6's sixteen `phase_e1.json` queries' cited chunk lists, where
+cycle 005's identical before/after comparison had found an exact null.
+
+**Confirmed the movement is the index, not the review corpus.** Zero review
+chunks appear in either affected query's cited list, before or after — the
+diffs are entirely among pre-existing baseline documents this cycle never
+touched. Confirmed the index is deterministic given a fixed graph (repeating
+the same query against the same, current index returns byte-identical
+results) — the movement happened at *ingest* time (when the graph changed),
+not at *query* time.
+
+**Confirmed, by disabling the index and scoring exactly, that the
+approximation is not merely different — it was silently wrong.** For
+`e1_hybrid_005`, the true top-3 by exact cosine similarity is `LP007_c001
+(0.7532) > LP001_c000 (0.7113) > LP007_c000 (0.6693)`; cycle 005's HNSW
+index returned `LP003_c000 (0.6454)` in place of the true rank-2 item —
+which happens to be this query's own expected answer. Cycle 006's index,
+after the unrelated bulk insert, returns the correct top-3. **This was
+never a property of the review ingest being good or bad — it is that this
+project's retrieval has been silently approximate the whole time, and
+nobody had checked whether HNSW's answers were exact before now.**
+
+**Not uniformly a correction — checked the other direction too, so this
+isn't reported one-sided.** For `e1_hybrid_001` (unscored — no ground
+truth in this fixture), the true ranking is a genuine near-tie (`S001_c000
+0.7143 ≈ S005_c000 0.7137 ≈ S025_c000 0.7134`, all within 0.001, with
+`S005_c001` clearly worse at `0.5678`). Cycle 005's index returned the
+correct near-tied trio; cycle 006's substituted the one candidate that
+scores clearly worse. This specific query carries no scored ground truth
+so it moves no published number, but it means the SAME bulk insert made
+one query's retrieval more correct and another's less correct — the net
+effect on any future query is not predictable from this cycle's evidence.
+
+**Does not establish** that HNSW's approximation error is large or small in
+general (two affected queries out of sixteen, on one corpus-size change, is
+not a characterization of the index's typical recall); that any PAST M6
+number is more or less trustworthy than believed (they were all measured
+under the same unexamined approximation, cycle 006 did not re-audit prior
+cycles' figures for this); or that switching to exact search is warranted
+(HNSW's speed/recall tradeoff is a deliberate, common choice, and nothing
+here measures whether the tradeoff is wrong for this corpus size). What it
+does establish: **a corpus-size change can move retrieval results for
+queries that have nothing to do with the added content**, which is a
+property future cycles adding to this corpus should expect, not be
+surprised by. Full investigation, with the exact-score transcripts:
+`docs/cycles/006.md` §4, "B6 — M6 re-run."
+
 ## The review-digest corpus: what it can and cannot support (added cycle 005)
 
 Cycle 005 ingested 2,567 per-seller documents (13,125 chunks) built from
