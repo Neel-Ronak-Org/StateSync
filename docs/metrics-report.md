@@ -119,6 +119,26 @@ to Gemini is an untested extrapolation, not a re-confirmation.
 two are **indistinguishable on this fixture** — not "the hosted model is
 better".
 
+**⚠ Five of the 18 questions state a restriction the data makes invisible**
+(audit 006 F-006-4, cycle 006 C1): `ol_007`, `ol_008`, `ol_012` and the two
+correlated-subquery hard-fixture questions below (`oh_cs01`, `oh_cs03`) each
+name a filter or population restriction in prose that removes zero rows on
+this corpus — verified by executing the ground truth with and without the
+clause and comparing result sets, identical every time. Three of the five
+were demonstrably exploited: the shipped 7B's `ol_012` pass omits the
+`WHERE product_category_name IS NOT NULL` filter entirely, Gemini's `oh_cs01`
+counts over the wrong table, and `oh_cs03`'s "products that have been ordered
+at least once" restriction is dropped — all score correct because the data
+has no case for the restriction to discriminate on (0 unsold products, 0
+sellers without a sale, the top-5 category ranking is identical either way).
+Same failure class as `c2g_15` (audit 005 F-005-2): real transactional data
+is *complete* in ways synthetic data is not (0 orphan rows anywhere in this
+schema — `docs/audits/006.md` verified this directly), so restrictions
+written to exclude an awkward case exclude nothing. **Does not move 88.9% or
+94.4%** — every generated query answers its question correctly either way,
+this is a fixture-instrument caveat, not a wrong pass. No fixture edited;
+same owner judgement call as `c2g_15`. Full write-up: `docs/open_items.md`.
+
 **Do NOT quote 94.4% next to phase_c2's 60%.** The olist fixture is easier in
 three nameable ways, two deliberate: it was authored *after* the phase_c2 audit
 with every question naming its columns and every denominator stated (so the
@@ -295,6 +315,25 @@ here it is 8 of 16. **88.9% does not survive harder questions. 94.4%, on this
 one hard-fixture sample, does** — though n=16 with 0 failures means the upper
 bound on Gemini's true error rate here is not tightly pinned by this sample
 alone.
+
+**⚠ Two of the 16 questions are softer than their own labels** (audit 006
+F-006-5, cycle 006 C2). `oh_j04` is counted in the `_about` block's `join3: 11`
+total, but its ground truth's middle table (`orders`) is a pure pass-through —
+both neighbouring joins key on `order_id` and nothing from `orders` is
+selected or filtered — so a 2-table answer scores identically; both graded
+models generated exactly that 2-table SQL and passed. `oh_j07` defines
+"REPEAT CUSTOMER" in its own question text (a `customer_unique_id` with more
+than one order); Gemini's generated SQL implements a *different* definition
+(counts only orders that have line items), which disagrees with the ground
+truth's definition on 84 of 2,997 customers — invisible here because the
+question's own `LIMIT 5` never reaches a customer where the two definitions
+differ. Cycle 002's safeguard 6 (`hard_classes` vs. the ground truth's own
+table count) cannot catch either: it checks what the *reference SQL* touches,
+not what the *question* actually requires. **Does not move 50.0% or 100.0%**
+— both are correct answers to their questions as posed. Carried to
+`docs/open_items.md` alongside the no-op-restriction entry above; two of the
+five no-op restrictions from that entry (`oh_cs01`, `oh_cs03`) are questions
+in *this* fixture specifically.
 
 **Failures classified** (`scripts/attribute_failures.py
 docs/m4_diagnosis_olist_hard_local7b.json docs/m4_diagnosis_olist_hard_gemini.json`):

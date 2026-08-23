@@ -70,6 +70,18 @@ itself is unaffected, but neither number is the shipped configuration. Full
 caveat and evidence: `docs/metrics-report.md` "Real-data results", added by
 audit 001 F-001-2.
 
+**⚠ Separately again: 5 of the 18 easy-fixture questions (plus 2 of the 16
+hard-fixture questions) state a restriction the data makes invisible** —
+verified by executing the ground truth with the restriction removed and
+getting an identical result set every time (audit 006 F-006-4). Three passes
+are demonstrably credited to a model that dropped the stated restriction
+entirely. Does not move 88.9%/94.4%/50.0%/100.0% — every generated query
+still answers its question correctly; this is a fixture-instrument caveat,
+same class as `c2g_15` (audit 005 F-005-2), not a wrong pass. Separately, 2
+of the 16 hard-fixture questions are answerable by fewer tables/a looser
+definition than their own `hard_classes` label implies (audit 006 F-006-5).
+Full write-up: `docs/metrics-report.md`, `docs/open_items.md`.
+
 **Ranked by measured effect — this table is the reason v2 is shaped the way it
 is:**
 

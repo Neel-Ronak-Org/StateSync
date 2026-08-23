@@ -22,6 +22,8 @@ as the historical record and do not edit them to match this summary.
 | [Three unfailable fixture queries](#three-unfailable-fixture-queries) | `c2g_03`/`c2g_10`/`c2g_18` return zero rows; standard EX scores any empty result correct against an empty reference. 23/23 passes across every run ever made. Published 60.0%; 54.5% over the 22 that can fail | Disclosed at every publication point 2026-08-20 (cycle 004 B2). **Fix is an owner judgment call**, per the fixture's own `_audit` — leave them, or replace the questions | No | Audit 004 F-004-3 |
 | [`c2g_15`'s filter is a no-op](#c2g_15s-filter-is-a-no-op) | "Sellers with a Devanagari display name" matches all 30 sellers, 0 NULLs — a fourth reference that cannot discriminate, by a mechanism distinct from the three above. The shipped 7B's pass is awarded to `WHERE display_name_local IS NOT NULL`, not a script test. Published 60.0% / 54.5%; **52.4% over the 21 references that can both fail and discriminate** | Disclosed at every publication point 2026-08-21 (cycle 005 B1). **Fix is an owner judgment call**, same shape as the row above — seed a Latin-only `display_name_local`, or change the question | No | Audit 005 F-005-2 |
 | [The real-data headline's difficulty caveat did not propagate](#the-real-data-headlines-difficulty-caveat-did-not-propagate) | `olist.json` removes schema linking and ambiguity resolution by construction (12/18 questions name a schema column verbatim, 16/18 single-table) — `metrics-report.md` states this correctly, but `AGENT_HANDOFF.md` and `V2_STRATEGY.md` compressed it to the single word "well-specified", where no reader would decode it. Same defect class as audit 002 F-002-6, never applied to the easy fixture | **Caveat propagated 2026-08-23** (post-cycle-005 follow-up, owner-raised). Underlying question — whether to keep publishing a schema-guided figure as the real-data headline at all — **open, and an owner call** | No | Raised by the owner reading the handoff, 2026-08-23 |
+| [Five real-data questions state a restriction the data makes invisible](#five-real-data-questions-state-a-restriction-the-data-makes-invisible) | `ol_007`/`ol_008`/`ol_012`/`oh_cs01`/`oh_cs03` each state a population/denominator restriction that removes zero rows on this corpus. Three passes demonstrably credited to a model that dropped the stated restriction — same failure class as `c2g_15`, real data being *complete* (0 orphans anywhere) rather than the fixture's own defect | Disclosed at every publication point 2026-08-23 (cycle 006 C1). **Fix is an owner judgment call**, same shape as `c2g_15` — neither fixture edited | No | Audit 006 F-006-4 |
+| [Two hard-fixture questions are softer than their own labels](#two-hard-fixture-questions-are-softer-than-their-own-labels) | `oh_j04` (labelled `join3`) is answerable with 2 tables — its middle table is a pure pass-through; `oh_j07` defines "repeat customer" and Gemini's SQL implements a different definition, disagreeing on 84/2,997 customers, hidden by the question's own `LIMIT 5`. Cycle 002's safeguard 6 checks the reference's table count, not the question's requirement | Disclosed at every publication point 2026-08-23 (cycle 006 C2). Fixture not edited — relabelling `oh_j04` or tightening safeguard 6 is an owner call | No | Audit 006 F-006-5 |
 | [M3 regression](#m3-regression) | D-V1 lift halved and D-V2 entity preservation dropped since Phase D. **Separation run done:** memory-flip candidate REFUTED; ~20 of the 35 lost English points traced to `c2g_10` misrouting; residual ~15 points still unattributed | Partly closed — one cause identified and shared with `c2g_10`, residual open | No for the identified cause (a routing defect, fixable now); the residual is re-measured by the graded re-baseline anyway | Routing half → fix with `c2g_10`; residual → needs a draft-first toggle that does not yet exist |
 
 ---
@@ -797,6 +799,123 @@ cheap, unambiguous fix available — seed one seller's `display_name_local`
 with a Latin-only value so the filter has something to exclude — that does not
 require replacing the question or accepting a permanently attached caveat.
 That is still a fixture edit, so it is still the owner's call, not made here.
+
+---
+
+## Five real-data questions state a restriction the data makes invisible
+
+*Added 2026-08-23, cycle 006 (audit 006 F-006-4). Disclosed, not fixed —
+same shape of owner judgment call as the two sections above, and routed the
+same way. This is the same failure class as `c2g_15`, found in the real-data
+fixtures audit 005 named as the largest hole in its own audit — "on a
+1.45M-row corpus that class of defect is more likely, not less, and I did
+not check for it."*
+
+`ol_007`, `ol_008`, and `ol_012` (`fixtures/golden/olist.json`), plus
+`oh_cs01` and `oh_cs03` (`fixtures/golden/olist_hard.json`), each state a
+population or denominator restriction in prose — exactly the kind of
+disambiguation the fixtures' own `self_authored_warning` names as a
+deliberate safeguard (*"every ambiguous denominator is stated in the
+question text"*). On this corpus, each restriction removes zero rows:
+
+| id | restriction stated | verified no-op by |
+|---|---|---|
+| `ol_007` | "Considering ONLY orders that have a delivery date recorded" | `avg()` skips NULL regardless; identical result with the `WHERE` clause removed |
+| `ol_008` | same restriction | `NULL > x` is never true; identical result with the `IS NOT NULL` removed |
+| `ol_012` | ground truth's `WHERE product_category_name IS NOT NULL` | the 610-row NULL group never reaches the top-5 either way; identical top-5 |
+| `oh_cs01` | "sellers" (implicitly: all of them, as a population) | 0 of 3,095 sellers have never sold — every seller appears in `order_items` |
+| `oh_cs03` | "among products that have been ordered at least once" | 0 of 32,951 products have never been ordered — the restricted and unrestricted populations are identical |
+
+**Three passes are demonstrably credited to a model that dropped the stated
+restriction, not merely unaffected by it:**
+
+- `ol_012`: the shipped 7B's generated SQL omits the `IS NOT NULL` filter
+  entirely (`docs/m4_diagnosis_olist_local7b.json`), scored correct.
+- `oh_cs01`: Gemini's generated SQL counts `DISTINCT seller_id` over
+  `order_items`, not `sellers` — a different population than the question
+  asks about — and lands on the same number, 1,161, because there is no
+  seller absent from `order_items` for the two populations to disagree on.
+- `oh_cs03`: the shipped 7B's generated SQL applies the `NOT EXISTS` check
+  to `olist.products` directly, never restricting to products that have been
+  ordered, and lands on the same number, 23,666.
+
+**Does not move any published figure.** 88.9%, 94.4%, 50.0%, and 100.0% are
+all unaffected — unlike `c2g_15`, none of these five is a case of SQL that
+answers a *different* question being scored correct; each generated query
+is a correct, defensible answer to the question as literally posed. The
+caveat is about what the fixtures' own safeguard claims to test, not about
+any pass being wrong.
+
+**The generalisable cause, worth naming because it will recur:** real
+transactional data is *complete* in ways synthetic seed data is not — this
+corpus has zero orphan `order_items`, zero orphan `order_payments`, zero
+sellers absent from `order_items`, zero products never ordered (verified
+directly, `docs/audits/006.md` F-006-4). A restriction written to exclude
+an awkward case excludes nothing when the corpus contains no awkward case.
+Every future fixture written against `olist` inherits this risk.
+
+**Disclosed at every publication point** 2026-08-23 (cycle 006 C1):
+`AGENT_HANDOFF.md`, `V2_STRATEGY.md`, `metrics-report.md`. **Neither fixture
+was edited.**
+
+---
+
+## Two hard-fixture questions are softer than their own labels
+
+*Added 2026-08-23, cycle 006 (audit 006 F-006-5). Disclosed, not fixed —
+routed the same way as the section above.*
+
+`fixtures/golden/olist_hard.json`'s own `_about` block states its purpose
+plainly: *"Built to test whether 88.9%/94.4% on the easy fixture is real or
+an artifact of easy questions"* — every question is meant to require a
+join across ≥3 tables, a correlated subquery, or a window function. Two of
+the sixteen do not hold up to that claim, by two different mechanisms:
+
+**`oh_j04` is labelled `join3` (11 questions carry this label) and is
+answerable with a 2-table join.** The ground truth joins
+`order_payments → orders → order_items`, but `orders` is a pure
+pass-through — both neighbouring joins key on `order_id`, and nothing from
+`orders` is selected or filtered. Both graded models generated the 2-table
+form and scored correct:
+
+```
+GT (3 tables):  order_payments JOIN orders JOIN order_items
+GEN (2 tables): order_payments JOIN order_items   -- orders dropped entirely
+```
+
+Both queries return the identical result — `credit_card|2951 boleto|2010
+voucher|1046` — because 0 of the corpus's `order_items`/`order_payments`
+rows are orphaned from `orders` (verified directly). Cycle 002's safeguard
+6 (*"every join3 label is checked against the ground truth's own
+distinct-table count"*, added for audit 002 F-002-7) cannot catch this: the
+ground truth genuinely touches 3 tables, so the label passes its own check.
+What safeguard 6 checks is the *reference SQL's* table count, not whether
+the *question* actually requires that many.
+
+**`oh_j07` defines "REPEAT CUSTOMER" in the question text, and the fixture
+never tests whether a generated answer implements that definition.** The
+question states: *"A REPEAT CUSTOMER is a customer_unique_id that placed
+more than one order."* The ground truth implements exactly that. Gemini's
+generated SQL implements a different definition — a customer counts as
+repeat only if more than one of their orders has line items in
+`order_items` — which disagrees with the question's own definition on 84 of
+2,997 customers (verified: `gt_repeat=2997, gen_repeat=2913,
+in_gt_only=84`). This is invisible in the score because the question's own
+`LIMIT 5` selects the highest-item customers, none of whom are among the 84
+where the definitions diverge.
+
+**Does not move 50.0% or 100.0%.** Both models' generated SQL is a correct
+answer to its question — `oh_j04`'s 2-table form and `oh_j07`'s alternate
+repeat-customer definition both happen to be extensionally correct on this
+data, the same shape as the no-op-restriction section above. This entry is
+about what the fixture's difficulty labelling claims, not about a wrong
+pass.
+
+**Disclosed at every publication point** 2026-08-23 (cycle 006 C2):
+`AGENT_HANDOFF.md`, `V2_STRATEGY.md`, `metrics-report.md`. **The fixture
+was not edited** — re-labelling `oh_j04` or tightening safeguard 6 to check
+question-necessity rather than reference-table-count is a fixture change
+and an owner call, not made here.
 
 ---
 
