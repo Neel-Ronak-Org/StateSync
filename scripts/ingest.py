@@ -45,7 +45,6 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-import pdfplumber
 import psycopg
 from psycopg.rows import dict_row
 
@@ -114,6 +113,85 @@ def _embed(text: str) -> list[float]:
             f"(expected {expected_dim}, got {len(vector) if isinstance(vector, list) else 'N/A'})."
         )
     return vector
+
+
+_BATCH_SIZE = 50
+
+# Belt-and-suspenders guard for the ONE thing _batch_embed cannot detect on
+# its own (silent truncation, no error, see its docstring). Set well below
+# gen_olist_review_digests.py's own SECTION_WORD_BUDGET=60 -- no, ABOVE it,
+# deliberately: this is a safety NET catching anything that violates the
+# packer's guarantee, not a second copy of the packer's own budget. Chosen
+# from the same live measurement the packer's 60 came from: 90 words showed
+# 1/20 failures on the corpus's densest documents against the endpoint that
+# actually rejects; everything at or under 90 that's routed here still goes
+# through that same rejecting endpoint via _embed_one_review_section, never
+# through the silently-truncating batch one.
+_SAFE_BATCH_WORD_LIMIT = 90
+
+
+def _batch_embed(texts: list[str]) -> list[list[float]]:
+    """
+    Cycle 006 B4 (performance fix, found live during this cycle's own build).
+    Embeds many SHORT, PRE-VERIFIED-SAFE texts via Ollama's `/api/embed`
+    endpoint (plural `input`), `_BATCH_SIZE` at a time, instead of one
+    `/api/embeddings` call (singular `prompt`) per text.
+
+    WHY THIS EXISTS. The single-call path is correct but was measured live,
+    under sustained load, at ~1.38s/call on this (CPU-only, num-parallel=1)
+    Ollama server -- 20,209 individual review-digest sections at that rate is
+    ~7.8 hours. Batches of 50 measured at ~1.6s/batch -- **~43x faster**,
+    confirmed numerically IDENTICAL to the single-call path for the same text
+    (max component diff ~3e-8, floating-point noise) -- so this is a
+    throughput fix, not a different embedding.
+
+    THE REAL DANGER, VERIFIED LIVE, WHY THIS MUST STAY CALLER-RESTRICTED.
+    Unlike `/api/embeddings` (which rejects an over-length input with HTTP
+    500 `"the input length exceeds the context length"`, which is what
+    `_embed_one_review_section`'s fallback catches and recurses on), `/api/
+    embed` does NOT reject an over-length input -- it SILENTLY TRUNCATES.
+    Verified: a 400-word, a 200-word, and a 5000-word slice of the SAME text
+    sent through this endpoint returned byte-identical embeddings (the
+    400-word and 5000-word vectors differed by exactly 0.0). No error, no
+    warning, no way to detect it from the response.
+
+    Consequence: **only call this with texts already independently verified
+    short enough that the real context length is never approached** --
+    `gen_olist_review_digests.py::_digest_sections`' `SECTION_WORD_BUDGET=60`
+    is exactly that verification (0/20 failures on the corpus's 20 densest
+    documents' longest sections, tested against the STRICTER endpoint that
+    actually rejects). Never call this with `_chunk_words` output, PDF
+    extraction output, or anything else whose length was not independently
+    bounded this way -- use `_embed_allowing_split` (PDF/general path) or
+    `_embed_one_review_section` (review-section fallback path) instead,
+    both of which rely on the single-call endpoint's real rejection
+    behaviour to detect and correctly handle an oversized input.
+    """
+    ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434")
+    model = _cfg["retrieval"]["embedding_model"]
+    expected_dim = _cfg["retrieval"]["embedding_dim"]
+    timeout_s = _cfg["retrieval"]["embedding_timeout_s"] * 4  # a batch takes longer than one item
+
+    vectors: list[list[float]] = []
+    for i in range(0, len(texts), _BATCH_SIZE):
+        batch = texts[i:i + _BATCH_SIZE]
+        payload = json.dumps({"model": model, "input": batch}).encode()
+        req = urllib.request.Request(
+            f"{ollama_url.rstrip('/')}/api/embed", data=payload,
+            headers={"Content-Type": "application/json"}, method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+            body = json.loads(resp.read())
+        embs = body.get("embeddings")
+        if (not isinstance(embs, list) or len(embs) != len(batch)
+                or any(not isinstance(e, list) or len(e) != expected_dim for e in embs)):
+            raise RuntimeError(
+                f"Batch embedding response invalid: expected {len(batch)} "
+                f"vectors of dim {expected_dim}, got "
+                f"{len(embs) if isinstance(embs, list) else 'N/A'}."
+            )
+        vectors.extend(embs)
+    return vectors
 
 
 def _embed_allowing_split(content_md: str, max_split_depth: int = 4) -> list[tuple[str, list[float]]]:
@@ -243,6 +321,13 @@ def _chunk_words(text: str, target_tokens: int, overlap_tokens: int) -> list[str
 
 def _extract_document_chunks(pdf_path: Path) -> list[dict[str, Any]]:
     """Returns [{content_md, is_table, page}], in reading order."""
+    import pdfplumber  # lazy: only the PDF path needs it (cycle 006 B4).
+    # scripts/ingest.py otherwise only needs psycopg -- already present in
+    # the mcp container, which does NOT have pdfplumber installed -- so an
+    # inline-text-only (review-digest) manifest can run entirely inside mcp,
+    # working around the same Docker Desktop host-port-publishing flakiness
+    # for `postgres` documented in docs/phase_e1_log.md §7 item 8, without
+    # installing a PDF-parsing dependency somewhere that never parses a PDF.
     chunk_specs: list[dict[str, Any]] = []
     target_tokens = _cfg["retrieval"]["chunk_target_tokens"]
     overlap_tokens = _cfg["retrieval"]["chunk_overlap_tokens"]
@@ -351,10 +436,44 @@ def ingest(manifest_path: Path) -> None:
                     pdf_path = documents_dir / doc["filename"]
                     chunk_specs = _extract_document_chunks(pdf_path)
 
+                if has_sections:
+                    # Cycle 006 B4 performance fix: batch-embed via
+                    # _batch_embed (~43x faster than one _embed call per
+                    # section, measured live). Safe ONLY because every
+                    # section is independently verified under
+                    # _SAFE_BATCH_WORD_LIMIT -- anything that somehow isn't
+                    # (should never happen given _digest_sections'
+                    # SECTION_WORD_BUDGET=60, but checked rather than
+                    # assumed) is routed to the single-call, properly-
+                    # rejecting, review-boundary-aware fallback instead of
+                    # being silently truncated by the batch endpoint. See
+                    # _batch_embed's docstring for why this split is
+                    # non-negotiable.
+                    batchable_idx = [
+                        i for i, spec in enumerate(chunk_specs)
+                        if len(spec["content_md"].split()) <= _SAFE_BATCH_WORD_LIMIT
+                    ]
+                    unsafe_idx = [i for i in range(len(chunk_specs)) if i not in batchable_idx]
+                    if unsafe_idx:
+                        logger.warning(
+                            "  %d of %d sections exceeded the %d-word batch safety "
+                            "limit; routed to the single-call fallback instead of "
+                            "the batch endpoint.", len(unsafe_idx), len(chunk_specs),
+                            _SAFE_BATCH_WORD_LIMIT,
+                        )
+                    batch_vectors = _batch_embed(
+                        [chunk_specs[i]["content_md"] for i in batchable_idx]
+                    ) if batchable_idx else []
+                    all_pieces: list[list[tuple[str, list[float]]]] = [None] * len(chunk_specs)  # type: ignore[list-item]
+                    for i, vec in zip(batchable_idx, batch_vectors):
+                        all_pieces[i] = [(chunk_specs[i]["content_md"], vec)]
+                    for i in unsafe_idx:
+                        all_pieces[i] = _embed_one_review_section(chunk_specs[i]["content_md"])
+                else:
+                    all_pieces = [_embed_allowing_split(spec["content_md"]) for spec in chunk_specs]
+
                 ordinal = 0
-                for spec in chunk_specs:
-                    embedder = _embed_one_review_section if has_sections else _embed_allowing_split
-                    pieces = embedder(spec["content_md"])
+                for spec, pieces in zip(chunk_specs, all_pieces):
                     if len(pieces) > 1:
                         total_split_fallbacks += 1
                         logger.warning(
