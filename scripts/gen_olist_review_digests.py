@@ -11,11 +11,40 @@ commented reviews average 11.9 words (max 45) against this project's
 512-token chunk target (`config/statesync.toml [retrieval]`), so a raw
 ingest leaves `_chunk_words` exactly as unexercised as F-004-6 found it --
 every chunk would still be a whole "document." Grouped per seller instead,
-2,567 sellers have >= 1 commented review, median digest length 56 words,
-max 12,426, and 246 exceed the 512-word chunk target -- so the real
-`scripts/ingest.py` chunker splits a document for the first time in this
-project's history (verified live, not asserted: see docs/audits/005.md and
-docs/cycles/005.md C4).
+2,567 sellers have >= 1 commented review (42,007 seller x review pairs --
+a seller with a multi-item order can pull in the same review more than
+once via the order_items join below, so this is NOT the same count as the
+41,746 distinct commented reviews above; both are real, they are different
+quantities), median digest length 84 words, max 17,704, and **349** exceed
+the 512-word chunk target -- so the real `scripts/ingest.py` chunker splits
+a document for the first time in this project's history (verified live,
+not asserted: see docs/audits/005.md and docs/cycles/005.md C4).
+**These figures were re-measured twice, 2026-08-23 (cycle 006 A2/A3, audit
+006 F-006-1 and its second amendment).** First correction: the original
+docstring's 56/12,426/246 did not reproduce by running this same,
+unchanged, verified-deterministic script. Second correction, found while
+building A3's pinning test: the FIRST correction's word-count method
+(`content_md.count(" ") + 1`, this file's own diagnostic below) itself
+undercounts, because content_md is newline-heavy and `count(" ")` does not
+treat a newline as a word boundary the way `_chunk_words`' `str.split()`
+does. Calling `_chunk_words` directly -- the function whose behaviour this
+number is supposed to describe -- against the same manifest text gives
+**349**, an exact subset of the 1,054 review documents the live database
+shows split, not 313. The diagnostic below now counts words the same way
+`_chunk_words` does, so it will not silently drift from the chunker's own
+logic again. See docs/audits/006.md's second amendment for the transcript.
+Separately -- audit 006 F-006-1a -- **349 is the count that matters for the
+"chunker split a document" claim above.** A different figure, 1,072, is
+published elsewhere (docs/limitations.md, docs/AGENT_HANDOFF.md) for "how
+many documents ended up with more than one chunk in the database"; that
+count also includes 18 baseline documents that were already multi-chunk
+before this generator ever ran, and 705 documents this generator emitted
+as ONE chunk that only became multiple chunks via ingest.py's
+`_embed_allowing_split` context-length fallback, not via this script or
+`_chunk_words`. Do not conflate the two counts; they measure different
+things and neither is a typo for the other. (18 + 349 + 705 = 1,072,
+exactly -- the arithmetic reconciles even though the published attribution
+did not.)
 
 DETERMINISM (C2). The SQL orders sellers by seller_id and each seller's
 reviews by review_id, both stable sort keys already unique in the source
@@ -30,11 +59,19 @@ that, and docs/limitations.md says so (C8). It exists to measure what
 ~100x the retrieval-space chunk count does to the EXISTING 16 E1 queries
 (interference), which is a corpus-scale question, not a translation one.
 
-REVERSIBLE BY CONSTRUCTION (C5). Every digest is written with
-`tenant_id=REVIEW_DIGEST_TENANT_ID` (distinct from the baseline corpus's
-`t_capstone_default`), so the entire corpus can be removed with one
-`DELETE ... WHERE tenant_id = ...` and the baseline is untouched by
-construction, not by care.
+REVERSIBLE BY CONSTRUCTION (C5). **Corrected 2026-08-23 (cycle 006 A2) --
+this paragraph described the plan as frozen, not what shipped; see
+DEVIATION 1 below the imports for why it changed mid-build.** Every digest
+is written to `documents.tenant_id` / `document_chunks.tenant_id` =
+`INGEST_TENANT_ID` (`t_capstone_default`, the SAME value as the baseline
+corpus -- distinct tenant_id turned out to make the corpus unretrievable
+by the live orchestrator, see DEVIATION 1). Isolation and reversibility
+use `doc_type='review_digest'` instead: no baseline document has ever used
+that value, so `DELETE ... WHERE doc_type = 'review_digest'` removes
+exactly this corpus and the baseline is untouched by construction, not by
+care. `REVIEW_DIGEST_TENANT_ID` below is retained as a `provenance_tenant_
+label` field for traceability -- it is not what isolates or reverses
+anything.
 
 Reads via `statesync_reader` (SELECT-only) directly against postgres,
 following the pattern scripts/check_dv6_spatial.py already uses for a
@@ -175,7 +212,17 @@ def main() -> None:
 
     manifest = build_manifest()
     docs = manifest["documents"]
-    words = [d["content_md"].count(" ") + 1 for d in docs]
+    # word count MUST use the same tokenisation as ingest.py::_chunk_words
+    # (str.split(), i.e. any whitespace run -- newlines included), not a
+    # literal-space count. content_md is newline-heavy (one line per review
+    # header, one per body, blank separators), so `.count(" ") + 1`
+    # systematically UNDERCOUNTS: verified live, cycle 006 A2/A3 (audit 006
+    # F-006-1 amendment) -- the literal-space proxy said 313 documents
+    # exceeded the 512-word chunk target; calling the real `_chunk_words`
+    # against the same manifest actually splits 349, an exact subset of
+    # what the live database shows split. The proxy was wrong; this counts
+    # words the way the chunker that acts on this text counts them.
+    words = [len(d["content_md"].split()) for d in docs]
     over_512 = sum(1 for w in words if w > 512)
 
     print(f"Sellers with >= 1 commented review: {len(docs)}")

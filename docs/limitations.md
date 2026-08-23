@@ -519,20 +519,67 @@ would retrieve correctly, or that the chunker's now-exercised split path (see
 below) produces chunks of good retrieval quality — none of that was measured.
 
 **What the ingest DID newly exercise, measured directly against the
-database.** `_chunk_words` had never split a document before this cycle
-(F-004-6). It now has: 1,072 of the 2,567 review documents produced more than
-one chunk, the largest producing 294. Separately, `mxbai-embed-large`'s real
-context limit (512 tokens, `ollama show mxbai-embed-large` →
-`bert.context_length=512`) is smaller than `_chunk_words`' 512-WORD
-approximation for this text — Portuguese subword tokenization is denser than
-the approximation assumes, confirmed live (a 1,709-word digest's first chunk
-was rejected outright by the embedding call, HTTP 500,
-`"the input length exceeds the context length"`). 2,119 of the corpus's chunks
-needed the recursive halving fallback added to handle this
-(`scripts/ingest.py::_embed_allowing_split`) before they would embed. Neither
-of these paths has ever been exercised by the original 36-chunk corpus, and
-neither has a quality measurement — only "it eventually embedded successfully"
-is verified, not "the resulting chunk boundary is a good one."
+database — corrected 2026-08-23 (cycle 006 A1, audit 006 F-006-1/F-006-1a).**
+The published figure here previously read *"1,072 of the 2,567 review
+documents produced more than one chunk"* and attributed all of it to
+`_chunk_words` finally splitting a document (F-004-6). That count is real but
+was measured over the wrong population and attributed to the wrong mechanism.
+Measured against all 2,585 documents in the corpus (18 baseline + 2,567
+review), it decomposes three ways:
+
+| documents | split by | pre-existing? |
+|---|---|---|
+| **18** | `_extract_document_chunks`'s table/narrative separation — one table chunk, one narrative chunk each | **Yes — multi-chunk since before this cycle. These are F-004-6's own subject.** |
+| **705** | `_embed_allowing_split`, the context-length fallback (see below), on digests that were ≤512 words | No |
+| **349** | `_chunk_words`, on digests over the 512-word target | No |
+
+So `_chunk_words` really did split a document for the first time this cycle —
+**349**, not 1,072 — and the 18 baseline documents were never evidence of
+that: they were multi-chunk *before* this ingest, and are literally the corpus
+F-004-6 diagnosed as "the chunker has never chunked." A test pinning this
+decomposition lives at `tests/test_review_chunk_split_attribution.py`.
+
+**This table went through two corrections, not one, and the second was caught
+building that test, not by a fresh audit — recorded here in full rather than
+silently fixed.** The first correction (immediately above) fixed the
+population and the attribution. Building the pinning test then surfaced that
+its own 313/741 split was *itself* measured wrong: the generator's diagnostic
+print computed word count as `content_md.count(" ") + 1`, a literal-space
+count, while `_chunk_words` — the function the claim is about — tokenises
+with `str.split()`, which also treats a newline as a word boundary. Digest
+text is newline-heavy (one line per review header, one per body), so the
+proxy undercounts. Calling `_chunk_words` directly against the same manifest
+text — which is what the pinning test does, not the generator's diagnostic —
+gives the table's real figures, **349** and **705**, confirmed an exact
+subset of the 1,054 review documents the live database shows split
+(`real_split ⊆ db_multi`, `|real_split| = 349`). The generator's diagnostic
+now tokenises the same way `_chunk_words` does
+(`scripts/gen_olist_review_digests.py`, cycle 006 A2/A3), so it cannot drift
+from the function it describes again. 18 + 349 + 705 = 1,072 exactly — the
+arithmetic behind the original published figure was never wrong; only its
+attribution, twice now. Full transcript of both corrections:
+`docs/audits/006.md` F-006-1a and its second amendment.
+
+Separately, `mxbai-embed-large`'s real context limit (512 tokens, `ollama show
+mxbai-embed-large` → `bert.context_length=512`) is smaller than
+`_chunk_words`' 512-WORD approximation for this text — Portuguese subword
+tokenization is denser than the approximation assumes, confirmed live (a
+1,709-word digest's first chunk was rejected outright by the embedding call,
+HTTP 500, `"the input length exceeds the context length"`). 2,119 of the
+corpus's *input* chunks needed the recursive halving fallback added to handle
+this (`scripts/ingest.py::_embed_allowing_split`) before they would embed.
+**The fallback is not a rare exception to `_chunk_words`' boundaries — it is
+the dominant regime.** Measured directly (audit 006 F-006-1): no chunk in the
+persisted corpus exceeds 154 words against the 512-token target, and 11,612 of
+13,125 chunks (88.5%) sit in a document that the fallback split, not the
+16%-of-input-chunks figure cycle 005's own confidence section estimated
+(`docs/cycles/005.md` §5.3 — left as written there; cycle files are the
+historical record and are not edited retroactively, per this file's own
+practice). Neither path has a quality measurement — only "it eventually
+embedded successfully" is verified, not "the resulting chunk boundary is a
+good one" — and `docs/audits/006.md` F-006-2 found the boundaries are not
+good: 94.9% of continuation chunks begin mid-review. See "Addressability"
+below for what cycle 006 did about it.
 
 **Reversible by construction, demonstrated not asserted.** Because the corpus
 carries `doc_type='review_digest'` and no baseline document has ever used that

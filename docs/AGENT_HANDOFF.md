@@ -501,9 +501,23 @@ average 11.9 words (max 45) against the 512-token chunk target, so it would
 have left `_chunk_words` exactly as unexercised as F-004-6 found it, one
 document indistinguishable from one chunk. Built instead as **2,567
 per-seller review digests** (one document per seller, all that seller's
-reviews concatenated) — 1,072 of them produced more than one chunk, the
-largest 294, so the chunker split a document for the first time in this
-project's history.
+reviews concatenated) — **349** of them exceeded the 512-word target and were
+split by `_chunk_words` itself, the largest into 294 chunks, so the chunker
+split a document for the first time in this project's history.
+**✎ CORRECTED 2026-08-23 (cycle 006 A1-A3, audit 006 F-006-1/F-006-1a and its
+second amendment).** This line previously said "1,072 of them produced more
+than one chunk" and credited all of it to `_chunk_words`. That count was
+measured over all 2,585 documents in the corpus, not the 2,567 review
+digests: 18 of it are the baseline documents, multi-chunk *before* this
+ingest via table/narrative separation — literally the documents F-004-6
+diagnosed as unsplit — and **705** more are digests the embedding-context
+fallback split, not `_chunk_words`. (A second pass found this correction's
+own first-draft figure, 313, was itself a proxy-measurement error — see
+`docs/limitations.md` for the full account of both corrections.) See
+`docs/limitations.md` § "What the ingest DID newly exercise" for the full
+three-way decomposition and why the criterion that asked for this count
+(`docs/cycles/005.md` C4) could not have specified which mechanism, because
+the fallback did not exist when it was frozen.
 
 **A real conflict in the plan's own isolation mechanism, found and resolved
 mid-build (DEVIATION 1, `docs/cycles/005.md` §3).** The frozen criteria
