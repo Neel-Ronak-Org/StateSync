@@ -302,16 +302,24 @@ contact with a real one.
 Postgres + PostGIS + pgvector · Qdrant · evaluator · nginx frontend · Ollama.
 
 **Data: TWO corpora as of 2026-08-18, document corpus enlarged 2026-08-21
-(cycle 005).**
+(cycle 005) and re-chunked 2026-08-23 (cycle 006).**
 - *synthetic* — 550 orders, 30 sellers, in `public`. The document corpus
   within it is no longer 18/36: **18 baseline documents (36 chunks) plus
-  2,567 per-seller review-digest documents (13,125 chunks) built from
-  `olist.order_reviews`**, same `tenant_id='t_capstone_default'`, isolated
-  by `doc_type='review_digest'` (see §7's cycle 005 entry, DEVIATION 1, for
-  why tenant_id isolation was specified and then abandoned mid-build). A5
-  fingerprint unaffected — verified before and after the schema change that
-  admitted the new `doc_type` value. Reversible: `DELETE ... WHERE
-  doc_type='review_digest'` removes exactly the addition, demonstrated live.
+  2,567 per-seller review-digest documents, now 20,209 chunks (was 13,125
+  at cycle 005) built from `olist.order_reviews`**, same
+  `tenant_id='t_capstone_default'`, isolated by `doc_type='review_digest'`
+  (see §7's cycle 005 entry, DEVIATION 1, for why tenant_id isolation was
+  specified and then abandoned mid-build). **Cycle 006 rebuilt the chunk
+  emission** — every chunk now carries its seller's identity and respects
+  review boundaries (verified 100%: 20,209/20,209 and 0/20,209), where
+  before 80.4% of chunks carried no seller-id text at all and 94.9% of
+  continuation chunks began mid-review. See §7's cycle 006 entry and
+  `docs/limitations.md` § "Addressability" for the mechanism, and the M6
+  row below for what else moved as a side effect. A5 fingerprint
+  unaffected — verified before/after the original cycle 005 schema change
+  AND before/after cycle 006's re-ingest. Reversible: `DELETE ... WHERE
+  doc_type='review_digest'` removes exactly the addition, demonstrated live
+  twice now (cycle 005, and again at the new chunk count in cycle 006).
 - *real* — **Olist, 1,451,414 rows** (99,441 orders / 3,095 sellers / 100,000
   reviews) in schema `olist`, checksum-verified, CC BY-NC-SA (NON-COMMERCIAL).
   Point the agent at it with `schema_retriever.target_schema = "olist"`.
@@ -339,8 +347,8 @@ Fixtures remain self-authored. Still never run against a standard benchmark
 | mean value recall | 74% | **weak metric — do not read as capability.** Unaligned and de-duplicated: a query returning 30 rows for a 1-row answer scores 1.00. Mean *row* recall is **48%** |
 | M8 adversarial | **40/40** — re-run live 2026-08-23 (cycle 005 G4) | was 36/36; +4 payload-count assertions that close a class-empties-silently hole (`dc2e31f`). ⚠ **Was FAILING 39/40 for the whole of cycle 003**, unnoticed until audit 004 (F-004-1): `56a23bf`'s frontend cache-buster broke `verify_e2.py`'s E2-V4 check, and M8 Class 4 delegates to `verify_e2.py`, failing on its exit code. Cause fixed in cycle 004 A1/A2 (below); classes 1–3 and table checksums were clean throughout — this was a reporting failure, not a security regression, but a binary gate reading FAIL is still failing |
 | M9 routing | 0.983 | unchanged |
-| **M6 — grounding (the RAG half)** | context precision **0.622** (n=15, over *cited* chunks) · recall **0.80** (n=15) · faithfulness **0.8125** (n=16) · **4** ungrounded-but-true | **This row did not exist in this table until cycle 003 — the unstructured half was absent from the handoff's own metrics list, which is part of why three cycles skipped it.** The four figures above are the published ones and are UNCHANGED (`docs/bench_grounding_report.json` untouched). ⚠ **Audit 003 found three of the four measured by a defective instrument**, repaired in cycle 003 without altering them: precision divides by *cited* chunks (capped at `citation_max_chunks=3`, so 7 of 8 doc queries sit on a 0.667 ceiling **with recall 1.0**; over *retrieved* chunks it is **0.364** and the attainable ceiling was **0.778**, not 1.0); the judge's factual-correctness "ground truth" was the string `row_count=N`, not an answer value, which caused at least one verified live scoring error; and `4` was the judge's own unvalidated self-report, disagreeing with its itemised claims on 2 of 16 — recounting the published run's own claims gives **2**. A second faithfulness score that also shows the judge the SQL a hybrid answer used is now reported alongside. ⚠ **Corpus is no longer 18 docs / 36 chunks — cycle 005 added 2,567 per-seller review-digest documents (13,125 chunks), same tenant as baseline (`t_capstone_default`; see cycle 005 DEVIATION 1 for why a genuinely distinct tenant would have made the corpus unretrievable), isolated instead by `doc_type='review_digest'`.** The four figures above are UNCHANGED by that ingest — measured both before and after, live, on this same `phase_e1.json` fixture: every summary figure and every one of the 16 queries' retrieved chunk IDs identical, zero review chunks ever retrieved. That is interference on the EXISTING fixture, not a measurement of review-corpus retrieval quality — no ground truth for review-topic questions exists (`docs/limitations.md` § "The review-digest corpus"). Full account: `docs/limitations.md` § M6 entry and § review-digest corpus, `docs/audits/003.md`, `docs/cycles/005.md` C6/C7 |
-| gates | seams **26/26** · pytest **93/93** · **deployed 19/19** · **E2 46/46** · **tenancy 12/12** · **M8 40/40** — all six re-run live 2026-08-23 (cycle 005 G4, after an environment gap — Docker itself had gone down between the build and the final gate run; treated the first, unverifiable completion signal as not done and re-ran everything fresh once the stack was confirmed healthy and the data confirmed to have survived the restart) | ⚠ **E2 was FAILING 29/30 from cycle 003's `56a23bf` until cycle 004 A1** — `verify_e2.py`'s E2-V4 check asserted a literal substring (`'<script src="app.js"'`) that a legitimate cache-busting query string broke, and that had never once tested for the CDN it was named against (audit 004 F-004-2). Fixed by replacing it with the real two-directional property (`scripts/frontend_asset_checks.py`), now also pinned in `tests/` so a frontend-only commit can't silently break it again. pytest was 68 going into cycle 004 (24 at cycle 000, additions through cycles 001–003, +15 of those at cycle 003's `test_grounding_scorer.py`), +20 at cycle 004 (`tests/test_frontend_asset_checks.py`) = 88, **+5 at cycle 005** (`tests/test_nginx_header_checks.py`) = 93. E2's count also moved, **30 → 46**: cycle 005 added a live-response header check (`e2_v4_csp_live`) after finding the frontend had sent **zero** of its four claimed security headers (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy) on every path since `56a23bf` — nginx does not inherit `add_header` into a location block that declares one of its own, and `56a23bf`'s two new location blocks did exactly that. Every prior E2-V4 check read the config file, never a response; fixed in `frontend/nginx.conf`, verified against the live container, not just the repo (audit 005 F-005-1, `docs/cycles/005.md` A1-A5). **This is the first cycle any audit has run tenancy** was cycle 004's claim; still true, tenancy reproduced 12/12 again here |
+| **M6 — grounding (the RAG half)** | context precision **0.622** (n=15, over *cited* chunks) · recall **0.80** (n=15) · faithfulness **0.8125** (n=16) · **4** ungrounded-but-true | **This row did not exist in this table until cycle 003 — the unstructured half was absent from the handoff's own metrics list, which is part of why three cycles skipped it.** The four figures above are the published ones and are UNCHANGED (`docs/bench_grounding_report.json` untouched). ⚠ **Audit 003 found three of the four measured by a defective instrument**, repaired in cycle 003 without altering them: precision divides by *cited* chunks (capped at `citation_max_chunks=3`, so 7 of 8 doc queries sit on a 0.667 ceiling **with recall 1.0**; over *retrieved* chunks it is **0.364** and the attainable ceiling was **0.778**, not 1.0); the judge's factual-correctness "ground truth" was the string `row_count=N`, not an answer value, which caused at least one verified live scoring error; and `4` was the judge's own unvalidated self-report, disagreeing with its itemised claims on 2 of 16 — recounting the published run's own claims gives **2**. A second faithfulness score that also shows the judge the SQL a hybrid answer used is now reported alongside. ⚠ **Corpus is no longer 18 docs / 36 chunks — cycle 005 added 2,567 per-seller review-digest documents (13,125 chunks), same tenant as baseline (`t_capstone_default`; see cycle 005 DEVIATION 1 for why a genuinely distinct tenant would have made the corpus unretrievable), isolated instead by `doc_type='review_digest'`.** The four figures above are UNCHANGED by that ingest — measured both before and after, live, on this same `phase_e1.json` fixture: every summary figure and every one of the 16 queries' retrieved chunk IDs identical, zero review chunks ever retrieved. That is interference on the EXISTING fixture, not a measurement of review-corpus retrieval quality — no ground truth for review-topic questions exists (`docs/limitations.md` § "The review-digest corpus"). Full account: `docs/limitations.md` § M6 entry and § review-digest corpus, `docs/audits/003.md`, `docs/cycles/005.md` C6/C7. ⚠ **Cycle 006's re-chunking of that same corpus (13,125 → 20,209 chunks) is the FIRST thing to move this before/after pair since cycle 003's repair** — not the four figures cited above (untouched, still `docs/bench_grounding_report.json`), but cycle 005's OWN before/after comparison arms, which had been an exact null. 14 of 16 queries' cited lists stayed byte-identical; the 2 that moved touch ZERO review chunks — root cause is `document_chunks.embedding`'s HNSW index being approximate, and a large bulk insert changing its graph, confirmed against exact index-disabled scores in both directions (one query moved toward its true answer, one unscored query moved away from its true near-tied one). **This project has been running retrieval on an unaudited approximate index the whole time**; a corpus-size change can move results for queries unrelated to what was added. Full investigation: `docs/limitations.md` § "Vector retrieval runs on an approximate index", `docs/cycles/006.md` §4 |
+| gates | seams **26/26** · pytest **96/96** · **deployed 19/19** · **E2 46/46** · **tenancy 12/12** · **M8 40/40** — all six re-run live 2026-08-24 (cycle 006 G4, at `dce90ab`) | ⚠ **E2 was FAILING 29/30 from cycle 003's `56a23bf` until cycle 004 A1** — `verify_e2.py`'s E2-V4 check asserted a literal substring (`'<script src="app.js"'`) that a legitimate cache-busting query string broke, and that had never once tested for the CDN it was named against (audit 004 F-004-2). Fixed by replacing it with the real two-directional property (`scripts/frontend_asset_checks.py`), now also pinned in `tests/` so a frontend-only commit can't silently break it again. pytest was 68 going into cycle 004 (24 at cycle 000, additions through cycles 001–003, +15 of those at cycle 003's `test_grounding_scorer.py`), +20 at cycle 004 (`tests/test_frontend_asset_checks.py`) = 88, **+5 at cycle 005** (`tests/test_nginx_header_checks.py`) = 93, **+3 at cycle 006** (`tests/test_review_chunk_split_attribution.py`) = 96. E2's count also moved, **30 → 46**: cycle 005 added a live-response header check (`e2_v4_csp_live`) after finding the frontend had sent **zero** of its four claimed security headers (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy) on every path since `56a23bf` — nginx does not inherit `add_header` into a location block that declares one of its own, and `56a23bf`'s two new location blocks did exactly that. Every prior E2-V4 check read the config file, never a response; fixed in `frontend/nginx.conf`, verified against the live container, not just the repo (audit 005 F-005-1, `docs/cycles/005.md` A1-A5). **This is the first cycle any audit has run tenancy** was cycle 004's claim; still true, tenancy reproduced 12/12 again here |
 
 **Of the 16 remaining M4 failures, 9 are genuine model errors** — not 5. The
 "unrecovered SQL error" category never fired correctly, and correcting it moved
@@ -584,10 +592,99 @@ that could plausibly move it. `_embed_allowing_split`'s 2,119 fallback-split
 chunks have never had their boundary quality checked — only that they
 successfully embedded.
 
-**No direction is recorded here for cycle 006.** That is the owner's to set,
-and cycle 000 established the reason it is not pre-written from inside a
-finished cycle: *"Pre-planning it from this side would anchor exactly what
-the seal exists to prevent."*
+### ✅ Direction for cycle 006 — auditor's own scope, 2026-08-23. DONE; what it found is below.
+
+**It was:** the auditor's own choice, not owner-delegated. Audit 006 opened
+the two surfaces audit 005 named as its own largest holes — the real-data
+fixtures (never re-read for the no-op-predicate class audit 005 found in
+`phase_c2_v2`) and cycle 005's own review-ingest build (audited by nobody).
+
+**The number that closed F-004-6 was itself wrong, twice.** Cycle 005
+published "1,072 of the 2,567 review documents produced more than one
+chunk" as evidence `_chunk_words` finally split a document. It decomposes
+as **18 baseline (multi-chunk since before cycle 005, via table/narrative
+separation — literally F-004-6's own subject) + 705 embedding-fallback
+splits + 349 real `_chunk_words` splits**. The audit's own first correction
+(313/741) was itself measured by a proxy that undercounts words — caught
+building the pinning test its own criterion required, corrected the same
+session. Both corrections are recorded in full, not silently folded in:
+`docs/audits/006.md` F-006-1/F-006-1a/F-006-1b, `docs/limitations.md`.
+
+**The review corpus was retrievable but not addressable, and now is
+partly.** A query naming a seller's exact id ranked that seller's own
+digest 2,365th of 13,161 chunks — 80.4% of chunks carried no occurrence of
+their own seller id, 94.9% of continuation chunks began mid-review.
+Rebuilt: every chunk now carries its seller's identity and respects review
+boundaries, verified at 100% against the database (20,209/20,209 and
+0/20,209 respectively). **The rank fix is real but partial, exactly as
+predicted before the scope was chosen**: 0/20 pre-committed probes rank
+within `semantic_top_k=8` in either arm; median rank nearly halved
+(597→298) but splits cleanly by review count — every low-review-count
+seller got worse (bigger retrieval space, nothing else changed for them),
+every high-review-count seller mostly got better (they previously had
+almost no identified chunks; now all of theirs are). Full mechanism and
+numbers: `docs/limitations.md` § "Addressability."
+
+**A real perf problem, investigated rather than pushed through.** The first
+re-ingest attempt (20,209 individual embedding calls, one section per call)
+was going to take ~7.8 hours — caught by the owner asking after "been
+almost 4 hours," not by the builder's own monitoring. Root-caused (the
+embedding server processes one request at a time; total time scales with
+call count) and fixed with a batched embedding path — which itself needed
+a real correctness fix once found: Ollama's batch endpoint **silently
+truncates** an over-length input rather than rejecting it (verified: a
+400-word and a 5000-word slice of the same text returned byte-identical
+embeddings). The batch path is now restricted to sections independently
+verified safe client-side; anything that doesn't verify falls through to
+the single-call path that actually rejects. Full account, including that
+this fallback path has never been exercised on real data (nothing in the
+corpus exceeds the safety threshold): `docs/cycles/006.md` DEVIATION 2, §5.1.
+
+**M6 moved for the first time across a before/after pair — investigated,
+and it is not the review corpus.** Cycle 005 measured this exact pair as a
+clean null; this cycle's re-ingest (adding 7,084 vectors to the same
+index) moved two of sixteen queries. Zero review chunks appear in either
+affected query. Root cause: `document_chunks.embedding` is indexed HNSW —
+an **approximate** structure, not exact search — and a large bulk insert
+changes its graph. Confirmed against exact (index-disabled) scores in
+both directions: one query's retrieval moved toward its true, previously
+mis-served answer; one (unscored) moved away from its true near-tied
+answer. **This project has been running retrieval on an unaudited
+approximate index the whole time**, and a corpus-size change can move
+results for queries unrelated to what was added — recorded as a standing
+property in `docs/limitations.md`, not filed away as cycle-specific noise.
+
+**Also done, smaller:** five real-data questions (`ol_007`/`ol_008`/
+`ol_012`/`oh_cs01`/`oh_cs03`) disclosed as stating a restriction the data
+makes invisible — same failure class as `c2g_15`, and audit 005 predicted
+exactly this ("on a 1.45M-row corpus that class of defect is more likely,
+not less"). Two hard-fixture questions (`oh_j04`, `oh_j07`) disclosed as
+softer than their own difficulty labels. The Ollama topology docs
+(`docker-compose.yml`, `README.md`) corrected — the stack has always run
+embeddings on the container and generation on a native host app
+simultaneously, and nothing said so. The 18.4MB committed review-manifest
+derivative (verbatim CC BY-NC-SA text, against this repo's own `.gitignore`
+rule) untracked and made regenerable on demand — owner decision, taken
+before freeze.
+
+**Gate state at handoff, all six re-verified live 2026-08-24** at `dce90ab`:
+seams 26/26 · pytest 96/96 · deployed 19/19 · E2 46/46 · tenancy 12/12 ·
+M8 40/40, table checksums unchanged.
+
+**Still outstanding after cycle 006** (none of it blocks anything): whether
+HNSW's approximation is small or large in general (this cycle characterised
+two affected queries, not the index's typical recall); whether the other
+fourteen M6 queries sit close to their own tie boundary; the addressability
+fix's `top_k=8` shortfall itself, not further diagnosed (B was scoped to
+the ingestion seam, not new retrieval features — filtering by seller
+before searching within is the obvious next move and is a new feature,
+deliberately out of scope here); no review-topic answer-quality fixture
+exists, still, for the same reason cycles 003 and 005 both declined to
+write one in the same cycle as a corpus change; and the batch/fallback
+safety design's unsafe branch remains unexercised on real data.
+
+**No direction is recorded here for cycle 007.** That is the owner's to
+set, for the same reason cycle 000 gave and every cycle since has honored.
 
 ---
 
