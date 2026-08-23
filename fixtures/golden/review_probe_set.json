@@ -1,0 +1,170 @@
+{
+  "version": 1,
+  "generated_by": "scripts/gen_review_probe_set.py",
+  "purpose": "Cycle 006 B1/B2/B5. NOT a quality fixture -- a mechanical retrieval-rank probe set. Ground truth is the document_id already assigned by scripts/gen_olist_review_digests.py; no answer text or judge call is involved. See this script's module docstring.",
+  "seed": 20260823,
+  "n": 20,
+  "manifest_source": "fixtures/documents/olist_review_digests_manifest.json",
+  "probes": [
+    {
+      "probe_id": "rp_02dcd3e8",
+      "seller_id": "02dcd3e8e25bee036e32512bcf175493",
+      "document_id": "doc_review_digest_02dcd3e8e25bee036e32512bcf175493",
+      "question": "What do customers say about seller 02dcd3e8e25bee036e32512bcf175493?",
+      "review_count": 4,
+      "content_word_count": 61
+    },
+    {
+      "probe_id": "rp_06579cb2",
+      "seller_id": "06579cb253ecd5a3a12a9e6eb6bf8f47",
+      "document_id": "doc_review_digest_06579cb253ecd5a3a12a9e6eb6bf8f47",
+      "question": "What do customers say about seller 06579cb253ecd5a3a12a9e6eb6bf8f47?",
+      "review_count": 24,
+      "content_word_count": 390
+    },
+    {
+      "probe_id": "rp_1835b56c",
+      "seller_id": "1835b56ce799e6a4dc4eddc053f04066",
+      "document_id": "doc_review_digest_1835b56ce799e6a4dc4eddc053f04066",
+      "question": "What do customers say about seller 1835b56ce799e6a4dc4eddc053f04066?",
+      "review_count": 193,
+      "content_word_count": 3675
+    },
+    {
+      "probe_id": "rp_3969863b",
+      "seller_id": "3969863bb8af7f72580b3b1ffd3a17b3",
+      "document_id": "doc_review_digest_3969863bb8af7f72580b3b1ffd3a17b3",
+      "question": "What do customers say about seller 3969863bb8af7f72580b3b1ffd3a17b3?",
+      "review_count": 5,
+      "content_word_count": 95
+    },
+    {
+      "probe_id": "rp_3f3486b6",
+      "seller_id": "3f3486b61f45078d4f31ee5e43d8c5bb",
+      "document_id": "doc_review_digest_3f3486b61f45078d4f31ee5e43d8c5bb",
+      "question": "What do customers say about seller 3f3486b61f45078d4f31ee5e43d8c5bb?",
+      "review_count": 16,
+      "content_word_count": 285
+    },
+    {
+      "probe_id": "rp_4c854574",
+      "seller_id": "4c8545742faaf58fafd5fd14d25d75cf",
+      "document_id": "doc_review_digest_4c8545742faaf58fafd5fd14d25d75cf",
+      "question": "What do customers say about seller 4c8545742faaf58fafd5fd14d25d75cf?",
+      "review_count": 1,
+      "content_word_count": 19
+    },
+    {
+      "probe_id": "rp_6e4f5ff6",
+      "seller_id": "6e4f5ff6b086632ba8dcb558fb10249e",
+      "document_id": "doc_review_digest_6e4f5ff6b086632ba8dcb558fb10249e",
+      "question": "What do customers say about seller 6e4f5ff6b086632ba8dcb558fb10249e?",
+      "review_count": 3,
+      "content_word_count": 91
+    },
+    {
+      "probe_id": "rp_75fdd0a7",
+      "seller_id": "75fdd0a732287f9497b179f6bd445d32",
+      "document_id": "doc_review_digest_75fdd0a732287f9497b179f6bd445d32",
+      "question": "What do customers say about seller 75fdd0a732287f9497b179f6bd445d32?",
+      "review_count": 1,
+      "content_word_count": 27
+    },
+    {
+      "probe_id": "rp_79ebd9a6",
+      "seller_id": "79ebd9a61bac3eaf882805ed4ecfa12a",
+      "document_id": "doc_review_digest_79ebd9a61bac3eaf882805ed4ecfa12a",
+      "question": "What do customers say about seller 79ebd9a61bac3eaf882805ed4ecfa12a?",
+      "review_count": 43,
+      "content_word_count": 830
+    },
+    {
+      "probe_id": "rp_79ed7553",
+      "seller_id": "79ed755314cfe6df0daef2c6cd3022cd",
+      "document_id": "doc_review_digest_79ed755314cfe6df0daef2c6cd3022cd",
+      "question": "What do customers say about seller 79ed755314cfe6df0daef2c6cd3022cd?",
+      "review_count": 9,
+      "content_word_count": 162
+    },
+    {
+      "probe_id": "rp_7dc9a335",
+      "seller_id": "7dc9a3355bae96dd82008b313d3a456c",
+      "document_id": "doc_review_digest_7dc9a3355bae96dd82008b313d3a456c",
+      "question": "What do customers say about seller 7dc9a3355bae96dd82008b313d3a456c?",
+      "review_count": 1,
+      "content_word_count": 22
+    },
+    {
+      "probe_id": "rp_9cea4682",
+      "seller_id": "9cea4682e16655f7da87f406902e989e",
+      "document_id": "doc_review_digest_9cea4682e16655f7da87f406902e989e",
+      "question": "What do customers say about seller 9cea4682e16655f7da87f406902e989e?",
+      "review_count": 3,
+      "content_word_count": 60
+    },
+    {
+      "probe_id": "rp_9e9b539e",
+      "seller_id": "9e9b539eb2806acee3f5c28085c1db9f",
+      "document_id": "doc_review_digest_9e9b539eb2806acee3f5c28085c1db9f",
+      "question": "What do customers say about seller 9e9b539eb2806acee3f5c28085c1db9f?",
+      "review_count": 1,
+      "content_word_count": 20
+    },
+    {
+      "probe_id": "rp_b6c6854d",
+      "seller_id": "b6c6854d4d92a5f6f46be8869da3fa1a",
+      "document_id": "doc_review_digest_b6c6854d4d92a5f6f46be8869da3fa1a",
+      "question": "What do customers say about seller b6c6854d4d92a5f6f46be8869da3fa1a?",
+      "review_count": 1,
+      "content_word_count": 54
+    },
+    {
+      "probe_id": "rp_cac4c8e7",
+      "seller_id": "cac4c8e7b1ca6252d8f20b2fc1a2e4af",
+      "document_id": "doc_review_digest_cac4c8e7b1ca6252d8f20b2fc1a2e4af",
+      "question": "What do customers say about seller cac4c8e7b1ca6252d8f20b2fc1a2e4af?",
+      "review_count": 36,
+      "content_word_count": 839
+    },
+    {
+      "probe_id": "rp_d5ba419e",
+      "seller_id": "d5ba419e26d246a0719437cf37d9b46d",
+      "document_id": "doc_review_digest_d5ba419e26d246a0719437cf37d9b46d",
+      "question": "What do customers say about seller d5ba419e26d246a0719437cf37d9b46d?",
+      "review_count": 18,
+      "content_word_count": 426
+    },
+    {
+      "probe_id": "rp_e883aa81",
+      "seller_id": "e883aa812c37a7413226856f4579fe91",
+      "document_id": "doc_review_digest_e883aa812c37a7413226856f4579fe91",
+      "question": "What do customers say about seller e883aa812c37a7413226856f4579fe91?",
+      "review_count": 9,
+      "content_word_count": 182
+    },
+    {
+      "probe_id": "rp_f3b80352",
+      "seller_id": "f3b80352b986ab4d1057a4b724be19d0",
+      "document_id": "doc_review_digest_f3b80352b986ab4d1057a4b724be19d0",
+      "question": "What do customers say about seller f3b80352b986ab4d1057a4b724be19d0?",
+      "review_count": 35,
+      "content_word_count": 729
+    },
+    {
+      "probe_id": "rp_fe26f3ec",
+      "seller_id": "fe26f3ecb51a15e6d8335cd92da42562",
+      "document_id": "doc_review_digest_fe26f3ecb51a15e6d8335cd92da42562",
+      "question": "What do customers say about seller fe26f3ecb51a15e6d8335cd92da42562?",
+      "review_count": 4,
+      "content_word_count": 57
+    },
+    {
+      "probe_id": "rp_fec62752",
+      "seller_id": "fec6275253471ace26d209bbaa64cd0f",
+      "document_id": "doc_review_digest_fec6275253471ace26d209bbaa64cd0f",
+      "question": "What do customers say about seller fec6275253471ace26d209bbaa64cd0f?",
+      "review_count": 2,
+      "content_word_count": 29
+    }
+  ]
+}
