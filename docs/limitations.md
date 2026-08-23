@@ -645,7 +645,78 @@ FROM documents WHERE doc_type='review_digest')` followed by `DELETE FROM
 documents WHERE doc_type='review_digest'` removes exactly the added corpus and
 nothing else — run live this cycle (`DELETE 13125` then `DELETE 2567`),
 verified immediately after at exactly 18 documents / 36 chunks, then
-re-ingested to restore it. See `docs/cycles/005.md` C5.
+re-ingested to restore it. See `docs/cycles/005.md` C5. **Re-demonstrated
+2026-08-23 against the re-chunked corpus below (cycle 006 B4): `DELETE 20209`
+then `DELETE 2567`, verified back to exactly 18/36, restored by re-running
+the same ingest — identical mechanism, identical result, on a corpus with a
+completely different internal chunk structure.**
+
+### Addressability — the corpus was retrievable but not addressable; fixed, verified, and only partly effective (cycle 006 B)
+
+Audit 006 F-006-2 found that the corpus above, while genuinely retrievable
+(a review-topical query's top-8 results were dominated by review chunks),
+could not answer the one question shape a per-seller digest exists to
+answer: a query naming a seller's exact id ranked that seller's own digest
+**2,365th of 13,161** chunks. Root cause, measured directly: **80.4% of
+chunks carried no occurrence of their own seller id** (only `ordinal=0`
+did), and **94.9% of continuation chunks began mid-review**.
+
+**What changed.** `scripts/gen_olist_review_digests.py::_digest_sections`
+now packs each seller's reviews into sections that (a) never split a single
+review's header+body across a boundary and (b) repeat the seller-identity
+header on every section — replacing the single whole-blob `content_md` that
+`ingest.py`'s generic `_chunk_words` chunked blindly. `ingest.py` gained a
+matching `has_sections` path with a review-boundary-aware fallback
+(`_embed_one_review_section`) for the rare section that still exceeds the
+embedding model's real context length. Full mechanism and the performance
+fix this required: `docs/cycles/006.md` §3 DEVIATION 2, §4.
+
+**Both target properties verified directly against the database, at
+100%, not inferred from the code.** Post re-ingest: 20,209/20,209 chunks
+(100%) contain their own seller id; 0/20,209 chunks (0%) begin mid-review.
+The corpus grew from 13,125 to 20,209 chunks (2,567 documents unchanged) —
+every chunk is now smaller (mean 48 words, max 63, vs. the prior mean 69 /
+max 154) and self-identifying.
+
+**The retrieval-rank fix is real but partial, exactly as predicted before
+the scope was chosen.** A fixed, pre-committed set of 20 seller-id probes
+(`fixtures/golden/review_probe_set.json`, `scripts/gen_review_probe_set.py`)
+measured rank before and after
+(`docs/review_probe_rank_before.json` / `_after.json`). **0/20 probes rank
+within `semantic_top_k=8` in either arm** — the property a user would
+actually notice (does the seller's digest show up) is unchanged. Median
+rank did improve materially (597 → 298), but this splits cleanly by review
+count: **11/11 low-review-count probes (≤5 reviews) got WORSE** (they were
+already single, fully-identified chunks; they only inherit the larger,
+54%-bigger retrieval space's extra competition), while **7/9
+high-review-count probes (>5 reviews) got BETTER** (they previously had
+almost no identified chunks at all; now every one of theirs is). Full
+per-probe numbers and the mechanism: `docs/cycles/006.md` §4.
+
+**What this does NOT establish, stated so nobody reads more into it than
+was measured:**
+
+- **The 20 probes are a mechanical rank check, not a quality fixture.**
+  There is no answer text, no expected claim, no judge involved — the
+  "ground truth" is the `document_id` the generator already assigned by
+  construction. This was a deliberate scope choice (`docs/cycles/006.md`
+  §2, "Explicitly NOT this cycle") for the same reason cycles 003 and 005
+  declined to write review-question ground truth in the same cycle as a
+  corpus change: it would be tuning against what is reported from.
+- **No review-topic answer QUALITY was measured**, this cycle or any
+  before it. Addressability (can a retrieved chunk be attributed to its
+  seller, does it respect a review's boundary) is a different property
+  from answer quality (does the system correctly answer a question about
+  a seller's reviews), and nothing here measures the second.
+- **The `top_k=8` shortfall is not further diagnosed.** This cycle did not
+  investigate whether a larger `semantic_top_k`, a different retrieval
+  strategy (e.g. filtering by seller before searching within), or a
+  different embedding model would close the remaining gap — B was
+  deliberately scoped to the ingestion seam, not new retrieval features.
+- **The M6 interference finding above (the null result) was itself
+  disturbed by this cycle's re-ingest**, but not by review-topic content —
+  see the HNSW section earlier in this file for what actually moved and
+  why.
 
 ## "Does it work on production-level data?" — measured answer (2026-08-18)
 
