@@ -40,14 +40,31 @@ provider = "local"    # "local" for offline dev, "anthropic" for graded metrics 
 ollama_url = "http://host.docker.internal:11434"
 ```
 
-> ⚠️ **`ollama_url` must point at wherever the models actually live — check this before your first query.** There are two valid topologies and the wrong one fails every LLM call with a connection error:
+> ⚠️ **`ollama_url` governs GENERATION only — embeddings are a separate,
+> fixed path. Get this wrong and you get a connection error on some calls
+> but not others, which is more confusing than an outright failure.**
+> **Corrected 2026-08-23 (cycle 006 D2, audit 006 F-006-6)** — this note
+> used to present two mutually exclusive topologies for "the models,"
+> plural, singular. There is only one topology for generation; embeddings
+> are never part of the choice.
 >
-> | You are running… | Set `ollama_url` to | Pull models with |
+> **Embeddings (`mxbai-embed-large`) always go to the Dockerized `ollama`
+> service**, `http://ollama:11434` — `mcp`'s `OLLAMA_URL` is set directly in
+> `docker-compose.yml` and does not read `ollama_url` or any other flag.
+> **This is true regardless of which generation topology you pick below.**
+> Whichever topology you choose, `mxbai-embed-large` still needs to be
+> pulled into the *container*, even if you never touch it for anything
+> else — `docker compose exec ollama ollama pull mxbai-embed-large`.
+>
+> **Generation (`qwen2.5:7b`) follows `ollama_url`, and there are two valid
+> settings:**
+>
+> | You are running generation on… | Set `ollama_url` to | Pull `qwen2.5:7b` with |
 > |---|---|---|
-> | The Dockerized `ollama` service (the default in `docker-compose.yml`, and what step 4 below sets up) | `http://ollama:11434` | `docker compose exec ollama ollama pull …` |
-> | A **native** Ollama app on the host (macOS/Windows desktop install) | `http://host.docker.internal:11434` | `ollama pull …` on the host |
+> | The same Dockerized `ollama` service the embeddings already use | `http://ollama:11434` | `docker compose exec ollama ollama pull qwen2.5:7b` |
+> | A **native** Ollama app on the host (macOS/Windows desktop install) | `http://host.docker.internal:11434` | `ollama pull qwen2.5:7b` on the host |
 >
-> **The value currently committed is `http://host.docker.internal:11434`**, because this repo's development machine runs a native Ollama app. **If you follow step 4 below and pull into the container, change it to `http://ollama:11434`.** `host.docker.internal` resolves only from inside a container — it is never reachable from the host itself, so host-side scripts needing a real completion must run via `docker compose exec orchestrator …`.
+> **The value currently committed is `http://host.docker.internal:11434`**, because this repo's development machine runs a native Ollama app for generation — **and pulls `mxbai-embed-large` into the container regardless**, per above. **If you'd rather generate from the container too**, pull `qwen2.5:7b` there and change `ollama_url` to `http://ollama:11434`; `docker-compose.yml`'s own comment above the `ollama` service spells out exactly this. `host.docker.internal` resolves only from inside a container — it is never reachable from the host itself, so host-side scripts needing a real completion must run via `docker compose exec orchestrator …`.
 
 > 💡 **Developer Note:** When `provider = "local"`, no Anthropic API key is required and the system starts completely offline.
 
@@ -55,29 +72,35 @@ ollama_url = "http://host.docker.internal:11434"
 
 ### 4. Pull Local LLM & Embedding Models (First Time Only)
 
-Pull into whichever Ollama your `ollama_url` points at (see the table in step 3).
-Both models are required: `mxbai-embed-large` for embeddings, `qwen2.5:7b` for
-generation.
-
-**Dockerized Ollama** (`ollama_url = "http://ollama:11434"`):
+**`mxbai-embed-large` always goes into the Dockerized `ollama` container** —
+`mcp` reaches it there unconditionally (see step 3's note), regardless of
+your `ollama_url` setting:
 ```bash
 docker compose up -d ollama
 docker compose exec ollama ollama pull mxbai-embed-large
+```
+
+**`qwen2.5:7b` (generation) goes wherever `ollama_url` points** (see the
+table in step 3):
+
+**Dockerized Ollama** (`ollama_url = "http://ollama:11434"`):
+```bash
 docker compose exec ollama ollama pull qwen2.5:7b
 ```
 
 **Native host Ollama** (`ollama_url = "http://host.docker.internal:11434"`):
 ```bash
-ollama pull mxbai-embed-large
 ollama pull qwen2.5:7b
 ```
 
-Confirm both are present where you expect them — a missing generation model
-surfaces as an HTTP 404 (`model ... not found`) on the first query, not at
-startup:
+Confirm the right model is present in the right place — a missing model
+surfaces as an HTTP 404 (`model ... not found`) on the first query or
+ingest, not at startup:
 ```bash
-docker compose exec ollama ollama list   # dockerized
-ollama list                              # native host
+docker compose exec ollama ollama list   # MUST show mxbai-embed-large always;
+                                          # also qwen2.5:7b if generating here
+ollama list                              # native host — only relevant if
+                                          # ollama_url points here for generation
 ```
 
 ---
@@ -200,7 +223,7 @@ StateSync strictly isolates database infrastructure (`db_net`) from public-facin
 |---|---|---|
 | `postgres` | `5432` | PostgreSQL + PostGIS spatial extension + pgvector |
 | `qdrant` | `6333` | Vector database storing AgentSM execution trajectories |
-| `ollama` | `11434` | Local LLM host (`mxbai-embed-large` embeddings & `qwen2.5:7b` instruct) |
+| `ollama` | `11434` | Local LLM host. Always serves `mxbai-embed-large` embeddings to `mcp`; `qwen2.5:7b` generation only if `llm.ollama_url` points here instead of a native host Ollama — see step 3/4 above |
 | `mcp` | `8080` | Model Context Protocol server — sole database credential holder |
 | `orchestrator` | `8090` | LangGraph multi-agent pipeline (`supervisor`, `sql_agent`, `synthesizer`) |
 | `frontend` | `3000` | Nginx-served stateless UI with Vega-Embed & Vega-Interpreter (CSP compliant) |

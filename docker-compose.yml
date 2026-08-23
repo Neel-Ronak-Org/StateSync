@@ -67,13 +67,31 @@ services:
 
   # ── 3. ollama (local model host) ───────────────────────────────────────────
   # Serves mxbai-embed-large (1024 dims) for trajectory/document embeddings
-  # (A6, E1) to mcp on db_net, AND qwen2.5:7b for generation to orchestrator
-  # on app_net when flags.llm.ollama_url points here.
+  # (A6, E1) to mcp -- mcp's OLLAMA_URL below is hardcoded to this service
+  # (http://ollama:11434) and always reaches it, regardless of the flag one
+  # line down.
+  #
+  # Generation (qwen2.5:7b) is DIFFERENT and NOT wired to this container by
+  # default. orchestrator has no OLLAMA_URL env var at all; it falls back to
+  # config/flags.toml's `llm.ollama_url`, which this repo ships pointing at
+  # `http://host.docker.internal:11434` -- a NATIVE Ollama app on the
+  # developer's host, not this container. **Corrected 2026-08-23 (cycle 006
+  # D1, audit 006 F-006-6)** -- this comment previously claimed the container
+  # served "qwen2.5:7b for generation to orchestrator... when
+  # flags.llm.ollama_url points here," which is false on two counts as
+  # shipped: this container has never had qwen2.5:7b pulled into it, and the
+  # shipped flag does not point here. If you DO want the orchestrator to
+  # generate against this container instead of a native host Ollama, pull
+  # the chat model into it (`docker compose exec ollama ollama pull
+  # qwen2.5:7b`) AND change `llm.ollama_url` to `http://ollama:11434` --
+  # neither is done by default. See README.md's Ollama topology section for
+  # the two supported setups and which env var governs which service.
   #
   # On BOTH networks, deliberately, and the comment that used to sit here
   # ("only mcp needs it; stays off app_net") was stale — it contradicted the
   # two lines directly below it. orchestrator is app_net-only (A1), so it can
-  # only reach a container-hosted Ollama if that container is on app_net too.
+  # only reach a container-hosted Ollama if that container is on app_net too
+  # -- relevant if you DO repoint llm.ollama_url at this service, per above.
   # This is not an A1 isolation concern: A1's topology table covers postgres,
   # qdrant, mcp, orchestrator, frontend and evaluator, and ollama holds no
   # credentials and fronts no data. postgres/qdrant remain db_net-only, and
