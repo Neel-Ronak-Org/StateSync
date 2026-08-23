@@ -1,0 +1,202 @@
+{
+  "generated_by": "scripts/check_review_probe_rank.py",
+  "flag_provenance": {
+    "llm": {
+      "provider": "local",
+      "models": {
+        "supervisor": "qwen2.5:7b",
+        "sql": "qwen2.5:7b",
+        "synthesizer": "qwen2.5:7b",
+        "memory_summarizer": "qwen2.5:7b",
+        "normalizer": "qwen2.5:7b",
+        "decomposer": "qwen2.5:7b",
+        "judge": "qwen2.5:7b"
+      }
+    },
+    "flag_state": {
+      "memory.enabled": "false",
+      "normalization.enabled": "true",
+      "tenancy.enforced": "false",
+      "evaluation.vision_scorer.enabled": "false",
+      "schema_retriever.target_schema": "public"
+    },
+    "shipped": true,
+    "disk_deviations": {},
+    "live_staleness": null,
+    "allow_nonshipped": false,
+    "fixture_corpus_check": null
+  },
+  "probe_set_source": "fixtures/golden/review_probe_set.json",
+  "probe_set_seed": 20260823,
+  "ollama_url_used": "http://[::1]:11434",
+  "tenant_id": "t_capstone_default",
+  "semantic_top_k": 8,
+  "n_chunks_in_retrieval_space": 13161,
+  "n_probes": 20,
+  "n_within_top_k": 0,
+  "median_rank": 597,
+  "worst_rank": 2843,
+  "best_rank": 13,
+  "results": [
+    {
+      "probe_id": "rp_02dcd3e8",
+      "seller_id": "02dcd3e8e25bee036e32512bcf175493",
+      "document_id": "doc_review_digest_02dcd3e8e25bee036e32512bcf175493",
+      "best_rank": 103,
+      "best_score": 0.7383,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_06579cb2",
+      "seller_id": "06579cb253ecd5a3a12a9e6eb6bf8f47",
+      "document_id": "doc_review_digest_06579cb253ecd5a3a12a9e6eb6bf8f47",
+      "best_rank": 597,
+      "best_score": 0.7077,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_1835b56c",
+      "seller_id": "1835b56ce799e6a4dc4eddc053f04066",
+      "document_id": "doc_review_digest_1835b56ce799e6a4dc4eddc053f04066",
+      "best_rank": 955,
+      "best_score": 0.6961,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_3969863b",
+      "seller_id": "3969863bb8af7f72580b3b1ffd3a17b3",
+      "document_id": "doc_review_digest_3969863bb8af7f72580b3b1ffd3a17b3",
+      "best_rank": 1539,
+      "best_score": 0.688,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_3f3486b6",
+      "seller_id": "3f3486b61f45078d4f31ee5e43d8c5bb",
+      "document_id": "doc_review_digest_3f3486b61f45078d4f31ee5e43d8c5bb",
+      "best_rank": 219,
+      "best_score": 0.7368,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_4c854574",
+      "seller_id": "4c8545742faaf58fafd5fd14d25d75cf",
+      "document_id": "doc_review_digest_4c8545742faaf58fafd5fd14d25d75cf",
+      "best_rank": 13,
+      "best_score": 0.7755,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_6e4f5ff6",
+      "seller_id": "6e4f5ff6b086632ba8dcb558fb10249e",
+      "document_id": "doc_review_digest_6e4f5ff6b086632ba8dcb558fb10249e",
+      "best_rank": 2843,
+      "best_score": 0.6482,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_75fdd0a7",
+      "seller_id": "75fdd0a732287f9497b179f6bd445d32",
+      "document_id": "doc_review_digest_75fdd0a732287f9497b179f6bd445d32",
+      "best_rank": 95,
+      "best_score": 0.7425,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_79ebd9a6",
+      "seller_id": "79ebd9a61bac3eaf882805ed4ecfa12a",
+      "document_id": "doc_review_digest_79ebd9a61bac3eaf882805ed4ecfa12a",
+      "best_rank": 1621,
+      "best_score": 0.6658,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_79ed7553",
+      "seller_id": "79ed755314cfe6df0daef2c6cd3022cd",
+      "document_id": "doc_review_digest_79ed755314cfe6df0daef2c6cd3022cd",
+      "best_rank": 856,
+      "best_score": 0.6944,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_7dc9a335",
+      "seller_id": "7dc9a3355bae96dd82008b313d3a456c",
+      "document_id": "doc_review_digest_7dc9a3355bae96dd82008b313d3a456c",
+      "best_rank": 88,
+      "best_score": 0.7332,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_9cea4682",
+      "seller_id": "9cea4682e16655f7da87f406902e989e",
+      "document_id": "doc_review_digest_9cea4682e16655f7da87f406902e989e",
+      "best_rank": 581,
+      "best_score": 0.7127,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_9e9b539e",
+      "seller_id": "9e9b539eb2806acee3f5c28085c1db9f",
+      "document_id": "doc_review_digest_9e9b539eb2806acee3f5c28085c1db9f",
+      "best_rank": 65,
+      "best_score": 0.7538,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_b6c6854d",
+      "seller_id": "b6c6854d4d92a5f6f46be8869da3fa1a",
+      "document_id": "doc_review_digest_b6c6854d4d92a5f6f46be8869da3fa1a",
+      "best_rank": 691,
+      "best_score": 0.7007,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_cac4c8e7",
+      "seller_id": "cac4c8e7b1ca6252d8f20b2fc1a2e4af",
+      "document_id": "doc_review_digest_cac4c8e7b1ca6252d8f20b2fc1a2e4af",
+      "best_rank": 571,
+      "best_score": 0.6965,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_d5ba419e",
+      "seller_id": "d5ba419e26d246a0719437cf37d9b46d",
+      "document_id": "doc_review_digest_d5ba419e26d246a0719437cf37d9b46d",
+      "best_rank": 1439,
+      "best_score": 0.684,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_e883aa81",
+      "seller_id": "e883aa812c37a7413226856f4579fe91",
+      "document_id": "doc_review_digest_e883aa812c37a7413226856f4579fe91",
+      "best_rank": 689,
+      "best_score": 0.6997,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_f3b80352",
+      "seller_id": "f3b80352b986ab4d1057a4b724be19d0",
+      "document_id": "doc_review_digest_f3b80352b986ab4d1057a4b724be19d0",
+      "best_rank": 1899,
+      "best_score": 0.6714,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_fe26f3ec",
+      "seller_id": "fe26f3ecb51a15e6d8335cd92da42562",
+      "document_id": "doc_review_digest_fe26f3ecb51a15e6d8335cd92da42562",
+      "best_rank": 346,
+      "best_score": 0.7191,
+      "within_top_k": false
+    },
+    {
+      "probe_id": "rp_fec62752",
+      "seller_id": "fec6275253471ace26d209bbaa64cd0f",
+      "document_id": "doc_review_digest_fec6275253471ace26d209bbaa64cd0f",
+      "best_rank": 477,
+      "best_score": 0.7087,
+      "within_top_k": false
+    }
+  ]
+}
