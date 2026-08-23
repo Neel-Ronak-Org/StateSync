@@ -568,14 +568,17 @@ tokenization is denser than the approximation assumes, confirmed live (a
 HTTP 500, `"the input length exceeds the context length"`). 2,119 of the
 corpus's *input* chunks needed the recursive halving fallback added to handle
 this (`scripts/ingest.py::_embed_allowing_split`) before they would embed.
-**The fallback is not a rare exception to `_chunk_words`' boundaries — it is
-the dominant regime.** Measured directly (audit 006 F-006-1): no chunk in the
-persisted corpus exceeds 154 words against the 512-token target, and 11,612 of
-13,125 chunks (88.5%) sit in a document that the fallback split, not the
-16%-of-input-chunks figure cycle 005's own confidence section estimated
-(`docs/cycles/005.md` §5.3 — left as written there; cycle files are the
-historical record and are not edited retroactively, per this file's own
-practice). Neither path has a quality measurement — only "it eventually
+**Splitting — by either mechanism — is not a rare exception to `_chunk_words`'
+single-whole-document norm; it is the dominant regime for this corpus.**
+Measured directly (audit 006 F-006-1): no chunk in the persisted corpus
+exceeds 154 words against the 512-token target, and 11,612 of 13,125 chunks
+(88.5%) sit in a document that ended up with more than one chunk — 705 of
+those 1,054 documents split only via the fallback, 349 via `_chunk_words`
+itself (the table above). That is a materially larger share of the corpus
+than the 16%-of-input-chunks figure cycle 005's own confidence section
+estimated for the fallback specifically (`docs/cycles/005.md` §5.3 — left as
+written there; cycle files are the historical record and are not edited
+retroactively, per this file's own practice). Neither path has a quality measurement — only "it eventually
 embedded successfully" is verified, not "the resulting chunk boundary is a
 good one" — and `docs/audits/006.md` F-006-2 found the boundaries are not
 good: 94.9% of continuation chunks begin mid-review. See "Addressability"
