@@ -37,6 +37,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
 import tomllib
 import urllib.error
@@ -152,6 +153,60 @@ def _embed_allowing_split(content_md: str, max_split_depth: int = 4) -> list[tup
             _embed_allowing_split(" ".join(words[:mid]), max_split_depth - 1)
             + _embed_allowing_split(" ".join(words[mid:]), max_split_depth - 1)
         )
+
+
+_REVIEW_HEADER_RE = re.compile(r"(?=^Review [0-9a-f]{32} \(order )", re.MULTILINE)
+
+
+def _embed_one_review_section(section: str, max_split_depth: int = 6) -> list[tuple[str, list[float]]]:
+    """
+    Cycle 006 B3 (audit 006 F-006-2). Embeds one pre-split, review-boundary-
+    respecting SECTION a review-digest manifest supplies (`gen_olist_review_
+    digests.py::_digest_sections`) -- each already under SECTION_WORD_BUDGET
+    words and already prefixed with the seller-identity header, so almost
+    every section embeds as a single chunk on the first try. Called once per
+    section from `ingest()`'s main loop, in place of `_embed_allowing_split`,
+    whenever a manifest document carries `"sections"`.
+
+    WHY NOT `_embed_allowing_split`. That function's fallback halves an
+    oversized chunk by raw WORD COUNT, blind to any structure -- correct for
+    the general PDF/plain-text path (where "structure" isn't a defined
+    concept), wrong here: it is exactly the mechanism that produced F-006-2's
+    "94.9% of continuation chunks begin mid-review." If a section (rare --
+    verified empirically against the corpus's 20 densest documents at
+    generation time, not assumed) STILL exceeds the embedding model's real
+    context length, this function re-splits it AT THE NEAREST REVIEW
+    BOUNDARY to its midpoint and retries each half recursively, so a forced
+    split never lands inside a review's own header or body. Only a section
+    that has been reduced to a SINGLE review and still fails falls through to
+    `_embed_allowing_split`'s word-halving as a last resort -- there is no
+    smaller review-respecting unit left to split into, and this has not been
+    observed to happen on this corpus (max single review ~49 words).
+    """
+    try:
+        return [(section, _embed(section))]
+    except urllib.error.HTTPError as e:
+        body_text = e.read().decode(errors="replace")
+        if "context length" not in body_text.lower() or max_split_depth <= 0:
+            raise
+
+    # Locate review-header start offsets within this section (the header
+    # line, plus everything before the FIRST one -- the "# Customer
+    # reviews..." identity line -- belongs to whichever half comes first).
+    starts = [m.start() for m in _REVIEW_HEADER_RE.finditer(section)]
+    if len(starts) <= 1:
+        # Zero or one review boundary in this section: nothing left to split
+        # AT A BOUNDARY. Fall back to word-halving as documented above.
+        return _embed_allowing_split(section)
+
+    mid = starts[len(starts) // 2]
+    preamble = section[:starts[0]]  # the seller-identity header line(s)
+    first_half = preamble + section[starts[0]:mid]
+    second_half = preamble + section[mid:]
+    return (
+        _embed_one_review_section(first_half, max_split_depth - 1)
+        + _embed_one_review_section(second_half, max_split_depth - 1)
+    )
 
 
 def _table_to_markdown(rows: list[list[str | None]]) -> str:
@@ -275,7 +330,22 @@ def ingest(manifest_path: Path) -> None:
                     {"document_id": doc["document_id"]},
                 )
 
-                if is_inline_text:
+                # Cycle 006 B3: a manifest entry carrying "sections" (a
+                # review digest, pre-split at review boundaries by
+                # gen_olist_review_digests.py::_digest_sections) skips BOTH
+                # PDF extraction and the generic word-window _chunk_words
+                # path -- each section is already sized and bounded at a
+                # review boundary, so it is embedded directly, with a
+                # review-boundary-aware fallback (_embed_one_review_section) in
+                # place of the word-blind _embed_allowing_split. See
+                # ingest.py's module docstring and audit 006 F-006-2 for why.
+                has_sections = "sections" in doc
+                if has_sections:
+                    chunk_specs = [
+                        {"content_md": s, "is_table": False, "page": None}
+                        for s in doc["sections"]
+                    ]
+                elif is_inline_text:
                     chunk_specs = _text_to_chunks(doc["content_md"])
                 else:
                     pdf_path = documents_dir / doc["filename"]
@@ -283,12 +353,14 @@ def ingest(manifest_path: Path) -> None:
 
                 ordinal = 0
                 for spec in chunk_specs:
-                    pieces = _embed_allowing_split(spec["content_md"])
+                    embedder = _embed_one_review_section if has_sections else _embed_allowing_split
+                    pieces = embedder(spec["content_md"])
                     if len(pieces) > 1:
                         total_split_fallbacks += 1
                         logger.warning(
                             "  chunk exceeded the embedding model's context length; "
-                            "split into %d pieces (see _embed_allowing_split)", len(pieces),
+                            "split into %d pieces (%s)", len(pieces),
+                            "review-boundary-aware" if has_sections else "see _embed_allowing_split",
                         )
                     for piece_text, vector in pieces:
                         chunk_id = f"{doc['document_id']}_c{ordinal:03d}"

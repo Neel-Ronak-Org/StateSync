@@ -156,17 +156,78 @@ def _fetch_reviews() -> list[dict[str, str]]:
     return list(reader)
 
 
+def _review_block(r: dict[str, str]) -> str:
+    """One review's full text, exactly as it appears in the digest -- header
+    line, body, trailing blank line. This is the atomic unit `_digest_sections`
+    packs; it is never split across a section boundary."""
+    title = r["title"].strip()
+    header = f"Review {r['review_id']} (order {r['order_id']}, score {r['review_score']}/5, {r['created']})"
+    if title:
+        header += f" — {title}"
+    return header + "\n" + r["comment"].strip() + "\n\n"
+
+
 def _digest_content_md(seller_id: str, reviews: list[dict[str, str]]) -> str:
     lines = [f"# Customer reviews — seller {seller_id}", ""]
     for r in reviews:
-        title = r["title"].strip()
-        header = f"Review {r['review_id']} (order {r['order_id']}, score {r['review_score']}/5, {r['created']})"
-        if title:
-            header += f" — {title}"
-        lines.append(header)
-        lines.append(r["comment"].strip())
+        lines.append(_review_block(r).rstrip("\n"))
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
+
+
+# Cycle 006 B3 (audit 006 F-006-2): the whole-blob content_md above, fed to
+# ingest.py's generic `_chunk_words`, is what produced a corpus where 80.4%
+# of chunks carried no seller id and 94.9% of continuation chunks began
+# mid-review -- the word-window chunker has no notion of a review boundary.
+#
+# SECTION_WORD_BUDGET, and why 60. `_chunk_words`' 512-WORD-as-token-proxy
+# approximation already failed once for this corpus (F-004-6/cycle 005 C3's
+# own DEVIATION): a 512-word slice was rejected by the real embedding model
+# at 512 TOKENS because Portuguese subword tokenisation is denser than one
+# token per word. For THIS corpus specifically the ratio is worse than that
+# general finding suggests, because every review's header embeds two 32-hex
+# identifiers (review_id, order_id) that a BERT-style tokenizer has no
+# whole-word entry for and must split into many subword pieces -- measured
+# live: the single densest document in the corpus started failing to embed
+# between 120 and 125 WORDS, not anywhere near 512. 60 is chosen with a
+# 2x safety margin under that measured floor, verified against the 20
+# densest documents in the corpus (zero failures) before being used here --
+# not a guessed magic number, matching this project's own stated objection
+# to guessing (`ingest.py::_embed_allowing_split`'s docstring). It is not a
+# proof for the remaining ~2,547 documents, which is why `ingest.py`'s
+# consumer of `sections` (`_embed_one_review_section`) still carries a REAL,
+# review-boundary-aware fallback rather than assuming 60 always holds.
+SECTION_WORD_BUDGET = 60
+
+
+def _digest_sections(seller_id: str, reviews: list[dict[str, str]]) -> list[str]:
+    """Splits a seller's reviews into sections, each prefixed with the
+    seller-identity header, each under SECTION_WORD_BUDGET words where
+    possible, and NEVER splitting a single review's header+body across a
+    section boundary -- the property audit 006 F-006-2 found missing.
+    A single review whose own text alone exceeds the budget still gets its
+    own one-review section (never happens on this corpus -- the largest
+    single review is ~49 words -- but handled rather than assumed away)."""
+    header = f"# Customer reviews — seller {seller_id}\n\n"
+    sections: list[str] = []
+    current_blocks: list[str] = []
+    current_words = len(header.split())
+
+    def flush() -> None:
+        if current_blocks:
+            sections.append((header + "".join(current_blocks)).rstrip() + "\n")
+
+    for r in reviews:
+        block = _review_block(r)
+        block_words = len(block.split())
+        if current_blocks and current_words + block_words > SECTION_WORD_BUDGET:
+            flush()
+            current_blocks = []
+            current_words = len(header.split())
+        current_blocks.append(block)
+        current_words += block_words
+    flush()
+    return sections
 
 
 def build_manifest() -> dict:
@@ -187,6 +248,17 @@ def build_manifest() -> dict:
             "source_uri": f"olist:order_reviews:seller_id={seller_id}",
             "party_id": None,  # olist sellers are not network_participants; no FK target exists
             "content_md": _digest_content_md(seller_id, reviews),
+            # Cycle 006 B3: pre-split, review-boundary-respecting sections.
+            # ingest.py chunks EACH section independently (still through
+            # _chunk_words/_embed_allowing_split, same functions, same call
+            # shape -- see ingest.py's manifest-consumption comment) instead
+            # of the whole content_md blob. content_md is kept for
+            # readability, provenance, and tests/test_review_chunk_split_
+            # attribution.py's pinned property, which describes the OLD
+            # whole-blob chunking behaviour and is unaffected by this field's
+            # addition -- it does not describe what ships once `sections` is
+            # present, and docs/limitations.md says so.
+            "sections": _digest_sections(seller_id, reviews),
             "review_count": len(reviews),
         })
 
