@@ -21,6 +21,7 @@ as the historical record and do not edit them to match this summary.
 | [Citations carry no support relation](#citations-carry-no-support-relation) | `build_citations` lists `retrievals[:citation_max_chunks]` with no relevance filter. Cycle 004 C1 fixed the *label* ("Sources" → "Retrieved Context"); the mechanism is unchanged | Label fixed 2026-08-20; **mechanism open by design** — filtering would alter the exact set M6's context precision measures | No | Audit 004 F-004-5 |
 | [Three unfailable fixture queries](#three-unfailable-fixture-queries) | `c2g_03`/`c2g_10`/`c2g_18` return zero rows; standard EX scores any empty result correct against an empty reference. 23/23 passes across every run ever made. Published 60.0%; 54.5% over the 22 that can fail | Disclosed at every publication point 2026-08-20 (cycle 004 B2). **Fix is an owner judgment call**, per the fixture's own `_audit` — leave them, or replace the questions | No | Audit 004 F-004-3 |
 | [`c2g_15`'s filter is a no-op](#c2g_15s-filter-is-a-no-op) | "Sellers with a Devanagari display name" matches all 30 sellers, 0 NULLs — a fourth reference that cannot discriminate, by a mechanism distinct from the three above. The shipped 7B's pass is awarded to `WHERE display_name_local IS NOT NULL`, not a script test. Published 60.0% / 54.5%; **52.4% over the 21 references that can both fail and discriminate** | Disclosed at every publication point 2026-08-21 (cycle 005 B1). **Fix is an owner judgment call**, same shape as the row above — seed a Latin-only `display_name_local`, or change the question | No | Audit 005 F-005-2 |
+| [The real-data headline's difficulty caveat did not propagate](#the-real-data-headlines-difficulty-caveat-did-not-propagate) | `olist.json` removes schema linking and ambiguity resolution by construction (12/18 questions name a schema column verbatim, 16/18 single-table) — `metrics-report.md` states this correctly, but `AGENT_HANDOFF.md` and `V2_STRATEGY.md` compressed it to the single word "well-specified", where no reader would decode it. Same defect class as audit 002 F-002-6, never applied to the easy fixture | **Caveat propagated 2026-08-23** (post-cycle-005 follow-up, owner-raised). Underlying question — whether to keep publishing a schema-guided figure as the real-data headline at all — **open, and an owner call** | No | Raised by the owner reading the handoff, 2026-08-23 |
 | [M3 regression](#m3-regression) | D-V1 lift halved and D-V2 entity preservation dropped since Phase D. **Separation run done:** memory-flip candidate REFUTED; ~20 of the 35 lost English points traced to `c2g_10` misrouting; residual ~15 points still unattributed | Partly closed — one cause identified and shared with `c2g_10`, residual open | No for the identified cause (a routing defect, fixable now); the residual is re-measured by the graded re-baseline anyway | Routing half → fix with `c2g_10`; residual → needs a draft-first toggle that does not yet exist |
 
 ---
@@ -796,3 +797,84 @@ cheap, unambiguous fix available — seed one seller's `display_name_local`
 with a Latin-only value so the filter has something to exclude — that does not
 require replacing the question or accepting a permanently attached caveat.
 That is still a fixture edit, so it is still the owner's call, not made here.
+
+---
+
+## The real-data headline's difficulty caveat did not propagate
+
+*Raised 2026-08-23 by the owner, reading the handoff's metrics table and asking
+directly: "How credible is this metric?? sounds too good?" The instinct was
+correct. Caveat propagated the same day; the underlying question is open.*
+
+**What the number is.** `standard EX — real data (olist, n=18)`, published as
+**local 7B 88.9% · Gemini 94.4%**.
+
+**What makes it much easier than "text-to-SQL on real data" sounds.**
+`scripts/gen_olist_fixture.py`'s docstring states the design as an explicit
+goal:
+
+> 1. EVERY question names its expected columns.
+> 2. EVERY ambiguous denominator is stated IN the question.
+
+Measured over the 18 questions (2026-08-23, against the live `olist` schema's
+column names):
+
+| | |
+|---|---|
+| name a real schema column **verbatim** in the question text | **12 / 18** |
+| remaining 6 | state the filter/denominator in prose instead |
+| **single-table** (ground-truth SQL touches ≤1 table) | **16 / 18** |
+| involve any join at all | **2 / 18** |
+
+Representative question, `ol_008`: *"Considering ONLY orders that have a
+delivery date recorded, how many were delivered LATER than their estimated
+delivery date? Return a single count."* That is a `WHERE` clause, a comparison
+and an output shape, dictated in English.
+
+**The safeguards are legitimate; the side effect is the problem.** They were
+added deliberately after the `phase_c2` audit found under-specified questions
+manufacture *false* failures under a scorer that compares projections — the
+16pp instrument defect, designed out. Nothing here suggests the fixture was
+built to flatter the system. But the consequence is that schema linking and
+ambiguity resolution — the two hardest parts of the task — are absent by
+construction, and what remains is closer to schema-guided SQL **dictation**.
+
+**The tell.** A free local 7B at 88.9% would beat published BIRD dev-set state
+of the art (roughly 70–75%, for far larger and heavily engineered systems). It
+does not. The task is different, not the model better. The honest capability
+signal is the hard fixture: **the same 7B falls to 50.0%, −38.9pp**, once
+multi-table joins are required (`olist_hard`, n=16).
+
+**This is a propagation failure, not a measurement failure.**
+`docs/metrics-report.md` § "What it does establish" has always stated the full
+caveat — column-naming, stated denominators, *and* the single-table skew — and
+it is accurate. By the time the number reached `AGENT_HANDOFF.md`'s metrics
+table and `V2_STRATEGY.md`'s headline table, all of it had compressed into the
+single word **"well-specified"**, which no reader decodes as "the questions
+name their own columns and 89% are single-table."
+
+**Same defect class as audit 002 F-002-6**, which caught exactly this for the
+*hard* fixture (*"B2 specified 'deliberately ambiguous phrasings'; the fixture
+systematically eliminates ambiguity, and 100.0% is published without that
+stated"*). It was never applied to the easy fixture.
+
+**Done 2026-08-23:** the full caveat now travels with the number in
+`AGENT_HANDOFF.md` §6 and `V2_STRATEGY.md`'s headline table, including the
+BIRD comparison and the pointer to the hard-fixture figure as the honest
+capability signal.
+
+**Still open, and an owner call:** whether a schema-guided figure should remain
+*the* published real-data headline at all. Three options, none free:
+(a) keep it with the caveat permanently attached, as now;
+(b) demote it and lead with the hard-fixture 50.0%/100.0% instead, which is
+    harder but n=16 and carries its own ambiguity caveat (F-002-6);
+(c) author a genuinely natural-language fixture over `olist` — questions that
+    do *not* name their columns — accepting that the projection-mismatch false
+    failures the current design exists to prevent will come back, and that the
+    resulting number will be substantially lower and not comparable to the
+    existing one.
+
+**Note for whoever closes it:** this strengthens the case for a BIRD/Spider
+subset run (`docs/benchmark_readiness.md`) above almost everything else on the
+list. It is the only route to a number that means anything to a reader outside
+this repository, and it is precisely the question the owner asked.

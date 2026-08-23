@@ -30,18 +30,45 @@ survived contact with a corpus they were never designed for.
 
 | | |
 |---|---|
-| single-turn EX, real data (Olist, 18 q, well-specified) | **local 7B 88.9% · hosted 94.4%** ⚠ |
+| single-turn EX, real data (Olist, 18 q, **schema-guided — see ⚠⚠ below**) | **local 7B 88.9% · hosted 94.4%** ⚠⚠ |
 | single-turn EX, synthetic corrected fixture (25 q) | 60.0% (54.5% over the 22 references that can fail — 3 are unfailable empty-vs-empty matches, audit 004 F-004-3; 52.4% over the 21 that can also discriminate — a 4th, `c2g_15`, has a filter that is a no-op on this data, audit 005 F-005-2 — `AGENT_HANDOFF.md` §6) |
 | single-turn EX, synthetic original fixture | 44.0% |
 | adversarial suite | 40/40 |
 | corpora | synthetic 550 orders · **Olist 1,451,414 real rows** |
 | providers behind one seam | local · anthropic · azure · gemini |
 
-**⚠ 88.9%/94.4% was measured with `normalization.enabled = false`, against a
-shipped default of `true`** — both arms, so the paired comparison itself is
-unaffected, but neither number is the shipped configuration. Full caveat and
-evidence: `docs/metrics-report.md` "Real-data results", added by audit 001
-F-001-2.
+**⚠⚠ 88.9%/94.4% is NOT "88.9% at text-to-SQL on real data," and the word
+"well-specified" that used to sit in that table row was carrying far too much
+weight.** `scripts/gen_olist_fixture.py` states the design as a goal: *"EVERY
+question names its expected columns"* and *"EVERY ambiguous denominator is
+stated IN the question."* Over the 18 questions: **12 name a real schema column
+verbatim**, the remaining 6 state the filter in prose, and **16 of 18 are
+single-table aggregates** — two involve a join at all. A representative
+question reads *"Considering ONLY orders that have a delivery date recorded,
+how many were delivered LATER than their estimated delivery date? Return a
+single count"* — a WHERE clause and an output shape dictated in English.
+
+Those safeguards exist for a **legitimate** reason — the scorer punishes
+projection mismatch, so under-specified questions manufacture false failures
+(the `phase_c2` 16pp instrument defect, designed out) — but the consequence is
+that this figure measures schema-guided SQL **dictation**, with schema linking
+and ambiguity resolution removed by construction. **The tell:** a free local 7B
+at 88.9% would beat published BIRD dev-set state of the art (~70–75%, for far
+larger and heavily engineered systems). It does not — the task is different,
+not the model better. **The honest capability signal is the hard fixture: the
+same 7B falls to 50.0%, −38.9pp, the moment multi-table joins are required.**
+
+This is the same defect class audit 002 F-002-6 caught for the *hard* fixture
+(ambiguity eliminated by construction, `100.0%` published without saying so);
+it was simply never applied to the easy one. `docs/metrics-report.md` § "What
+it does establish" has always stated this correctly and in full — the failure
+was **propagation**, not measurement. Logged 2026-08-23 for cycle 006's audit.
+
+**⚠ Separately: 88.9%/94.4% was measured with `normalization.enabled = false`,
+against a shipped default of `true`** — both arms, so the paired comparison
+itself is unaffected, but neither number is the shipped configuration. Full
+caveat and evidence: `docs/metrics-report.md` "Real-data results", added by
+audit 001 F-001-2.
 
 **Ranked by measured effect — this table is the reason v2 is shaped the way it
 is:**
