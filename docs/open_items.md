@@ -997,3 +997,158 @@ capability signal.
 subset run (`docs/benchmark_readiness.md`) above almost everything else on the
 list. It is the only route to a number that means anything to a reader outside
 this repository, and it is precisely the question the owner asked.
+
+## The A2 concurrency assertion cannot fire — added 2026-08-24, audit 007 (F-007-4)
+
+The Build Spec is unambiguous: a last-write-wins field written by two
+concurrent nodes is a defect, and it must be "enforced with an assertion in
+the merge path, active in all environments including production."
+`orchestrator/state.py::merge()` implements the assertion correctly in
+isolation — a live probe inside the running container confirms it fires when
+two nodes write the same field in one merge cycle.
+
+It cannot fire in the graph. `graph.py`'s node wrapper calls
+`merge(state, update, node_name=...).model_dump()` after every node, and
+`model_dump()` drops `_lww_writers` (it is set via `object.__setattr__` and
+excluded from serialization by design — the field isn't declared on the
+model). LangGraph rebuilds a fresh `StateSyncState` from that dict for the
+next node, and `model_post_init` resets `_lww_writers` to `{}`. Every node
+therefore starts with an empty writer map, so the "was this field already
+written by a different node this cycle" check can never see a prior writer.
+
+The corroborating detail: `state.py::reset_lww_writers()` — the function
+whose own docstring explains why writer-tracking needs a reset point at the
+start of each parallel dispatch batch — is imported by `graph.py` and called
+nowhere. It was written for a design where the tracking *persists* across
+nodes within a batch; the actual graph resets it on every single hop instead,
+making the reset function unreachable dead code and the assertion body
+unreachable for a different reason than the one the reset function guards
+against.
+
+**Does not currently cost anything.** The shipped graph has no parallel
+dispatch — `supervisor_node` routes to exactly one of `sql`/`docs`/`hybrid` —
+so there is nothing today for a concurrent double-write to happen to. The gap
+matters the moment a future cycle adds real parallel nodes (a candidate:
+running the SQL and doc sub-tasks of a hybrid query concurrently instead of
+sequentially, which `unstructured_knowledge.py`'s decomposition already sets
+up the pieces for) — at that point the safety net the spec requires will
+still be absent, silently.
+
+**Fix shape, not attempted here:** either (a) make `_lww_writers` survive the
+`model_dump()`/rebuild round-trip (a serialized, non-underscore field, which
+changes the public schema), or (b) move the concurrency check to a layer that
+sits outside the per-node dump/rebuild cycle — e.g. tracked once per
+`graph.ainvoke()` call in `main.py`, keyed by `query_id`, reset explicitly
+when a new query starts. Neither was implemented in cycle 007: multi-turn
+touched this file only to add three new LWW fields, all single-writer, and
+did not add parallel dispatch.
+
+## SchemaRetriever Protocol omits the parameter its only implementation needs — added 2026-08-24, audit 007 (F-007-5)
+
+`orchestrator/schema_retriever.py`'s `SchemaRetriever(Protocol)` declares
+`retrieve(self, session, table_names) -> tuple[str, list[dict]]`.
+`DirectSchemaRetriever.retrieve` — the only implementation, and the one every
+call site actually uses — requires a third parameter, `schema: str | None`,
+without which the Olist real-data path cannot be reached (`sql_agent.py`
+passes it positionally at two call sites). A second implementation written
+*to the declared interface* — exactly what §5a's pre-committed top-k
+candidate selector would be — would satisfy the Protocol and break on the
+third positional argument at either call site.
+
+`@runtime_checkable` does not catch this: `isinstance()` against a
+runtime-checkable Protocol checks method names, not signatures, and nothing
+in the codebase calls `isinstance` against `SchemaRetriever` anyway. The seam
+gate that reports this as passing (`verify_seams.py`, part of the 26/26
+figure) checks for the literal string `"class SchemaRetriever(Protocol)"` via
+regex — true regardless of what the class declares.
+
+**Not fixed in cycle 007.** Cycle 007 built two new MCP tools and one new
+LLM role; it did not touch `schema_retriever.py` or add a second
+`SchemaRetriever` implementation. Whoever builds §5a's top-k selector should
+fix the Protocol's signature (add `schema: str | None = None`) as part of
+that work, before writing the second implementation against it — writing the
+second implementation first and discovering the mismatch by breakage would
+repeat the exact shape of this finding.
+
+## `run_e2_v1.py` crashes on an unregistered `--force` — added 2026-08-24, audit 007 (F-007-6)
+
+`scripts/run_e2_v1.py` reads `args.force` at its append-only-guard check but
+never registers `--force` on its `argparse.ArgumentParser` (every sibling
+harness that has this guard — `bench_multilingual.py`, `bench_memory.py`,
+`bench_correction.py`, `check_consistency.py` — registers it; this one
+doesn't). Reproduced live: `python3 scripts/run_e2_v1.py --out
+docs/metrics-report.md` raises `AttributeError: 'Namespace' object has no
+attribute 'force'` before any query runs.
+
+Fails safe — the crash happens before the overwrite it's guarding against, so
+nothing was lost — but the guard is unusable on its one intended trigger
+(re-running into an existing `--out` path on purpose). Fix is one line
+(`ap.add_argument("--force", action="store_true", ...)`, matching the other
+four harnesses); not applied in cycle 007, which did not touch this file.
+
+## Supervisor's route-parse fallback iterates a `frozenset` — added 2026-08-24, audit 007 (F-007-7)
+
+`orchestrator/nodes/supervisor.py::_extract_route`'s regex fallback (used
+when the LLM's response isn't valid JSON) does `for candidate in
+_VALID_ROUTES: if re.search(...)`, where `_VALID_ROUTES` is
+`frozenset({"sql", "docs", "hybrid"})`. Python randomizes string hashing per
+process (`PYTHONHASHSEED` unset), so the iteration order — and therefore
+which route wins when the response text matches more than one candidate —
+changes between orchestrator restarts. Confirmed live in the running
+container: three separate `python -c` invocations printed three different
+orders.
+
+**No evidence this has ever changed a routing decision** — the fallback only
+runs on a JSON parse failure, whose rate was not measured here, and M9's
+published 0.983 was measured within one process where the order was fixed
+for the run's whole duration. The finding is a reproducible source of
+cross-restart nondeterminism in a component whose headline property is
+determinism, not a demonstrated wrong route. Fix is trivial (iterate a tuple
+in a fixed priority order instead of a set); not applied in cycle 007, which
+did not touch `supervisor.py`.
+
+## The shipped-flag guard does not cover `config/statesync.toml` — added 2026-08-24, audit 007 (F-007-9)
+
+`scripts/shipped_flags.py`'s `SHIPPED_DEFAULTS` guards five keys, all in
+`config/flags.toml`. Metric-moving constants that live in
+`config/statesync.toml` instead — `citation_max_chunks` (the constant behind
+M6's 0.667 context-precision ceiling, audit 003 F-003-4), `semantic_top_k`
+(the constant cycle 006's addressability result is stated against) — are read
+by nothing in the guard and appear in no `flag_provenance` block. A change to
+either would produce a report that looks byte-identical in provenance to
+every one before it.
+
+**Never fired.** `git log -- config/statesync.toml` shows 13 commits, all
+additions; `git log -p` shows zero modifications to either constant since
+each was introduced. No published number is affected by this gap as things
+stand. Cycle 007 itself *added* two new constants to this same file
+(`max_tokens_rewriter`, `rewrite_history_turns`, `history_get_turns_hard_cap`
+— BD10) without adding statesync.toml to the guard's coverage, which is the
+same class of omission, made again rather than closed. Left open rather than
+scope-crept into this cycle: closing it means deciding which subset of
+statesync.toml's many values are actually metric-moving (a real design
+question, not a mechanical one), which cycle 007 did not have budget to do
+carefully.
+
+## `_signature`'s exact-match may false-fail AVG-style ground truth in bench_multilingual.py too — added 2026-08-25, found building cycle 007
+
+Building `bench_multiturn.py` (Workstream A) found that reusing
+`bench_multilingual.py`'s `_signature` verbatim (justified by audit 007
+F-007-3 for alias-insensitivity) produces a **second**, different false
+failure: a ground truth that rounds an aggregate (`ROUND(AVG(...),2)`, for
+readability) does not match generated SQL that computes the same `AVG`
+unrounded — confirmed live, `19.99` vs Postgres's own
+`19.9903199289835775` for the identical query. Fixed in
+`bench_multiturn.py` (`_round_floats`, rounds any float value to 2dp before
+comparison).
+
+**Not fixed in `bench_multilingual.py` itself — not verified to matter
+there either.** `fixtures/golden/phase_d_multilingual.json` contains 4
+occurrences of `AVG`/`avg(` in its ground truths, so the same false-failure
+shape is *possible* in D-V1's published numbers. This was not checked: audit
+007 F-007-10 already found D-V1 has an unrelated ±7.5pp run-to-run noise
+floor, and chasing a second, unverified defect class in a harness this
+cycle did not otherwise touch would have been scope creep on a build cycle,
+not an audit. Whoever next touches `bench_multilingual.py` should check the
+4 AVG-bearing queries' ground truth against generated SQL directly before
+assuming this doesn't apply.

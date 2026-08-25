@@ -299,9 +299,17 @@ matches `city_local`, returns 0, and answers confidently. Reproduced on three
 independent models, so the cause is the schema carrying no signal about which
 column holds which script — not any model's weakness.
 
-*Completion:* the acceptance condition already fixed in `open_items.md`
-(English line up, D-V2 ≥ 81.25%, D-V1 treatment ≥ 65.0%) **plus** the Hinglish
-half no worse. Pre-committed so it cannot be renegotiated after seeing results.
+*Completion:* the acceptance condition in `open_items.md`, which is the
+authoritative version of this line — this copy went stale (audit 007
+F-007-8) and is corrected to match rather than repeated: **D-V2 entity
+preservation ≥ 81.25%** (unchanged, absolute); the **English reference line
+must improve** over the paired pre-measurement; **D-V1 treatment must not
+fall below** that same pre-measurement, taken on the build immediately
+before the attempt, replacing the absolute `≥ 65.0%` this line used to state
+(audit 001 F-001-3: `da6e49f` shipped and took D-V1 to 55.0%, turning "hold
+65.0%" into an undisclosed +10.0pp demand against the build that actually
+ships) — **plus** the Hinglish half no worse. Pre-committed so it cannot be
+renegotiated after seeing results.
 
 **B2. The hard fixture.** Every fixture here is mostly single-table aggregates.
 BD6 records 2-hop joins as this system's measured weakness across four
