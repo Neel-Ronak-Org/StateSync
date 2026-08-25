@@ -15,6 +15,7 @@ pool_min_size             = 2       # psycopg3 AsyncConnectionPool minimum conne
 pool_max_size             = 10      # psycopg3 AsyncConnectionPool maximum connections
 sample_rows_default_limit = 5       # default row count for data.sample_rows (A4.3)
 sample_rows_max_columns   = 12      # maximum columns in a sample_rows column list
+history_get_turns_hard_cap = 20     # cycle 007: history.get_recent_turns input bound (BD10)
 
 [sql]
 retry_max                 = 3       # attempts after the first; 4 executions maximum
@@ -27,6 +28,8 @@ max_tokens_memory_summary = 256     # C1: insight/tables/join_path JSON, capped 
 max_tokens_normalizer     = 512     # D: detected_language/confidence/normalized_query/preserved_entities JSON
 max_tokens_decomposer     = 512     # E1: sub-question decomposition JSON, hybrid route only
 max_tokens_judge          = 1024    # E1: bench_grounding.py context precision / faithfulness JSON
+max_tokens_rewriter       = 512     # cycle 007: needs_context/rewritten_query/guessed JSON (BD10)
+rewrite_history_turns     = 3       # how many prior turns rewrite_node loads per query
 synthesizer_preview_rows  = 50      # rows shown to synthesizer LLM (context window budget)
 answer_max_chars          = 4000    # A7 answer_text character cap
 chart_max_data_rows       = 5000    # A7 data.values maxItems

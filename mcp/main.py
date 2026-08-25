@@ -12,6 +12,8 @@ Tools exposed (A4):
   docs.get_passage        (A4.9, E1)
   memory.get_trajectory   (A4.8, C1)
   memory.put_trajectory   (A4.8, C1)
+  history.append_turn       (cycle 007, Workstream A)
+  history.get_recent_turns  (cycle 007, Workstream A)
 
 Per A4: tenant_id is bound at session establishment from the X-Tenant-ID header.
 It is not a tool parameter — it is injected server-side by session middleware.
@@ -31,7 +33,7 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from db import init_pool, close_pool, get_connection
+from db import init_pool, close_pool, get_connection, init_history_pool, close_history_pool
 from embeddings import close_embeddings_client
 from fingerprint import verify_fingerprint_at_startup
 from qdrant_store import init_qdrant, close_qdrant
@@ -42,6 +44,7 @@ from tools.schema_tools import list_tables, describe_table
 from tools.data_tools import sample_rows, run_select
 from tools.vector_tools import semantic_search, hybrid_select, get_passage
 from tools.memory_tools import get_trajectory, put_trajectory
+from tools.history_tools import append_turn, get_recent_turns
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
@@ -53,6 +56,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_pool()
+    await init_history_pool()
 
     # A5: recomputed at mcp startup; mismatch is a startup failure, not a
     # warning. Uses the ordinary statesync_reader pool (see fingerprint.py).
@@ -66,6 +70,7 @@ async def lifespan(app: FastAPI):
     await close_qdrant()
     await close_embeddings_client()
     await close_pool()
+    await close_history_pool()
     logger.info("MCP service shutdown.")
 
 
@@ -91,6 +96,8 @@ _REGISTERED_TOOLS: dict[str, Any] = {
     "docs.get_passage":       get_passage,
     "memory.get_trajectory": get_trajectory,
     "memory.put_trajectory": put_trajectory,
+    "history.append_turn":      append_turn,
+    "history.get_recent_turns": get_recent_turns,
 }
 
 assert len(_REGISTERED_TOOLS) <= TOOL_CEILING, (

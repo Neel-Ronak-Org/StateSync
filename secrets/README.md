@@ -19,6 +19,11 @@ echo "changeme_reader" > secrets/pg_reader_password
 # Postgres statesync_ingest password (for seeding)
 echo "changeme_ingest" > secrets/pg_ingest_password
 
+# Postgres statesync_history password (cycle 007: session_state.conversation_turns
+# only -- migrations/011). Mounted into the mcp container; never held by the
+# orchestrator (A1).
+echo "changeme_history" > secrets/pg_history_password
+
 # Anthropic API key
 echo "sk-ant-..." > secrets/anthropic_api_key
 ```

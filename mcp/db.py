@@ -11,6 +11,20 @@ Every connection has session guards applied at checkout (Layer 2):
 Password is read from a Docker secret file (never from an env var directly
 in production — B-V4 pass condition requires zero credential material in
 environment or logs).
+
+Cycle 007 adds a SECOND, fully independent pool below (get_history_connection)
+for statesync_history — the one role in this codebase with a write grant, and
+it is granted on exactly one table (migrations/011). This is not an extension
+of the reader pool: different role, different DSN, different secret, no
+shared connections, and NOT wrapped in "BEGIN READ ONLY" -- deliberately, since
+its entire purpose is to write. The A4.5 SELECT-only guarantee this file's
+first half implements is about statesync_reader and the agent's SQL-execution
+path (data.run_select); it is completely unchanged by the second half below.
+What makes the second half safe is not a role grant alone -- it is that
+mcp/tools/history_tools.py, the ONLY caller, builds fixed-shape parameterized
+queries and never accepts or executes a SQL string handed to it by an LLM.
+That invariant lives in history_tools.py, not here; this file only opens the
+connection.
 """
 
 from __future__ import annotations
@@ -129,3 +143,94 @@ async def get_connection() -> AsyncIterator[psycopg.AsyncConnection]:
         finally:
             # Always rollback — Layer 2 guarantee (A4.5).
             await conn.execute("ROLLBACK")
+
+
+# ── statesync_history pool (cycle 007) ─────────────────────────────────────────
+# Independent of everything above: own pool object, own role, own secret file,
+# own DSN. Nothing here is reachable from get_connection() or vice versa.
+_history_pool: AsyncConnectionPool | None = None
+
+
+def _read_pg_history_password() -> str:
+    """Read the statesync_history password from its own Docker secret file."""
+    secret_file = os.environ.get("PG_HISTORY_PASSWORD_FILE", "/run/secrets/pg_history_password")
+    try:
+        return open(secret_file).read().strip()
+    except OSError:
+        pw = os.environ.get("PG_HISTORY_PASSWORD", "")
+        if not pw:
+            raise RuntimeError(
+                "statesync_history password not found. "
+                "Set PG_HISTORY_PASSWORD_FILE or PG_HISTORY_PASSWORD."
+            )
+        return pw
+
+
+def _build_history_dsn() -> str:
+    """Build the postgres DSN for statesync_history (migrations/011)."""
+    pg_host = os.environ.get("POSTGRES_HOST", "postgres")
+    pg_port = os.environ.get("POSTGRES_PORT", "5432")
+    pg_db   = os.environ.get("POSTGRES_DB", "statesync")
+    pg_user = "statesync_history"
+    pg_pass = _read_pg_history_password()
+    return f"postgresql://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/{pg_db}"
+
+
+async def _configure_history_connection(conn: psycopg.AsyncConnection) -> None:
+    """
+    Session guards for the history pool. Statement/idle timeouts apply the
+    same as the reader pool; READ ONLY does not, and must not -- this
+    connection's one job is to write to session_state.conversation_turns.
+    """
+    await conn.execute(
+        f"SET statement_timeout = {_statement_timeout_ms}"
+    )
+    await conn.execute(
+        f"SET idle_in_transaction_session_timeout = {_session_idle_timeout_ms}"
+    )
+    await conn.commit()
+    logger.debug("Session guards applied to new history connection.")
+
+
+async def init_history_pool() -> None:
+    """Initialize the statesync_history pool. Called at MCP startup, alongside init_pool()."""
+    global _history_pool
+    dsn = _build_history_dsn()
+    _history_pool = AsyncConnectionPool(
+        conninfo=dsn,
+        min_size=1,
+        max_size=cfg.mcp.pool_max_size,
+        configure=_configure_history_connection,
+        open=True,
+    )
+    logger.info("MCP history database pool initialized (statesync_history).")
+
+
+async def close_history_pool() -> None:
+    """Close the statesync_history pool. Called at MCP shutdown."""
+    global _history_pool
+    if _history_pool:
+        await _history_pool.close()
+        logger.info("MCP history database pool closed.")
+    _history_pool = None
+
+
+@asynccontextmanager
+async def get_history_connection() -> AsyncIterator[psycopg.AsyncConnection]:
+    """
+    Yield a connection from the statesync_history pool inside an ordinary
+    (non-read-only) transaction that COMMITS on success. This is the only
+    write-capable connection path in this codebase -- see this module's
+    docstring for why it exists and what constrains it. Never used by any
+    agent-facing tool; only mcp/tools/history_tools.py calls this.
+    """
+    if _history_pool is None:
+        raise RuntimeError("History database pool not initialized. Call init_history_pool() first.")
+
+    async with _history_pool.connection() as conn:
+        try:
+            yield conn
+            await conn.commit()
+        except Exception:
+            await conn.rollback()
+            raise

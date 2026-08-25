@@ -1609,4 +1609,47 @@ have."
 
 ---
 
+## BD10 — `rewriter` role (config/flags.toml) and `max_tokens_rewriter` (config/statesync.toml), cycle 007 Workstream A
+
+**Decided**: cycle 007 adds contextual query rewriting (`orchestrator/nodes/
+rewrite.py`, V2_STRATEGY.md §3b) as a new pipeline stage between `normalize`
+and `supervisor`. It needs its own LLM role, `rewriter`, added to
+`_VALID_ROLES` in `orchestrator/llm/provider.py` and to all four
+`[llm.models.<provider>]` blocks in `config/flags.toml` — a new key per
+provider, which `flags.toml`'s own rule (quoted in BD9) requires a BD entry
+for. It also needs `max_tokens_rewriter = 512` in `config/statesync.toml`'s
+`[sql]` block (A0.3, a new locked constant), sized the same as `normalizer`
+and `decomposer` — comparable output shape: a JSON object carrying a
+boolean, a short rewritten-question string, and a second boolean.
+
+**Written at build time, not retroactively.** BD9 exists because audit 002
+caught the same class of gap after the fact. Writing this one now, in the
+same commit as the config change, is the fix for that repeated failure mode
+— not a claim that BD9's gap could not recur, but evidence it did not
+recur silently this time.
+
+**Two new MCP tools, named for completeness though the spec's own rule does
+not require a BD entry for them.** `history.append_turn` and
+`history.get_recent_turns` (`mcp/tools/history_tools.py`) bring the
+registered tool count from 9 to 11, against a ceiling of 15 — Appendix 4's
+rule requires a BD entry only past the ceiling (*"A build agent may not add
+a tenth tool without a BD entry"*), which this does not reach. Recorded here
+anyway so a reader auditing "what changed this cycle" finds one entry rather
+than needing to also check `mcp/main.py`'s `_REGISTERED_TOOLS` diff by hand.
+
+**A pre-existing gap this entry does NOT fix, named so it is not mistaken
+for one it does.** Appendix 1's `[sql]` block above (this same file) already
+omits `max_tokens_supervisor`, `max_tokens_sql`, `max_tokens_synthesizer`,
+`max_tokens_memory_summary`, `max_tokens_normalizer`, `max_tokens_decomposer`
+and `max_tokens_judge` — seven constants that exist in the real
+`config/statesync.toml` and predate this cycle. Adding only
+`max_tokens_rewriter` to Appendix 1's embedded copy would misrepresent that
+block as current when six of its siblings already are not; it is left as-is,
+and the drift is the same `CYCLE_PROTOCOL.md` §6 class 4 shape BD9 named,
+now with a second instance on record rather than a silently-widened first
+one. Backfilling all seven is a documentation task with no build-code
+dependency and is out of this cycle's scope.
+
+---
+
 *Master Build Specification, StateSync. Derived from `StateSync_Strategy_Document.md`, which remains canonical for all architectural rationale.*

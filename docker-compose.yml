@@ -134,6 +134,7 @@ services:
       - ./config:/app/config:ro
     secrets:
       - pg_reader_password
+      - pg_history_password
     depends_on:
       postgres:
         condition: service_healthy
@@ -253,12 +254,18 @@ services:
 # For local dev, create these files before running:
 #   echo "changeme" > secrets/pg_migrator_password
 #   echo "changeme" > secrets/pg_reader_password
+#   echo "changeme" > secrets/pg_history_password
 #   echo "sk-ant-..." > secrets/anthropic_api_key
 secrets:
   pg_migrator_password:
     file: ./secrets/pg_migrator_password
   pg_reader_password:
     file: ./secrets/pg_reader_password
+  pg_history_password:
+    # Cycle 007: statesync_history, table-scoped to
+    # session_state.conversation_turns only (migrations/011). Mounted only
+    # into mcp -- the orchestrator never holds a DB credential (A1).
+    file: ./secrets/pg_history_password
   anthropic_api_key:
     file: ./secrets/anthropic_api_key
   azure_openai_api_key:
