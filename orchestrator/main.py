@@ -10,6 +10,7 @@ Endpoints:
 from __future__ import annotations
 
 import logging
+import os
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -24,6 +25,7 @@ from pydantic import BaseModel
 from config_loader import cfg, flags, snapshot_flags
 from graph import graph
 from llm.provider import validate_llm_config
+from mcp_client import MCPSession, history_append_turn
 from nodes.synthesizer import build_citations
 from schemas.synthesizer_output import safe_synthesizer_output
 from state import StateSyncState
@@ -157,6 +159,9 @@ async def run_query(request: QueryRequest) -> QueryResponse:
         "detected_language":  final_state.detected_language,
         "normalized_query":   final_state.normalized_query,
         "preserved_entities": final_state.preserved_entities,
+        "turn_index":         final_state.turn_index,
+        "rewrite_applied":    final_state.rewrite_applied,
+        "context_guessed":    final_state.context_guessed,
         "spatial":            final_state.spatial.model_dump(),
         "subtasks":           final_state.subtasks,
         "retrievals":         [r.model_dump() for r in final_state.retrievals],
@@ -193,6 +198,40 @@ async def run_query(request: QueryRequest) -> QueryResponse:
         "citations": citations,
     })
 
+    # Cycle 007 (Workstream A): record the turn AFTER validation, using the
+    # exact answer_text the user is about to receive -- not final_state's
+    # pre-repair value, for the same reason citations are recomputed here
+    # rather than trusted from the node's own return (see the comment above
+    # build_citations). Best-effort: a history-write failure must never turn
+    # a correct answer into a 500. Logged loudly rather than silently
+    # swallowed -- C2's own verification (row counts per session) would
+    # surface a persistent failure here immediately, so this is not an
+    # unobservable failure mode, just one that must not block the response.
+    try:
+        async with MCPSession(
+            tenant_id=final_state.tenant_id,
+            base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
+            session_id=final_state.session_id,
+        ) as history_session:
+            await history_append_turn(
+                history_session,
+                session_id=final_state.session_id,
+                turn_index=final_state.turn_index,
+                raw_query=final_state.raw_query,
+                rewritten_query=final_state.normalized_query or final_state.raw_query,
+                rewrite_applied=final_state.rewrite_applied,
+                context_guessed=final_state.context_guessed,
+                answer_text=validated["answer_text"],
+                route=final_state.route,
+                executed_sql=final_state.executed_sql,
+            )
+    except Exception as exc:
+        logger.error(
+            "History write failed for query_id=%s session_id=%s turn_index=%d: %s "
+            "-- response still returned to the user unaffected.",
+            final_state.query_id, final_state.session_id, final_state.turn_index, exc,
+        )
+
     logger.info(
         "Query completed: query_id=%s route=%s rows=%d latency_ms=%d chart=%s",
         final_state.query_id,
@@ -214,7 +253,6 @@ async def run_query(request: QueryRequest) -> QueryResponse:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    import os
     uvicorn.run(
         "main:app",
         host=os.environ.get("ORCHESTRATOR_HOST", "0.0.0.0"),

@@ -74,6 +74,9 @@ _LAST_WRITE_WINS_FIELDS: frozenset[str] = frozenset({
     "detected_language",
     "normalized_query",
     "preserved_entities",
+    "turn_index",
+    "rewrite_applied",
+    "context_guessed",
     "route",
     "subtasks",
     "schema_fingerprint",
@@ -127,6 +130,20 @@ class StateSyncState(BaseModel):
     detected_language:   Language = "en"
     normalized_query:    str | None = None   # None until the gate runs
     preserved_entities:  dict[str, str] = Field(default_factory=dict)
+
+    # --- multi-turn (cycle 007, Workstream A) ---
+    # rewrite_node runs after normalize, before supervisor, and OVERWRITES
+    # normalized_query with the standalone form of a follow-up (or leaves it
+    # unchanged on turn 1 / a context-free question) -- it does not add a
+    # second query field, so D1 Callout 1's structural guarantee ("Supervisor
+    # reads normalized_query only, never raw_query") stays true unmodified.
+    # These three fields are provenance ABOUT that rewrite, read by nobody
+    # downstream in the graph -- only by main.py's history write and by
+    # bench_multiturn.py's scoring.
+    turn_index:       int = 1       # 1 on a fresh session; loaded history + 1 otherwise
+    rewrite_applied:  bool = False  # normalized_query changed from the pre-rewrite text
+    context_guessed:  bool = False  # rewrite required resolving an ambiguous reference
+                                     # with no clarification path available (A5 cut-line)
 
     # --- routing (Part B) ---
     route:         Route | None = None

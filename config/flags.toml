@@ -78,6 +78,7 @@ memory_summarizer = "qwen2.5:7b"   # C1: trajectory insight generation
 normalizer        = "qwen2.5:7b"   # D: language detection + entity-preserving rewrite
 decomposer        = "qwen2.5:7b"   # E1: hybrid query decomposition into sub-tasks
 judge             = "qwen2.5:7b"   # E1: bench_grounding.py context precision / faithfulness scoring
+rewriter          = "qwen2.5:7b"   # cycle 007: contextual query rewriting (multi-turn)
 
 # DEPLOYMENT names, not model ids. Azure addresses whatever you named the
 # deployment in the portal; two deployments of the same base model with
@@ -93,6 +94,7 @@ memory_summarizer = "gpt-4o-mini"
 normalizer        = "gpt-4o-mini"
 decomposer        = "gpt-4o-mini"
 judge             = "gpt-4o"
+rewriter          = "gpt-4o-mini"  # cycle 007: contextual query rewriting (multi-turn)
 
 # Gemini addresses models by PUBLISHED NAME -- no deployment-name indirection,
 # unlike Azure. Free tier is rate-limited per MINUTE, so a full fixture run
@@ -136,6 +138,10 @@ memory_summarizer = "gemini-3.1-flash-lite"
 normalizer        = "gemini-3.1-flash-lite"
 decomposer        = "gemini-3.5-flash-lite"
 judge             = "gemini-3.5-flash-lite"
+rewriter          = "gemini-3.1-flash-lite"  # cycle 007: contextual query rewriting (multi-turn).
+# An 8th role tightens the free-tier RPD budget further (see the block comment
+# above) -- only relevant if provider=gemini is actually selected; unexercised
+# by this cycle's own measurements, which run on the shipped local provider.
 
 [llm.models.anthropic]
 supervisor        = "claude-opus-4-5"
@@ -145,6 +151,7 @@ memory_summarizer = "claude-sonnet-4-5"   # C1: trajectory insight generation
 normalizer        = "claude-sonnet-4-5"   # D: language detection + entity-preserving rewrite
 decomposer        = "claude-sonnet-4-5"   # E1: hybrid query decomposition into sub-tasks
 judge             = "claude-opus-4-5"     # E1: bench_grounding.py context precision / faithfulness scoring
+rewriter          = "claude-sonnet-4-5"   # cycle 007: contextual query rewriting (multi-turn)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # that is the point of the flag system. Changing the *existence* of a flag

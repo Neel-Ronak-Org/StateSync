@@ -359,6 +359,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     raw_query: str = state_dict.get("normalized_query") or state_dict.get("raw_query", "")
     tenant_id: str = state_dict["tenant_id"]
     query_id: str = state_dict.get("query_id", "")
+    session_id: str = state_dict.get("session_id", "")
     flags_snapshot: dict[str, Any] = state_dict.get("flags_snapshot", {})
     memory_enabled: bool = bool(flags_snapshot.get("memory.enabled", True))
 
@@ -378,7 +379,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
 
     mcp_base_url = os.environ.get("MCP_URL", "http://mcp:8080")
 
-    async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url) as session:
+    async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id) as session:
         # Always needed: fingerprint (memory key on attempt 0) and table list.
         _schema = target_schema()
         tables_result = await schema_list_tables(session, _schema)

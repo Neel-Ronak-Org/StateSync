@@ -29,9 +29,16 @@ class MCPSession:
     The server injects it server-side; agents never see it as a parameter.
     """
 
-    def __init__(self, tenant_id: str, base_url: str | None = None) -> None:
+    def __init__(self, tenant_id: str, base_url: str | None = None,
+                session_id: str | None = None) -> None:
         self.tenant_id = tenant_id
-        self.session_id = str(uuid.uuid4())
+        # Cycle 007 (audit 007 F-007-1): session_id now flows in from the
+        # caller -- the conversation's real StateSyncState.session_id -- so
+        # X-Session-ID actually identifies the conversation, which is what
+        # history_tools.py's session-scoped queries need. Minting a fresh
+        # uuid4 remains the fallback for any caller that has no session of
+        # its own to thread (verify_tenancy.py, one-off scripts).
+        self.session_id = session_id or str(uuid.uuid4())
         self._base_url = (
             base_url
             or os.environ.get("MCP_URL", "http://mcp:8080")
@@ -228,3 +235,43 @@ async def memory_put_trajectory(
     if dialect_notes is not None:
         params["dialect_notes"] = dialect_notes
     return await session.call("memory.put_trajectory", params)
+
+
+# ── history.* (cycle 007, Workstream A) ─────────────────────────────────────
+async def history_append_turn(
+    session: MCPSession,
+    session_id: str,
+    turn_index: int,
+    raw_query: str,
+    rewritten_query: str,
+    rewrite_applied: bool,
+    context_guessed: bool,
+    answer_text: str,
+    route: str | None = None,
+    executed_sql: str | None = None,
+) -> dict[str, Any]:
+    """history.append_turn"""
+    params: dict[str, Any] = {
+        "session_id": session_id,
+        "turn_index": turn_index,
+        "raw_query": raw_query,
+        "rewritten_query": rewritten_query,
+        "rewrite_applied": rewrite_applied,
+        "context_guessed": context_guessed,
+        "answer_text": answer_text,
+    }
+    if route is not None:
+        params["route"] = route
+    if executed_sql is not None:
+        params["executed_sql"] = executed_sql
+    return await session.call("history.append_turn", params)
+
+
+async def history_get_recent_turns(
+    session: MCPSession, session_id: str, limit: int | None = None,
+) -> dict[str, Any]:
+    """history.get_recent_turns"""
+    params: dict[str, Any] = {"session_id": session_id}
+    if limit is not None:
+        params["limit"] = limit
+    return await session.call("history.get_recent_turns", params)

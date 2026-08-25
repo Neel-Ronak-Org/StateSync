@@ -44,7 +44,7 @@ from mcp_client import (
     MCPSession, data_run_select, schema_list_tables,
     vector_hybrid_select, vector_semantic_search,
 )
-from schema_retriever import get_schema_retriever
+from schema_retriever import get_schema_retriever, target_schema
 
 logger = logging.getLogger(__name__)
 
@@ -267,14 +267,31 @@ async def _run_sql_subtask(
     Returns (executed_sql, rows, columns, error_or_None, tokens_in,
     tokens_out, llm_calls, trajectory_steps). error_or_None matches
     ErrorRecord's shape minus 'attempt' (the caller fills that in).
+
+    Cycle 007 B1 (audit 007 F-007-2): this sub-task used to call
+    schema_list_tables/retrieve with schema=None, which resolves server-side
+    to 'public' regardless of schema_retriever.target_schema -- so under
+    target_schema="olist" this path silently queried the 550-row synthetic
+    corpus while sql_agent_node (the non-hybrid route) correctly queried
+    olist's 99,441 rows, sharing three table names (orders/order_items/
+    sellers) between the two schemas so the wrong-corpus answer was
+    well-formed and silent, not an error. Threading target_schema() through
+    here, the same way sql_agent_node already does (schema_retriever.py's
+    QUALIFY comment), closes that gap. data_run_select itself takes no
+    schema parameter -- it executes whatever SQL text it is given, so no
+    change is needed there; retriever.retrieve()'s qualification of the
+    schema_context (e.g. "TABLE olist.orders:") is what makes the model
+    write schema-qualified FROM clauses, same mechanism sql_agent.py relies
+    on for the exact same reason.
     """
     trajectory_steps = 0
-    tables_result = await schema_list_tables(session)
+    _schema = target_schema()
+    tables_result = await schema_list_tables(session, _schema)
     table_names = [t["name"] for t in tables_result.get("tables", [])]
     trajectory_steps += 1
 
     retriever = get_schema_retriever()
-    schema_context, _ = await retriever.retrieve(session, table_names)
+    schema_context, _ = await retriever.retrieve(session, table_names, _schema)
     trajectory_steps += len(table_names)
 
     llm = get_agent_llm("sql")
@@ -319,13 +336,14 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
     query_text: str = state_dict.get("normalized_query") or state_dict.get("raw_query", "")
     tenant_id: str = state_dict["tenant_id"]
     query_id: str = state_dict.get("query_id", "")
+    session_id: str = state_dict.get("session_id", "")
     flags_snapshot: dict[str, Any] = state_dict.get("flags_snapshot", {})
 
     start_ms = int(time.monotonic() * 1000)
     tokens_in_total = tokens_out_total = llm_calls_total = trajectory_steps = 0
     mcp_base_url = os.environ.get("MCP_URL", "http://mcp:8080")
 
-    async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url) as session:
+    async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id) as session:
         if route == "docs":
             matches = await _semantic_search_expanded(session, query_text, cfg.retrieval.semantic_top_k)
             trajectory_steps += 2  # the expanded call is a second round-trip

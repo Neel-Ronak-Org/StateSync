@@ -1,17 +1,22 @@
 """
 orchestrator/graph.py
-LangGraph: entry -> Normalize -> Supervisor -> Specialist (routed) ->
-[correction loop] -> Synthesizer.
+LangGraph: entry -> Normalize -> Rewrite -> Supervisor -> Specialist (routed)
+-> [correction loop] -> Synthesizer.
 
-Graph structure (Phase B + C2 + D + E1):
+Graph structure (Phase B + C2 + D + E1 + cycle 007 Workstream A):
   entry_node
       |
   normalize_node    (D1: language detection + entity-preserving rewrite;
       |               ALWAYS runs before Supervisor -- Callout 1: Supervisor
-      |               reads normalized_query only, never raw_query. This is
-      |               what makes that guarantee structural: normalize_node
-      |               always sets normalized_query, by a direct (non-
-      |               conditional) edge, before supervisor_node can run.)
+      |               reads normalized_query only, never raw_query.)
+  rewrite_node      (cycle 007: contextual query rewriting for multi-turn,
+      |               V2_STRATEGY.md §3b. ALWAYS runs, direct edge, same
+      |               structural technique as normalize_node -- it
+      |               OVERWRITES normalized_query with a follow-up's
+      |               standalone form (or leaves it unchanged) rather than
+      |               adding a second field, so Callout 1's guarantee above
+      |               is unmodified: Supervisor still reads exactly one
+      |               field and still never sees raw_query.)
   supervisor_node   (LLM classification: sql | docs | hybrid)
       |
   [routing dispatch] -> sql_agent_node                (route = "sql")
@@ -59,6 +64,7 @@ from state import StateSyncState, merge, reset_lww_writers
 from nodes.entry import entry_node
 from nodes.error_exit import error_exit_node
 from nodes.normalize import normalize_node
+from nodes.rewrite import rewrite_node
 from nodes.supervisor import supervisor_node
 from nodes.sql_agent import sql_agent_node
 from nodes.unstructured_knowledge import unstructured_knowledge_node
@@ -178,6 +184,11 @@ async def _normalize(state: StateSyncState) -> dict[str, Any]:
     return _merge_with_scratch(state, update, "normalize")
 
 
+async def _rewrite(state: StateSyncState) -> dict[str, Any]:
+    update = await rewrite_node(state.model_dump())
+    return _merge_with_scratch(state, update, "rewrite")
+
+
 async def _supervisor(state: StateSyncState) -> dict[str, Any]:
     update = await supervisor_node(state.model_dump())
     return _merge_with_scratch(state, update, "supervisor")
@@ -223,6 +234,7 @@ def build_graph() -> StateGraph:
     # Add nodes
     builder.add_node("entry", _entry)
     builder.add_node("normalize", _normalize)
+    builder.add_node("rewrite", _rewrite)
     builder.add_node("supervisor", _supervisor)
     builder.add_node("sql", _sql_specialist)
     builder.add_node("docs", _docs_specialist)
@@ -233,10 +245,15 @@ def build_graph() -> StateGraph:
     # Entry point
     builder.set_entry_point("entry")
 
-    # entry → normalize → supervisor (D1: gate always runs first, direct
-    # non-conditional edges so normalized_query survives intact -- Callout 1)
+    # entry → normalize → rewrite → supervisor. D1: normalize always runs
+    # first, direct non-conditional edge, so normalized_query survives intact
+    # (Callout 1). Cycle 007 (Workstream A) inserts rewrite the same way,
+    # for the same structural reason: it always runs, always sets
+    # normalized_query (possibly unchanged), and supervisor's existing
+    # "reads normalized_query only" assertion needs no change.
     builder.add_edge("entry", "normalize")
-    builder.add_edge("normalize", "supervisor")
+    builder.add_edge("normalize", "rewrite")
+    builder.add_edge("rewrite", "supervisor")
 
     # supervisor → routing dispatch
     builder.add_conditional_edges(
