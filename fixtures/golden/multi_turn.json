@@ -1,0 +1,717 @@
+{
+  "_about": {
+    "corpus": "olist schema -- real Brazilian e-commerce data, 1,451,414 rows",
+    "licence": "CC BY-NC-SA 4.0 (non-commercial). See docs/limitations.md.",
+    "authored": "2026-08-25 (cycle 007), scripts/gen_multiturn_fixture.py -- every SQL ground truth executed live via data.run_select before commit; the one docs-route ground truth (mt_06 T1) is the same value and same expected_chunk_ids already established and scored by fixtures/golden/phase_e1.json's e1_doc_002, reused rather than re-invented.",
+    "self_authored_warning": "Self-authored, same class of caveat as olist.json/olist_hard.json's own _about.self_authored_warning.",
+    "design_note": "Per-turn SQL-generation difficulty is deliberately kept in the EASY range (single-table or a 2-3 table join, matching olist.json's own profile, not olist_hard.json's) so a QM failure on a REWRITTEN question is attributable to the rewrite/multi-turn mechanism this fixture exists to test, not confounded with ordinary SQL-generation difficulty this project has already separately characterized (AGENT_HANDOFF.md §6: 88.9% easy / 50.0% hard).",
+    "n_conversations": 12,
+    "n_turns": 36,
+    "reference_types_covered": [
+      "anaphora",
+      "ellipsis",
+      "refinement"
+    ],
+    "cross_modal_conversations": [
+      "mt_06"
+    ],
+    "ambiguous_by_design_conversations": [
+      "mt_09"
+    ],
+    "context_free_at_turn_2plus": [
+      "mt_07 (turn 2)"
+    ]
+  },
+  "conversations": [
+    {
+      "conversation_id": "mt_01",
+      "turns": [
+        {
+          "turn_id": "mt_01_t1",
+          "turn_index": 1,
+          "text": "How many orders included an item from seller 6560211a19b47992c3666cc44a7e94c0?",
+          "needs_context": false,
+          "reference_type": null,
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": null,
+          "ground_truth_sql": "SELECT COUNT(DISTINCT order_id) n FROM olist.order_items WHERE seller_id='6560211a19b47992c3666cc44a7e94c0'",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_01_t2",
+          "turn_index": 2,
+          "text": "Just the delivered ones?",
+          "needs_context": true,
+          "reference_type": "refinement",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "seller",
+            "6560211a19b47992c3666cc44a7e94c0",
+            "delivered"
+          ],
+          "ground_truth_sql": "SELECT COUNT(DISTINCT oi.order_id) n FROM olist.order_items oi\n                JOIN olist.orders o ON o.order_id=oi.order_id\n                WHERE oi.seller_id='6560211a19b47992c3666cc44a7e94c0' AND o.order_status='delivered'",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_01_t3",
+          "turn_index": 3,
+          "text": "And how many of those were paid by credit card?",
+          "needs_context": true,
+          "reference_type": "ellipsis",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "seller",
+            "6560211a19b47992c3666cc44a7e94c0",
+            "delivered",
+            "credit card"
+          ],
+          "ground_truth_sql": "SELECT COUNT(DISTINCT oi.order_id) n FROM olist.order_items oi\n                JOIN olist.orders o ON o.order_id=oi.order_id\n                JOIN olist.order_payments p ON p.order_id=o.order_id\n                WHERE oi.seller_id='6560211a19b47992c3666cc44a7e94c0' AND o.order_status='delivered' AND p.payment_type='credit_card'",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "conversation_id": "mt_02",
+      "turns": [
+        {
+          "turn_id": "mt_02_t1",
+          "turn_index": 1,
+          "text": "How many orders were paid using credit card?",
+          "needs_context": false,
+          "reference_type": null,
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": null,
+          "ground_truth_sql": "SELECT COUNT(DISTINCT order_id) n FROM olist.order_payments WHERE payment_type='credit_card'",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_02_t2",
+          "turn_index": 2,
+          "text": "And how many of those had more than 6 installments?",
+          "needs_context": true,
+          "reference_type": "ellipsis",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "credit card",
+            "more than 6 installments"
+          ],
+          "ground_truth_sql": "SELECT COUNT(DISTINCT order_id) n FROM olist.order_payments WHERE payment_type='credit_card' AND payment_installments > 6",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_02_t3",
+          "turn_index": 3,
+          "text": "Just the ones with a payment value over 200?",
+          "needs_context": true,
+          "reference_type": "refinement",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "credit card",
+            "more than 6 installments",
+            "over 200"
+          ],
+          "ground_truth_sql": "SELECT COUNT(DISTINCT order_id) n FROM olist.order_payments WHERE payment_type='credit_card' AND payment_installments > 6 AND payment_value > 200",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "conversation_id": "mt_03",
+      "turns": [
+        {
+          "turn_id": "mt_03_t1",
+          "turn_index": 1,
+          "text": "How many distinct products has seller 6560211a19b47992c3666cc44a7e94c0 sold?",
+          "needs_context": false,
+          "reference_type": null,
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": null,
+          "ground_truth_sql": "SELECT COUNT(DISTINCT product_id) n FROM olist.order_items WHERE seller_id='6560211a19b47992c3666cc44a7e94c0'",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_03_t2",
+          "turn_index": 2,
+          "text": "And how many reviews has it received?",
+          "needs_context": true,
+          "reference_type": "anaphora",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "seller",
+            "6560211a19b47992c3666cc44a7e94c0",
+            "reviews"
+          ],
+          "ground_truth_sql": "SELECT COUNT(*) n FROM olist.order_reviews r\n                WHERE r.order_id IN (SELECT order_id FROM olist.order_items WHERE seller_id='6560211a19b47992c3666cc44a7e94c0')",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_03_t3",
+          "turn_index": 3,
+          "text": "How many of those were 5-star?",
+          "needs_context": true,
+          "reference_type": "refinement",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "seller",
+            "6560211a19b47992c3666cc44a7e94c0",
+            "reviews",
+            "5-star"
+          ],
+          "ground_truth_sql": "SELECT COUNT(*) n FROM olist.order_reviews r\n                WHERE r.order_id IN (SELECT order_id FROM olist.order_items WHERE seller_id='6560211a19b47992c3666cc44a7e94c0') AND r.review_score = 5",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "conversation_id": "mt_04",
+      "turns": [
+        {
+          "turn_id": "mt_04_t1",
+          "turn_index": 1,
+          "text": "How many orders came from customers in Sao Paulo state (SP)?",
+          "needs_context": false,
+          "reference_type": null,
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": null,
+          "ground_truth_sql": "SELECT COUNT(DISTINCT o.order_id) n FROM olist.orders o\n                JOIN olist.customers c ON c.customer_id=o.customer_id WHERE c.customer_state='SP'",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_04_t2",
+          "turn_index": 2,
+          "text": "And from Rio de Janeiro (RJ)?",
+          "needs_context": true,
+          "reference_type": "ellipsis",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "orders",
+            "Rio de Janeiro",
+            "RJ"
+          ],
+          "ground_truth_sql": "SELECT COUNT(DISTINCT o.order_id) n FROM olist.orders o\n                JOIN olist.customers c ON c.customer_id=o.customer_id WHERE c.customer_state='RJ'",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_04_t3",
+          "turn_index": 3,
+          "text": "What is the average payment value for the RJ orders?",
+          "needs_context": true,
+          "reference_type": "anaphora",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "average payment value",
+            "RJ"
+          ],
+          "ground_truth_sql": "SELECT ROUND(AVG(p.payment_value),2) n FROM olist.orders o\n                JOIN olist.customers c ON c.customer_id=o.customer_id\n                JOIN olist.order_payments p ON p.order_id=o.order_id WHERE c.customer_state='RJ'",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "conversation_id": "mt_05",
+      "turns": [
+        {
+          "turn_id": "mt_05_t1",
+          "turn_index": 1,
+          "text": "How many orders include an item in the bed_bath_table category?",
+          "needs_context": false,
+          "reference_type": null,
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": null,
+          "ground_truth_sql": "SELECT COUNT(DISTINCT oi.order_id) n FROM olist.order_items oi\n                JOIN olist.products p ON p.product_id=oi.product_id\n                JOIN olist.product_category_name_translation t ON t.product_category_name=p.product_category_name\n                WHERE t.product_category_name_english='bed_bath_table'",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_05_t2",
+          "turn_index": 2,
+          "text": "How many of those got a 5-star review?",
+          "needs_context": true,
+          "reference_type": "refinement",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "bed_bath_table",
+            "5-star"
+          ],
+          "ground_truth_sql": "SELECT COUNT(DISTINCT oi.order_id) n FROM olist.order_items oi\n                JOIN olist.products p ON p.product_id=oi.product_id\n                JOIN olist.product_category_name_translation t ON t.product_category_name=p.product_category_name\n                JOIN olist.order_reviews r ON r.order_id=oi.order_id\n                WHERE t.product_category_name_english='bed_bath_table' AND r.review_score=5",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_05_t3",
+          "turn_index": 3,
+          "text": "And how many got a 1-star review?",
+          "needs_context": true,
+          "reference_type": "ellipsis",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "bed_bath_table",
+            "1-star"
+          ],
+          "ground_truth_sql": "SELECT COUNT(DISTINCT oi.order_id) n FROM olist.order_items oi\n                JOIN olist.products p ON p.product_id=oi.product_id\n                JOIN olist.product_category_name_translation t ON t.product_category_name=p.product_category_name\n                JOIN olist.order_reviews r ON r.order_id=oi.order_id\n                WHERE t.product_category_name_english='bed_bath_table' AND r.review_score=1",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "conversation_id": "mt_06",
+      "turns": [
+        {
+          "turn_id": "mt_06_t1",
+          "turn_index": 1,
+          "text": "What is the ONDC network's return window in days for the electronics category, per the returns policy?",
+          "needs_context": false,
+          "reference_type": null,
+          "expected_route": "docs",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": null,
+          "ground_truth_sql": null,
+          "ground_truth_value": "10",
+          "expected_chunk_ids": [
+            "doc_policy_returns_refunds_c000",
+            "doc_policy_returns_refunds_c001"
+          ],
+          "note": ""
+        },
+        {
+          "turn_id": "mt_06_t2",
+          "turn_index": 2,
+          "text": "How many electronics orders took longer than that to be delivered after purchase?",
+          "needs_context": true,
+          "reference_type": "ellipsis",
+          "expected_route": "sql",
+          "cross_modal": true,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "electronics",
+            "10 days",
+            "delivered",
+            "purchase"
+          ],
+          "ground_truth_sql": "SELECT COUNT(DISTINCT o.order_id) n FROM olist.orders o\n                JOIN olist.order_items oi ON oi.order_id=o.order_id\n                JOIN olist.products p ON p.product_id=oi.product_id\n                JOIN olist.product_category_name_translation t ON t.product_category_name=p.product_category_name\n                WHERE t.product_category_name_english='electronics' AND o.order_delivered_customer_date IS NOT NULL\n                  AND o.order_delivered_customer_date - o.order_purchase_timestamp > INTERVAL '10 days'",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_06_t3",
+          "turn_index": 3,
+          "text": "Just the ones where the customer is in Sao Paulo state?",
+          "needs_context": true,
+          "reference_type": "refinement",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "electronics",
+            "10 days",
+            "delivered",
+            "Sao Paulo"
+          ],
+          "ground_truth_sql": "SELECT COUNT(DISTINCT o.order_id) n FROM olist.orders o\n                JOIN olist.order_items oi ON oi.order_id=o.order_id\n                JOIN olist.products p ON p.product_id=oi.product_id\n                JOIN olist.product_category_name_translation t ON t.product_category_name=p.product_category_name\n                JOIN olist.customers c ON c.customer_id=o.customer_id\n                WHERE t.product_category_name_english='electronics' AND o.order_delivered_customer_date IS NOT NULL\n                  AND o.order_delivered_customer_date - o.order_purchase_timestamp > INTERVAL '10 days'\n                  AND c.customer_state='SP'",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "conversation_id": "mt_07",
+      "turns": [
+        {
+          "turn_id": "mt_07_t1",
+          "turn_index": 1,
+          "text": "How many orders were paid using boleto?",
+          "needs_context": false,
+          "reference_type": null,
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": null,
+          "ground_truth_sql": "SELECT COUNT(DISTINCT order_id) n FROM olist.order_payments WHERE payment_type='boleto'",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_07_t2",
+          "turn_index": 2,
+          "text": "How many sellers are there in total?",
+          "needs_context": false,
+          "reference_type": null,
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": null,
+          "ground_truth_sql": "SELECT COUNT(*) n FROM olist.sellers",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": "Deliberately self-contained despite being turn 2 -- tests the acceptance criterion's second clause."
+        },
+        {
+          "turn_id": "mt_07_t3",
+          "turn_index": 3,
+          "text": "And how many of them have sold over 500 orders' worth of items?",
+          "needs_context": true,
+          "reference_type": "ellipsis",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "sellers",
+            "over 500 orders"
+          ],
+          "ground_truth_sql": "SELECT COUNT(*) n FROM (\n                SELECT seller_id FROM olist.order_items GROUP BY seller_id HAVING COUNT(DISTINCT order_id) > 500\n                ) x",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "conversation_id": "mt_08",
+      "turns": [
+        {
+          "turn_id": "mt_08_t1",
+          "turn_index": 1,
+          "text": "What is the average review score across all orders?",
+          "needs_context": false,
+          "reference_type": null,
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": null,
+          "ground_truth_sql": "SELECT ROUND(AVG(review_score),2) n FROM olist.order_reviews",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_08_t2",
+          "turn_index": 2,
+          "text": "What about just for the sports_leisure category?",
+          "needs_context": true,
+          "reference_type": "refinement",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "average review score",
+            "sports_leisure"
+          ],
+          "ground_truth_sql": "SELECT ROUND(AVG(r.review_score),2) n FROM olist.order_reviews r\n                JOIN olist.order_items oi ON oi.order_id=r.order_id\n                JOIN olist.products p ON p.product_id=oi.product_id\n                JOIN olist.product_category_name_translation t ON t.product_category_name=p.product_category_name\n                WHERE t.product_category_name_english='sports_leisure'",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_08_t3",
+          "turn_index": 3,
+          "text": "How many reviews is that based on?",
+          "needs_context": true,
+          "reference_type": "anaphora",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "sports_leisure",
+            "reviews"
+          ],
+          "ground_truth_sql": "SELECT COUNT(DISTINCT r.review_id) n FROM olist.order_reviews r\n                JOIN olist.order_items oi ON oi.order_id=r.order_id\n                JOIN olist.products p ON p.product_id=oi.product_id\n                JOIN olist.product_category_name_translation t ON t.product_category_name=p.product_category_name\n                WHERE t.product_category_name_english='sports_leisure'",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "conversation_id": "mt_09",
+      "turns": [
+        {
+          "turn_id": "mt_09_t1",
+          "turn_index": 1,
+          "text": "How many orders include an item from seller 6560211a19b47992c3666cc44a7e94c0, and how many from seller 4a3ca9315b744ce9f8e9374361493884?",
+          "needs_context": false,
+          "reference_type": null,
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": null,
+          "ground_truth_sql": "SELECT\n                (SELECT COUNT(DISTINCT order_id) FROM olist.order_items WHERE seller_id='6560211a19b47992c3666cc44a7e94c0') a,\n                (SELECT COUNT(DISTINCT order_id) FROM olist.order_items WHERE seller_id='4a3ca9315b744ce9f8e9374361493884') b",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_09_t2",
+          "turn_index": 2,
+          "text": "How many of their orders were delivered after the estimated delivery date?",
+          "needs_context": true,
+          "reference_type": "anaphora",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": true,
+          "expected_standalone_facts": [
+            "seller",
+            "6560211a19b47992c3666cc44a7e94c0",
+            "4a3ca9315b744ce9f8e9374361493884",
+            "estimated delivery date"
+          ],
+          "ground_truth_sql": "SELECT COUNT(DISTINCT o.order_id) n FROM olist.orders o\n                JOIN olist.order_items oi ON oi.order_id=o.order_id\n                WHERE oi.seller_id IN ('6560211a19b47992c3666cc44a7e94c0','4a3ca9315b744ce9f8e9374361493884')\n                  AND o.order_delivered_customer_date IS NOT NULL AND o.order_estimated_delivery_date IS NOT NULL\n                  AND o.order_delivered_customer_date > o.order_estimated_delivery_date",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": "'their' spans two named sellers -- correctly resolvable only as BOTH combined; scored leniently, guess-rate tracked separately."
+        },
+        {
+          "turn_id": "mt_09_t3",
+          "turn_index": 3,
+          "text": "And how many were delivered early or on time?",
+          "needs_context": true,
+          "reference_type": "ellipsis",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "seller",
+            "6560211a19b47992c3666cc44a7e94c0",
+            "4a3ca9315b744ce9f8e9374361493884",
+            "on time"
+          ],
+          "ground_truth_sql": "SELECT COUNT(DISTINCT o.order_id) n FROM olist.orders o\n                JOIN olist.order_items oi ON oi.order_id=o.order_id\n                WHERE oi.seller_id IN ('6560211a19b47992c3666cc44a7e94c0','4a3ca9315b744ce9f8e9374361493884')\n                  AND o.order_delivered_customer_date IS NOT NULL AND o.order_estimated_delivery_date IS NOT NULL\n                  AND o.order_delivered_customer_date <= o.order_estimated_delivery_date",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "conversation_id": "mt_10",
+      "turns": [
+        {
+          "turn_id": "mt_10_t1",
+          "turn_index": 1,
+          "text": "What is the average freight value across all order items?",
+          "needs_context": false,
+          "reference_type": null,
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": null,
+          "ground_truth_sql": "SELECT ROUND(AVG(freight_value),2) n FROM olist.order_items",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_10_t2",
+          "turn_index": 2,
+          "text": "Just for items priced over 100?",
+          "needs_context": true,
+          "reference_type": "refinement",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "average freight value",
+            "over 100"
+          ],
+          "ground_truth_sql": "SELECT ROUND(AVG(freight_value),2) n FROM olist.order_items WHERE price > 100",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_10_t3",
+          "turn_index": 3,
+          "text": "And for items priced 100 or under?",
+          "needs_context": true,
+          "reference_type": "ellipsis",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "average freight value",
+            "100 or under"
+          ],
+          "ground_truth_sql": "SELECT ROUND(AVG(freight_value),2) n FROM olist.order_items WHERE price <= 100",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "conversation_id": "mt_11",
+      "turns": [
+        {
+          "turn_id": "mt_11_t1",
+          "turn_index": 1,
+          "text": "How many reviews has seller 6560211a19b47992c3666cc44a7e94c0 received?",
+          "needs_context": false,
+          "reference_type": null,
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": null,
+          "ground_truth_sql": "SELECT COUNT(*) n FROM olist.order_reviews r\n                WHERE r.order_id IN (SELECT order_id FROM olist.order_items WHERE seller_id='6560211a19b47992c3666cc44a7e94c0')",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_11_t2",
+          "turn_index": 2,
+          "text": "How many of those were 5 stars?",
+          "needs_context": true,
+          "reference_type": "refinement",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "seller",
+            "6560211a19b47992c3666cc44a7e94c0",
+            "5 stars"
+          ],
+          "ground_truth_sql": "SELECT COUNT(*) n FROM olist.order_reviews r\n                WHERE r.order_id IN (SELECT order_id FROM olist.order_items WHERE seller_id='6560211a19b47992c3666cc44a7e94c0') AND r.review_score=5",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_11_t3",
+          "turn_index": 3,
+          "text": "And how many total reviews does that compare against?",
+          "needs_context": true,
+          "reference_type": "anaphora",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "seller",
+            "6560211a19b47992c3666cc44a7e94c0",
+            "total reviews"
+          ],
+          "ground_truth_sql": "SELECT COUNT(*) n FROM olist.order_reviews r\n                WHERE r.order_id IN (SELECT order_id FROM olist.order_items WHERE seller_id='6560211a19b47992c3666cc44a7e94c0')",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "conversation_id": "mt_12",
+      "turns": [
+        {
+          "turn_id": "mt_12_t1",
+          "turn_index": 1,
+          "text": "How many orders were paid in a single installment?",
+          "needs_context": false,
+          "reference_type": null,
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": null,
+          "ground_truth_sql": "SELECT COUNT(DISTINCT order_id) n FROM olist.order_payments WHERE payment_installments = 1",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_12_t2",
+          "turn_index": 2,
+          "text": "And how many in more than 6 installments?",
+          "needs_context": true,
+          "reference_type": "ellipsis",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "orders",
+            "more than 6 installments"
+          ],
+          "ground_truth_sql": "SELECT COUNT(DISTINCT order_id) n FROM olist.order_payments WHERE payment_installments > 6",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        },
+        {
+          "turn_id": "mt_12_t3",
+          "turn_index": 3,
+          "text": "What's the average payment value for the second group?",
+          "needs_context": true,
+          "reference_type": "anaphora",
+          "expected_route": "sql",
+          "cross_modal": false,
+          "ambiguous_by_design": false,
+          "expected_standalone_facts": [
+            "average payment value",
+            "more than 6 installments"
+          ],
+          "ground_truth_sql": "SELECT ROUND(AVG(payment_value),2) n FROM olist.order_payments WHERE payment_installments > 6",
+          "ground_truth_value": null,
+          "expected_chunk_ids": null,
+          "note": ""
+        }
+      ]
+    }
+  ]
+}

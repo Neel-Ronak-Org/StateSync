@@ -1,0 +1,462 @@
+{
+  "flag_provenance": {
+    "llm": {
+      "provider": "local",
+      "models": {
+        "supervisor": "qwen2.5:7b",
+        "sql": "qwen2.5:7b",
+        "synthesizer": "qwen2.5:7b",
+        "memory_summarizer": "qwen2.5:7b",
+        "normalizer": "qwen2.5:7b",
+        "decomposer": "qwen2.5:7b",
+        "judge": "qwen2.5:7b",
+        "rewriter": "qwen2.5:7b"
+      }
+    },
+    "flag_state": {
+      "memory.enabled": "false",
+      "normalization.enabled": "true",
+      "tenancy.enforced": "false",
+      "evaluation.vision_scorer.enabled": "false",
+      "schema_retriever.target_schema": "olist"
+    },
+    "shipped": false,
+    "disk_deviations": {
+      "schema_retriever.target_schema": {
+        "expected": "public",
+        "found": "olist"
+      }
+    },
+    "live_staleness": null,
+    "allow_nonshipped": true,
+    "fixture_corpus_check": null
+  },
+  "elapsed_s": 1616.343548417004,
+  "summary": {
+    "qm": {
+      "correct": 17,
+      "total": 36,
+      "rate": 0.4722222222222222
+    },
+    "im": {
+      "correct": 2,
+      "total": 12,
+      "rate": 0.16666666666666666
+    },
+    "reference_resolution_rate": {
+      "detected": 23,
+      "total": 23,
+      "rate": 1.0
+    },
+    "rewrite_fidelity_rate": {
+      "correct": 20,
+      "total": 23,
+      "rate": 0.8695652173913043
+    },
+    "guess_rate": {
+      "guessed": 4,
+      "total": 23,
+      "rate": 0.17391304347826086,
+      "guessed_but_qm_correct": 1
+    },
+    "error_propagation_rate": {
+      "propagated": 9,
+      "opportunities": 11,
+      "rate": 0.8181818181818182
+    }
+  },
+  "per_conversation": {
+    "mt_01": [
+      {
+        "turn_id": "mt_01_t1",
+        "route": "sql",
+        "rewrite_applied": false,
+        "context_guessed": false,
+        "normalized_query": "How many orders included an item from seller 6560211a19b47992c3666cc44a7e94c0?",
+        "qm_correct": true,
+        "executed_sql": "SELECT COUNT(DISTINCT o.order_id) \nFROM olist.order_items oi\nJOIN olist.orders o ON oi.order_id = o.order_id\nWHERE oi.seller_id = '6560211a19b47992c3666cc44a7e94c0';",
+        "rewrite_fidelity": null
+      },
+      {
+        "turn_id": "mt_01_t2",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "How many delivered orders included an item from seller 6560211a19b47992c3666cc44a7e94c0?",
+        "qm_correct": true,
+        "executed_sql": "SELECT COUNT(DISTINCT o.order_id)\nFROM olist.orders o\nJOIN olist.order_items oi ON o.order_id = oi.order_id\nJOIN olist.sellers s ON oi.seller_id = s.seller_id\nWHERE s.seller_id = '6560211a19b47992c3666cc44a7e94c0' AND o.order_status = 'delivered';",
+        "rewrite_fidelity": true
+      },
+      {
+        "turn_id": "mt_01_t3",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": true,
+        "normalized_query": "How many of the 1819 delivered orders that included an item from seller 6560211a19b47992c3666cc44a7e94c0 were paid by credit card?",
+        "qm_correct": true,
+        "executed_sql": "SELECT COUNT(DISTINCT o.order_id)\nFROM olist.orders o\nJOIN olist.order_items oi ON o.order_id = oi.order_id\nJOIN olist.order_payments op ON o.order_id = op.order_id\nWHERE o.order_status = 'delivered'\nAND oi.seller_id = '6560211a19b47992c3666cc44a7e94c0'\nAND op.payment_type = 'credit_card';",
+        "rewrite_fidelity": true
+      }
+    ],
+    "mt_02": [
+      {
+        "turn_id": "mt_02_t1",
+        "route": "sql",
+        "rewrite_applied": false,
+        "context_guessed": false,
+        "normalized_query": "How many orders were paid using credit card?",
+        "qm_correct": false,
+        "executed_sql": "SELECT COUNT(*) \nFROM olist.order_payments AS op \nWHERE op.payment_type = 'credit_card';",
+        "rewrite_fidelity": null
+      },
+      {
+        "turn_id": "mt_02_t2",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "How many orders paid using a credit card had more than 6 installments?",
+        "qm_correct": false,
+        "executed_sql": "SELECT COUNT(*)\nFROM olist.order_payments AS op\nJOIN olist.orders AS o ON op.order_id = o.order_id\nWHERE op.payment_type = 'credit_card' AND op.payment_installments > 6;",
+        "rewrite_fidelity": true
+      },
+      {
+        "turn_id": "mt_02_t3",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "How many orders paid using a credit card had more than 6 installments and a payment value over 200?",
+        "qm_correct": true,
+        "executed_sql": "SELECT COUNT(DISTINCT o.order_id)\nFROM olist.order_payments op\nJOIN olist.orders o ON op.order_id = o.order_id\nWHERE op.payment_type = 'credit_card'\n  AND op.payment_installments > 6\n  AND op.payment_value > 200\nLIMIT 1000;",
+        "rewrite_fidelity": true
+      }
+    ],
+    "mt_03": [
+      {
+        "turn_id": "mt_03_t1",
+        "route": "sql",
+        "rewrite_applied": false,
+        "context_guessed": false,
+        "normalized_query": "How many distinct products has seller 6560211a19b47992c3666cc44a7e94c0 sold?",
+        "qm_correct": true,
+        "executed_sql": "SELECT COUNT(DISTINCT o.product_id) \nFROM olist.order_items o\nJOIN olist.sellers s ON o.seller_id = s.seller_id\nWHERE s.seller_id = '6560211a19b47992c3666cc44a7e94c0';",
+        "rewrite_fidelity": null
+      },
+      {
+        "turn_id": "mt_03_t2",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "How many reviews has seller 6560211a19b47992c3666cc44a7e94c0 received?",
+        "qm_correct": false,
+        "executed_sql": "SELECT COUNT(*) \nFROM olist.order_reviews OR\nJOIN olist.orders O ON OR.order_id = O.order_id\nWHERE O.seller_id = '6560211a19b47992c3666cc44a7e94c0';",
+        "rewrite_fidelity": true
+      },
+      {
+        "turn_id": "mt_03_t3",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": true,
+        "normalized_query": "How many 5-star reviews has seller 6560211a19b47992c3666cc44a7e94c0 received?",
+        "qm_correct": false,
+        "executed_sql": "SELECT COUNT(*) \nFROM olist.order_reviews OR\nJOIN olist.orders O ON OR.order_id = O.order_id\nWHERE OR.review_score = 5 AND O.seller_id = '6560211a19b47992c3666cc44a7e94c0';",
+        "rewrite_fidelity": true
+      }
+    ],
+    "mt_04": [
+      {
+        "turn_id": "mt_04_t1",
+        "route": "sql",
+        "rewrite_applied": false,
+        "context_guessed": false,
+        "normalized_query": "How many orders came from customers in Sao Paulo state (SP)?",
+        "qm_correct": true,
+        "executed_sql": "SELECT COUNT(DISTINCT o.order_id) \nFROM olist.orders o\nJOIN olist.customers c ON o.customer_id = c.customer_id\nWHERE c.customer_state = 'SP'",
+        "rewrite_fidelity": null
+      },
+      {
+        "turn_id": "mt_04_t2",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "How many orders came from customers in Rio de Janeiro (RJ)?",
+        "qm_correct": false,
+        "executed_sql": "SELECT COUNT(o.order_id) \nFROM olist.orders o\nJOIN olist.customers c ON o.customer_id = c.customer_unique_id\nJOIN olist.geolocation g ON c.customer_zip_code_prefix = g.geolocation_zip_code_prefix\nWHERE g.geolocation_city = 'Rio de Janeiro' AND c.customer_state = 'RJ'",
+        "rewrite_fidelity": true
+      },
+      {
+        "turn_id": "mt_04_t3",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "What is the average payment value for the orders from customers in Rio de Janeiro (RJ)?",
+        "qm_correct": false,
+        "executed_sql": "SELECT AVG(op.payment_value) AS average_payment_value\nFROM olist.orders o\nJOIN olist.order_payments op ON o.order_id = op.order_id\nJOIN olist.customers c ON o.customer_id = c.customer_id\nJOIN olist.geolocation g ON c.customer_zip_code_prefix = g.geolocation_zip_code_prefix\nWHERE g.geolocation_state = 'RJ'\nLIMIT 1000;",
+        "rewrite_fidelity": true
+      }
+    ],
+    "mt_05": [
+      {
+        "turn_id": "mt_05_t1",
+        "route": "sql",
+        "rewrite_applied": false,
+        "context_guessed": false,
+        "normalized_query": "How many orders include an item in the bed_bath_table category?",
+        "qm_correct": true,
+        "executed_sql": "SELECT COUNT(DISTINCT o.order_id)\nFROM olist.orders o\nJOIN olist.order_items oi ON o.order_id = oi.order_id\nJOIN olist.products p ON oi.product_id = p.product_id\nJOIN olist.product_category_name_translation t ON p.product_category_name = t.product_category_name\nWHERE t.product_category_name_english = 'bed_bath_table';",
+        "rewrite_fidelity": null
+      },
+      {
+        "turn_id": "mt_05_t2",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "How many of the 9,417 orders that include an item in the bed_bath_table category got a 5-star review?",
+        "qm_correct": false,
+        "executed_sql": "SELECT COUNT(DISTINCT o.order_id)\nFROM olist.orders o\nJOIN olist.order_items oi ON o.order_id = oi.order_id\nJOIN olist.product_category_name_translation p ON oi.product_id = p.product_category_name\nWHERE p.product_category_name_english = 'bed_bath_table' AND o.order_status = 'delivered'\nAND o.order_id IN (\n    SELECT order_id\n    FROM olist.order_reviews\n    WHERE review_score = 5\n)\nLIMIT 1000;",
+        "rewrite_fidelity": true
+      },
+      {
+        "turn_id": "mt_05_t3",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "How many of the 9,417 orders that include an item in the bed_bath_table category got a 1-star review?",
+        "qm_correct": false,
+        "executed_sql": "SELECT COUNT(DISTINCT o.order_id)\nFROM olist.orders o\nJOIN olist.order_items oi ON o.order_id = oi.order_id\nJOIN olist.product_category_name_translation p ON oi.product_id = p.product_category_name\nWHERE p.product_category_name_english = 'bed_bath_table' AND o.order_status = 'delivered'\nAND o.order_id IN (\n    SELECT order_id\n    FROM olist.order_reviews\n    WHERE review_score = 1\n)\nLIMIT 1000;",
+        "rewrite_fidelity": true
+      }
+    ],
+    "mt_06": [
+      {
+        "turn_id": "mt_06_t1",
+        "route": "docs",
+        "rewrite_applied": false,
+        "context_guessed": false,
+        "normalized_query": "What is the ONDC network's return window in days for the electronics category, per the returns policy?",
+        "qm_correct": true,
+        "detail": {
+          "value_present": true,
+          "chunk_present": true,
+          "cited": [
+            "doc_policy_returns_refunds_c000",
+            "doc_policy_returns_refunds_c001",
+            "doc_supplier_agreement_S005_c000"
+          ]
+        },
+        "rewrite_fidelity": null
+      },
+      {
+        "turn_id": "mt_06_t2",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "How many electronics orders took longer than 10 days to be delivered after purchase?",
+        "qm_correct": false,
+        "executed_sql": "SELECT COUNT(*)\nFROM olist.orders o\nJOIN olist.order_items oi ON o.order_id = oi.order_id\nJOIN olist.product_category_name_translation p ON oi.product_id = p.product_id\nWHERE p.product_category_name_english = 'electronics' \nAND EXTRACT(EPOCH FROM o.order_delivered_customer_date - o.order_purchase_timestamp) > 86400;",
+        "rewrite_fidelity": true
+      },
+      {
+        "turn_id": "mt_06_t3",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "How many electronics orders took longer than 10 days to be delivered after purchase where the customer is in Sao Paulo state?",
+        "qm_correct": false,
+        "executed_sql": "SELECT COUNT(*)\nFROM olist.orders o\nJOIN olist.customers c ON o.customer_id = c.customer_id\nJOIN olist.order_items oi ON o.order_id = oi.order_id\nJOIN olist.product_category_name_translation p ON oi.product_category_name = p.product_category_name\nJOIN olist.product_category_name_translation p2 ON p.product_category_name_english = 'electronics'\nWHERE p2.product_category_name_english = 'electronics'\nAND EXTRACT(EPOCH FROM (o.order_delivered_customer_date - o.order_purchase_timestamp)) / 86400 > 10\nAND c.customer_state = 'Sao Paulo';",
+        "rewrite_fidelity": true
+      }
+    ],
+    "mt_07": [
+      {
+        "turn_id": "mt_07_t1",
+        "route": "sql",
+        "rewrite_applied": false,
+        "context_guessed": false,
+        "normalized_query": "How many orders were paid using boleto?",
+        "qm_correct": true,
+        "executed_sql": "SELECT COUNT(order_id) AS number_of_orders\nFROM olist.order_payments\nWHERE payment_type = 'boleto';",
+        "rewrite_fidelity": null
+      },
+      {
+        "turn_id": "mt_07_t2",
+        "route": "sql",
+        "rewrite_applied": false,
+        "context_guessed": false,
+        "normalized_query": "How many sellers are there in total?",
+        "qm_correct": true,
+        "executed_sql": "SELECT COUNT(DISTINCT seller_id) AS total_sellers FROM olist.sellers",
+        "rewrite_fidelity": null
+      },
+      {
+        "turn_id": "mt_07_t3",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "How many sellers have sold over 500 orders' worth of items?",
+        "qm_correct": false,
+        "executed_sql": "SELECT COUNT(DISTINCT s.seller_id)\nFROM olist.sellers s\nJOIN olist.order_items oi ON s.seller_id = oi.seller_id\nGROUP BY s.seller_id\nHAVING SUM(oi.price) > 500\nLIMIT 1000;",
+        "rewrite_fidelity": true
+      }
+    ],
+    "mt_08": [
+      {
+        "turn_id": "mt_08_t1",
+        "route": "sql",
+        "rewrite_applied": false,
+        "context_guessed": false,
+        "normalized_query": "What is the average review score across all orders?",
+        "qm_correct": true,
+        "executed_sql": "SELECT AVG(review_score) AS average_review_score\nFROM olist.order_reviews;",
+        "rewrite_fidelity": null
+      },
+      {
+        "turn_id": "mt_08_t2",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "What is the average review score for orders in the sports_leisure category?",
+        "qm_correct": false,
+        "executed_sql": "SELECT AVG(olist_order_reviews.review_score) AS average_review_score\nFROM olist_order_reviews\nJOIN olist_orders ON olist_order_reviews.order_id = olist_orders.order_id\nJOIN olist_product_category_name_translation ON olist_orders.product_category_name = olist_product_category_name_translation.product_category_name\nWHERE olist_product_category_name_translation.product_category_name_english = 'sports_leisure'\nLIMIT 1000;",
+        "rewrite_fidelity": true
+      },
+      {
+        "turn_id": "mt_08_t3",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "How many reviews is the average review score of 4.07 based on?",
+        "qm_correct": false,
+        "executed_sql": "SELECT COUNT(*) \nFROM olist.order_reviews \nWHERE review_score = 4.07::numeric;",
+        "rewrite_fidelity": false
+      }
+    ],
+    "mt_09": [
+      {
+        "turn_id": "mt_09_t1",
+        "route": "sql",
+        "rewrite_applied": false,
+        "context_guessed": false,
+        "normalized_query": "How many orders include an item from seller 6560211a19b47992c3666cc44a7e94c0, and how many from seller 4a3ca9315b744ce9f8e9374361493884?",
+        "qm_correct": false,
+        "executed_sql": "SELECT \n    SUM(CASE WHEN seller_id = '6560211a19b47992c3666cc44a7e94c0' THEN 1 ELSE 0 END) AS orders_from_seller_1,\n    SUM(CASE WHEN seller_id = '4a3ca9315b744ce9f8e9374361493884' THEN 1 ELSE 0 END) AS orders_from_seller_2\nFROM \n    olist.order_items\nWHERE \n    seller_id IN ('6560211a19b47992c3666cc44a7e94c0', '4a3ca9315b744ce9f8e9374361493884');",
+        "rewrite_fidelity": null
+      },
+      {
+        "turn_id": "mt_09_t2",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": true,
+        "normalized_query": "How many of the orders from sellers 6560211a19b47992c3666cc44a7e94c0 and 4a3ca9315b744ce9f8e9374361493884 were delivered after the estimated delivery date?",
+        "qm_correct": false,
+        "executed_sql": "SELECT COUNT(o.order_id)\nFROM olist.orders o\nJOIN olist.sellers s ON o.seller_id = s.seller_id\nWHERE s.seller_id IN ('6560211a19b47992c3666cc44a7e94c0', '4a3ca9315b744ce9f8e9374361493884')\nAND o.order_delivered_customer_date > o.order_estimated_delivery_date::timestamptz;",
+        "rewrite_fidelity": true
+      },
+      {
+        "turn_id": "mt_09_t3",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": true,
+        "normalized_query": "How many orders from sellers 6560211a19b47992c3666cc44a7e94c0 and 4a3ca935b744ce9f8e9374361493884 were delivered early or on time?",
+        "qm_correct": false,
+        "executed_sql": "SELECT COUNT(o.order_id)\nFROM olist.orders o\nJOIN olist.order_items oi ON o.order_id = oi.order_id\nJOIN olist.sellers s ON oi.seller_id = s.seller_id\nWHERE s.seller_id IN ('6560211a19b47992c3666cc44a7e94c0', '4a3ca935b744ce9f8e9374361493884')\n  AND o.order_status = 'delivered'\n  AND o.order_delivered_customer_date <= oi.shipping_limit_date;",
+        "rewrite_fidelity": false
+      }
+    ],
+    "mt_10": [
+      {
+        "turn_id": "mt_10_t1",
+        "route": "sql",
+        "rewrite_applied": false,
+        "context_guessed": false,
+        "normalized_query": "What is the average freight value across all order items?",
+        "qm_correct": true,
+        "executed_sql": "SELECT AVG(freight_value) AS average_freight_value\nFROM olist.order_items",
+        "rewrite_fidelity": null
+      },
+      {
+        "turn_id": "mt_10_t2",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "What is the average freight value for items priced over $100?",
+        "qm_correct": true,
+        "executed_sql": "SELECT AVG(oi.freight_value) AS average_freight_value\nFROM olist.order_items oi\nWHERE oi.price > 100;",
+        "rewrite_fidelity": false
+      },
+      {
+        "turn_id": "mt_10_t3",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "What is the average freight value for items priced 100 or under?",
+        "qm_correct": true,
+        "executed_sql": "SELECT AVG(freight_value) AS average_freight_value\nFROM olist.order_items\nWHERE price <= 100;",
+        "rewrite_fidelity": true
+      }
+    ],
+    "mt_11": [
+      {
+        "turn_id": "mt_11_t1",
+        "route": "sql",
+        "rewrite_applied": false,
+        "context_guessed": false,
+        "normalized_query": "How many reviews has seller 6560211a19b47992c3666cc44a7e94c0 received?",
+        "qm_correct": true,
+        "executed_sql": "SELECT COUNT(*) \nFROM olist.order_reviews \nWHERE order_id IN (\n    SELECT order_id \n    FROM olist.order_items \n    WHERE seller_id = '6560211a19b47992c3666cc44a7e94c0'\n);",
+        "rewrite_fidelity": null
+      },
+      {
+        "turn_id": "mt_11_t2",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "How many of seller 6560211a19b47992c3666cc44a7e94c0's 1860 reviews were 5 stars?",
+        "qm_correct": false,
+        "executed_sql": "SELECT COUNT(*) \nFROM olist.order_reviews OR\nJOIN olist.orders O ON OR.order_id = O.order_id\nJOIN olist.sellers S ON O.seller_id = S.seller_id\nWHERE OR.review_score = 5 AND S.seller_id = '6560211a19b47992c3666cc44a7e94c0';",
+        "rewrite_fidelity": true
+      },
+      {
+        "turn_id": "mt_11_t3",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "How many total reviews does seller 6560211a19b47992c3666cc44a7e94c0 have in comparison?",
+        "qm_correct": false,
+        "executed_sql": "SELECT COUNT(*) \nFROM olist.order_reviews OR\nJOIN olist.orders O ON OR.order_id = O.order_id\nWHERE OR.seller_id = '6560211a19b47992c3666cc44a7e94c0'::text;",
+        "rewrite_fidelity": true
+      }
+    ],
+    "mt_12": [
+      {
+        "turn_id": "mt_12_t1",
+        "route": "sql",
+        "rewrite_applied": false,
+        "context_guessed": false,
+        "normalized_query": "How many orders were paid in a single installment?",
+        "qm_correct": false,
+        "executed_sql": "SELECT COUNT(*) \nFROM olist.order_payments \nWHERE payment_installments = 1;",
+        "rewrite_fidelity": null
+      },
+      {
+        "turn_id": "mt_12_t2",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "How many orders were paid in more than 6 installments?",
+        "qm_correct": true,
+        "executed_sql": "SELECT COUNT(DISTINCT order_id)\nFROM olist.order_payments\nWHERE payment_installments > 6;",
+        "rewrite_fidelity": true
+      },
+      {
+        "turn_id": "mt_12_t3",
+        "route": "sql",
+        "rewrite_applied": true,
+        "context_guessed": false,
+        "normalized_query": "What's the average payment value for the orders paid in more than 6 installments?",
+        "qm_correct": true,
+        "executed_sql": "SELECT AVG(op.payment_value) AS average_payment_value\nFROM olist.order_payments op\nJOIN olist.orders o ON op.order_id = o.order_id\nWHERE op.payment_installments > 6;",
+        "rewrite_fidelity": true
+      }
+    ]
+  }
+}
