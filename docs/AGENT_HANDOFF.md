@@ -348,7 +348,8 @@ Fixtures remain self-authored. Still never run against a standard benchmark
 | M8 adversarial | **40/40** — re-run live 2026-08-23 (cycle 005 G4) | was 36/36; +4 payload-count assertions that close a class-empties-silently hole (`dc2e31f`). ⚠ **Was FAILING 39/40 for the whole of cycle 003**, unnoticed until audit 004 (F-004-1): `56a23bf`'s frontend cache-buster broke `verify_e2.py`'s E2-V4 check, and M8 Class 4 delegates to `verify_e2.py`, failing on its exit code. Cause fixed in cycle 004 A1/A2 (below); classes 1–3 and table checksums were clean throughout — this was a reporting failure, not a security regression, but a binary gate reading FAIL is still failing |
 | M9 routing | 0.983 | unchanged |
 | **M6 — grounding (the RAG half)** | context precision **0.622** (n=15, over *cited* chunks) · recall **0.80** (n=15) · faithfulness **0.8125** (n=16) · **4** ungrounded-but-true | **This row did not exist in this table until cycle 003 — the unstructured half was absent from the handoff's own metrics list, which is part of why three cycles skipped it.** The four figures above are the published ones and are UNCHANGED (`docs/bench_grounding_report.json` untouched). ⚠ **Audit 003 found three of the four measured by a defective instrument**, repaired in cycle 003 without altering them: precision divides by *cited* chunks (capped at `citation_max_chunks=3`, so 7 of 8 doc queries sit on a 0.667 ceiling **with recall 1.0**; over *retrieved* chunks it is **0.364** and the attainable ceiling was **0.778**, not 1.0); the judge's factual-correctness "ground truth" was the string `row_count=N`, not an answer value, which caused at least one verified live scoring error; and `4` was the judge's own unvalidated self-report, disagreeing with its itemised claims on 2 of 16 — recounting the published run's own claims gives **2**. A second faithfulness score that also shows the judge the SQL a hybrid answer used is now reported alongside. ⚠ **Corpus is no longer 18 docs / 36 chunks — cycle 005 added 2,567 per-seller review-digest documents (13,125 chunks), same tenant as baseline (`t_capstone_default`; see cycle 005 DEVIATION 1 for why a genuinely distinct tenant would have made the corpus unretrievable), isolated instead by `doc_type='review_digest'`.** The four figures above are UNCHANGED by that ingest — measured both before and after, live, on this same `phase_e1.json` fixture: every summary figure and every one of the 16 queries' retrieved chunk IDs identical, zero review chunks ever retrieved. That is interference on the EXISTING fixture, not a measurement of review-corpus retrieval quality — no ground truth for review-topic questions exists (`docs/limitations.md` § "The review-digest corpus"). Full account: `docs/limitations.md` § M6 entry and § review-digest corpus, `docs/audits/003.md`, `docs/cycles/005.md` C6/C7. ⚠ **Cycle 006's re-chunking of that same corpus (13,125 → 20,209 chunks) is the FIRST thing to move this before/after pair since cycle 003's repair** — not the four figures cited above (untouched, still `docs/bench_grounding_report.json`), but cycle 005's OWN before/after comparison arms, which had been an exact null. 14 of 16 queries' cited lists stayed byte-identical; the 2 that moved touch ZERO review chunks — root cause is `document_chunks.embedding`'s HNSW index being approximate, and a large bulk insert changing its graph, confirmed against exact index-disabled scores in both directions (one query moved toward its true answer, one unscored query moved away from its true near-tied one). **This project has been running retrieval on an unaudited approximate index the whole time**; a corpus-size change can move results for queries unrelated to what was added. Full investigation: `docs/limitations.md` § "Vector retrieval runs on an approximate index", `docs/cycles/006.md` §4 |
-| gates | seams **26/26** · pytest **96/96** · **deployed 19/19** · **E2 46/46** · **tenancy 12/12** · **M8 40/40** — all six re-run live 2026-08-24 (cycle 006 G4, at `dce90ab`) | ⚠ **E2 was FAILING 29/30 from cycle 003's `56a23bf` until cycle 004 A1** — `verify_e2.py`'s E2-V4 check asserted a literal substring (`'<script src="app.js"'`) that a legitimate cache-busting query string broke, and that had never once tested for the CDN it was named against (audit 004 F-004-2). Fixed by replacing it with the real two-directional property (`scripts/frontend_asset_checks.py`), now also pinned in `tests/` so a frontend-only commit can't silently break it again. pytest was 68 going into cycle 004 (24 at cycle 000, additions through cycles 001–003, +15 of those at cycle 003's `test_grounding_scorer.py`), +20 at cycle 004 (`tests/test_frontend_asset_checks.py`) = 88, **+5 at cycle 005** (`tests/test_nginx_header_checks.py`) = 93, **+3 at cycle 006** (`tests/test_review_chunk_split_attribution.py`) = 96. E2's count also moved, **30 → 46**: cycle 005 added a live-response header check (`e2_v4_csp_live`) after finding the frontend had sent **zero** of its four claimed security headers (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy) on every path since `56a23bf` — nginx does not inherit `add_header` into a location block that declares one of its own, and `56a23bf`'s two new location blocks did exactly that. Every prior E2-V4 check read the config file, never a response; fixed in `frontend/nginx.conf`, verified against the live container, not just the repo (audit 005 F-005-1, `docs/cycles/005.md` A1-A5). **This is the first cycle any audit has run tenancy** was cycle 004's claim; still true, tenancy reproduced 12/12 again here |
+| **multi-turn — QM / IM** (cycle 007, local 7B, n=12 conversations / 36 turns, olist) | **QM 47.2% (17/36) · IM 16.7% (2/12)** — two clean runs, zero per-turn disagreement | Reference resolution **100%**, rewrite fidelity **87.0%**, guess rate **17.4%** (1/4 guesses still correct), error propagation **81.8%**. Read together: the rewrite mechanism is reliable (100%/87%); SQL generation on the resulting, now-multi-condition questions is the ceiling — a rewritten turn ≥2 question routinely needs 2-3 conditions across a 2-3 table join, harder than the single-table-dominant profile the 88.9% easy-fixture headline measures, so QM well under 88.9% is compounding, not a contradiction. Two runs is not a variance estimate (same caveat F-007-10 gave M3). Full write-up: `docs/cycles/007.md` §5/§6, `docs/bench_multiturn_report_run{1,2}.json` |
+| gates | seams **26/26** · pytest **96/96** · **deployed 19/19** · **E2 46/46** · **tenancy 12/12** · **M8 40/40** — all six re-run live 2026-08-25 (cycle 007 C11, table checksums independently re-verified unchanged) | ⚠ **E2 was FAILING 29/30 from cycle 003's `56a23bf` until cycle 004 A1** — `verify_e2.py`'s E2-V4 check asserted a literal substring (`'<script src="app.js"'`) that a legitimate cache-busting query string broke, and that had never once tested for the CDN it was named against (audit 004 F-004-2). Fixed by replacing it with the real two-directional property (`scripts/frontend_asset_checks.py`), now also pinned in `tests/` so a frontend-only commit can't silently break it again. pytest was 68 going into cycle 004 (24 at cycle 000, additions through cycles 001–003, +15 of those at cycle 003's `test_grounding_scorer.py`), +20 at cycle 004 (`tests/test_frontend_asset_checks.py`) = 88, **+5 at cycle 005** (`tests/test_nginx_header_checks.py`) = 93, **+3 at cycle 006** (`tests/test_review_chunk_split_attribution.py`) = 96. E2's count also moved, **30 → 46**: cycle 005 added a live-response header check (`e2_v4_csp_live`) after finding the frontend had sent **zero** of its four claimed security headers (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy) on every path since `56a23bf` — nginx does not inherit `add_header` into a location block that declares one of its own, and `56a23bf`'s two new location blocks did exactly that. Every prior E2-V4 check read the config file, never a response; fixed in `frontend/nginx.conf`, verified against the live container, not just the repo (audit 005 F-005-1, `docs/cycles/005.md` A1-A5). **This is the first cycle any audit has run tenancy** was cycle 004's claim; still true, tenancy reproduced 12/12 again here |
 
 **Of the 16 remaining M4 failures, 9 are genuine model errors** — not 5. The
 "unrecovered SQL error" category never fired correctly, and correcting it moved
@@ -683,8 +684,127 @@ exists, still, for the same reason cycles 003 and 005 both declined to
 write one in the same cycle as a corpus change; and the batch/fallback
 safety design's unsafe branch remains unexercised on real data.
 
-**No direction is recorded here for cycle 007.** That is the owner's to
-set, for the same reason cycle 000 gave and every cycle since has honored.
+### ✅ Direction for cycle 007 — owner decision, 2026-08-24. DONE; what it found and built is below.
+
+**It was:** build Workstream A (multi-turn), per `V2_STRATEGY.md` §3/§3b —
+"the only remaining gap that is a capability rather than a bug," 0% built.
+
+**The audit found the plan's own head-start assumption was false, before any
+code was written.** §3b sized the work as *"`/query` already accepts
+`session_id` and threads it to `MCPSession`, so half the plumbing exists."*
+It did not: `MCPSession` took no `session_id` parameter and minted its own
+uuid4 per node; the frontend never sent one; the request field was stored,
+marked immutable, and read by nothing (audit 007 F-007-1). Session threading
+became real build work rather than inheritance. The audit also found the
+hybrid route's SQL sub-task silently ignored `schema_retriever.target_schema`
+(F-007-2, the `80d35c8` failure mode, alive on an untested route), and that
+the sibling harness `bench_multilingual.py` does not reproduce run-to-run —
+D-V1 treatment moved 55.0%→62.5% between two runs of an unchanged build
+(F-007-10) — which is why this cycle's own multi-turn numbers are reported
+from two runs, not one, and why "stable across two runs" is stated with the
+caveat that two is not a variance estimate (see cycle 007's own §6.1).
+
+**Built:** session identity threaded end to end (captured live off a real
+`MCPSession` object mid-RPC-call: the outgoing `X-Session-ID` header equals
+the conversation's real session id, not inferred from source); a new
+`session_state.conversation_turns` table (`migrations/011`) behind a THIRD,
+narrowly-scoped Postgres role (`statesync_history`, `INSERT`/`SELECT` on
+exactly that one table, nothing else) — an owner decision, asked and
+answered explicitly because "write capability stays absent" is on
+`CYCLE_PROTOCOL.md` §4.3's never-reverse-silently list, and the fingerprint
+was verified byte-identical before and after the migration
+(`cf4caa5c...`); a `rewrite_node` (contextual query rewriting, placed before
+the supervisor per §3b's own design, unchanged) that overwrites
+`normalized_query` rather than adding a second field, so the existing
+"supervisor reads normalized_query only" guarantee needed no change; a
+12-conversation, 36-turn fixture over Olist (`fixtures/golden/multi_turn.json`),
+audited before scoring — one conversation replaced for a zero-row reference,
+four fact-checks corrected for false-failure risk, both found by smoke-testing
+before the frozen run, not after a good score; and `bench_multiturn.py`,
+reporting QM **and** IM together (never QM alone, per §3's binding rule),
+plus reference-resolution rate, rewrite fidelity (scored independently of
+turn correctness, per §3b), guess-rate (the cut-line §3 requires when
+clarification is cut), and error-propagation rate.
+
+**Two real bugs found live, by smoke-testing before the fixture existed —
+not fixture-tuning.** First: the local 7B would sometimes report
+`needs_context: false` while its own `rewritten_query` field contained a
+correct, genuinely different rewrite — the code trusted the (wrong) boolean
+over the (right) text and let a bare fragment fall through to the SQL agent,
+a fresh instance of this project's signature silent-wrong-answer failure,
+introduced by this cycle's own code and fixed by this cycle before any
+measurement ran. Second, found DURING measurement: the bench script's own
+scorer false-failed any AVG-style answer where the model's SQL didn't happen
+to round to the same 2 decimal places as the fixture's ground truth
+(`19.99` vs Postgres's own `19.9903199289835775` for the identical query) —
+fixed, and flagged as a **possible**, unverified risk to `bench_multilingual.py`'s
+own published numbers too (4 AVG ground truths in that fixture), not chased
+down this cycle.
+
+**Headline result, two clean runs, zero per-turn disagreement between them:**
+**QM 47.2% (17/36), IM 16.7% (2/12)**, reference resolution **100%** (23/23
+context-needing turns were detected as needing rewriting), rewrite fidelity
+**87.0%**, guess rate **17.4%** (1 of 4 guesses still landed correct), error
+propagation **81.8%** (a wrong turn's dependent successor is wrong 9 times
+of 11). Read together: **the rewrite mechanism itself is reliable; the SQL
+generation on the resulting, now-more-complex questions is the ceiling.** A
+rewritten turn ≥2 question routinely carries 2-3 conditions across a 2-3
+table join — more complex than the single-table-dominant profile this
+project's existing "easy" fixture measures — so QM sitting well under the
+88.9% easy-fixture headline is not a contradiction, it is what compounding
+predicts. The one cross-modal conversation (`docs` turn → `sql` turn
+carrying a value forward) is reported in full, both runs, and it fails
+identically both times: the rewrite correctly carries "10 days" and
+"electronics" forward (fidelity `True`) every time, and the SQL agent
+independently picks the same wrong join path (skips `products`, joins
+`order_items` straight to `product_category_name_translation`) both times —
+a clean, repeatable attribution to SQL generation, not to anything this
+cycle built.
+
+**Also done:** B1/F-007-2 fixed and verified live (before: hybrid + olist
+silently queried `public.sellers`; after: correctly queries
+`olist.sellers`); `V2_STRATEGY.md`'s stale absolute D-V1 bar corrected to
+point at `open_items.md`'s actual amended condition (F-007-8); BD10 written
+for the new `rewriter` role and three new locked constants, at build time,
+not retroactively; five smaller audit findings (F-007-4/5/6/7/9) routed to
+`open_items.md` with full reasoning, none fixed (out of this cycle's scope).
+
+**Explicitly NOT done, on record rather than silently absorbed:** the
+audit-log deliverable §3b describes ("session state, history and the audit
+log are ONE table") is NOT claimed — history ships without auth this cycle,
+an owner decision, asked and confirmed explicitly; the §3b resume/staleness
+open question is side-stepped, not answered (no resume path exists yet,
+`computed_at` is stored so the choice stays open); the new stored-prompt-
+injection surface this build introduces (a later turn's rewrite prompt now
+contains an earlier turn's own text) is named three times in `docs/cycles/007.md`
+and mitigated in the prompt but has zero adversarial test coverage; latency
+is measured and reported (turn ≥2 adds a real, felt LLM round-trip before
+the specialist even starts) but nothing gates on it, an explicit owner call;
+no new pytest test pins anything this cycle built.
+
+**Gate state at handoff, all six re-verified live 2026-08-25:** seams
+**26/26** · pytest **96/96** · deployed **19/19** · tenancy **12/12** · E2
+**46/46** · M8 **40/40**, table checksums unchanged (independently
+re-verified byte-identical, not just trusted from the script's own claim).
+One real regression fixed to get here: a new lint-no-literals violation
+(`history_tools.py`'s `r[8]` — the tool's own "array indices exempt" comment
+overclaims what its code actually exempts, 0-3 only) fixed by unpacking the
+row into named variables, a genuine readability improvement, not a
+workaround. Full write-up, all twelve acceptance criteria addressed
+individually with evidence, nine confidence notes: `docs/cycles/007.md`.
+
+**Still outstanding after cycle 007** (none of it blocks anything): whether
+QM/IM's two-run stability holds on a third run or a different fixture draw
+(§6.1); the stored-prompt-injection mitigation is unverified by any
+adversarial test (§6.2); only ~5 of 19 QM-failing turns were read closely
+enough to rule out a second scorer defect the way DEVIATION 4 found the
+first (§6.3); `mt_09`'s ambiguous-by-design ground truth is one auditor's
+judgment call, not externally validated (§6.4); `sql_agent.py`/`synthesizer.py`
+remain the largest unaudited files in the repo (§6.5); zero new pytest
+coverage for anything this cycle built (§6.6); every number is local-7B-only,
+untested on any hosted provider (§6.7); the latency figures are
+characterized, not a controlled A/B (§6.8); and the possible AVG-precision
+scorer defect in `bench_multilingual.py` (open_items.md) is unverified.
 
 ---
 
