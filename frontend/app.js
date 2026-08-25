@@ -11,6 +11,23 @@
   // ORCHESTRATOR_URL is nginx-substituted at container start.
   const ORCHESTRATOR_URL = window.__ORCHESTRATOR_URL__ || 'http://localhost:8090';
 
+  // ── Session (cycle 007, Workstream A) ────────────────────────────────────────
+  // sessionStorage: persists across reloads within one browser tab, cleared
+  // when the tab closes -- the right lifetime for a conversation with no
+  // auth (§3b: history ships without identity this cycle; scoped by
+  // tenant_id + session_id only, see docs/cycles/007.md §3).
+  const SESSION_KEY = 'statesync_session_id';
+  function getOrCreateSessionId() {
+    let id = sessionStorage.getItem(SESSION_KEY);
+    if (!id) {
+      id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() :
+        'sess-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+      sessionStorage.setItem(SESSION_KEY, id);
+    }
+    return id;
+  }
+  let sessionId = getOrCreateSessionId();
+
   // ── Elements ───────────────────────────────────────────────────────────────
   const form        = document.getElementById('query-form');
   const input       = document.getElementById('query-input');
@@ -28,6 +45,17 @@
   const chartCont   = document.getElementById('chart-container');
   const latencyBadge= document.getElementById('latency-badge');
   const footerStatus= document.getElementById('footer-status');
+  const turnIndicator = document.getElementById('turn-indicator');
+  const rewriteNote    = document.getElementById('rewrite-note');
+  const newConvoBtn    = document.getElementById('new-conversation-btn');
+
+  newConvoBtn?.addEventListener('click', () => {
+    sessionStorage.removeItem(SESSION_KEY);
+    sessionId = getOrCreateSessionId();
+    turnIndicator.textContent = 'New conversation';
+    resetUI();
+    footerStatus.textContent = 'Started a new conversation.';
+  });
 
   // ── Suggestion buttons ─────────────────────────────────────────────────────
   document.querySelectorAll('.suggestion-btn').forEach(btn => {
@@ -51,6 +79,8 @@
     citList.textContent = '';
     errorText.textContent = '';
     traceCard.innerHTML = '';
+    rewriteNote.classList.remove('visible');
+    rewriteNote.textContent = '';
   }
 
   // ── Citations renderer ─────────────────────────────────────────────────────
@@ -350,7 +380,7 @@
       const resp = await fetch(`${ORCHESTRATOR_URL}/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query, session_id: sessionId }),
       });
 
       if (!resp.ok) {
@@ -359,6 +389,19 @@
       }
 
       const data = await resp.json();
+
+      // Turn indicator + rewrite note (cycle 007, Workstream A)
+      const turnIdx = data.state_trace?.turn_index;
+      if (turnIdx) {
+        turnIndicator.textContent = `Turn ${turnIdx} · session ${sessionId.slice(0, 8)}…`;
+      }
+      if (data.state_trace?.rewrite_applied && data.state_trace?.normalized_query) {
+        rewriteNote.textContent = `Interpreted as: “${data.state_trace.normalized_query}”` +
+          (data.state_trace?.context_guessed ? ' (guessed — ambiguous reference, no clarification available)' : '');
+        rewriteNote.classList.add('visible');
+      } else {
+        rewriteNote.classList.remove('visible');
+      }
 
       // Answer
       answerText.textContent = data.answer_text || '';

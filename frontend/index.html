@@ -233,6 +233,26 @@
     #answer-text {
       font-size: 0.9rem; line-height: 1.7; color: var(--text);
     }
+    .rewrite-note {
+      display: none;
+      font-size: 0.78rem; color: var(--text-muted);
+      font-style: italic; margin-bottom: 0.75rem;
+      padding-bottom: 0.75rem; border-bottom: 1px dashed var(--border);
+    }
+    .rewrite-note.visible { display: block; }
+
+    /* Session/turn bar (cycle 007, Workstream A) */
+    .session-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 0.5rem;
+      font-size: 0.75rem; color: var(--text-muted);
+    }
+    #new-conversation-btn {
+      background: none; border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text-muted); font-size: 0.72rem; padding: 0.25rem 0.6rem;
+      cursor: pointer;
+    }
+    #new-conversation-btn:hover { color: var(--text); border-color: var(--text-muted); }
 
     /* SQL display */
     .sql-card {
@@ -341,10 +361,19 @@
       </div>
     </div>
 
+    <!-- Cycle 007 (Workstream A): session/turn indicator, so a multi-turn
+         conversation is visible, not just functionally present (V2_STRATEGY
+         §7's demo bar). New conversation clears sessionStorage and mints a
+         fresh session_id. -->
+    <div class="session-bar" id="session-bar">
+      <span id="turn-indicator">New conversation</span>
+      <button type="button" id="new-conversation-btn">New conversation</button>
+    </div>
+
     <form class="query-form" id="query-form">
       <textarea
         id="query-input"
-        placeholder="Ask anything about the ONDC network data…"
+        placeholder="Ask anything about the ONDC network data… (try a follow-up, like “and by state?”)"
         rows="5"
         autocomplete="off"
       ></textarea>
@@ -378,6 +407,7 @@
         <span class="answer-label">Answer</span>
         <span class="latency-badge" id="latency-badge"></span>
       </div>
+      <div id="rewrite-note" class="rewrite-note"></div>
       <div id="answer-text"></div>
     </div>
 
