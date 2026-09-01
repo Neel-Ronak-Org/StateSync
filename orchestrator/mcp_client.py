@@ -249,6 +249,10 @@ async def history_append_turn(
     answer_text: str,
     route: str | None = None,
     executed_sql: str | None = None,
+    chart: dict[str, Any] | None = None,
+    sql_columns: list[str] | None = None,
+    sql_rows_preview: list[dict[str, Any]] | None = None,
+    sql_rows_count: int | None = None,
 ) -> dict[str, Any]:
     """history.append_turn"""
     params: dict[str, Any] = {
@@ -264,6 +268,14 @@ async def history_append_turn(
         params["route"] = route
     if executed_sql is not None:
         params["executed_sql"] = executed_sql
+    if chart is not None:
+        params["chart"] = chart
+    if sql_columns:
+        params["sql_columns"] = sql_columns
+    if sql_rows_preview:
+        params["sql_rows_preview"] = sql_rows_preview
+    if sql_rows_count is not None:
+        params["sql_rows_count"] = sql_rows_count
     return await session.call("history.append_turn", params)
 
 

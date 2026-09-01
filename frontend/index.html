@@ -130,6 +130,7 @@
 
       --masthead-h: 56px;
       --rail-w: 0px;
+      --sidebar-w: 0px;
       --gutter: 56px;
       --measure: 68ch;
       --bleed-extra: 16ch;
@@ -284,12 +285,16 @@
     .app {
       height: 100dvh;
       display: grid;
-      grid-template-areas: "masthead masthead" "thread rail" "composer rail";
-      grid-template-columns: minmax(0, 1fr) var(--rail-w);
+      grid-template-areas:
+        "sidebar masthead masthead"
+        "sidebar thread   rail"
+        "sidebar composer rail";
+      grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--rail-w);
       grid-template-rows: var(--masthead-h) minmax(0, 1fr) auto;
       transition: grid-template-columns 180ms ease;
     }
     :root[data-rail="open"] { --rail-w: 420px; }
+    :root[data-sidebar="open"] { --sidebar-w: 272px; }
     @media (prefers-reduced-motion: reduce) { .app { transition: none; } }
 
     /* ─── Masthead ─────────────────────────────────────────────────────────── */
@@ -634,57 +639,58 @@
       margin: 0 0 6px;
     }
 
-    /* ─── History sheet ────────────────────────────────────────────────────── */
-    .sheet {
-      position: fixed; inset: 0; z-index: 40;
-      background: rgba(0,0,0,0.42);
-      display: flex; align-items: flex-start; justify-content: center;
-      padding: 8vh 20px 20px;
-    }
-    .sheet[hidden] { display: none; }
-    .sheet__panel {
-      background: var(--surface-raised); color: var(--text-primary);
-      border: 1px solid var(--border); border-radius: var(--radius);
-      box-shadow: var(--shadow-md);
-      width: min(720px, 100%); max-height: 78vh;
+    /* ─── Conversations sidebar ────────────────────────────────────────────── */
+    .sidebar {
+      grid-area: sidebar; overflow: hidden;
+      background: var(--surface-sunken);
+      border-right: 1px solid var(--border-subtle);
       display: flex; flex-direction: column;
     }
-    .sheet__head {
-      display: flex; align-items: center; gap: 8px; padding: 12px 14px;
+    :root:not([data-sidebar="open"]) .sidebar { display: none; }
+    .sidebar__head {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 10px 0 14px; height: var(--masthead-h); flex: none;
       border-bottom: 1px solid var(--border-subtle);
     }
-    .sheet__note {
-      margin: 0; padding: 10px 14px; font-size: var(--fs-2xs);
-      color: var(--text-muted); border-bottom: 1px solid var(--border-subtle);
-      line-height: 1.5;
+    .sidebar__body { overflow-y: auto; padding: 6px; flex: 1; }
+    .sidebar__note {
+      margin: 0; padding: 8px 12px; flex: none;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 10px; line-height: 1.45; color: var(--text-muted);
     }
-    .sheet__note code {
-      font-family: var(--font-mono); font-size: 11px;
-      background: var(--surface-sunken); padding: 1px 4px; border-radius: 3px;
+    .sidebar__note code {
+      font-family: var(--font-mono); font-size: 9px;
+      background: var(--surface); padding: 1px 3px; border-radius: 3px;
     }
-    .sheet__body { overflow: auto; padding: 8px; }
     .session-row {
       width: 100%; text-align: left; cursor: pointer;
       background: transparent; border: 1px solid transparent;
-      border-radius: var(--radius); padding: 10px 12px;
-      display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 4px 12px;
-      align-items: baseline; color: inherit;
+      border-radius: var(--radius); padding: 7px 9px; margin-bottom: 1px;
+      display: block; color: inherit;
     }
-    .session-row:hover { background: var(--surface-hover); border-color: var(--border); }
+    .session-row:hover { background: var(--surface-hover); }
+    .session-row[aria-current="true"] {
+      background: var(--surface); border-color: var(--border);
+    }
     .session-row__q {
-      font-size: var(--fs-xs); color: var(--text-primary);
+      display: block; font-size: var(--fs-xs); color: var(--text-primary);
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      margin-bottom: 2px;
     }
     .session-row__meta {
-      font-size: var(--fs-3xs); color: var(--text-muted);
-      font-variant-numeric: tabular-nums; white-space: nowrap;
+      display: block; font-size: 10px; color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
     }
-    .session-row__id {
-      grid-column: 1 / -1; font-family: var(--font-mono);
-      font-size: 10px; color: var(--text-muted);
+
+    /* Restored turns: stamped, because a rendered table reads as live data in
+       a way prose does not (V2_STRATEGY 3b's staleness question). */
+    .restored-stamp {
+      margin: 10px 0 0; font-size: var(--fs-3xs); color: var(--text-muted);
+      display: flex; align-items: center; gap: 6px;
     }
-    .session-row--current .session-row__q::after {
-      content: ' · current'; color: var(--accent); font-weight: 600;
+    .restored-stamp::before {
+      content: ''; width: 5px; height: 5px; border-radius: 50%;
+      background: var(--text-muted); flex: none;
     }
 
     /* ─── Responsive ───────────────────────────────────────────────────────── */
@@ -701,6 +707,11 @@
     }
     @media (max-width: 860px) {
       :root[data-rail="open"] { --rail-w: 0px; }
+      :root[data-sidebar="open"] { --sidebar-w: 0px; }
+      :root[data-sidebar="open"] .sidebar {
+        display: flex; position: fixed; inset: 0 auto 0 0; width: 272px;
+        z-index: 30; box-shadow: var(--shadow-md);
+      }
       :root[data-rail="open"] .rail {
         display: flex; position: fixed; inset: var(--masthead-h) 0 0 0;
         z-index: 20; border-left: 0;
@@ -790,21 +801,18 @@
       </div>
     </aside>
 
-    <div class="sheet" id="history-sheet" hidden>
-      <div class="sheet__panel" role="dialog" aria-modal="true" aria-labelledby="history-title">
-        <div class="sheet__head">
-          <span class="rail__title" id="history-title">Past conversations</span>
-          <div class="artifact__spacer"></div>
-          <button type="button" class="btn btn--ghost btn--sm" id="history-close">Close</button>
-        </div>
-        <p class="sheet__note">
-          Stored server-side in <code>session_state.conversation_turns</code>. This list is a
-          local-development view: history has no access control yet, so it is off unless
-          <code>STATESYNC_SESSION_BROWSER</code> is set.
-        </p>
-        <div class="sheet__body" id="history-list"></div>
+    <nav class="sidebar" id="history-sidebar" aria-label="Past conversations">
+      <div class="sidebar__head">
+        <span class="rail__title">Conversations</span>
+        <div class="artifact__spacer"></div>
+        <button type="button" class="btn btn--ghost btn--sm" id="sidebar-new" title="Start a new conversation">+</button>
       </div>
-    </div>
+      <div class="sidebar__body" id="history-list"></div>
+      <p class="sidebar__note">
+        Local-dev view. History has no access control yet, so this is off unless
+        <code>STATESYNC_SESSION_BROWSER</code> is set.
+      </p>
+    </nav>
 
   </div>
 

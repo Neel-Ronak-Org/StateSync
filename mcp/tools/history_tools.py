@@ -22,6 +22,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from psycopg.types.json import Jsonb
+
 from config_loader import cfg
 from db import get_history_connection
 from session import get_tenant_id
@@ -39,6 +41,10 @@ async def append_turn(
     answer_text: str,
     route: str | None = None,
     executed_sql: str | None = None,
+    chart: dict[str, Any] | None = None,
+    sql_columns: list[str] | None = None,
+    sql_rows_preview: list[dict[str, Any]] | None = None,
+    sql_rows_count: int | None = None,
 ) -> dict[str, Any]:
     """
     Insert one completed turn. Called once per query, after the response
@@ -46,20 +52,42 @@ async def append_turn(
     answer_text here is always the text the user saw, never a pre-repair
     draft. tenant_id is bound server-side; a caller cannot write into
     another tenant's history by any parameter it controls.
+
+    The artifact columns (migration 012) let a resumed conversation render
+    what the user saw rather than a transcript of it. sql_rows_preview is
+    CLAMPED here, not merely trusted from the caller: the cap is a storage
+    invariant of this table, so it is enforced at the write, and
+    sql_rows_count carries the true size so a truncated preview can never be
+    presented as a complete result set.
     """
     tenant_id = get_tenant_id()
+
+    preview = sql_rows_preview
+    if preview is not None:
+        cap = cfg.mcp.history_row_preview_max
+        if len(preview) > cap:
+            logger.info(
+                "history.append_turn: clamping row preview %d -> %d (tenant=%s session=%s turn=%d)",
+                len(preview), cap, tenant_id, session_id, turn_index,
+            )
+            preview = preview[:cap]
     async with get_history_connection() as conn:
         cur = await conn.execute(
             """
             INSERT INTO session_state.conversation_turns
                 (tenant_id, session_id, turn_index, raw_query, rewritten_query,
-                 rewrite_applied, context_guessed, route, executed_sql, answer_text)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                 rewrite_applied, context_guessed, route, executed_sql, answer_text,
+                 chart, sql_columns, sql_rows_preview, sql_rows_count)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (tenant_id, session_id, turn_index) DO NOTHING
             RETURNING turn_id, computed_at
             """,
             (tenant_id, session_id, turn_index, raw_query, rewritten_query,
-             rewrite_applied, context_guessed, route, executed_sql, answer_text),
+             rewrite_applied, context_guessed, route, executed_sql, answer_text,
+             Jsonb(chart) if chart is not None else None,
+             Jsonb(sql_columns) if sql_columns is not None else None,
+             Jsonb(preview) if preview is not None else None,
+             sql_rows_count),
         )
         row = await cur.fetchone()
 
@@ -91,7 +119,8 @@ async def get_recent_turns(session_id: str, limit: int | None = None) -> dict[st
         cur = await conn.execute(
             """
             SELECT turn_index, raw_query, rewritten_query, rewrite_applied,
-                   context_guessed, route, executed_sql, answer_text, computed_at
+                   context_guessed, route, executed_sql, answer_text, computed_at,
+                   chart, sql_columns, sql_rows_preview, sql_rows_count
             FROM session_state.conversation_turns
             WHERE tenant_id = %s AND session_id = %s
             ORDER BY turn_index DESC
@@ -104,7 +133,8 @@ async def get_recent_turns(session_id: str, limit: int | None = None) -> dict[st
     turns = []
     for r in reversed(rows):  # DESC fetch, ASC (oldest-first) return
         (turn_index, raw_query, rewritten_query, rewrite_applied,
-         context_guessed, route, executed_sql, answer_text, computed_at) = r
+         context_guessed, route, executed_sql, answer_text, computed_at,
+         chart, sql_columns, sql_rows_preview, sql_rows_count) = r
         turns.append({
             "turn_index": turn_index,
             "raw_query": raw_query,
@@ -115,6 +145,13 @@ async def get_recent_turns(session_id: str, limit: int | None = None) -> dict[st
             "executed_sql": executed_sql,
             "answer_text": answer_text,
             "computed_at": computed_at.isoformat(),
+            # NULL means "written before migration 012", not "had no chart".
+            # The caller distinguishes them: a turn with sql_columns but no
+            # preview is a pre-012 turn; one with neither is a docs turn.
+            "chart": chart,
+            "sql_columns": sql_columns,
+            "sql_rows_preview": sql_rows_preview,
+            "sql_rows_count": sql_rows_count,
         })
     return {"turns": turns, "count": len(turns)}
 

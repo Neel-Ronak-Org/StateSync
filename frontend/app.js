@@ -386,9 +386,28 @@
     if (tr.executed_sql) art.appendChild(sqlBlock(tr.executed_sql));
     if (Array.isArray(turn.citations) && turn.citations.length) art.appendChild(citationsBlock(turn.citations));
 
+    // A restored turn is stamped, and says so BEFORE its truncation notice.
+    // Prose reads as a record of what was said; a rendered table reads as live
+    // data. V2_STRATEGY 3b's staleness question is unanswered -- this does not
+    // answer it, it makes the ambiguity visible, which is 3b's own minimum bar
+    // ("answers stamped with when they were computed, at minimum").
+    if (tr.restored) {
+      const when = tr.computed_at ? new Date(tr.computed_at) : null;
+      const stamp = el('div', 'restored-stamp');
+      let text = 'Restored from history';
+      if (when && !isNaN(when)) text += ` — computed ${when.toLocaleString()}`;
+      if (tr.preview_truncated) {
+        text += ` · showing ${fmtInt.format(rows.length)} stored of ` +
+                `${fmtInt.format(tr.sql_rows_count)} rows`;
+      }
+      text += '. Not re-run; the underlying data may have changed since.';
+      stamp.appendChild(document.createTextNode(text));
+      art.appendChild(stamp);
+    }
+
     // Truncation is reported with the config key that caused it, so the number
     // is actionable rather than mysterious.
-    if (typeof tr.sql_rows_count === 'number' && tr.sql_rows_count >= 1000) {
+    if (!tr.restored && typeof tr.sql_rows_count === 'number' && tr.sql_rows_count >= 1000) {
       art.appendChild(el('div', 'notice',
         `Returned ${fmtInt.format(tr.sql_rows_count)} rows — at or above the 1,000-row default cap ` +
         '(mcp.max_rows_default in config/statesync.toml). Results may be incomplete.'));
@@ -1182,14 +1201,17 @@
   // 404s when STATESYNC_SESSION_BROWSER is unset, which is the shipped state,
   // so probing is how the UI discovers whether the feature exists rather than
   // advertising a control that would only produce an error.
-  const historyBtn   = $('history-btn');
-  const historySheet = $('history-sheet');
-  const historyList  = $('history-list');
+  const historyBtn  = $('history-btn');
+  const historyList = $('history-list');
+
+  function sidebarOpen() { return document.documentElement.getAttribute('data-sidebar') === 'open'; }
+  function openSidebar()  { document.documentElement.setAttribute('data-sidebar', 'open'); historyBtn.setAttribute('aria-expanded', 'true'); }
+  function closeSidebar() { document.documentElement.removeAttribute('data-sidebar'); historyBtn.setAttribute('aria-expanded', 'false'); }
 
   async function probeSessionBrowser() {
     try {
       const r = await fetch(`${ORCHESTRATOR_URL}/sessions?limit=1`);
-      if (r.ok) historyBtn.hidden = false;
+      if (r.ok) { historyBtn.hidden = false; openHistory(); }
     } catch (err) {
       /* orchestrator down or route absent -- leave the button hidden. */
     }
@@ -1206,7 +1228,7 @@
   }
 
   async function openHistory() {
-    historySheet.hidden = false;
+    openSidebar();
     clear(historyList);
     historyList.appendChild(el('div', 'rail__empty', 'Loading…'));
     try {
@@ -1220,12 +1242,13 @@
         return;
       }
       list.forEach((sess) => {
-        const row = el('button', 'session-row' + (sess.session_id === sessionId ? ' session-row--current' : ''));
+        const row = el('button', 'session-row');
         row.type = 'button';
+        row.title = sess.first_query || sess.session_id;
+        if (sess.session_id === sessionId) row.setAttribute('aria-current', 'true');
         row.appendChild(el('span', 'session-row__q', sess.first_query || '(no question recorded)'));
         row.appendChild(el('span', 'session-row__meta',
           `${sess.turn_count} turn${sess.turn_count === 1 ? '' : 's'} · ${fmtWhen(sess.last_activity)}`));
-        row.appendChild(el('span', 'session-row__id', sess.session_id));
         row.addEventListener('click', () => loadSession(sess.session_id));
         historyList.appendChild(row);
       });
@@ -1235,14 +1258,13 @@
     }
   }
 
-  function closeHistory() { historySheet.hidden = true; }
+  function toggleHistory() { if (sidebarOpen()) closeSidebar(); else openHistory(); }
 
   // Loading a past conversation ADOPTS its session_id, so a follow-up typed
   // afterwards continues that thread on the backend too -- the rewrite node
   // reads history by session_id, so resuming the UI without resuming the id
   // would silently start a new conversation wearing an old one's transcript.
   async function loadSession(id) {
-    closeHistory();
     try {
       const r = await fetch(`${ORCHESTRATOR_URL}/sessions/${encodeURIComponent(id)}?limit=100`);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -1256,16 +1278,25 @@
         const turn = {
           id: `turn-${turnSeq}`, ordinal: t.turn_index || turnSeq,
           question: t.raw_query, state: 'done',
-          answer: t.answer_text || '', chart: null, citations: [],
-          // Only what the table stores. sql_rows/columns and the chart are
-          // NOT persisted server-side, so a resumed turn shows prose, SQL and
-          // route -- and must not pretend to more than that.
+          answer: t.answer_text || '', chart: t.chart || null, citations: [],
+          // Artifacts come back from migration 012. sql_rows_preview is a
+          // CAPPED slice, so sql_rows_count (the true size) travels with it
+          // and the turn is stamped: a rendered table must not imply it is
+          // the whole result, nor that it is live. A turn written before 012
+          // has all four fields NULL and degrades to prose + SQL, which is
+          // exactly the old behaviour rather than an empty table frame.
           trace: {
             route: t.route, executed_sql: t.executed_sql,
             normalized_query: t.rewritten_query,
             rewrite_applied: t.rewrite_applied,
             context_guessed: t.context_guessed,
-            turn_index: t.turn_index, restored: true,
+            turn_index: t.turn_index,
+            sql_columns: t.sql_columns || [],
+            sql_rows: t.sql_rows_preview || [],
+            sql_rows_count: t.sql_rows_count,
+            restored: true,
+            computed_at: t.computed_at,
+            preview_truncated: (t.sql_rows_count || 0) > (t.sql_rows_preview || []).length,
           },
           latency: null, error: null,
         };
@@ -1281,12 +1312,8 @@
     }
   }
 
-  historyBtn.addEventListener('click', openHistory);
-  $('history-close').addEventListener('click', closeHistory);
-  historySheet.addEventListener('click', (e) => { if (e.target === historySheet) closeHistory(); });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !historySheet.hidden) closeHistory();
-  });
+  historyBtn.addEventListener('click', toggleHistory);
+  $('sidebar-new').addEventListener('click', () => $('new-conversation-btn').click());
 
   // ── Suggestions ────────────────────────────────────────────────────────────
   // These target the SHIPPED default corpus -- the synthetic ONDC schema in

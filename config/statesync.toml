@@ -22,6 +22,11 @@ history_get_turns_hard_cap = 20     # cycle 007: history.get_recent_turns input 
 # per-session read server-side regardless of what is requested here.
 session_browser_list_limit = 50     # conversations listed in the history sheet
 session_browser_turn_limit = 100    # turns fetched when resuming one conversation
+# Rows persisted per turn for replay (migration 012). A capped PREVIEW, not the
+# result set: max_rows_default is 1000 and the hard cap 5000, so storing every
+# turn in full grows session_state.conversation_turns without bound. The true
+# count is stored separately so a truncated preview is never shown as complete.
+history_row_preview_max   = 100
 
 [sql]
 retry_max                 = 3       # attempts after the first; 4 executions maximum
