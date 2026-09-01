@@ -6,17 +6,38 @@
 //
 // NOTE: entrypoint.sh substitutes the ORCHESTRATOR_URL placeholder in THIS
 // file at container start -- it used to patch index.html.
-// ── Config ─────────────────────────────────────────────────────────────────
+//
+// ── Structure of this file ───────────────────────────────────────────────────
+//   1. Config + session
+//   2. Theme (light / system / dark) and the chart token bridge
+//   3. DOM helpers -- textContent only, never innerHTML with data
+//   4. Thread model: append-only turns
+//   5. Renderers: answer, SQL, results table, chart, citations
+//   6. Export: CSV / JSON / Markdown / PNG
+//   7. A7 validator (validator 2 of 2) -- transcribed from the contract
+//   8. Chart rendering through the AST interpreter
+//   9. Developer rail
+//  10. Submit / history / keyboard
+(() => {
+  'use strict';
+
+  // ── 1. Config ──────────────────────────────────────────────────────────────
   // In Docker: orchestrator is accessed from the browser via the host machine.
   // ORCHESTRATOR_URL is nginx-substituted at container start.
+  //
+  // DO NOT REFORMAT THE NEXT LINE. frontend/entrypoint.sh runs a line-oriented
+  // `sed` against the exact byte sequence
+  //   window.__ORCHESTRATOR_URL__ || 'http://localhost:8090'
+  // and scripts/verify_deployed.py pins the same literal. Changing the quotes,
+  // the spacing, `||` to `??`, or wrapping it across two lines makes the
+  // substitution silently no-op: sed exits 0, entrypoint.sh still prints
+  // "Frontend configured", and every deployment then talks to localhost.
   const ORCHESTRATOR_URL = window.__ORCHESTRATOR_URL__ || 'http://localhost:8090';
 
-  // ── Session (cycle 007, Workstream A) ────────────────────────────────────────
-  // sessionStorage: persists across reloads within one browser tab, cleared
-  // when the tab closes -- the right lifetime for a conversation with no
-  // auth (§3b: history ships without identity this cycle; scoped by
-  // tenant_id + session_id only, see docs/cycles/007.md §3).
   const SESSION_KEY = 'statesync_session_id';
+  const THEME_KEY   = 'statesync_theme';
+  const THREAD_KEY  = 'statesync_thread';
+
   function getOrCreateSessionId() {
     let id = sessionStorage.getItem(SESSION_KEY);
     if (!id) {
@@ -29,140 +50,616 @@
   let sessionId = getOrCreateSessionId();
 
   // ── Elements ───────────────────────────────────────────────────────────────
-  const form        = document.getElementById('query-form');
-  const input       = document.getElementById('query-input');
-  const submitBtn   = document.getElementById('submit-btn');
-  const loading     = document.getElementById('loading');
-  const answerCard  = document.getElementById('answer-card');
-  const answerText  = document.getElementById('answer-text');
-  const sqlCard     = document.getElementById('sql-card');
-  const sqlText     = document.getElementById('sql-text');
-  const citCard     = document.getElementById('citations-card');
-  const citList     = document.getElementById('citation-list');
-  const errorCard   = document.getElementById('error-card');
-  const errorText   = document.getElementById('error-text');
-  const traceCard   = document.getElementById('trace-card');
-  const chartCont   = document.getElementById('chart-container');
-  const latencyBadge= document.getElementById('latency-badge');
-  const footerStatus= document.getElementById('footer-status');
-  const turnIndicator = document.getElementById('turn-indicator');
-  const rewriteNote    = document.getElementById('rewrite-note');
-  const newConvoBtn    = document.getElementById('new-conversation-btn');
+  const $ = (id) => document.getElementById(id);
+  const thread       = $('thread');
+  const cover        = $('cover');
+  const form         = $('query-form');
+  const input        = $('query-input');
+  const submitBtn    = $('submit-btn');
+  const footerStatus = $('footer-status');
+  const sessionMeta  = $('session-meta');
+  const healthDot    = $('health-dot');
+  const railEl       = $('rail');
+  const railBody     = $('rail-body');
+  const banner       = $('composer-banner');
+  const bannerText   = $('composer-banner-text');
 
-  newConvoBtn?.addEventListener('click', () => {
-    sessionStorage.removeItem(SESSION_KEY);
-    sessionId = getOrCreateSessionId();
-    turnIndicator.textContent = 'New conversation';
-    resetUI();
-    footerStatus.textContent = 'Started a new conversation.';
-  });
+  // ── 2. Theme ───────────────────────────────────────────────────────────────
+  // Three states. 'system' removes data-theme entirely so the media query in
+  // index.html governs; 'light'/'dark' stamp the attribute so an explicit
+  // choice wins over the OS in BOTH directions.
+  const THEMES = ['light', 'system', 'dark'];
 
-  // ── Suggestion buttons ─────────────────────────────────────────────────────
-  document.querySelectorAll('.suggestion-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      input.value = btn.textContent.trim();
-      input.focus();
-    });
-  });
-
-  // ── Reset UI ───────────────────────────────────────────────────────────────
-  function resetUI() {
-    answerCard.classList.remove('visible');
-    sqlCard.classList.remove('visible');
-    citCard.classList.remove('visible');
-    errorCard.classList.remove('visible');
-    traceCard.classList.remove('visible');
-    chartCont.classList.remove('visible');
-    chartCont.innerHTML = '';
-    answerText.textContent = '';
-    sqlText.textContent = '';
-    citList.textContent = '';
-    errorText.textContent = '';
-    traceCard.innerHTML = '';
-    rewriteNote.classList.remove('visible');
-    rewriteNote.textContent = '';
+  function currentTheme() {
+    const stored = localStorage.getItem(THEME_KEY);
+    return THEMES.includes(stored) ? stored : 'system';
   }
 
-  // ── Citations renderer ─────────────────────────────────────────────────────
-  // SECURITY: DOM nodes + textContent, same discipline as renderTrace -- a
-  // chunk_id ultimately traces back to ingested document content.
+  function applyTheme(mode) {
+    if (mode === 'system') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', mode);
+    localStorage.setItem(THEME_KEY, mode);
+    THEMES.forEach((m) => {
+      const btn = $(`theme-${m}`);
+      if (btn) btn.setAttribute('aria-pressed', String(m === mode));
+    });
+    // A compiled Vega view holds no live binding to the config it was built
+    // with, so every mounted chart keeps its old colors forever unless it is
+    // rebuilt. This is the other half of the dark-on-dark fix.
+    rerenderAllCharts();
+  }
+
+  THEMES.forEach((m) => {
+    const btn = $(`theme-${m}`);
+    if (btn) btn.addEventListener('click', () => applyTheme(m));
+  });
+  // Following the OS while in 'system' mode still needs a chart rebuild.
+  if (window.matchMedia) {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = () => { if (currentTheme() === 'system') rerenderAllCharts(); };
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else if (mq.addListener) mq.addListener(onChange);
+  }
+
+  // ── The chart token bridge ─────────────────────────────────────────────────
+  // Chart color comes from the SAME CSS custom properties the page uses, read
+  // at render time. No color literal appears anywhere in this file, which is
+  // what makes palette drift between page and chart structurally impossible.
   //
-  // The API has returned this array since E1-V4 (build_citations, A7-adjacent:
-  // main.py recomputes it at the process boundary so it can't be dropped
-  // in transit) and nothing in the page ever read it -- a document-route
-  // answer reached the user with zero visible source. Audit 003 F-003-5.
-  function renderCitations(citations) {
-    if (!citations || citations.length === 0) return;
-    citList.textContent = '';
+  // Reads are guarded: a renamed or misspelled token yields '' from
+  // getPropertyValue, and an empty string handed to Vega silently produces an
+  // invisible mark -- the exact class of bug this rewrite exists to fix. A
+  // missing token therefore warns loudly and falls back to a named CSS color
+  // rather than failing open.
+  const CHART_FALLBACK = {
+    '--chart-surface': 'white', '--chart-view-stroke': 'silver',
+    '--chart-axis-domain': 'gray', '--chart-axis-tick': 'gray',
+    '--chart-grid': 'gainsboro', '--chart-label': 'dimgray',
+    '--chart-title': 'black', '--chart-subtitle': 'gray',
+    '--chart-c1': 'steelblue', '--chart-c2': 'chocolate', '--chart-c3': 'seagreen',
+    '--chart-c4': 'slateblue', '--chart-c5': 'mediumvioletred', '--chart-c6': 'darkgoldenrod',
+    '--chart-c7': 'slategray', '--chart-c8': 'crimson', '--chart-c9': 'teal',
+    '--chart-c10': 'sienna',
+    '--chart-ramp-from': 'aliceblue', '--chart-ramp-to': 'steelblue',
+    '--chart-diverge-from': 'chocolate', '--chart-diverge-mid': 'gainsboro',
+    '--chart-diverge-to': 'steelblue',
+  };
+
+  function tok(cs, name) {
+    const v = cs.getPropertyValue(name).trim();
+    if (v) return v;
+    console.warn(`[theme] chart token ${name} resolved empty — using fallback.`);
+    return CHART_FALLBACK[name] || 'gray';
+  }
+
+  function chartTokens() {
+    const cs = getComputedStyle(document.documentElement);
+    return {
+      surface:    tok(cs, '--chart-surface'),
+      viewStroke: tok(cs, '--chart-view-stroke'),
+      domain:     tok(cs, '--chart-axis-domain'),
+      tick:       tok(cs, '--chart-axis-tick'),
+      grid:       tok(cs, '--chart-grid'),
+      label:      tok(cs, '--chart-label'),
+      title:      tok(cs, '--chart-title'),
+      subtitle:   tok(cs, '--chart-subtitle'),
+      fontSans:   "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      fontSerif:  "'Source Serif 4', Georgia, serif",
+      categorical: Array.from({ length: 10 }, (_, i) => tok(cs, `--chart-c${i + 1}`)),
+      ramp:      [tok(cs, '--chart-ramp-from'), tok(cs, '--chart-ramp-to')],
+      diverging: [tok(cs, '--chart-diverge-from'), tok(cs, '--chart-diverge-mid'), tok(cs, '--chart-diverge-to')],
+    };
+  }
+
+  // Every guide is colored explicitly. The old config set only `background`
+  // and left axis/legend/title text to Vega-Lite's near-black defaults, which
+  // is precisely why charts were illegible on a dark ground.
+  function vegaConfig() {
+    const c = chartTokens();
+    return {
+      background: c.surface,
+      padding: { left: 8, right: 14, top: 8, bottom: 8 },
+      autosize: { type: 'fit', contains: 'padding', resize: true },
+      font: c.fontSans,
+      view: { stroke: c.viewStroke, continuousWidth: 520, continuousHeight: 300 },
+      axis: {
+        domain: true, domainColor: c.domain, domainWidth: 1,
+        ticks: true, tickColor: c.tick, tickSize: 5, tickWidth: 1,
+        grid: true, gridColor: c.grid, gridWidth: 1, gridOpacity: 1,
+        labelColor: c.label, labelFont: c.fontSans, labelFontSize: 11,
+        labelPadding: 6, labelOverlap: 'greedy', labelLimit: 160,
+        titleColor: c.title, titleFont: c.fontSans, titleFontSize: 12,
+        titleFontWeight: 600, titlePadding: 10, tickCount: 6,
+      },
+      // labelAngle is deliberately NOT forced. Pinning -35 rotates short
+      // categorical labels ('SP', 'RJ') that would read fine horizontally, and
+      // clips them at narrow widths. Vega-Lite already rotates only when the
+      // labels would collide, which is the behaviour we want at both widths.
+      axisX: { grid: false },
+      axisY: { grid: true, domain: false, ticks: false, format: '~s' },
+      legend: {
+        orient: 'top', direction: 'horizontal', offset: 6, padding: 0,
+        symbolType: 'square', symbolSize: 90, symbolStrokeWidth: 0,
+        labelColor: c.label, labelFont: c.fontSans, labelFontSize: 11,
+        titleColor: c.title, titleFont: c.fontSans, titleFontSize: 11,
+        titleFontWeight: 600, rowPadding: 4, columnPadding: 14,
+      },
+      title: {
+        color: c.title, font: c.fontSerif, fontSize: 15, fontWeight: 600,
+        anchor: 'start', offset: 12,
+        subtitleColor: c.subtitle, subtitleFont: c.fontSans, subtitleFontSize: 12,
+      },
+      header: { labelColor: c.label, titleColor: c.title, labelFont: c.fontSans, titleFont: c.fontSans },
+      range: {
+        category: c.categorical, ordinal: c.ramp, ramp: c.ramp,
+        heatmap: c.ramp, diverging: c.diverging,
+      },
+      // tooltip is deliberately NOT enabled: vega-tooltip builds its table with
+      // innerHTML from raw row values, reintroducing the untrusted-data sink
+      // the trace renderer was fixed for. The results table shows the values.
+      mark:  { tooltip: false },
+      bar:   { fill: c.categorical[0], cornerRadiusEnd: 2 },
+      line:  { stroke: c.categorical[0], strokeWidth: 2 },
+      point: { fill: c.categorical[0], filled: true, size: 54 },
+      area:  { fill: c.categorical[0], fillOpacity: 0.22, line: { stroke: c.categorical[0], strokeWidth: 2 } },
+      arc:   { stroke: c.surface, strokeWidth: 1 },
+      tick:  { color: c.categorical[0], thickness: 2 },
+      text:  { color: c.label, font: c.fontSans, fontSize: 11 },
+      // Belt and braces: guide-label/guide-title are the underlying styles every
+      // axis and legend text mark resolves through. A spec setting an unusual
+      // guide can escape config.axis but not config.style.
+      style: {
+        'guide-label': { fill: c.label, font: c.fontSans, fontSize: 11 },
+        'guide-title': { fill: c.title, font: c.fontSans, fontSize: 12, fontWeight: 600 },
+        'group-title': { fill: c.title, font: c.fontSerif },
+        'group-subtitle': { fill: c.subtitle },
+        cell: { stroke: c.viewStroke },
+      },
+    };
+  }
+
+  // ── 3. DOM helpers ─────────────────────────────────────────────────────────
+  // SECURITY: every helper below sets text via textContent. innerHTML is used
+  // in exactly one way in this file -- assigning '' to clear a container --
+  // and never to interpolate a value. state_trace carries sql_rows (raw
+  // database content) and echoes the user's own text; document chunk ids come
+  // from ingested files. All of it is untrusted.
+  function el(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined && text !== null) n.textContent = String(text);
+    return n;
+  }
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+
+  function button(label, cls, onClick, title) {
+    const b = el('button', cls, label);
+    b.type = 'button';
+    if (title) b.title = title;
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
+  const fmtInt = new Intl.NumberFormat();
+  function fmtNumber(v) {
+    if (typeof v !== 'number' || !Number.isFinite(v)) return String(v);
+    return Number.isInteger(v) ? fmtInt.format(v) : String(Number(v.toFixed(4)));
+  }
+
+  // ── 4. Thread model ────────────────────────────────────────────────────────
+  // Append-only. The previous implementation called resetUI() at the top of
+  // every submit, which wiped the answer, SQL, chart and citations -- so the
+  // page was structurally single-turn no matter what the backend remembered.
+  const turns = [];
+  const charts = new Map();   // turnId -> { host, spec }
+  const pendingMounts = [];   // [turnId, host, spec] flushed at the end of renderTurn
+  let turnSeq = 0;
+  let activeController = null;
+
+  function persistThread() {
+    try {
+      // sql_rows dominates the payload and sessionStorage is ~5MB. Keep the
+      // rows for recent turns only; older turns keep everything else.
+      const slim = turns.map((t, i) => {
+        const keepRows = i >= turns.length - 8;
+        const st = t.trace ? { ...t.trace } : null;
+        if (st && !keepRows) { st.sql_rows = []; st.rows_trimmed = true; }
+        else if (st && Array.isArray(st.sql_rows)) st.sql_rows = st.sql_rows.slice(0, 200);
+        return { ...t, trace: st };
+      });
+      sessionStorage.setItem(THREAD_KEY, JSON.stringify({ sessionId, turns: slim }));
+    } catch (err) {
+      console.warn('[thread] could not persist to sessionStorage:', err && err.message);
+    }
+  }
+
+  function restoreThread() {
+    try {
+      const raw = sessionStorage.getItem(THREAD_KEY);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.sessionId !== sessionId || !Array.isArray(parsed.turns)) return false;
+      parsed.turns.forEach((t) => { turns.push(t); renderTurn(t, true); });
+      return turns.length > 0;
+    } catch (err) {
+      console.warn('[thread] could not restore thread:', err && err.message);
+      return false;
+    }
+  }
+
+  function updateSessionMeta() {
+    const n = turns.filter((t) => t.state === 'done').length;
+    sessionMeta.textContent = n === 0
+      ? 'New conversation'
+      : `${n} turn${n === 1 ? '' : 's'} · session ${sessionId.slice(0, 8)}…`;
+  }
+
+  function atBottom() {
+    return thread.scrollHeight - thread.scrollTop - thread.clientHeight < 140;
+  }
+  function scrollToBottom() { thread.scrollTop = thread.scrollHeight; }
+
+  // ── 5. Renderers ───────────────────────────────────────────────────────────
+  function renderTurn(turn, restoring) {
+    const stick = restoring ? false : atBottom();
+    if (cover && cover.parentNode) cover.remove();
+
+    let art = document.getElementById(turn.id);
+    if (art) { clear(art); } else {
+      art = el('article', 'turn');
+      art.id = turn.id;
+      thread.appendChild(art);
+    }
+    art.setAttribute('aria-label', `Turn ${turn.ordinal}`);
+
+    art.appendChild(el('div', 'turn__ordinal', String(turn.ordinal).padStart(2, '0')));
+
+    const q = el('p', 'turn__question', turn.question);
+    art.appendChild(q);
+
+    // Per-turn actions
+    const actions = el('div', 'turn__actions');
+    actions.appendChild(button('Ask again', 'btn btn--ghost btn--sm',
+      () => runQuery(turn.question), 'Re-issue this question as a new turn'));
+    actions.appendChild(button('Edit', 'btn btn--ghost btn--sm',
+      () => { input.value = turn.question; input.focus(); autosize(); }, 'Load into the composer'));
+    art.appendChild(actions);
+
+    if (turn.state === 'pending') {
+      const p = el('div', 'pending');
+      p.appendChild(el('span', 'spinner'));
+      const lab = el('span', null, 'Thinking… ');
+      const ela = el('span', 'elapsed', '0.0s');
+      lab.appendChild(ela);
+      p.appendChild(lab);
+      p.appendChild(button('Stop', 'btn btn--ghost btn--sm', () => {
+        if (activeController) activeController.abort();
+      }));
+      art.appendChild(p);
+      turn._elapsedEl = ela;
+      if (stick) scrollToBottom();
+      return;
+    }
+
+    if (turn.state === 'error') {
+      const n = el('div', 'notice notice--error');
+      n.appendChild(el('strong', null, 'Request failed. '));
+      n.appendChild(document.createTextNode(turn.error || 'Unknown error.'));
+      art.appendChild(n);
+      updateSessionMeta();
+      if (stick) scrollToBottom();
+      return;
+    }
+
+    const tr = turn.trace || {};
+
+    // Rewrite note — makes the contextual reinterpretation visible.
+    if (tr.rewrite_applied && tr.normalized_query) {
+      const note = el('div', 'rewrite-note' + (tr.context_guessed ? ' rewrite-note--guessed' : ''));
+      note.appendChild(el('span', 'rewrite-note__label', tr.context_guessed ? 'Guessed' : 'Interpreted as'));
+      const body = el('span');
+      body.appendChild(el('em', null, tr.normalized_query));
+      if (tr.context_guessed) {
+        body.appendChild(document.createTextNode(' — ambiguous reference resolved without asking.'));
+      }
+      note.appendChild(body);
+      art.appendChild(note);
+    }
+
+    if (turn.answer) art.appendChild(el('div', 'answer', turn.answer));
+
+    // KPI: a 1x1 result is a headline number, not a table.
+    const cols = Array.isArray(tr.sql_columns) ? tr.sql_columns : [];
+    const rows = Array.isArray(tr.sql_rows) ? tr.sql_rows : [];
+    if (cols.length === 1 && rows.length === 1) {
+      const v = rows[0][cols[0]];
+      const k = el('div', 'kpi');
+      k.appendChild(el('span', 'kpi__label', cols[0]));
+      k.appendChild(document.createTextNode(fmtNumber(v)));
+      art.appendChild(k);
+    }
+
+    art.appendChild(metaRow(turn, tr));
+
+    if (turn.chart) art.appendChild(figureBlock(turn));
+    if (rows.length) art.appendChild(tableBlock(turn, cols, rows));
+    if (tr.executed_sql) art.appendChild(sqlBlock(tr.executed_sql));
+    if (Array.isArray(turn.citations) && turn.citations.length) art.appendChild(citationsBlock(turn.citations));
+
+    // Truncation is reported with the config key that caused it, so the number
+    // is actionable rather than mysterious.
+    if (typeof tr.sql_rows_count === 'number' && tr.sql_rows_count >= 1000) {
+      art.appendChild(el('div', 'notice',
+        `Returned ${fmtInt.format(tr.sql_rows_count)} rows — at or above the 1,000-row default cap ` +
+        '(mcp.max_rows_default in config/statesync.toml). Results may be incomplete.'));
+    }
+
+    updateSessionMeta();
+    flushMounts();
+    if (stick) scrollToBottom();
+  }
+
+  // Mount charts once their article is attached to the document.
+  function flushMounts() {
+    while (pendingMounts.length) {
+      const [id, host, spec] = pendingMounts.shift();
+      renderChart(id, host, spec);
+    }
+  }
+
+  function metaRow(turn, tr) {
+    const row = el('div', 'meta-row');
+    const route = (tr.route || 'unknown').toLowerCase();
+    row.appendChild(el('span', `chip chip--${['sql', 'docs', 'hybrid'].includes(route) ? route : ''}`.trim(), route));
+    if (typeof turn.latency === 'number') row.appendChild(el('span', 'chip', `${fmtInt.format(turn.latency)} ms`));
+    if (typeof tr.sql_rows_count === 'number') {
+      row.appendChild(el('span', 'chip', `${fmtInt.format(tr.sql_rows_count)} rows`));
+    }
+    if (tr.memory_hit) row.appendChild(el('span', 'chip', 'cached plan'));
+    if (typeof tr.attempt === 'number' && tr.attempt > 0) {
+      row.appendChild(el('span', 'chip chip--warn', `self-corrected ×${tr.attempt}`));
+    }
+    if (tr.detected_language && tr.detected_language !== 'en') {
+      row.appendChild(el('span', 'chip', tr.detected_language));
+    }
+    row.appendChild(button('Trace', 'btn btn--ghost btn--sm', () => {
+      openRail(); showRailTab('trace', turn);
+    }, 'Open this turn in the developer panel'));
+    return row;
+  }
+
+  function sqlBlock(sql) {
+    const d = el('details', 'artifact');
+    const s = el('summary');
+    s.appendChild(el('span', 'disclosure-caret', '▶'));
+    s.appendChild(el('span', 'artifact__title', 'Executed SQL'));
+    s.appendChild(el('span', 'artifact__spacer'));
+    s.appendChild(button('Copy', 'btn btn--sm', (ev) => {
+      ev.preventDefault(); ev.stopPropagation(); copyText(sql, 'SQL copied.');
+    }));
+    d.appendChild(s);
+    d.appendChild(el('pre', 'sql', sql));
+    return d;
+  }
+
+  function inferNumericColumns(cols, rows) {
+    const numeric = new Set();
+    cols.forEach((c) => {
+      const sample = rows.slice(0, 40).map((r) => r[c]).filter((v) => v !== null && v !== undefined);
+      if (sample.length && sample.every((v) => typeof v === 'number')) numeric.add(c);
+    });
+    return numeric;
+  }
+
+  function tableBlock(turn, cols, rows) {
+    const d = el('details', 'artifact block--wide');
+    // Small results open by default; large ones stay collapsed so the reading
+    // flow is not swamped.
+    if (rows.length <= 12) d.open = true;
+    const s = el('summary');
+    s.appendChild(el('span', 'disclosure-caret', '▶'));
+    s.appendChild(el('span', 'artifact__title', `Results · ${fmtInt.format(rows.length)} × ${cols.length}`));
+    s.appendChild(el('span', 'artifact__spacer'));
+    s.appendChild(button('CSV', 'btn btn--sm', (ev) => {
+      ev.preventDefault(); ev.stopPropagation(); downloadCSV(turn, cols, rows);
+    }, 'Download as CSV'));
+    s.appendChild(button('JSON', 'btn btn--sm', (ev) => {
+      ev.preventDefault(); ev.stopPropagation(); downloadJSON(turn, rows);
+    }, 'Download as JSON'));
+    s.appendChild(button('Copy TSV', 'btn btn--sm', (ev) => {
+      ev.preventDefault(); ev.stopPropagation();
+      copyText(toDelimited(cols, rows, '\t', false), 'Copied — paste into Sheets or Excel.');
+    }));
+    d.appendChild(s);
+
+    const numeric = inferNumericColumns(cols, rows);
+    const wrap = el('div', 'table-scroll');
+    const table = el('table', 'results');
+    const cap = el('caption', null,
+      rows.length > 500
+        ? `Showing the first 500 of ${fmtInt.format(rows.length)} rows. Export for the full set.`
+        : `${fmtInt.format(rows.length)} row${rows.length === 1 ? '' : 's'}.`);
+    table.appendChild(cap);
+
+    const thead = el('thead');
+    const htr = el('tr');
+    cols.forEach((c) => {
+      const th = el('th', null, c);
+      th.scope = 'col';
+      htr.appendChild(th);
+    });
+    thead.appendChild(htr);
+    table.appendChild(thead);
+
+    const tbody = el('tbody');
+    rows.slice(0, 500).forEach((r) => {
+      const tr2 = el('tr');
+      cols.forEach((c) => {
+        const v = r[c];
+        let td;
+        if (v === null || v === undefined) td = el('td', 'null', 'null');
+        else if (numeric.has(c)) td = el('td', 'num', fmtNumber(v));
+        else td = el('td', null, typeof v === 'object' ? JSON.stringify(v) : String(v));
+        td.title = v === null || v === undefined ? 'null' : String(v);
+        tr2.appendChild(td);
+      });
+      tbody.appendChild(tr2);
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    d.appendChild(wrap);
+    return d;
+  }
+
+  function figureBlock(turn) {
+    const wrap = el('div', 'artifact block--wide');
+    const head = el('div', 'artifact__head');
+    head.appendChild(el('span', 'artifact__title', `Figure ${turn.ordinal}`));
+    head.appendChild(el('span', 'artifact__spacer'));
+    head.appendChild(button('PNG', 'btn btn--sm', () => exportPNG(turn), 'Download the chart as a PNG'));
+    head.appendChild(button('Spec', 'btn btn--sm', () => { openRail(); showRailTab('spec', turn); }));
+    wrap.appendChild(head);
+
+    const fig = el('figure', 'figure');
+    const host = el('div', 'chart-host');
+    fig.appendChild(host);
+    const cap = el('figcaption');
+    const tr = turn.trace || {};
+    cap.appendChild(document.createTextNode(
+      `Source: StateSync · ${(tr.route || 'unknown')} route` +
+      (typeof tr.sql_rows_count === 'number' ? ` · ${fmtInt.format(tr.sql_rows_count)} rows` : '')));
+    fig.appendChild(cap);
+    wrap.appendChild(fig);
+
+    charts.set(turn.id, { host, spec: turn.chart });
+    // Deliberately NOT scheduled with requestAnimationFrame. rAF does not fire
+    // while the tab is hidden, and a local model can take 5-30s per turn -- so
+    // a user who switches away while waiting would come back to a figure frame
+    // that never mounted. renderTurn() flushes this after the article is in the
+    // document, which is also when the host is measurable for autosize 'fit'.
+    wrap.dataset.chartTurn = turn.id;
+    if (ro) ro.observe(wrap);
+    pendingMounts.push([turn.id, host, turn.chart]);
+    return wrap;
+  }
+
+  function citationsBlock(citations) {
+    const wrap = el('div', 'artifact');
+    const head = el('div', 'artifact__head');
+    head.appendChild(el('span', 'artifact__title', 'Retrieved context'));
+    wrap.appendChild(head);
+    const list = el('div', 'citation-list');
     citations.forEach((c) => {
-      const item = document.createElement('div');
-      item.className = 'citation-item';
-      const kindEl = document.createElement('span');
-      kindEl.className = 'citation-kind';
-      kindEl.textContent = c.kind === 'chunk' ? 'doc' : c.kind;
-      const refEl = document.createElement('span');
-      refEl.className = 'citation-ref';
-      refEl.textContent = c.kind === 'chunk' && c.page != null
-        ? `${c.ref} (p.${c.page})`
-        : c.ref;
-      item.appendChild(kindEl);
-      item.appendChild(refEl);
-      citList.appendChild(item);
+      const item = el('div', 'citation');
+      item.appendChild(el('span', 'citation__kind', c.kind === 'chunk' ? 'doc' : c.kind));
+      item.appendChild(el('span', 'citation__ref',
+        c.kind === 'chunk' && c.page != null ? `${c.ref} (p.${c.page})` : c.ref));
+      list.appendChild(item);
     });
-    citCard.classList.add('visible');
+    wrap.appendChild(list);
+    return wrap;
   }
 
-  function showLoading(show) {
-    loading.classList.toggle('visible', show);
-    submitBtn.disabled = show;
+  // ── 6. Export ──────────────────────────────────────────────────────────────
+  // CSV formula-injection guard: a field starting with = + - @ TAB or CR is
+  // executed as a formula when the file is opened in Excel or Sheets. Values
+  // here come straight from the database, so this is a real path from stored
+  // data to code execution on an analyst's machine. Prefixing an apostrophe
+  // makes the cell literal text.
+  function csvCell(v) {
+    if (v === null || v === undefined) return '';
+    let s = typeof v === 'object' ? JSON.stringify(v) : String(v);
+    if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+    if (/[",\r\n]/.test(s)) s = `"${s.replace(/"/g, '""')}"`;
+    return s;
   }
 
-  // ── Trace renderer ─────────────────────────────────────────────────────────
-  // SECURITY: built with DOM nodes and textContent, never innerHTML.
-  //
-  // This previously interpolated trace values straight into innerHTML, which
-  // is an XSS sink fed by untrusted data: state_trace carries `sql_rows` (raw
-  // database content) and echoes `normalized_query` (the user's own text).
-  //
-  // Characterised honestly, because the distinction matters: this was a
-  // LATENT vulnerability, not an exploited one. The Part F adversarial corpus
-  // (scripts/seed_adversarial.py) is prompt-injection PROSE -- it contains no
-  // <script>, no onerror, no executable construct -- so nothing currently
-  // seeded achieves script execution. What the database does contain is
-  // angle-bracketed text: two `delivery_events.note` rows carry
-  // `<tool_call>...</tool_call>` payloads. That proves untrusted markup
-  // reaches this sink. Had any payload been executable it would have run,
-  // because the page's CSP allows 'unsafe-inline' for script-src (it must:
-  // the app is a single inline <script>).
-  //
-  // There is a second, already-active bug here that is not about XSS at all:
-  // innerHTML PARSES those `<tool_call>` tags as unknown elements and drops
-  // them from the rendered output, so an analyst reading the trace to inspect
-  // an injection attempt saw the payload silently vanish -- the security
-  // trace concealing the exact thing it exists to show. textContent displays
-  // it verbatim.
-  //
-  // Same threat model as F-V1's "tool poisoning through data", one layer
-  // further out, where nothing was checking.
-  function renderTrace(trace) {
-    if (!trace) return;
-    traceCard.textContent = '';
-    Object.entries(trace).forEach(([k, v], i) => {
-      if (i > 0) traceCard.appendChild(document.createTextNode('\n'));
-      const keyEl = document.createElement('span');
-      keyEl.className = 'trace-key';
-      keyEl.textContent = k;
-      const valEl = document.createElement('span');
-      valEl.className = 'trace-value';
-      valEl.textContent = typeof v === 'object' ? JSON.stringify(v) : String(v);
-      traceCard.appendChild(keyEl);
-      traceCard.appendChild(document.createTextNode(': '));
-      traceCard.appendChild(valEl);
+  function toDelimited(cols, rows, sep, guard) {
+    const head = cols.map((c) => (guard ? csvCell(c) : c)).join(sep);
+    const body = rows.map((r) => cols.map((c) => {
+      const v = r[c];
+      if (guard) return csvCell(v);
+      if (v === null || v === undefined) return '';
+      return typeof v === 'object' ? JSON.stringify(v) : String(v);
+    }).join(sep));
+    return [head].concat(body).join('\r\n');
+  }
+
+  function downloadBlob(name, mime, text) {
+    try {
+      const blob = new Blob([text], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = el('a');
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      status(`Downloaded ${name}`);
+    } catch (err) {
+      status(`Download failed: ${err && err.message}`);
+    }
+  }
+
+  function downloadCSV(turn, cols, rows) {
+    // BOM so Excel reads UTF-8 rather than guessing a legacy codepage.
+    downloadBlob(`statesync-turn-${turn.ordinal}.csv`, 'text/csv;charset=utf-8',
+      '﻿' + toDelimited(cols, rows, ',', true));
+  }
+  function downloadJSON(turn, rows) {
+    downloadBlob(`statesync-turn-${turn.ordinal}.json`, 'application/json', JSON.stringify(rows, null, 2));
+  }
+
+  async function exportPNG(turn) {
+    const entry = charts.get(turn.id);
+    if (!entry || !entry.view) { status('Chart is not mounted.'); return; }
+    try {
+      const url = await entry.view.toImageURL('png', 2);
+      const a = el('a');
+      a.href = url; a.download = `statesync-figure-${turn.ordinal}.png`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      status('Chart exported.');
+    } catch (err) {
+      status(`PNG export failed: ${err && err.message}`);
+    }
+  }
+
+  function copyText(text, okMsg) {
+    const done = () => status(okMsg || 'Copied.');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+    } else fallbackCopy(text, done);
+  }
+  function fallbackCopy(text, done) {
+    // navigator.clipboard is undefined on insecure origins, which includes
+    // http://localhost:3000 in some browsers -- the exact way this app is served.
+    const ta = el('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); }
+    catch (err) { status('Copy failed.'); }
+    document.body.removeChild(ta);
+  }
+
+  function threadAsMarkdown() {
+    const parts = [`# StateSync conversation\n\nSession \`${sessionId}\``];
+    turns.forEach((t) => {
+      if (t.state !== 'done') return;
+      const tr = t.trace || {};
+      parts.push(`\n## Turn ${t.ordinal}\n\n**Q:** ${t.question}`);
+      if (tr.rewrite_applied && tr.normalized_query) parts.push(`\n_Interpreted as: ${tr.normalized_query}_`);
+      parts.push(`\n${t.answer || ''}`);
+      if (tr.executed_sql) parts.push('\n```sql\n' + tr.executed_sql + '\n```');
+      const bits = [];
+      if (tr.route) bits.push(`route: ${tr.route}`);
+      if (typeof tr.sql_rows_count === 'number') bits.push(`rows: ${tr.sql_rows_count}`);
+      if (typeof t.latency === 'number') bits.push(`${t.latency} ms`);
+      if (bits.length) parts.push(`\n_${bits.join(' · ')}_`);
     });
-    traceCard.classList.add('visible');
+    return parts.join('\n');
   }
 
-  // ── A7 validator, validator 2 of 2 (E2, A7 enforcement) ───────────────────
+  // ── 7. A7 validator, validator 2 of 2 (E2, A7 enforcement) ────────────────
   // Deliberately hand-written rather than a JSON-Schema library port. A7 asks
   // for "two independent validations, because the guarantee must not depend on
   // one component being correct" -- two copies of the same implementation
@@ -303,6 +800,7 @@
   // guarantee. Not used by the render path itself.
   window.validateA7Chart = validateA7Chart;
 
+  // ── 8. Chart rendering ─────────────────────────────────────────────────────
   // Resolve the CSP-safe expression interpreter. Different builds expose it
   // under different globals, so probe rather than assume; if none is present
   // we must NOT silently fall through to the default compiler (that needs
@@ -316,123 +814,547 @@
     // implements {operator, parameter, event, handler, encode}. Verified
     // in-browser; a truthiness check silently picks the wrong one.
     const usable = c => c && typeof c.operator === 'function';
-    const interp = [
+    const found = [
       window.vega && window.vega.expressionInterpreter,
       window.vegaInterpreter && window.vegaInterpreter.expressionInterpreter,
       window.expressionInterpreter,
     ].find(usable);
-    if (!interp) {
+    if (!found) {
       console.error('[A7] vega-interpreter unavailable — refusing to render via the eval-based compiler.');
     }
-    return interp;
+    return found;
   }
 
-  // ── Chart renderer ────────────────────────────────────────────────────────
-  async function renderChart(spec) {
-    if (!spec) return;
+  function renderWithheld(host, reasons) {
+    clear(host);
+    host.appendChild(el('div', 'chart-withheld',
+      `Chart withheld — ${reasons.length} A7 validation ${reasons.length === 1 ? 'violation' : 'violations'}. ` +
+      'The prose answer above is unaffected. See the developer panel for detail.'));
+  }
+
+  async function renderChart(turnId, host, spec) {
+    if (!spec || !host) return;
 
     // Validator 2 of 2 — runs BEFORE render, independently of whatever the
     // orchestrator concluded. No repair path: an invalid spec is dropped, the
-    // prose answer stays, and the failure is logged.
+    // prose answer stays, and the failure is surfaced rather than only logged.
     const violations = validateA7Chart(spec);
     if (violations.length > 0) {
       console.error('[A7 validation failure] chart rejected before render, not repaired:', violations);
-      chartCont.classList.remove('visible');
-      chartCont.innerHTML = '';
+      renderWithheld(host, violations);
+      const rec = charts.get(turnId);
+      if (rec) rec.violations = violations;
       return;
     }
 
     const interp = expressionInterpreter();
-    if (!interp) { chartCont.classList.remove('visible'); return; }
+    if (!interp) { renderWithheld(host, ['expression interpreter unavailable']); return; }
 
     try {
-      chartCont.classList.add('visible');
+      clear(host);
       // CSP-safe rendering (A7): parse to an AST and evaluate expressions with
       // vega-interpreter, never the default compiler, which builds functions
       // via `Function(...)` and would need `unsafe-eval`. The CSP in
       // frontend/nginx.conf omits unsafe-eval, so the compiler path would
       // throw rather than silently work — that is what makes E2-V4 a real
       // test instead of a cosmetic one.
-      await vegaEmbed(chartCont, spec, {
+      // Size the chart to its frame.
+      //
+      // vega-embed's `width` OPTION does not work for a Vega-Lite spec --
+      // verified in-browser: the same spec renders 98px via the option and
+      // 738px when `width` is set on the spec itself. Only the spec field is
+      // honoured, so the width must go there.
+      //
+      // That is safe under A7, which permits a top-level `width` as an integer
+      // in [MIN_DIM, MAX_WIDTH]. The spec RECEIVED from the orchestrator is
+      // validated first and unmodified; the width is applied to a copy, and
+      // the copy is validated again before it reaches vega. If the copy fails
+      // for any reason we render the original rather than nothing.
+      const frame = host.closest('.artifact') || host.parentElement;
+      const box = frame ? frame.getBoundingClientRect().width : 0;
+      let draw = spec;
+      if (!('width' in spec) && box > 40) {
+        const avail = Math.min(A7.MAX_WIDTH, Math.max(A7.MIN_DIM, Math.floor(box) - 28));
+        const candidate = { ...spec, width: avail };
+        draw = validateA7Chart(candidate).length === 0 ? candidate : spec;
+      }
+      const result = await vegaEmbed(host, draw, {
         renderer: 'canvas',
         actions: false,
-        config: { background: '#111827', view: { stroke: 'transparent' } },
+        config: vegaConfig(),
         ast: true,
         expr: interp,
       });
+      const rec0 = charts.get(turnId);
+      if (rec0 && box > 40) rec0.lastWidth = Math.floor(box);
+      const rec = charts.get(turnId);
+      if (rec) rec.view = result.view;
     } catch (err) {
       console.error('Chart render error (A7 violation or vega error):', err);
-      chartCont.classList.remove('visible');
+      renderWithheld(host, [String((err && err.message) || err)]);
     }
   }
 
-  // ── Submit handler ─────────────────────────────────────────────────────────
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const query = input.value.trim();
-    if (!query) return;
+  // Rebuilding is the only way to recolor: a compiled Vega view captured the
+  // old config by value and will never pick up new CSS custom properties.
+  function rerenderAllCharts() {
+    charts.forEach((rec, turnId) => {
+      if (rec && rec.host && rec.spec) renderChart(turnId, rec.host, rec.spec);
+    });
+  }
 
-    resetUI();
-    showLoading(true);
-    footerStatus.textContent = 'Running…';
+  // Charts are sized from a measurement, and a measurement can be wrong or
+  // simply unavailable at mount time -- a container that is display:none, in a
+  // collapsed grid track, or in a tab the browser has not laid out yet all
+  // report 0. Rather than trust one reading, observe the frame and re-render
+  // when its width actually changes. This also gives real responsive
+  // behaviour when the developer rail opens and the reading column narrows.
+  const ro = ('ResizeObserver' in window) ? new ResizeObserver((entries) => {
+    entries.forEach((e) => {
+      const id = e.target.dataset.chartTurn;
+      if (!id) return;
+      const rec = charts.get(id);
+      if (!rec || !rec.spec) return;
+      const w = Math.floor(e.contentRect.width);
+      // Only act on a real change, or the re-render's own layout retriggers us.
+      if (w < 40 || Math.abs(w - (rec.lastWidth || 0)) <= 8) return;
+      rec.lastWidth = w;
+      if (rec.resizeTimer) clearTimeout(rec.resizeTimer);
+      rec.resizeTimer = setTimeout(() => renderChart(id, rec.host, rec.spec), 120);
+    });
+  }) : null;
+
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(rerenderAllCharts, 200);
+  });
+
+  // ── 9. Developer rail ──────────────────────────────────────────────────────
+  let railTab = 'trace';
+  let railTurn = null;
+
+  function openRail()  { document.documentElement.setAttribute('data-rail', 'open'); $('rail-toggle').setAttribute('aria-expanded', 'true'); }
+  function closeRail() { document.documentElement.removeAttribute('data-rail'); $('rail-toggle').setAttribute('aria-expanded', 'false'); }
+  function toggleRail() {
+    if (document.documentElement.getAttribute('data-rail') === 'open') closeRail();
+    else { openRail(); paintRail(); }
+  }
+  $('rail-toggle').addEventListener('click', toggleRail);
+  $('rail-close').addEventListener('click', closeRail);
+  ['trace', 'metrics', 'spec', 'theme'].forEach((t) => {
+    $(`tab-${t}`).addEventListener('click', () => showRailTab(t, railTurn));
+  });
+
+  function showRailTab(tab, turn) {
+    railTab = tab;
+    if (turn) railTurn = turn;
+    ['trace', 'metrics', 'spec', 'theme'].forEach((t) => {
+      $(`tab-${t}`).setAttribute('aria-selected', String(t === tab));
+    });
+    paintRail();
+  }
+
+  function traceRows(obj, into) {
+    Object.entries(obj).forEach(([k, v]) => {
+      const row = el('div', 'trace__row');
+      row.appendChild(el('span', 'trace__key', k));
+      // SECURITY: textContent. sql_rows is raw database content and
+      // normalized_query echoes the user's own text; both reach this node.
+      // The previous implementation interpolated these into innerHTML, which
+      // also silently swallowed angle-bracketed payloads (the adversarial
+      // corpus seeds `<tool_call>` strings) so an analyst inspecting an
+      // injection attempt saw the payload vanish from the very trace meant to
+      // reveal it.
+      const val = typeof v === 'object' && v !== null ? JSON.stringify(v, null, 1) : String(v);
+      row.appendChild(el('span', 'trace__val', val));
+      into.appendChild(row);
+    });
+  }
+
+  function paintRail() {
+    clear(railBody);
+    const turn = railTurn || turns.filter((t) => t.state === 'done').slice(-1)[0];
+
+    if (railTab === 'theme') {
+      const sec = el('div', 'rail__section');
+      sec.appendChild(el('h3', null, 'Resolved chart tokens'));
+      const box = el('div', 'trace');
+      const c = chartTokens();
+      traceRows({
+        theme: currentTheme(),
+        resolved: document.documentElement.getAttribute('data-theme') || 'system',
+        surface: c.surface, label: c.label, title: c.title,
+        grid: c.grid, axisDomain: c.domain,
+        categorical: c.categorical.join(' '),
+      }, box);
+      sec.appendChild(box);
+      const note = el('div', 'rail__empty',
+        'These are read from CSS custom properties at render time. Switching theme rebuilds every mounted chart.');
+      sec.appendChild(note);
+      railBody.appendChild(sec);
+      return;
+    }
+
+    if (!turn) { railBody.appendChild(el('div', 'rail__empty', 'Run a query to populate the trace.')); return; }
+
+    if (railTab === 'spec') {
+      const rec = charts.get(turn.id);
+      if (rec && rec.violations) {
+        const sec = el('div', 'rail__section');
+        sec.appendChild(el('h3', null, 'A7 violations'));
+        rec.violations.forEach((v) => sec.appendChild(el('div', 'trace__val', v)));
+        railBody.appendChild(sec);
+      }
+      railBody.appendChild(el('pre', 'sql',
+        turn.chart ? JSON.stringify(turn.chart, null, 2) : 'chart: null (no chart produced for this turn)'));
+      return;
+    }
+
+    const tr = turn.trace || {};
+    if (railTab === 'metrics') {
+      const box = el('div', 'trace');
+      traceRows(tr.metrics || { metrics: 'none' }, box);
+      railBody.appendChild(box);
+      const sec = el('div', 'rail__section');
+      sec.appendChild(el('h3', null, 'Session totals'));
+      const tot = turns.reduce((a, t) => {
+        const m = (t.trace && t.trace.metrics) || {};
+        a.turns += t.state === 'done' ? 1 : 0;
+        a.tokens_in += m.tokens_in || 0;
+        a.tokens_out += m.tokens_out || 0;
+        a.llm_calls += m.llm_calls || 0;
+        a.rows += (t.trace && t.trace.sql_rows_count) || 0;
+        return a;
+      }, { turns: 0, tokens_in: 0, tokens_out: 0, llm_calls: 0, rows: 0 });
+      const box2 = el('div', 'trace');
+      traceRows(tot, box2);
+      sec.appendChild(box2);
+      railBody.appendChild(sec);
+      return;
+    }
+
+    // Trace tab. sql_rows is shown as a count, not inlined -- the full rows
+    // are in the results table, and dumping 1000 of them here makes the panel
+    // unusable for its actual purpose.
+    const shown = { ...tr };
+    if (Array.isArray(shown.sql_rows)) shown.sql_rows = `[${shown.sql_rows.length} rows — see the results table]`;
+    const box = el('div', 'trace');
+    traceRows(shown, box);
+    railBody.appendChild(box);
+  }
+
+  // ── 10. Submit / history / keyboard ────────────────────────────────────────
+  function status(msg) { footerStatus.textContent = msg; }
+
+  // Grow the composer with its content, but never trust a measurement taken
+  // before layout has settled. At boot, scrollHeight is read before the web
+  // fonts land and reports a bogus value that clamps to the max-height and
+  // then sticks, because nothing re-measures until the next input event --
+  // which is how an empty one-line box rendered 190px tall.
+  function autosize() {
+    if (input.value === '') { input.style.height = ''; return; }   // natural rows=1 height
+    input.style.height = 'auto';
+    const h = input.scrollHeight;
+    input.style.height = (h > 0 ? Math.min(h, 190) : 22) + 'px';
+  }
+  input.addEventListener('input', autosize);
+
+  const sent = [];
+  let histIdx = -1;
+  let draft = '';
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); return; }
+    if (e.key === 'Escape' && activeController) { activeController.abort(); return; }
+    // Shell-style recall, only from an empty (or already-recalled) composer so
+    // it never eats a cursor movement inside real text.
+    if (e.key === 'ArrowUp' && (input.value === '' || histIdx >= 0) && sent.length) {
+      if (histIdx === -1) draft = input.value;
+      histIdx = Math.min(histIdx + 1, sent.length - 1);
+      input.value = sent[sent.length - 1 - histIdx];
+      e.preventDefault(); autosize();
+    } else if (e.key === 'ArrowDown' && histIdx >= 0) {
+      histIdx -= 1;
+      input.value = histIdx === -1 ? draft : sent[sent.length - 1 - histIdx];
+      e.preventDefault(); autosize();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); toggleRail(); }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); form.requestSubmit(); }
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const q = input.value.trim();
+    if (!q) return;
+    input.value = ''; autosize();
+    histIdx = -1; draft = '';
+    runQuery(q);
+  });
+
+  async function runQuery(question) {
+    if (activeController) { status('A query is already running.'); return; }
+    sent.push(question);
+
+    turnSeq += 1;
+    const turn = {
+      id: `turn-${turnSeq}`, ordinal: turnSeq, question,
+      state: 'pending', answer: '', chart: null, citations: [], trace: null,
+      latency: null, error: null,
+    };
+    turns.push(turn);
+    renderTurn(turn);
+    scrollToBottom();
+
+    const t0 = performance.now();
+    const tick = setInterval(() => {
+      if (turn._elapsedEl) turn._elapsedEl.textContent = `${((performance.now() - t0) / 1000).toFixed(1)}s`;
+    }, 100);
+
+    activeController = new AbortController();
+    submitBtn.disabled = true;
+    status('Running…');
 
     try {
       const resp = await fetch(`${ORCHESTRATOR_URL}/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, session_id: sessionId }),
+        body: JSON.stringify({ query: question, session_id: sessionId }),
+        signal: activeController.signal,
       });
-
       if (!resp.ok) {
         const errBody = await resp.json().catch(() => ({ detail: resp.statusText }));
         throw new Error(errBody.detail || `HTTP ${resp.status}`);
       }
-
       const data = await resp.json();
 
-      // Turn indicator + rewrite note (cycle 007, Workstream A)
-      const turnIdx = data.state_trace?.turn_index;
-      if (turnIdx) {
-        turnIndicator.textContent = `Turn ${turnIdx} · session ${sessionId.slice(0, 8)}…`;
+      turn.state = 'done';
+      turn.answer = data.answer_text || '';
+      turn.chart = data.chart || null;
+      turn.citations = data.citations || [];
+      turn.trace = data.state_trace || {};
+      turn.latency = data.latency_ms;
+      turn.queryId = data.query_id;
+      // The backend's own turn index is authoritative; the local counter is
+      // only a display ordinal and can drift from it after a restore.
+      if (turn.trace && typeof turn.trace.turn_index === 'number') {
+        turn.backendTurn = turn.trace.turn_index;
       }
-      if (data.state_trace?.rewrite_applied && data.state_trace?.normalized_query) {
-        rewriteNote.textContent = `Interpreted as: “${data.state_trace.normalized_query}”` +
-          (data.state_trace?.context_guessed ? ' (guessed — ambiguous reference, no clarification available)' : '');
-        rewriteNote.classList.add('visible');
-      } else {
-        rewriteNote.classList.remove('visible');
-      }
-
-      // Answer
-      answerText.textContent = data.answer_text || '';
-      answerCard.classList.add('visible');
-      latencyBadge.textContent = data.latency_ms ? `${data.latency_ms}ms` : '';
-
-      // SQL (from state trace)
-      const sql = data.state_trace?.executed_sql;
-      if (sql) {
-        sqlText.textContent = sql;
-        sqlCard.classList.add('visible');
-      }
-
-      // Citations (kind:"sql" and/or kind:"chunk", per E1-V4)
-      renderCitations(data.citations);
-
-      // State trace
-      renderTrace(data.state_trace);
-
-      // Chart (Phase E2 — chart will be null in Phase B)
-      if (data.chart) {
-        await renderChart(data.chart);
-      }
-
-      footerStatus.textContent = `Done. query_id=${data.query_id}`;
-
+      status(`Done · query_id=${data.query_id}`);
     } catch (err) {
-      errorText.textContent = err.message || 'Unknown error.';
-      errorCard.classList.add('visible');
-      footerStatus.textContent = `Error: ${err.message}`;
+      turn.state = 'error';
+      turn.error = (err && err.name === 'AbortError') ? 'Cancelled.' : (err && err.message) || 'Unknown error.';
+      status(turn.error);
     } finally {
-      showLoading(false);
+      clearInterval(tick);
+      activeController = null;
+      submitBtn.disabled = false;
+      delete turn._elapsedEl;
+      renderTurn(turn);
+      persistThread();
+      if (railTurn === null || railTab) { railTurn = turn; if (document.documentElement.getAttribute('data-rail') === 'open') paintRail(); }
     }
+  }
+
+  // ── Masthead actions ───────────────────────────────────────────────────────
+  $('new-conversation-btn').addEventListener('click', () => {
+    sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(THREAD_KEY);
+    sessionId = getOrCreateSessionId();
+    turns.length = 0; charts.clear(); turnSeq = 0; railTurn = null;
+    clear(thread);
+    thread.appendChild(cover);
+    buildSuggestions();
+    updateSessionMeta();
+    status('Started a new conversation.');
   });
+
+  $('copy-thread-btn').addEventListener('click', () => {
+    if (!turns.some((t) => t.state === 'done')) { status('Nothing to copy yet.'); return; }
+    copyText(threadAsMarkdown(), 'Conversation copied as Markdown.');
+  });
+
+  // ── Past conversations (local dev only) ───────────────────────────────────
+  // The button stays hidden unless GET /sessions actually answers. The route
+  // 404s when STATESYNC_SESSION_BROWSER is unset, which is the shipped state,
+  // so probing is how the UI discovers whether the feature exists rather than
+  // advertising a control that would only produce an error.
+  const historyBtn   = $('history-btn');
+  const historySheet = $('history-sheet');
+  const historyList  = $('history-list');
+
+  async function probeSessionBrowser() {
+    try {
+      const r = await fetch(`${ORCHESTRATOR_URL}/sessions?limit=1`);
+      if (r.ok) historyBtn.hidden = false;
+    } catch (err) {
+      /* orchestrator down or route absent -- leave the button hidden. */
+    }
+  }
+
+  function fmtWhen(iso) {
+    const d = new Date(iso);
+    if (isNaN(d)) return iso;
+    const mins = Math.round((Date.now() - d.getTime()) / 60000);
+    if (mins < 1)   return 'just now';
+    if (mins < 60)  return `${mins}m ago`;
+    if (mins < 1440) return `${Math.round(mins / 60)}h ago`;
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  async function openHistory() {
+    historySheet.hidden = false;
+    clear(historyList);
+    historyList.appendChild(el('div', 'rail__empty', 'Loading…'));
+    try {
+      const r = await fetch(`${ORCHESTRATOR_URL}/sessions?limit=50`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      clear(historyList);
+      const list = data.sessions || [];
+      if (!list.length) {
+        historyList.appendChild(el('div', 'rail__empty', 'No conversations stored yet.'));
+        return;
+      }
+      list.forEach((sess) => {
+        const row = el('button', 'session-row' + (sess.session_id === sessionId ? ' session-row--current' : ''));
+        row.type = 'button';
+        row.appendChild(el('span', 'session-row__q', sess.first_query || '(no question recorded)'));
+        row.appendChild(el('span', 'session-row__meta',
+          `${sess.turn_count} turn${sess.turn_count === 1 ? '' : 's'} · ${fmtWhen(sess.last_activity)}`));
+        row.appendChild(el('span', 'session-row__id', sess.session_id));
+        row.addEventListener('click', () => loadSession(sess.session_id));
+        historyList.appendChild(row);
+      });
+    } catch (err) {
+      clear(historyList);
+      historyList.appendChild(el('div', 'rail__empty', `Could not load history: ${err.message}`));
+    }
+  }
+
+  function closeHistory() { historySheet.hidden = true; }
+
+  // Loading a past conversation ADOPTS its session_id, so a follow-up typed
+  // afterwards continues that thread on the backend too -- the rewrite node
+  // reads history by session_id, so resuming the UI without resuming the id
+  // would silently start a new conversation wearing an old one's transcript.
+  async function loadSession(id) {
+    closeHistory();
+    try {
+      const r = await fetch(`${ORCHESTRATOR_URL}/sessions/${encodeURIComponent(id)}?limit=100`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      sessionId = id;
+      sessionStorage.setItem(SESSION_KEY, id);
+      turns.length = 0; charts.clear(); turnSeq = 0; railTurn = null;
+      clear(thread);
+      (data.turns || []).forEach((t) => {
+        turnSeq += 1;
+        const turn = {
+          id: `turn-${turnSeq}`, ordinal: t.turn_index || turnSeq,
+          question: t.raw_query, state: 'done',
+          answer: t.answer_text || '', chart: null, citations: [],
+          // Only what the table stores. sql_rows/columns and the chart are
+          // NOT persisted server-side, so a resumed turn shows prose, SQL and
+          // route -- and must not pretend to more than that.
+          trace: {
+            route: t.route, executed_sql: t.executed_sql,
+            normalized_query: t.rewritten_query,
+            rewrite_applied: t.rewrite_applied,
+            context_guessed: t.context_guessed,
+            turn_index: t.turn_index, restored: true,
+          },
+          latency: null, error: null,
+        };
+        turns.push(turn);
+        renderTurn(turn, true);
+      });
+      updateSessionMeta();
+      persistThread();
+      scrollToBottom();
+      status(`Resumed conversation ${id.slice(0, 8)}… — follow-ups continue this thread.`);
+    } catch (err) {
+      status(`Could not load that conversation: ${err.message}`);
+    }
+  }
+
+  historyBtn.addEventListener('click', openHistory);
+  $('history-close').addEventListener('click', closeHistory);
+  historySheet.addEventListener('click', (e) => { if (e.target === historySheet) closeHistory(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !historySheet.hidden) closeHistory();
+  });
+
+  // ── Suggestions ────────────────────────────────────────────────────────────
+  // These target the SHIPPED default corpus -- the synthetic ONDC schema in
+  // `public` (orders, sellers, fulfillments, disputes, logistics_providers,
+  // documents), which is what schema_retriever.target_schema resolves to by
+  // default. They are deliberately NOT Olist questions: Olist lives in its own
+  // `olist` schema and is not reachable on the default configuration, so
+  // suggesting product-category or review-score questions here would hand the
+  // user a prompt the running system cannot answer.
+  const SUGGESTIONS = [
+    ['SQL', 'How many orders are there in total?'],
+    ['SQL', 'Which sellers have the highest average order value?'],
+    ['SQL', 'List logistics providers with more than 50 fulfillments.'],
+    ['SQL', 'How many disputes were raised in the last 90 days?'],
+    ['Docs', "What committed transit time does FastShip 1's SLA annexure specify for the Metro Mumbai zone?"],
+    ['Follow-up', 'Ask any of the above, then follow up with “and how many were delivered?”'],
+  ];
+
+  function buildSuggestions() {
+    const grid = $('suggestions');
+    if (!grid) return;
+    clear(grid);
+    SUGGESTIONS.forEach(([kind, text]) => {
+      const b = el('button', 'suggestion');
+      b.type = 'button';
+      b.appendChild(el('span', 'suggestion__kind', kind));
+      b.appendChild(document.createTextNode(text));
+      b.addEventListener('click', () => {
+        if (kind === 'Follow-up') { input.focus(); return; }
+        input.value = text; input.focus(); autosize();
+      });
+      grid.appendChild(b);
+    });
+  }
+
+  // ── Health ─────────────────────────────────────────────────────────────────
+  async function pollHealth(force) {
+    // Skip only the RECURRING poll while hidden. The first call must always
+    // run: a tab that loads in the background would otherwise leave the status
+    // dot on 'unknown' indefinitely, which reads as "broken" rather than
+    // "not checked yet".
+    if (document.hidden && !force) return;
+    try {
+      const r = await fetch(`${ORCHESTRATOR_URL}/health`, { method: 'GET' });
+      const ok = r.ok;
+      healthDot.dataset.state = ok ? 'ok' : 'down';
+      healthDot.title = ok ? 'Orchestrator reachable' : `Orchestrator returned HTTP ${r.status}`;
+    } catch (err) {
+      healthDot.dataset.state = 'down';
+      healthDot.title = `Orchestrator unreachable: ${(err && err.message) || 'network error'}`;
+    }
+  }
+
+  // ── Boot ───────────────────────────────────────────────────────────────────
+  applyTheme(currentTheme());
+  buildSuggestions();
+  const restored = restoreThread();
+  if (restored) {
+    turnSeq = turns.length;
+    if (cover && cover.parentNode) cover.remove();
+    status('Restored this conversation from the current tab session.');
+  }
+  updateSessionMeta();
+  autosize();
+  input.focus();
+  pollHealth(true);
+  probeSessionBrowser();
+  setInterval(pollHealth, 30000);
+  window.addEventListener('focus', () => pollHealth(true));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) pollHealth(true); });
+})();

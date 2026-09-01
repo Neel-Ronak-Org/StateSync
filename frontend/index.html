@@ -3,12 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>StateSync — ONDC Network Analytics</title>
-  <meta name="description" content="Multi-agent analytics for ONDC network data. Ask questions in plain English and get structured answers powered by AI." />
+  <title>StateSync — Conversational Analytics</title>
+  <meta name="description" content="Conversational analytics over network commerce data. Ask in plain language; get prose, SQL, a results table and a chart." />
+  <meta name="color-scheme" content="light dark" />
 
-  <!-- Fonts -->
+  <!-- Fonts. fonts.googleapis.com is permitted by style-src; fonts.gstatic.com
+       by font-src. Source Serif 4 carries the assistant's prose (published
+       language); Inter carries every machine-reported label (apparatus);
+       JetBrains Mono carries SQL and identifiers. -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <!-- Vega stack, CSP-safe (A7 / E2-V4).
        Expressions are evaluated by `vega-interpreter`, handed to vega-embed as
@@ -29,428 +34,780 @@
            dependencies and throws on load, leaving `window.vega` empty. The
            full `vega@5` build is the one to use. It ships the compiler code,
            but `ast: true` + `expr` means that code is never reached; the CSP
-           is what proves it. -->
+           is what proves it.
+
+       vega-tooltip is deliberately NOT loaded and `mark.tooltip` is left off
+       in app.js: vega-tooltip builds its table with innerHTML from raw row
+       values, which would reintroduce the exact untrusted-data sink the trace
+       renderer was fixed for. Tooltips are rendered from the results table
+       instead, via textContent. -->
   <script src="https://cdn.jsdelivr.net/npm/vega@5/build/vega.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-interpreter@1/build/vega-interpreter.min.js"></script>
 
   <style>
+    /* ═══════════════════════════════════════════════════════════════════════
+       BROADSHEET — an editorial design system for a conversational analytics
+       agent.
+
+       The governing rule: UNFRAMED IS LANGUAGE, FRAMED IS ARTIFACT. The
+       assistant's answer runs as body copy in a serif measure with no bubble
+       and no card. Everything the machine *made* — chart, results table, SQL,
+       citations — sits in a bordered container. A reader can tell at a glance
+       what was said from what was produced.
+
+       THEMING CONTRACT (load-bearing, do not restructure):
+       Light is the base on bare `:root`. Dark is declared TWICE with identical
+       bodies — once under `@media (prefers-color-scheme: dark)` guarded by
+       `:root:not([data-theme="light"])`, and once under `:root[data-theme="dark"]`
+       — so the system default and an explicit user override both resolve, in
+       both directions. No color is defined ONLY inside a media query.
+
+       The `--chart-*` tokens are the single source of chart color. app.js
+       reads them with getComputedStyle and contains no hex literal, which is
+       what makes palette drift between page and chart structurally impossible
+       and is the actual fix for the dark-on-dark chart bug.
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    /* ─── LIGHT (base) ─────────────────────────────────────────────────────── */
     :root {
-      --bg:        #0b0f1a;
-      --surface:   #111827;
-      --surface2:  #1a2236;
-      --border:    #1e2d45;
-      --accent:    #3b82f6;
-      --accent2:   #6366f1;
-      --success:   #10b981;
-      --warning:   #f59e0b;
-      --error:     #ef4444;
-      --text:      #e2e8f0;
-      --text-muted:#94a3b8;
-      --radius:    12px;
-      --mono:      'JetBrains Mono', monospace;
+      color-scheme: light dark;
+
+      --surface-canvas:  #F5F4F1;
+      --surface:         #FFFFFF;
+      --surface-raised:  #FFFFFF;
+      --surface-sunken:  #F0EEE9;
+      --surface-hover:   #EFEDE8;
+
+      --border-subtle:   #E7E4DE;
+      --border:          #D9D5CD;
+      --border-strong:   #B4AEA2;
+
+      --text-primary:    #1A1A17;
+      --text-secondary:  #4A4740;
+      --text-muted:      #78736A;
+      --text-inverse:    #FFFFFF;
+
+      --accent:          #0F5FA6;
+      --accent-hover:    #0C4C86;
+      --accent-subtle:   #E8F1F9;
+      --accent-border:   #B7D4EC;
+      --accent-contrast: #FFFFFF;
+
+      --success:         #1A7F4B;
+      --success-subtle:  #E6F4EC;
+      --success-border:  #A9D9BF;
+      --warning:         #9A6407;
+      --warning-subtle:  #FBF1DF;
+      --warning-border:  #E5CA92;
+      --danger:          #B3261E;
+      --danger-subtle:   #FBEBEA;
+      --danger-border:   #EFBAB6;
+
+      /* Chart tokens — the ONLY source of color app.js reads. */
+      --chart-surface:      #FFFFFF;
+      --chart-view-stroke:  #E7E4DE;
+      --chart-axis-domain:  #B4AEA2;
+      --chart-axis-tick:    #B4AEA2;
+      --chart-grid:         #EDEAE4;
+      --chart-label:        #4A4740;
+      --chart-title:        #1A1A17;
+      --chart-subtitle:     #78736A;
+      --chart-c1:  #1F6FB2;  --chart-c2:  #C2410C;  --chart-c3:  #147D64;
+      --chart-c4:  #6D48C4;  --chart-c5:  #B4177E;  --chart-c6:  #8A6D1F;
+      --chart-c7:  #475569;  --chart-c8:  #A21C4B;  --chart-c9:  #0E7490;
+      --chart-c10: #7C2D12;
+      --chart-ramp-from:    #E8F1F9;
+      --chart-ramp-to:      #0F5FA6;
+      --chart-diverge-from: #C2410C;
+      --chart-diverge-mid:  #F0EEE9;
+      --chart-diverge-to:   #0F5FA6;
+
+      --focus-ring: #0F5FA6;
+      --shadow-sm:  0 1px 2px rgba(26,26,23,0.06);
+      --shadow-md:  0 2px 6px rgba(26,26,23,0.08), 0 8px 24px rgba(26,26,23,0.06);
+
+      --masthead-h: 56px;
+      --rail-w: 0px;
+      --gutter: 56px;
+      --measure: 68ch;
+      --bleed-extra: 16ch;
+      --radius: 6px;
+      --space: 1rem;
+
+      --fs-3xs: 11px; --fs-2xs: 12px; --fs-xs: 13px; --fs-sm: 14px;
+      --fs-base: 16px; --fs-prose: 17px; --fs-lg: 20px; --fs-xl: 24px;
+      --fs-2xl: 32px; --fs-3xl: 44px;
+
+      --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      --font-serif: 'Source Serif 4', 'Iowan Old Style', Charter, Georgia, 'Times New Roman', serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* ─── DARK, copy 1 of 2: system preference, unless explicitly set light ── */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --surface-canvas:  #14171C;
+        --surface:         #1B1F26;
+        --surface-raised:  #21262E;
+        --surface-sunken:  #171B21;
+        --surface-hover:   #272D36;
 
+        --border-subtle:   #2A303A;
+        --border:          #39414D;
+        --border-strong:   #5A6472;
+
+        --text-primary:    #F0EDE6;
+        --text-secondary:  #C2BCB1;
+        --text-muted:      #8F897E;
+        --text-inverse:    #14171C;
+
+        --accent:          #6BA8E8;
+        --accent-hover:    #8FC0F2;
+        --accent-subtle:   #1B2C3F;
+        --accent-border:   #2F4C6B;
+        --accent-contrast: #0B1520;
+
+        --success:         #5FCE93;
+        --success-subtle:  #16301F;
+        --success-border:  #2A5A3C;
+        --warning:         #E0B057;
+        --warning-subtle:  #33270F;
+        --warning-border:  #5E4A1D;
+        --danger:          #F08A82;
+        --danger-subtle:   #3A1B18;
+        --danger-border:   #6B322C;
+
+        --chart-surface:      #1B1F26;
+        --chart-view-stroke:  #2A303A;
+        --chart-axis-domain:  #5A6472;
+        --chart-axis-tick:    #5A6472;
+        --chart-grid:         #262C35;
+        --chart-label:        #C2BCB1;
+        --chart-title:        #F0EDE6;
+        --chart-subtitle:     #8F897E;
+        --chart-c1:  #6BA8E8;  --chart-c2:  #F0895A;  --chart-c3:  #4FC3A1;
+        --chart-c4:  #B49BF0;  --chart-c5:  #F07AB8;  --chart-c6:  #D4B45C;
+        --chart-c7:  #9AA7B8;  --chart-c8:  #F07A96;  --chart-c9:  #4FBCD4;
+        --chart-c10: #E0956B;
+        --chart-ramp-from:    #1B2C3F;
+        --chart-ramp-to:      #6BA8E8;
+        --chart-diverge-from: #F0895A;
+        --chart-diverge-mid:  #2A303A;
+        --chart-diverge-to:   #6BA8E8;
+
+        --focus-ring: #6BA8E8;
+        --shadow-sm:  0 1px 2px rgba(0,0,0,0.4);
+        --shadow-md:  0 2px 6px rgba(0,0,0,0.45), 0 8px 24px rgba(0,0,0,0.35);
+      }
+    }
+
+    /* ─── DARK, copy 2 of 2: explicit user override, wins regardless of OS ── */
+    :root[data-theme="dark"] {
+      --surface-canvas:  #14171C;
+      --surface:         #1B1F26;
+      --surface-raised:  #21262E;
+      --surface-sunken:  #171B21;
+      --surface-hover:   #272D36;
+
+      --border-subtle:   #2A303A;
+      --border:          #39414D;
+      --border-strong:   #5A6472;
+
+      --text-primary:    #F0EDE6;
+      --text-secondary:  #C2BCB1;
+      --text-muted:      #8F897E;
+      --text-inverse:    #14171C;
+
+      --accent:          #6BA8E8;
+      --accent-hover:    #8FC0F2;
+      --accent-subtle:   #1B2C3F;
+      --accent-border:   #2F4C6B;
+      --accent-contrast: #0B1520;
+
+      --success:         #5FCE93;
+      --success-subtle:  #16301F;
+      --success-border:  #2A5A3C;
+      --warning:         #E0B057;
+      --warning-subtle:  #33270F;
+      --warning-border:  #5E4A1D;
+      --danger:          #F08A82;
+      --danger-subtle:   #3A1B18;
+      --danger-border:   #6B322C;
+
+      --chart-surface:      #1B1F26;
+      --chart-view-stroke:  #2A303A;
+      --chart-axis-domain:  #5A6472;
+      --chart-axis-tick:    #5A6472;
+      --chart-grid:         #262C35;
+      --chart-label:        #C2BCB1;
+      --chart-title:        #F0EDE6;
+      --chart-subtitle:     #8F897E;
+      --chart-c1:  #6BA8E8;  --chart-c2:  #F0895A;  --chart-c3:  #4FC3A1;
+      --chart-c4:  #B49BF0;  --chart-c5:  #F07AB8;  --chart-c6:  #D4B45C;
+      --chart-c7:  #9AA7B8;  --chart-c8:  #F07A96;  --chart-c9:  #4FBCD4;
+      --chart-c10: #E0956B;
+      --chart-ramp-from:    #1B2C3F;
+      --chart-ramp-to:      #6BA8E8;
+      --chart-diverge-from: #F0895A;
+      --chart-diverge-mid:  #2A303A;
+      --chart-diverge-to:   #6BA8E8;
+
+      --focus-ring: #6BA8E8;
+      --shadow-sm:  0 1px 2px rgba(0,0,0,0.4);
+      --shadow-md:  0 2px 6px rgba(0,0,0,0.45), 0 8px 24px rgba(0,0,0,0.35);
+    }
+
+    /* ─── Reset / base ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; }
     body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+      margin: 0;
+      background: var(--surface-canvas);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: var(--fs-sm);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    button, input, textarea, select { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 3px; }
+    ::selection { background: var(--accent-subtle); color: var(--text-primary); }
+
+    .visually-hidden {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
     }
 
-    /* ── Header ── */
-    header {
-      background: linear-gradient(135deg, #0f172a 0%, #1a1f3a 100%);
-      border-bottom: 1px solid var(--border);
-      padding: 1rem 2rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-    .logo {
-      width: 36px; height: 36px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: 1rem; color: #fff;
-      flex-shrink: 0;
-    }
-    header h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em; }
-    header p  { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
-    .phase-badge {
-      margin-left: auto;
-      background: rgba(59,130,246,0.15);
-      border: 1px solid rgba(59,130,246,0.3);
-      color: var(--accent);
-      font-size: 0.7rem; font-weight: 600;
-      padding: 0.25rem 0.6rem; border-radius: 20px;
-    }
-
-    /* ── Main layout ── */
-    main {
-      flex: 1;
+    /* ─── App shell ────────────────────────────────────────────────────────── */
+    .app {
+      height: 100dvh;
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0;
+      grid-template-areas: "masthead masthead" "thread rail" "composer rail";
+      grid-template-columns: minmax(0, 1fr) var(--rail-w);
+      grid-template-rows: var(--masthead-h) minmax(0, 1fr) auto;
+      transition: grid-template-columns 180ms ease;
     }
+    :root[data-rail="open"] { --rail-w: 420px; }
+    @media (prefers-reduced-motion: reduce) { .app { transition: none; } }
 
-    /* ── Query panel ── */
-    .query-panel {
-      border-right: 1px solid var(--border);
-      padding: 2rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
+    /* ─── Masthead ─────────────────────────────────────────────────────────── */
+    .masthead {
+      grid-area: masthead;
+      display: flex; align-items: center; gap: 14px;
+      padding: 0 16px;
+      background: var(--surface-raised);
+      border-bottom: 1px solid var(--border-subtle);
+      z-index: 5;
     }
-    .panel-title {
-      font-size: 0.7rem; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.1em;
+    .wordmark {
+      font-family: var(--font-serif); font-size: var(--fs-lg); font-weight: 600;
+      letter-spacing: -0.012em; margin-right: 2px;
+    }
+    .wordmark span { color: var(--accent); }
+    .masthead__meta {
+      font-size: var(--fs-2xs); color: var(--text-muted);
+      font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
+    .masthead__spacer { flex: 1; }
+
+    .health-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted);
+      flex: none;
+    }
+    .health-dot[data-state="ok"]   { background: var(--success); }
+    .health-dot[data-state="down"] { background: var(--danger); }
+
+    /* Segmented control — Light / System / Dark, all three first-class. */
+    .segmented {
+      display: inline-flex; background: var(--surface-sunken);
+      border: 1px solid var(--border); border-radius: var(--radius); padding: 2px;
+    }
+    .segmented button {
+      appearance: none; border: 0; background: transparent; cursor: pointer;
+      padding: 4px 9px; border-radius: 4px; font-size: var(--fs-3xs);
+      font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
       color: var(--text-muted);
     }
-
-    /* Query suggestions */
-    .suggestions { display: flex; flex-direction: column; gap: 0.5rem; }
-    .suggestion-btn {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      border-radius: 8px;
-      padding: 0.6rem 1rem;
-      font-size: 0.8rem; font-family: 'Inter', sans-serif;
-      text-align: left; cursor: pointer;
-      transition: all 0.15s;
-    }
-    .suggestion-btn:hover {
-      border-color: var(--accent);
-      color: var(--text);
-      background: var(--surface2);
+    .segmented button:hover { color: var(--text-primary); }
+    .segmented button[aria-pressed="true"] {
+      background: var(--surface-raised); color: var(--text-primary);
+      box-shadow: var(--shadow-sm);
     }
 
-    /* Query input area */
-    .query-form { display: flex; flex-direction: column; gap: 0.75rem; }
-    #query-input {
-      width: 100%;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      font-family: 'Inter', sans-serif;
-      font-size: 0.9rem;
-      padding: 1rem;
-      resize: vertical;
-      min-height: 100px;
-      transition: border-color 0.15s;
-      outline: none;
+    .btn {
+      appearance: none; cursor: pointer;
+      background: var(--surface-raised); color: var(--text-secondary);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 6px 11px; font-size: var(--fs-xs); font-weight: 500;
+      display: inline-flex; align-items: center; gap: 6px;
+      transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
     }
-    #query-input:focus { border-color: var(--accent); }
-    #query-input::placeholder { color: var(--text-muted); }
-
-    #submit-btn {
-      align-self: flex-start;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border: none; border-radius: 8px;
-      color: #fff; font-family: 'Inter', sans-serif;
-      font-size: 0.875rem; font-weight: 600;
-      padding: 0.65rem 1.5rem;
-      cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+    .btn:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-primary); border-color: var(--border-strong); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn--primary {
+      background: var(--accent); color: var(--accent-contrast); border-color: var(--accent);
     }
-    #submit-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
-    #submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn--primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--accent-contrast); }
+    .btn--ghost { background: transparent; border-color: transparent; color: var(--text-muted); }
+    .btn--ghost:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-primary); border-color: transparent; }
+    .btn--sm { padding: 3px 8px; font-size: var(--fs-3xs); }
+    .btn--danger { color: var(--danger); border-color: var(--danger-border); }
 
-    /* State trace (B-V2) */
-    .trace-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1rem;
-      font-family: var(--mono);
-      font-size: 0.72rem;
-      color: var(--text-muted);
-      line-height: 1.6;
-      display: none;
+    /* ─── Thread ───────────────────────────────────────────────────────────── */
+    .thread {
+      grid-area: thread; overflow-y: auto; overscroll-behavior: contain;
+      scroll-behavior: smooth; scrollbar-gutter: stable;
     }
-    .trace-card.visible { display: block; }
-    .trace-key { color: var(--accent2); }
-    .trace-value { color: var(--success); }
+    @media (prefers-reduced-motion: reduce) { .thread { scroll-behavior: auto; } }
 
-    /* ── Result panel ── */
-    .result-panel {
-      padding: 2rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
+    .turn {
+      display: grid;
+      grid-template-columns:
+        [gutter-start] var(--gutter)
+        [text-start] minmax(0, var(--measure))
+        [text-end] minmax(0, var(--bleed-extra)) [gutter-end];
+      column-gap: 24px; justify-content: center;
+      padding: 36px 24px; border-top: 1px solid var(--border-subtle);
+    }
+    .turn:first-child { border-top: none; }
+    .turn > * { grid-column: text; min-width: 0; }
+    .turn > .block--wide { grid-column: text-start / gutter-end; }
+    .turn__ordinal {
+      grid-column: gutter-start / text-start;
+      grid-row: 1 / span 2;
+      text-align: right; font-family: var(--font-serif);
+      font-size: var(--fs-lg); color: var(--text-muted);
+      font-variant-numeric: tabular-nums; padding-top: 1px; user-select: none;
     }
 
-    /* Loading spinner */
-    .loading {
-      display: none;
-      align-items: center;
-      gap: 0.75rem;
-      color: var(--text-muted);
-      font-size: 0.85rem;
+    .turn__question {
+      font-size: var(--fs-base); font-weight: 500; line-height: 1.5;
+      margin: 0 0 4px; color: var(--text-primary);
     }
-    .loading.visible { display: flex; }
+    .turn__actions { display: flex; gap: 4px; margin: 6px 0 0; opacity: 0; transition: opacity 120ms ease; }
+    .turn:hover .turn__actions, .turn:focus-within .turn__actions { opacity: 1; }
+
+    /* Rewrite note — the multi-turn affordance. This is what makes the
+       contextual rewrite visible instead of a silent reinterpretation. */
+    .rewrite-note {
+      margin: 10px 0 0; padding: 9px 12px;
+      background: var(--accent-subtle); border: 1px solid var(--accent-border);
+      border-radius: var(--radius); font-size: var(--fs-2xs);
+      color: var(--text-secondary); display: flex; gap: 8px; align-items: flex-start;
+    }
+    .rewrite-note__label {
+      font-size: var(--fs-3xs); font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--accent); white-space: nowrap; padding-top: 1px;
+    }
+    .rewrite-note em { font-style: normal; font-weight: 500; color: var(--text-primary); }
+    .rewrite-note--guessed { background: var(--warning-subtle); border-color: var(--warning-border); }
+    .rewrite-note--guessed .rewrite-note__label { color: var(--warning); }
+
+    /* The answer: unframed, serif, body copy. */
+    .answer {
+      font-family: var(--font-serif); font-size: var(--fs-prose); line-height: 1.68;
+      color: var(--text-primary); margin: 14px 0 0; white-space: pre-wrap;
+      overflow-wrap: break-word;
+    }
+
+    .meta-row {
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+      margin: 14px 0 0; font-size: var(--fs-3xs);
+    }
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 8px; border-radius: 100px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-secondary); font-weight: 500;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      font-variant-numeric: tabular-nums;
+    }
+    .chip--sql    { background: var(--accent-subtle); border-color: var(--accent-border); color: var(--accent); }
+    .chip--docs   { background: var(--success-subtle); border-color: var(--success-border); color: var(--success); }
+    .chip--hybrid { background: var(--warning-subtle); border-color: var(--warning-border); color: var(--warning); }
+    .chip--warn   { background: var(--warning-subtle); border-color: var(--warning-border); color: var(--warning); }
+
+    /* KPI — a 1x1 result deserves to be typeset, not tabulated. */
+    .kpi {
+      margin: 18px 0 0; font-family: var(--font-serif); font-size: var(--fs-3xl);
+      font-weight: 600; line-height: 1.1; letter-spacing: -0.022em;
+      font-variant-numeric: tabular-nums; color: var(--text-primary);
+    }
+    .kpi__label {
+      display: block; font-family: var(--font-sans); font-size: var(--fs-3xs);
+      font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 2px;
+    }
+
+    /* ─── Artifacts: framed ────────────────────────────────────────────────── */
+    .artifact {
+      margin: 18px 0 0; border: 1px solid var(--border);
+      border-radius: var(--radius); background: var(--surface); overflow: hidden;
+    }
+    .artifact__head {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; background: var(--surface-sunken);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .artifact__title {
+      font-size: var(--fs-3xs); font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .artifact__spacer { flex: 1; }
+    details.artifact > summary {
+      list-style: none; cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; background: var(--surface-sunken);
+    }
+    details.artifact > summary::-webkit-details-marker { display: none; }
+    details.artifact > summary:hover { background: var(--surface-hover); }
+    .disclosure-caret { color: var(--text-muted); font-size: 10px; transition: transform 140ms ease; }
+    details[open] > summary .disclosure-caret { transform: rotate(90deg); }
+    details.artifact[open] > summary { border-bottom: 1px solid var(--border-subtle); }
+
+    pre.sql {
+      margin: 0; padding: 12px; overflow-x: auto;
+      font-family: var(--font-mono); font-size: var(--fs-2xs); line-height: 1.6;
+      color: var(--text-primary); background: var(--surface);
+      white-space: pre; tab-size: 2;
+    }
+
+    figure.figure { margin: 0; padding: 12px; background: var(--surface); }
+    figure.figure > figcaption {
+      margin-top: 8px; font-size: var(--fs-2xs); color: var(--text-muted);
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    /* vega-embed adds its own `vega-embed` class to the container it is handed,
+       and its stylesheet sets display:inline-block -- which makes the host
+       shrink-wrap the chart's natural width instead of filling the figure.
+       Overriding it here is what lets a chart occupy its frame. */
+    .chart-host, .chart-host.vega-embed { min-height: 60px; display: block; }
+    .chart-withheld {
+      padding: 14px; font-size: var(--fs-2xs); color: var(--warning);
+      background: var(--warning-subtle); border-radius: 4px;
+    }
+
+    .table-scroll { overflow: auto; max-height: 420px; }
+    table.results { border-collapse: collapse; width: 100%; font-size: var(--fs-2xs); }
+    table.results caption { text-align: left; padding: 8px 12px; color: var(--text-muted); font-size: var(--fs-3xs); }
+    table.results th, table.results td {
+      padding: 6px 12px; text-align: left; border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap; max-width: 340px; overflow: hidden; text-overflow: ellipsis;
+    }
+    table.results thead th {
+      position: sticky; top: 0; z-index: 1;
+      background: var(--surface-sunken); color: var(--text-secondary);
+      font-size: var(--fs-3xs); font-weight: 600; letter-spacing: 0.05em;
+      text-transform: uppercase; border-bottom: 1px solid var(--border);
+    }
+    table.results tbody tr:hover { background: var(--surface-hover); }
+    table.results td.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+    table.results td.null { color: var(--text-muted); font-style: italic; }
+
+    .citation-list { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+    .citation {
+      display: flex; gap: 8px; align-items: baseline;
+      font-size: var(--fs-2xs); color: var(--text-secondary);
+    }
+    .citation__kind {
+      font-size: var(--fs-3xs); font-weight: 600; letter-spacing: 0.05em;
+      text-transform: uppercase; color: var(--accent);
+      border: 1px solid var(--accent-border); background: var(--accent-subtle);
+      border-radius: 3px; padding: 1px 5px; flex: none;
+    }
+    .citation__ref { font-family: var(--font-mono); overflow-wrap: anywhere; }
+
+    .notice {
+      margin: 14px 0 0; padding: 9px 12px; border-radius: var(--radius);
+      font-size: var(--fs-2xs); border: 1px solid var(--warning-border);
+      background: var(--warning-subtle); color: var(--text-secondary);
+    }
+    .notice--error { border-color: var(--danger-border); background: var(--danger-subtle); }
+    .notice--error strong { color: var(--danger); }
+
+    /* ─── Pending turn ─────────────────────────────────────────────────────── */
+    .pending { display: flex; align-items: center; gap: 10px; margin: 14px 0 0; color: var(--text-muted); font-size: var(--fs-2xs); }
     .spinner {
-      width: 20px; height: 20px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.6s linear infinite;
+      width: 13px; height: 13px; border-radius: 50%; flex: none;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      animation: spin 700ms linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+    .elapsed { font-variant-numeric: tabular-nums; }
 
-    /* Answer card */
-    .answer-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.5rem;
-      display: none;
+    /* ─── Empty state ──────────────────────────────────────────────────────── */
+    .cover { padding: 8vh 24px 40px; max-width: 76ch; margin: 0 auto; }
+    .cover__title {
+      font-family: var(--font-serif); font-size: var(--fs-2xl); font-weight: 600;
+      letter-spacing: -0.02em; margin: 0 0 8px;
     }
-    .answer-card.visible { display: block; }
-    .answer-header {
-      display: flex; align-items: center; gap: 0.5rem;
-      margin-bottom: 1rem;
+    .cover__deck { font-size: var(--fs-sm); color: var(--text-secondary); margin: 0 0 26px; line-height: 1.6; max-width: 56ch; }
+    .cover__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
+    .suggestion {
+      text-align: left; cursor: pointer; padding: 11px 13px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text-primary);
+      font-size: var(--fs-xs); line-height: 1.45;
+      transition: border-color 120ms ease, background 120ms ease;
     }
-    .answer-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--success);
-    }
-    .answer-label {
-      font-size: 0.7rem; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.1em;
-      color: var(--text-muted);
-    }
-    .latency-badge {
-      margin-left: auto;
-      font-size: 0.7rem; color: var(--text-muted);
-    }
-    #answer-text {
-      font-size: 0.9rem; line-height: 1.7; color: var(--text);
-    }
-    .rewrite-note {
-      display: none;
-      font-size: 0.78rem; color: var(--text-muted);
-      font-style: italic; margin-bottom: 0.75rem;
-      padding-bottom: 0.75rem; border-bottom: 1px dashed var(--border);
-    }
-    .rewrite-note.visible { display: block; }
-
-    /* Session/turn bar (cycle 007, Workstream A) */
-    .session-bar {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 0.5rem;
-      font-size: 0.75rem; color: var(--text-muted);
-    }
-    #new-conversation-btn {
-      background: none; border: 1px solid var(--border); border-radius: var(--radius);
-      color: var(--text-muted); font-size: 0.72rem; padding: 0.25rem 0.6rem;
-      cursor: pointer;
-    }
-    #new-conversation-btn:hover { color: var(--text); border-color: var(--text-muted); }
-
-    /* SQL display */
-    .sql-card {
-      background: #0d1117;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1rem 1.25rem;
-      display: none;
-    }
-    .sql-card.visible { display: block; }
-    .sql-label {
-      font-size: 0.65rem; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.1em;
-      color: var(--text-muted); margin-bottom: 0.5rem;
-    }
-    #sql-text {
-      font-family: var(--mono); font-size: 0.78rem;
-      color: #c9d1d9; white-space: pre-wrap; word-break: break-all;
+    .suggestion:hover { border-color: var(--accent); background: var(--accent-subtle); }
+    .suggestion__kind {
+      display: block; font-size: var(--fs-3xs); font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 4px;
     }
 
-    /* Citations display */
-    .citations-card {
-      background: #0d1117;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1rem 1.25rem;
-      display: none;
+    /* ─── Composer ─────────────────────────────────────────────────────────── */
+    .composer {
+      grid-area: composer; background: var(--surface-raised);
+      border-top: 1px solid var(--border-subtle); padding: 12px 24px 14px;
     }
-    .citations-card.visible { display: block; }
-    .citation-list {
-      display: flex; flex-direction: column; gap: 0.4rem;
+    .composer__inner { max-width: calc(var(--measure) + var(--bleed-extra) + var(--gutter) + 24px); margin: 0 auto; }
+    .composer__banner {
+      display: none; margin-bottom: 8px; padding: 6px 10px; border-radius: 4px;
+      font-size: var(--fs-2xs); background: var(--accent-subtle);
+      border: 1px solid var(--accent-border); color: var(--text-secondary);
+      align-items: center; gap: 8px;
     }
-    .citation-item {
-      font-family: var(--mono); font-size: 0.75rem;
-      color: #c9d1d9;
-      display: flex; align-items: baseline; gap: 0.5rem;
+    .composer__banner.visible { display: flex; }
+    .composer__box {
+      display: flex; gap: 8px; align-items: flex-end;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--surface); padding: 8px;
+      transition: border-color 120ms ease, box-shadow 120ms ease;
     }
-    .citation-kind {
-      font-size: 0.62rem; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.05em;
-      color: var(--text-muted);
-      flex-shrink: 0;
+    .composer__box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-subtle); }
+    .composer textarea {
+      flex: 1; resize: none; border: 0; background: transparent; outline: none;
+      font-size: var(--fs-sm); line-height: 1.55; color: var(--text-primary);
+      max-height: 190px; min-height: 22px; padding: 2px 2px 0;
     }
-
-    /* Error card */
-    .error-card {
-      background: rgba(239,68,68,0.08);
-      border: 1px solid rgba(239,68,68,0.3);
-      border-radius: var(--radius);
-      padding: 1rem 1.25rem;
-      display: none;
+    .composer textarea::placeholder { color: var(--text-muted); }
+    .composer__hint {
+      margin-top: 6px; font-size: var(--fs-3xs); color: var(--text-muted);
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
     }
-    .error-card.visible { display: block; }
-    #error-text { font-size: 0.85rem; color: var(--error); }
-
-    /* Chart container (Phase E2 readiness) */
-    #chart-container {
-      display: none;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1rem;
-      min-height: 300px;
-    }
-    #chart-container.visible { display: block; }
-
-    /* ── Footer ── */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 0.75rem 2rem;
-      font-size: 0.7rem; color: var(--text-muted);
-      display: flex; gap: 2rem;
+    kbd {
+      font-family: var(--font-mono); font-size: 10px; padding: 1px 4px;
+      border: 1px solid var(--border); border-bottom-width: 2px;
+      border-radius: 3px; background: var(--surface-sunken); color: var(--text-secondary);
     }
 
-    /* ── Responsive ── */
-    @media (max-width: 900px) {
-      main { grid-template-columns: 1fr; }
-      .query-panel { border-right: none; border-bottom: 1px solid var(--border); }
+    /* ─── Developer rail ───────────────────────────────────────────────────── */
+    .rail {
+      grid-area: rail; overflow: hidden;
+      background: var(--surface-raised); border-left: 1px solid var(--border-subtle);
+      display: flex; flex-direction: column;
+    }
+    :root:not([data-rail="open"]) .rail { display: none; }
+    .rail__head {
+      display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+      border-bottom: 1px solid var(--border-subtle); flex: none;
+    }
+    .rail__title {
+      font-size: var(--fs-3xs); font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .rail__tabs { display: flex; gap: 2px; padding: 8px 12px 0; flex: none; flex-wrap: wrap; }
+    .rail__tab {
+      appearance: none; cursor: pointer; background: transparent; border: 0;
+      border-bottom: 2px solid transparent; padding: 5px 8px;
+      font-size: var(--fs-3xs); font-weight: 600; letter-spacing: 0.05em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+    .rail__tab:hover { color: var(--text-primary); }
+    .rail__tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+    .rail__body { overflow: auto; padding: 12px; flex: 1; }
+    .rail__empty { color: var(--text-muted); font-size: var(--fs-2xs); padding: 8px 0; }
+
+    .trace { font-family: var(--font-mono); font-size: var(--fs-2xs); line-height: 1.7; }
+    .trace__row { display: grid; grid-template-columns: minmax(0, 13ch) minmax(0, 1fr); gap: 10px; padding: 2px 0; border-bottom: 1px solid var(--border-subtle); }
+    .trace__key { color: var(--text-muted); overflow-wrap: anywhere; }
+    .trace__val { color: var(--text-primary); overflow-wrap: anywhere; white-space: pre-wrap; }
+    .rail__section { margin-bottom: 16px; }
+    .rail__section > h3 {
+      font-family: var(--font-sans); font-size: var(--fs-3xs); font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted);
+      margin: 0 0 6px;
+    }
+
+    /* ─── History sheet ────────────────────────────────────────────────────── */
+    .sheet {
+      position: fixed; inset: 0; z-index: 40;
+      background: rgba(0,0,0,0.42);
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 8vh 20px 20px;
+    }
+    .sheet[hidden] { display: none; }
+    .sheet__panel {
+      background: var(--surface-raised); color: var(--text-primary);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      width: min(720px, 100%); max-height: 78vh;
+      display: flex; flex-direction: column;
+    }
+    .sheet__head {
+      display: flex; align-items: center; gap: 8px; padding: 12px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .sheet__note {
+      margin: 0; padding: 10px 14px; font-size: var(--fs-2xs);
+      color: var(--text-muted); border-bottom: 1px solid var(--border-subtle);
+      line-height: 1.5;
+    }
+    .sheet__note code {
+      font-family: var(--font-mono); font-size: 11px;
+      background: var(--surface-sunken); padding: 1px 4px; border-radius: 3px;
+    }
+    .sheet__body { overflow: auto; padding: 8px; }
+    .session-row {
+      width: 100%; text-align: left; cursor: pointer;
+      background: transparent; border: 1px solid transparent;
+      border-radius: var(--radius); padding: 10px 12px;
+      display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 4px 12px;
+      align-items: baseline; color: inherit;
+    }
+    .session-row:hover { background: var(--surface-hover); border-color: var(--border); }
+    .session-row__q {
+      font-size: var(--fs-xs); color: var(--text-primary);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .session-row__meta {
+      font-size: var(--fs-3xs); color: var(--text-muted);
+      font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
+    .session-row__id {
+      grid-column: 1 / -1; font-family: var(--font-mono);
+      font-size: 10px; color: var(--text-muted);
+    }
+    .session-row--current .session-row__q::after {
+      content: ' · current'; color: var(--accent); font-weight: 600;
+    }
+
+    /* ─── Responsive ───────────────────────────────────────────────────────── */
+    @media (max-width: 1100px) {
+      :root { --gutter: 0px; --measure: 100%; --bleed-extra: 0px; }
+      .turn { padding: 26px 18px; grid-template-columns: minmax(0, 1fr); }
+      .turn > *, .turn > .block--wide { grid-column: 1 / -1; }
+      .turn__ordinal {
+        grid-row: auto; text-align: left; font-family: var(--font-sans);
+        font-size: var(--fs-3xs); font-weight: 600; letter-spacing: 0.06em;
+        text-transform: uppercase; margin-bottom: 2px;
+      }
+      .composer { padding: 10px 18px 12px; }
+    }
+    @media (max-width: 860px) {
+      :root[data-rail="open"] { --rail-w: 0px; }
+      :root[data-rail="open"] .rail {
+        display: flex; position: fixed; inset: var(--masthead-h) 0 0 0;
+        z-index: 20; border-left: 0;
+      }
+      .masthead__meta { display: none; }
+    }
+
+    /* ─── Print ────────────────────────────────────────────────────────────── */
+    @media print {
+      :root { --rail-w: 0px; }
+      .masthead, .composer, .rail, .turn__actions, .artifact__head .btn { display: none !important; }
+      .app { height: auto; display: block; }
+      .thread { overflow: visible; }
+      .turn { break-inside: avoid; page-break-inside: avoid; }
+      details.artifact > *:not(summary) { display: revert !important; }
     }
   </style>
 </head>
 <body>
+  <div class="app">
 
-<header>
-  <div class="logo">SS</div>
-  <div>
-    <h1>StateSync</h1>
-    <p>ONDC Network Analytics</p>
+    <header class="masthead">
+      <div class="wordmark">State<span>Sync</span></div>
+      <span class="health-dot" id="health-dot" data-state="unknown" title="Orchestrator status"></span>
+      <span class="masthead__meta" id="session-meta">New conversation</span>
+
+      <div class="masthead__spacer"></div>
+
+      <div class="segmented" role="group" aria-label="Color theme">
+        <button type="button" id="theme-light"  aria-pressed="false">Light</button>
+        <button type="button" id="theme-system" aria-pressed="true">System</button>
+        <button type="button" id="theme-dark"   aria-pressed="false">Dark</button>
+      </div>
+
+      <button type="button" class="btn btn--sm" id="copy-thread-btn" title="Copy the whole conversation as Markdown">Copy thread</button>
+      <button type="button" class="btn btn--sm" id="history-btn" title="Past conversations (local dev only)" hidden>History</button>
+      <button type="button" class="btn btn--sm" id="new-conversation-btn" title="Start a new conversation (new session_id)">New</button>
+      <button type="button" class="btn btn--sm" id="rail-toggle" aria-expanded="false" aria-controls="rail" title="Toggle the developer panel (Cmd/Ctrl+D)">Developer</button>
+    </header>
+
+    <main class="thread" id="thread" role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversation">
+      <div class="cover" id="cover">
+        <h1 class="cover__title">Ask the network anything.</h1>
+        <p class="cover__deck">
+          Questions go to SQL, to documents, or to both. Answers come back with the
+          executed query, the rows behind them, and a chart when one helps.
+          Follow-ups keep their context — ask “and by state?” next.
+        </p>
+        <div class="cover__grid" id="suggestions"></div>
+      </div>
+    </main>
+
+    <div class="composer">
+      <div class="composer__inner">
+        <div class="composer__banner" id="composer-banner">
+          <span id="composer-banner-text"></span>
+          <button type="button" class="btn btn--ghost btn--sm" id="composer-banner-cancel">Cancel</button>
+        </div>
+        <form id="query-form">
+          <div class="composer__box">
+            <label class="visually-hidden" for="query-input">Your question</label>
+            <textarea id="query-input" rows="1" placeholder="Ask about the network data — then follow up, like “and by state?”"></textarea>
+            <button type="submit" class="btn btn--primary" id="submit-btn">Send</button>
+          </div>
+        </form>
+        <div class="composer__hint">
+          <span><kbd>Enter</kbd> send · <kbd>Shift</kbd>+<kbd>Enter</kbd> newline · <kbd>↑</kbd> recall</span>
+          <span id="footer-status">Ready.</span>
+        </div>
+      </div>
+    </div>
+
+    <aside class="rail" id="rail" aria-label="Developer panel">
+      <div class="rail__head">
+        <span class="rail__title">Developer</span>
+        <div class="artifact__spacer"></div>
+        <button type="button" class="btn btn--ghost btn--sm" id="rail-close" title="Close">Close</button>
+      </div>
+      <div class="rail__tabs" role="tablist">
+        <button type="button" class="rail__tab" id="tab-trace"   role="tab" aria-selected="true">Trace</button>
+        <button type="button" class="rail__tab" id="tab-metrics" role="tab" aria-selected="false">Metrics</button>
+        <button type="button" class="rail__tab" id="tab-spec"    role="tab" aria-selected="false">Chart spec</button>
+        <button type="button" class="rail__tab" id="tab-theme"   role="tab" aria-selected="false">Theme</button>
+      </div>
+      <div class="rail__body" id="rail-body">
+        <div class="rail__empty">Run a query to populate the trace.</div>
+      </div>
+    </aside>
+
+    <div class="sheet" id="history-sheet" hidden>
+      <div class="sheet__panel" role="dialog" aria-modal="true" aria-labelledby="history-title">
+        <div class="sheet__head">
+          <span class="rail__title" id="history-title">Past conversations</span>
+          <div class="artifact__spacer"></div>
+          <button type="button" class="btn btn--ghost btn--sm" id="history-close">Close</button>
+        </div>
+        <p class="sheet__note">
+          Stored server-side in <code>session_state.conversation_turns</code>. This list is a
+          local-development view: history has no access control yet, so it is off unless
+          <code>STATESYNC_SESSION_BROWSER</code> is set.
+        </p>
+        <div class="sheet__body" id="history-list"></div>
+      </div>
+    </div>
+
   </div>
-  <span class="phase-badge">Phase B</span>
-</header>
 
-<main>
-  <!-- ── Query panel ── -->
-  <section class="query-panel">
-    <div class="panel-title">Ask a question</div>
-
-    <div>
-      <div class="panel-title" style="margin-bottom:0.5rem">Suggested queries</div>
-      <div class="suggestions" id="suggestions">
-        <button class="suggestion-btn" id="s1">How many orders were placed in Mumbai last month?</button>
-        <button class="suggestion-btn" id="s2">Which sellers have the highest average order value?</button>
-        <button class="suggestion-btn" id="s3">List logistics providers with more than 50 fulfillments.</button>
-        <button class="suggestion-btn" id="s4">How many disputes were raised in the last 90 days?</button>
-        <button class="suggestion-btn" id="s5">What are the top 5 cities by number of orders?</button>
-      </div>
-    </div>
-
-    <!-- Cycle 007 (Workstream A): session/turn indicator, so a multi-turn
-         conversation is visible, not just functionally present (V2_STRATEGY
-         §7's demo bar). New conversation clears sessionStorage and mints a
-         fresh session_id. -->
-    <div class="session-bar" id="session-bar">
-      <span id="turn-indicator">New conversation</span>
-      <button type="button" id="new-conversation-btn">New conversation</button>
-    </div>
-
-    <form class="query-form" id="query-form">
-      <textarea
-        id="query-input"
-        placeholder="Ask anything about the ONDC network data… (try a follow-up, like “and by state?”)"
-        rows="5"
-        autocomplete="off"
-      ></textarea>
-      <button type="submit" id="submit-btn">Run Query</button>
-    </form>
-
-    <!-- State trace (for B-V2) -->
-    <div>
-      <div class="panel-title" style="margin-bottom:0.5rem">State trace</div>
-      <div class="trace-card" id="trace-card"></div>
-    </div>
-  </section>
-
-  <!-- ── Result panel ── -->
-  <section class="result-panel">
-    <div class="panel-title">Result</div>
-
-    <div class="loading" id="loading">
-      <div class="spinner"></div>
-      <span>Running query through agent graph…</span>
-    </div>
-
-    <div class="error-card" id="error-card">
-      <div class="sql-label">Error</div>
-      <div id="error-text"></div>
-    </div>
-
-    <div class="answer-card" id="answer-card">
-      <div class="answer-header">
-        <div class="answer-dot"></div>
-        <span class="answer-label">Answer</span>
-        <span class="latency-badge" id="latency-badge"></span>
-      </div>
-      <div id="rewrite-note" class="rewrite-note"></div>
-      <div id="answer-text"></div>
-    </div>
-
-    <div class="sql-card" id="sql-card">
-      <div class="sql-label">Executed SQL</div>
-      <pre id="sql-text"></pre>
-    </div>
-
-    <!-- Citations (chunk_id/page for retrieved document passages, kind:"sql"
-         for the executed statement above) -- API always returns this array
-         (E1-V4), previously computed and validated but never rendered to the
-         page (audit 003 F-003-5, fixed cycle 003 B1).
-         Labelled "Retrieved Context", not "Sources": build_citations lists
-         the first citation_max_chunks retrievals in retrieval order with NO
-         relevance filter against the answer -- on a retrieval miss it can
-         list a document that supports nothing in the answer (audit 004
-         F-004-5, live example in docs/limitations.md's M6 entry). Changing
-         WHAT is listed here is out of scope: that would filter the exact
-         retrieval set M6's context precision measures, which is a metric
-         change, not a UI fix -- orchestrator/nodes/synthesizer.py's
-         build_citations is deliberately untouched. -->
-    <div class="citations-card" id="citations-card">
-      <div class="sql-label">Retrieved Context</div>
-      <div class="citation-list" id="citation-list"></div>
-    </div>
-
-    <!-- Chart container (Phase E2 readiness — hidden until chart data arrives) -->
-    <div id="chart-container"></div>
-  </section>
-</main>
-
-<footer>
-  <span id="footer-status">Ready.</span>
-  <span>StateSync v0.1.0-phase-b</span>
-</footer>
-
-<!-- ?v= is a manually-bumped cache-buster, not a build hash -- this project
-     has no asset pipeline. nginx.conf's Cache-Control: no-cache (audit 003
-     B1) makes a browser revalidate on every load going forward; this
-     covers the case that fix cannot: a browser that already cached app.js
-     under the OLD no-header rules, whose cache entry's own freshness
-     lifetime was fixed at store time and is unaffected by a later
-     Cache-Control change. Bump the date on any app.js edit. -->
-<script src="app.js?v=20260820" defer></script>
+  <script src="app.js?v=20260820" defer></script>
 </body>
 </html>
