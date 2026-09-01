@@ -44,7 +44,7 @@ from tools.schema_tools import list_tables, describe_table
 from tools.data_tools import sample_rows, run_select
 from tools.vector_tools import semantic_search, hybrid_select, get_passage
 from tools.memory_tools import get_trajectory, put_trajectory
-from tools.history_tools import append_turn, get_recent_turns
+from tools.history_tools import append_turn, get_recent_turns, list_sessions
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
@@ -98,6 +98,7 @@ _REGISTERED_TOOLS: dict[str, Any] = {
     "memory.put_trajectory": put_trajectory,
     "history.append_turn":      append_turn,
     "history.get_recent_turns": get_recent_turns,
+    "history.list_sessions":    list_sessions,
 }
 
 assert len(_REGISTERED_TOOLS) <= TOOL_CEILING, (

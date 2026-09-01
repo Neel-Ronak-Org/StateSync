@@ -30,6 +30,14 @@ services:
       - "8090:8090"
     environment:
       - LOG_LEVEL=DEBUG
+      # Past-conversations browser: GET /sessions and GET /sessions/{id}.
+      # DEV ONLY, and deliberately set HERE rather than in docker-compose.yml.
+      # History is stored with no auth (V2_STRATEGY 3b -- scoped by
+      # tenant_id + session_id only), so enumerating sessions on a shared
+      # tenant would expose every user's questions and answers to every other
+      # user. Safe on a single-user machine; not something to ship. The
+      # orchestrator returns 404 on both routes unless this is set.
+      - STATESYNC_SESSION_BROWSER=1
 
   evaluator:
     ports:

@@ -25,7 +25,8 @@ from pydantic import BaseModel
 from config_loader import cfg, flags, snapshot_flags
 from graph import graph
 from llm.provider import validate_llm_config
-from mcp_client import MCPSession, history_append_turn
+from mcp_client import (MCPSession, history_append_turn, history_get_recent_turns,
+                        history_list_sessions)
 from nodes.synthesizer import build_citations
 from schemas.synthesizer_output import safe_synthesizer_output
 from state import StateSyncState
@@ -99,6 +100,59 @@ async def health() -> dict:
         "phase": "B",
         "llm_provider": str(flags.llm.provider),
     }
+
+
+# ── Session browser (LOCAL DEVELOPMENT ONLY) ─────────────────────────────────
+# Off unless STATESYNC_SESSION_BROWSER is explicitly set. This is not timidity
+# about an extra route: history shipped WITHOUT auth (V2_STRATEGY §3b, an
+# owner decision recorded in docs/cycles/007.md §3), so conversations are
+# scoped by tenant_id + session_id alone. Listing them means any user of a
+# shared tenant can read every other user's questions and answers -- and
+# stored answers contain real rows, which §3b names as an exfiltration
+# target in its own right.
+#
+# Every other read path in this service can only return a conversation whose
+# session_id the caller already had. These two routes are the first that
+# ENUMERATE, so they are the first that need to know WHO is asking. Until
+# auth exists, the honest control is a switch that a developer turns on for
+# their own single-user machine and that is off everywhere else.
+SESSION_BROWSER_ENABLED = os.environ.get("STATESYNC_SESSION_BROWSER", "").strip().lower() in (
+    "1", "true", "yes", "on",
+)
+
+
+def _require_session_browser() -> None:
+    if not SESSION_BROWSER_ENABLED:
+        raise HTTPException(
+            status_code=404,
+            detail="Session browser is disabled. It is local-development only and "
+                   "requires STATESYNC_SESSION_BROWSER=1 on the orchestrator, because "
+                   "conversation history is not access-controlled without auth "
+                   "(V2_STRATEGY 3b).",
+        )
+
+
+@app.get("/sessions", tags=["history"])
+async def list_sessions_route(limit: int = cfg.mcp.session_browser_list_limit) -> dict:
+    """Past conversations for this tenant, most recently active first."""
+    _require_session_browser()
+    async with MCPSession(
+        tenant_id=cfg.tenancy.default_tenant,
+        base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
+    ) as session:
+        return await history_list_sessions(session, limit=limit)
+
+
+@app.get("/sessions/{session_id}", tags=["history"])
+async def get_session_route(session_id: str,
+                            limit: int = cfg.mcp.session_browser_turn_limit) -> dict:
+    """Every stored turn of one past conversation, oldest first."""
+    _require_session_browser()
+    async with MCPSession(
+        tenant_id=cfg.tenancy.default_tenant,
+        base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
+    ) as session:
+        return await history_get_recent_turns(session, session_id, limit=limit)
 
 
 @app.post("/query", response_model=QueryResponse, tags=["query"])
