@@ -1183,6 +1183,7 @@
     sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(THREAD_KEY);
     sessionId = getOrCreateSessionId();
+    syncActiveSessionRow();
     turns.length = 0; charts.clear(); turnSeq = 0; railTurn = null;
     clear(thread);
     thread.appendChild(cover);
@@ -1245,17 +1246,34 @@
         const row = el('button', 'session-row');
         row.type = 'button';
         row.title = sess.first_query || sess.session_id;
-        if (sess.session_id === sessionId) row.setAttribute('aria-current', 'true');
+        row.dataset.sessionId = sess.session_id;
         row.appendChild(el('span', 'session-row__q', sess.first_query || '(no question recorded)'));
         row.appendChild(el('span', 'session-row__meta',
           `${sess.turn_count} turn${sess.turn_count === 1 ? '' : 's'} · ${fmtWhen(sess.last_activity)}`));
         row.addEventListener('click', () => loadSession(sess.session_id));
         historyList.appendChild(row);
       });
+      syncActiveSessionRow();
     } catch (err) {
       clear(historyList);
       historyList.appendChild(el('div', 'rail__empty', `Could not load history: ${err.message}`));
     }
+  }
+
+  // BUG FIXED: aria-current was set once at row-creation time, comparing
+  // against sessionId as it stood THEN. loadSession() and "New conversation"
+  // both reassign the outer `sessionId` variable afterward but never touched
+  // the DOM again, so whichever row happened to match at the last openHistory()
+  // call stayed marked "current" forever -- including while a completely
+  // different conversation was open on screen. This re-derives the highlight
+  // from the live sessionId on every call, driven off data-session-id rather
+  // than recomputed at creation, so it can be called again after ANY change to
+  // which conversation is active.
+  function syncActiveSessionRow() {
+    historyList.querySelectorAll('.session-row').forEach((row) => {
+      if (row.dataset.sessionId === sessionId) row.setAttribute('aria-current', 'true');
+      else row.removeAttribute('aria-current');
+    });
   }
 
   function toggleHistory() { if (sidebarOpen()) closeSidebar(); else openHistory(); }
@@ -1271,6 +1289,7 @@
       const data = await r.json();
       sessionId = id;
       sessionStorage.setItem(SESSION_KEY, id);
+      syncActiveSessionRow();
       turns.length = 0; charts.clear(); turnSeq = 0; railTurn = null;
       clear(thread);
       (data.turns || []).forEach((t) => {
