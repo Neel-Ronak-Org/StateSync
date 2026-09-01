@@ -39,16 +39,41 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Derive requirements from orchestrator/pyproject.toml
-        # Read from the manifest rather than hand-listing here. A second
+      - name: Derive requirements from orchestrator/ and mcp/'s pyproject.toml
+        # Read from the manifests rather than hand-listing here. A second
         # hand-maintained copy of the dependency list is exactly the drift that
         # had already put pglast and openai out of sync inside
         # orchestrator/Dockerfile.
+        #
+        # BOTH manifests, not just orchestrator's. tests/ imports across both
+        # service boundaries -- e.g. test_review_chunk_split_attribution.py pulls
+        # in scripts/ingest.py, which imports psycopg, a dependency declared only
+        # in mcp/pyproject.toml. Installing orchestrator's alone let that
+        # ImportError through silently: the test file itself was fine and had
+        # been fine for weeks, but nothing had ever actually run this job against
+        # it, because CI runs on push/PR and this repo's `main` had not been
+        # pushed to GitHub since before the file existed. First real run found it.
         run: |
           python - <<'PY' > /tmp/requirements-ci.txt
           import tomllib, pathlib
-          data = tomllib.loads(pathlib.Path("orchestrator/pyproject.toml").read_text())
-          for dep in data["project"]["dependencies"]:
+          seen = {}
+          for manifest in ("orchestrator/pyproject.toml", "mcp/pyproject.toml"):
+              data = tomllib.loads(pathlib.Path(manifest).read_text())
+              for dep in data["project"]["dependencies"]:
+                  # Keyed on the package name (before any version specifier), so
+                  # the two manifests naming the same package at different pins
+                  # fails loudly here rather than one silently shadowing the
+                  # other inside a merged pip install.
+                  import re
+                  name = re.split(r"[><=\[]", dep, maxsplit=1)[0].strip()
+                  if name in seen and seen[name] != dep:
+                      raise SystemExit(
+                          f"dependency conflict across manifests: {name!r} is "
+                          f"{seen[name]!r} in one and {dep!r} in the other -- "
+                          "pin them to agree before this can merge cleanly."
+                      )
+                  seen[name] = dep
+          for dep in seen.values():
               print(dep)
           PY
           echo "pytest" >> /tmp/requirements-ci.txt
