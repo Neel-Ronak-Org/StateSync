@@ -275,3 +275,13 @@ async def history_get_recent_turns(
     if limit is not None:
         params["limit"] = limit
     return await session.call("history.get_recent_turns", params)
+
+
+async def history_list_sessions(
+    session: MCPSession, limit: int | None = None,
+) -> dict[str, Any]:
+    """history.list_sessions"""
+    params: dict[str, Any] = {}
+    if limit is not None:
+        params["limit"] = limit
+    return await session.call("history.list_sessions", params)

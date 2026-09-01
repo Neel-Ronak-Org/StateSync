@@ -1,7 +1,7 @@
 """
 mcp/tools/history_tools.py
-MCP history tools: history.append_turn and history.get_recent_turns
-(cycle 007, Workstream A -- multi-turn conversation).
+MCP history tools: history.append_turn, history.get_recent_turns and
+history.list_sessions (cycle 007, Workstream A -- multi-turn conversation).
 
 Backed by session_state.conversation_turns (migrations/011), via db.py's
 SEPARATE statesync_history pool -- not the statesync_reader pool every other
@@ -117,3 +117,62 @@ async def get_recent_turns(session_id: str, limit: int | None = None) -> dict[st
             "computed_at": computed_at.isoformat(),
         })
     return {"turns": turns, "count": len(turns)}
+
+
+async def list_sessions(limit: int | None = None) -> dict[str, Any]:
+    """
+    Every conversation this tenant has, most recently active first, with the
+    turn count and the opening question so a caller can label it.
+
+    WHY THIS IS NOT SIMPLY THE MISSING HALF OF get_recent_turns. Every other
+    read in this file is scoped to a session_id the caller already holds --
+    it can only return a conversation you were already in. This one
+    ENUMERATES, so it returns conversations the caller may never have had.
+    On a single shared tenant that is every user's history, which is exactly
+    why V2_STRATEGY §3b sequences auth BEFORE history: "whose history?" is
+    unanswerable without identity, and this tool is where that becomes
+    concrete rather than theoretical.
+
+    The tool itself is still tenant-scoped server-side (A0.6) like every
+    other one here, so it cannot cross a tenant boundary. The exposure it
+    creates is WITHIN a tenant, among users who share one. The orchestrator
+    therefore keeps its HTTP surface behind an explicit opt-in env var
+    (STATESYNC_SESSION_BROWSER) that is off unless a developer turns it on;
+    registering the tool does not by itself publish anything.
+
+    Fixed-shape and parameterized, same as its siblings: no caller string
+    ever reaches the statement.
+    """
+    tenant_id = get_tenant_id()
+    hard_cap = cfg.mcp.history_get_turns_hard_cap
+    effective_limit = min(limit, hard_cap) if limit else hard_cap
+
+    async with get_history_connection() as conn:
+        cur = await conn.execute(
+            """
+            SELECT session_id,
+                   count(*)                                        AS turn_count,
+                   min(computed_at)                                AS started_at,
+                   max(computed_at)                                AS last_activity,
+                   (array_agg(raw_query ORDER BY turn_index))[1]   AS first_query
+            FROM session_state.conversation_turns
+            WHERE tenant_id = %s
+            GROUP BY session_id
+            ORDER BY max(computed_at) DESC
+            LIMIT %s
+            """,
+            (tenant_id, effective_limit),
+        )
+        rows = await cur.fetchall()
+
+    sessions = [
+        {
+            "session_id":    session_id,
+            "turn_count":    turn_count,
+            "started_at":    started_at.isoformat(),
+            "last_activity": last_activity.isoformat(),
+            "first_query":   first_query,
+        }
+        for (session_id, turn_count, started_at, last_activity, first_query) in rows
+    ]
+    return {"sessions": sessions, "count": len(sessions)}
