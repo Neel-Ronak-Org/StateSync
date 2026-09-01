@@ -278,6 +278,19 @@ async def run_query(request: QueryRequest) -> QueryResponse:
                 answer_text=validated["answer_text"],
                 route=final_state.route,
                 executed_sql=final_state.executed_sql,
+                # Artifacts (migration 012), so a resumed conversation renders
+                # what the user saw. The chart is the VALIDATED spec -- the same
+                # object returned to the browser, already through both A7
+                # validators -- never a pre-repair draft. Rows are sliced to the
+                # preview cap HERE as well as clamped server-side: sending 1000
+                # rows across the MCP boundary only to discard 900 of them is
+                # waste, and the cap is a property of what gets stored, so both
+                # ends enforce it.
+                chart=validated["chart"],
+                sql_columns=final_state.sql_columns or None,
+                sql_rows_preview=(final_state.sql_rows or None) and
+                    final_state.sql_rows[: cfg.mcp.history_row_preview_max],
+                sql_rows_count=len(final_state.sql_rows),
             )
     except Exception as exc:
         logger.error(
