@@ -158,6 +158,7 @@ def _parse_rewrite(text: str, original: str) -> tuple[bool, str, bool]:
 async def rewrite_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     query_id: str = state_dict.get("query_id", "")
     tenant_id: str = state_dict["tenant_id"]
+    principal_id: str = state_dict["principal_id"]
     session_id: str = state_dict.get("session_id", "")
     normalized_query: str = state_dict.get("normalized_query") or state_dict.get("raw_query", "")
 
@@ -175,7 +176,7 @@ async def rewrite_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     try:
         async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id) as session:
             history_result = await history_get_recent_turns(
-                session, session_id, limit=cfg.sql.rewrite_history_turns,
+                session, session_id, principal_id=principal_id, limit=cfg.sql.rewrite_history_turns,
             )
         turns = history_result.get("turns", [])
     except Exception as exc:

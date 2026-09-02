@@ -241,6 +241,7 @@ async def memory_put_trajectory(
 async def history_append_turn(
     session: MCPSession,
     session_id: str,
+    principal_id: str,
     turn_index: int,
     raw_query: str,
     rewritten_query: str,
@@ -257,6 +258,7 @@ async def history_append_turn(
     """history.append_turn"""
     params: dict[str, Any] = {
         "session_id": session_id,
+        "principal_id": principal_id,
         "turn_index": turn_index,
         "raw_query": raw_query,
         "rewritten_query": rewritten_query,
@@ -280,20 +282,20 @@ async def history_append_turn(
 
 
 async def history_get_recent_turns(
-    session: MCPSession, session_id: str, limit: int | None = None,
+    session: MCPSession, session_id: str, principal_id: str, limit: int | None = None,
 ) -> dict[str, Any]:
     """history.get_recent_turns"""
-    params: dict[str, Any] = {"session_id": session_id}
+    params: dict[str, Any] = {"session_id": session_id, "principal_id": principal_id}
     if limit is not None:
         params["limit"] = limit
     return await session.call("history.get_recent_turns", params)
 
 
 async def history_list_sessions(
-    session: MCPSession, limit: int | None = None,
+    session: MCPSession, principal_id: str, limit: int | None = None,
 ) -> dict[str, Any]:
     """history.list_sessions"""
-    params: dict[str, Any] = {}
+    params: dict[str, Any] = {"principal_id": principal_id}
     if limit is not None:
         params["limit"] = limit
     return await session.call("history.list_sessions", params)

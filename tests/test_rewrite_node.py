@@ -245,6 +245,10 @@ def test_rewrite_node_empty_history_turn_one_structural_guarantee(monkeypatch):
     input_query = "What is the revenue for customer 42?"
     state = {
         "tenant_id": "tenant-test",
+        # Required identity field since migration 014 scoped history per
+        # principal; rewrite_node reads it with bracket access because a
+        # missing one is a defect, not a degradable condition.
+        "principal_id": "p_test",
         "session_id": "session-test",
         "query_id": "query-test",
         "normalized_query": input_query,
@@ -277,6 +281,10 @@ def test_rewrite_node_history_read_failure_degrades_to_turn_one_fallback(monkeyp
     input_query = "List all active subscriptions"
     state = {
         "tenant_id": "tenant-test-2",
+        # Required identity field since migration 014 scoped history per
+        # principal; rewrite_node reads it with bracket access because a
+        # missing one is a defect, not a degradable condition.
+        "principal_id": "p_test",
         "session_id": "session-test-2",
         "query_id": "query-test-2",
         "normalized_query": input_query,

@@ -200,34 +200,16 @@ async def health() -> dict:
     }
 
 
-# ── Session browser (LOCAL DEVELOPMENT ONLY) ─────────────────────────────────
-# Off unless STATESYNC_SESSION_BROWSER is explicitly set. This is not timidity
-# about an extra route: history shipped WITHOUT auth (V2_STRATEGY §3b, an
-# owner decision recorded in docs/cycles/007.md §3), so conversations are
-# scoped by tenant_id + session_id alone. Listing them means any user of a
-# shared tenant can read every other user's questions and answers -- and
-# stored answers contain real rows, which §3b names as an exfiltration
-# target in its own right.
-#
-# Every other read path in this service can only return a conversation whose
-# session_id the caller already had. These two routes are the first that
-# ENUMERATE, so they are the first that need to know WHO is asking. Until
-# auth exists, the honest control is a switch that a developer turns on for
-# their own single-user machine and that is off everywhere else.
-SESSION_BROWSER_ENABLED = os.environ.get("STATESYNC_SESSION_BROWSER", "").strip().lower() in (
-    "1", "true", "yes", "on",
-)
-
-
-def _require_session_browser() -> None:
-    if not SESSION_BROWSER_ENABLED:
-        raise HTTPException(
-            status_code=404,
-            detail="Session browser is disabled. It is local-development only and "
-                   "requires STATESYNC_SESSION_BROWSER=1 on the orchestrator, because "
-                   "conversation history is not access-controlled without auth "
-                   "(V2_STRATEGY 3b).",
-        )
+# ── Session browser ───────────────────────────────────────────────────────────
+# Formerly gated for local development only: history was scoped by tenant_id +
+# session_id alone, so any user of a shared tenant could enumerate every other
+# user's questions and answers (and stored answers contain real rows). C1 added
+# authentication and migration 014 added a NOT NULL principal_id to
+# conversation_turns. Both routes now filter on the authenticated principal, so
+# a caller can only enumerate and read their own conversations. Turns written
+# before auth carry the sentinel principal 'p_preauth_legacy', which no real
+# principal holds, so pre-auth history is deliberately invisible rather than
+# shown to an arbitrary caller.
 
 
 @app.get("/sessions", tags=["history"])
@@ -237,12 +219,13 @@ async def list_sessions_route(
     principal: Principal = Depends(require_principal),
 ) -> dict:
     """Past conversations for this tenant, most recently active first."""
-    _require_session_browser()
     async with MCPSession(
         tenant_id=principal.tenant_id,
         base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
     ) as session:
-        result = await history_list_sessions(session, limit=limit)
+        result = await history_list_sessions(
+            session, principal_id=principal.principal_id, limit=limit
+        )
     client_ip = request.client.host if request.client else None
     await _audit(
         principal.principal_id,
@@ -262,12 +245,13 @@ async def get_session_route(
     principal: Principal = Depends(require_principal),
 ) -> dict:
     """Every stored turn of one past conversation, oldest first."""
-    _require_session_browser()
     async with MCPSession(
         tenant_id=principal.tenant_id,
         base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
     ) as session:
-        result = await history_get_recent_turns(session, session_id, limit=limit)
+        result = await history_get_recent_turns(
+            session, session_id, principal_id=principal.principal_id, limit=limit
+        )
     client_ip = request.client.host if request.client else None
     await _audit(
         principal.principal_id,
@@ -298,6 +282,7 @@ async def run_query(
     initial_input = {
         "query_id": query_id,   # A2: set once here, immutable from here on
         "tenant_id": tenant_id,
+        "principal_id": principal.principal_id,
         "session_id": session_id,
         "raw_query": body.query,
         "flags_snapshot": snapshot_flags(),
@@ -309,6 +294,7 @@ async def run_query(
             StateSyncState(
                 query_id=initial_input["query_id"],
                 tenant_id=initial_input["tenant_id"],
+                principal_id=principal.principal_id,
                 session_id=initial_input["session_id"],
                 raw_query=initial_input["raw_query"],
                 flags_snapshot=initial_input["flags_snapshot"],
@@ -339,6 +325,7 @@ async def run_query(
     state_trace = {
         "query_id":    final_state.query_id,
         "tenant_id":   final_state.tenant_id,
+        "principal_id": final_state.principal_id,
         "route":       final_state.route,
         "executed_sql": final_state.executed_sql,
         "sql_rows_count": len(final_state.sql_rows),
@@ -411,6 +398,7 @@ async def run_query(
             await history_append_turn(
                 history_session,
                 session_id=final_state.session_id,
+                principal_id=final_state.principal_id,
                 turn_index=final_state.turn_index,
                 raw_query=final_state.raw_query,
                 rewritten_query=final_state.normalized_query or final_state.raw_query,

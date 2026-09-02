@@ -1385,11 +1385,11 @@
     });
   }
 
-  // ── Past conversations (local dev only) ───────────────────────────────────
+  // ── Past conversations ────────────────────────────────────────────────────
   // The button stays hidden unless GET /sessions actually answers. The route
-  // 404s when STATESYNC_SESSION_BROWSER is unset, which is the shipped state,
-  // so probing is how the UI discovers whether the feature exists rather than
-  // advertising a control that would only produce an error.
+  // is now always available to an authenticated caller and returns only that
+  // principal's own conversations. Probing discovers whether the endpoint is
+  // reachable so the UI degrades gracefully if the orchestrator is unavailable.
   const historyBtn  = $('history-btn');
   const historyList = $('history-list');
 

@@ -111,6 +111,7 @@ _SUM_FIELDS: frozenset[str] = frozenset({
 _IMMUTABLE_FIELDS: frozenset[str] = frozenset({
     "query_id",
     "tenant_id",
+    "principal_id",
     "session_id",
     "raw_query",
 })
@@ -122,7 +123,8 @@ class StateSyncState(BaseModel):
 
     # --- identity (set once at entry, never mutated) ---
     query_id:     str                      # uuid4
-    tenant_id:    str                      # A0.6; always config default
+    tenant_id:    str                      # derived from authenticated principal (C1)
+    principal_id: str                      # authenticated caller (C1); scopes conversation history
     session_id:   str
 
     # --- input & normalization (Part D) ---

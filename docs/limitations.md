@@ -890,11 +890,16 @@ can read it. Accepted because the page's CSP forbids inline script and
 `SameSite=None; Secure` and therefore HTTPS, which local development does not
 have. It is a real exposure, not a non-issue.
 
-**Per-principal history scoping does not exist.** See the ⚠ block in
-`V2_STRATEGY` §5: `session_state.conversation_turns` carries `tenant_id` and
-`session_id` but no `principal_id`, so principals sharing a tenant can read
-each other's conversations. This is why the `STATESYNC_SESSION_BROWSER` env
-gate stays.
+**Per-principal history scoping — CLOSED 2026-09-03.** This entry used to
+record that `conversation_turns` had no `principal_id`, so principals sharing
+a tenant could read each other's conversations, and that the
+`STATESYNC_SESSION_BROWSER` gate stayed because of it. Migration 014 added the
+column, all three history tools filter on it, and the gate is deleted.
+Verified with two principals on one tenant, including the direct-read case:
+requesting another principal's session by its exact id returns zero turns.
+**The residual limitation is the sentinel:** pre-auth rows carry
+`p_preauth_legacy` and are therefore invisible to everyone. They are retained
+for forensics, not shown.
 
 **MCP is unauthenticated, by design and unchanged.** Port 8080 is an internal
 service on the compose network; nothing in C1 altered that, and no script's

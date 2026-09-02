@@ -476,17 +476,40 @@ adversarial suite re-run and still 40/40.
 > Operators run `python3 scripts/gen_api_principal.py`; `secrets/` is
 > gitignored, so no token is ever committed.
 
-> **⚠ WHAT C1 DOES *NOT* FIX — the session browser is only PARTLY unblocked.**
-> §3b and `main.py`'s own comment say the session browser cannot ship without
-> auth because history is scoped by `tenant_id` + `session_id` alone. Auth now
-> exists, but **`session_state.conversation_turns` still has no
-> `principal_id` column** — so two principals on the *same tenant* can still
-> enumerate and read each other's conversations. Authentication fixed *who is
-> asking*; it did not fix *whose history this is*. The
-> `STATESYNC_SESSION_BROWSER` env gate is therefore **deliberately left in
-> place**, and removing it needs per-principal history scoping (a
-> `principal_id` column on that table, written at append and filtered on read)
-> — not merely the auth that now exists.
+> **✎ CLOSED 2026-09-03 — the session browser is now fully unblocked and the
+> env gate is DELETED.** The block that stood here recorded that C1 fixed *who
+> is asking* but not *whose history this is*: `conversation_turns` was scoped
+> by `tenant_id` + `session_id` alone, so principals sharing a tenant could
+> enumerate and read each other's conversations, and `STATESYNC_SESSION_BROWSER`
+> was the honest stopgap.
+>
+> **Migration 014** adds a `NOT NULL principal_id` to
+> `session_state.conversation_turns`; `history.append_turn` writes it,
+> `history.get_recent_turns` filters `tenant_id AND principal_id AND
+> session_id`, and `history.list_sessions` filters `tenant_id AND
+> principal_id`. `principal_id` is now an immutable identity field on
+> `StateSyncState`, so the multi-turn rewrite node scopes its history read the
+> same way. `STATESYNC_SESSION_BROWSER`, `SESSION_BROWSER_ENABLED` and
+> `_require_session_browser()` are removed outright — not left as a dead
+> fallback.
+>
+> **Verified live with two principals on the SAME tenant:**
+>
+> | check | result |
+> |---|---|
+> | env var actually unset in the container | `STATESYNC_SESSION_BROWSER=[UNSET]`, `GET /sessions` → **200** |
+> | enumeration isolation | `p_dev_local` sees **2** sessions, `p_dev_second` sees **1** — each only its own |
+> | **direct-read escape** (the one that matters: knowing a session id) | `p_dev_second` requesting `p_dev_local`'s session by exact id → **0 turns**; the owner gets **1** |
+> | pre-auth history | 556 legacy rows backfilled to `p_preauth_legacy` → **0 sessions visible** to any real principal |
+> | multi-turn not broken by the new scoping | *"and how many of those were delivered?"* → rewritten to *"How many of the 550 orders were delivered?"*, answered 323/550 |
+> | adversarial suite | re-run, still **40/40** |
+>
+> **One deliberate, visible consequence:** history written before auth existed
+> cannot be attributed to anyone, so it is backfilled to a sentinel no
+> principal holds and is invisible in the UI. That is the correct default —
+> the alternative is showing one user another user's conversations — but it
+> does mean existing history disappears, and that is a choice, not an
+> accident.
 
 **C2. Indian corpus.** With a Kaggle account, order-level Indian e-commerce data
 is reachable. **Caveat that decides how it is used:** these sets are typically

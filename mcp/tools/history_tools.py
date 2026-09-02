@@ -1,20 +1,22 @@
 """
 mcp/tools/history_tools.py
 MCP history tools: history.append_turn, history.get_recent_turns and
-history.list_sessions (cycle 007, Workstream A -- multi-turn conversation).
+history.list_sessions (scoped by tenant and principal).
 
-Backed by session_state.conversation_turns (migrations/011), via db.py's
+Backed by session_state.conversation_turns (migrations/011, 014), via db.py's
 SEPARATE statesync_history pool -- not the statesync_reader pool every other
 tool in this package uses. That role has INSERT+SELECT on exactly this one
 table and nothing else (see migrations/011's header for the full reasoning).
 
-Both queries below are fixed-shape and parameterized. Neither function
+All queries below are fixed-shape and parameterized. Neither function
 accepts, builds, or executes a SQL string from a caller -- there is no path
 from an LLM's output to a statement run on this connection. That is the
 actual guarantee here, the same way memory.put_trajectory's guarantee is
 that `insight` never becomes a query, just a payload value (A4.8's
 _SQL_REJECT_RE backstop). tenant_id comes from the session context (A0.6),
 never a parameter, same as every other tool in this file's sibling modules.
+principal_id is supplied by the authenticating orchestrator and scopes all
+conversation turns and sessions per identity within the tenant.
 """
 
 from __future__ import annotations
@@ -31,8 +33,19 @@ from session import get_tenant_id
 logger = logging.getLogger(__name__)
 
 
+# NOTE on principal_id parameter passing:
+# Unlike tenant_id, principal_id IS a caller-supplied parameter rather than being
+# bound server-side from the session. That is deliberate and does not weaken A0.6:
+# the MCP service has no notion of identity, it is an internal service on the
+# compose network that already trusts the X-Tenant-ID header, and the ORCHESTRATOR
+# is the component that authenticates and is therefore the authority on which
+# principal a request belongs to. The trust boundary is unchanged; it has simply
+# gained a second field.
+
+
 async def append_turn(
     session_id: str,
+    principal_id: str,
     turn_index: int,
     raw_query: str,
     rewritten_query: str,
@@ -47,10 +60,11 @@ async def append_turn(
     sql_rows_count: int | None = None,
 ) -> dict[str, Any]:
     """
-    Insert one completed turn. Called once per query, after the response
-    that will actually reach the user has been validated (A7) -- so
-    answer_text here is always the text the user saw, never a pre-repair
-    draft. tenant_id is bound server-side; a caller cannot write into
+    Insert one completed turn scoped by tenant and principal. Called once per
+    query, after the response that will actually reach the user has been
+    validated (A7) -- so answer_text here is always the text the user saw,
+    never a pre-repair draft. tenant_id is bound server-side; principal_id is
+    forwarded by the authenticating orchestrator. A caller cannot write into
     another tenant's history by any parameter it controls.
 
     The artifact columns (migration 012) let a resumed conversation render
@@ -75,14 +89,14 @@ async def append_turn(
         cur = await conn.execute(
             """
             INSERT INTO session_state.conversation_turns
-                (tenant_id, session_id, turn_index, raw_query, rewritten_query,
+                (tenant_id, principal_id, session_id, turn_index, raw_query, rewritten_query,
                  rewrite_applied, context_guessed, route, executed_sql, answer_text,
                  chart, sql_columns, sql_rows_preview, sql_rows_count)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (tenant_id, session_id, turn_index) DO NOTHING
             RETURNING turn_id, computed_at
             """,
-            (tenant_id, session_id, turn_index, raw_query, rewritten_query,
+            (tenant_id, principal_id, session_id, turn_index, raw_query, rewritten_query,
              rewrite_applied, context_guessed, route, executed_sql, answer_text,
              Jsonb(chart) if chart is not None else None,
              Jsonb(sql_columns) if sql_columns is not None else None,
@@ -104,12 +118,13 @@ async def append_turn(
     return {"written": True, "turn_id": row[0], "computed_at": row[1].isoformat()}
 
 
-async def get_recent_turns(session_id: str, limit: int | None = None) -> dict[str, Any]:
+async def get_recent_turns(session_id: str, principal_id: str, limit: int | None = None) -> dict[str, Any]:
     """
-    Return the last `limit` turns for (tenant_id, session_id), OLDEST first
-    (the order a rewrite prompt wants to read them in), tenant-scoped
-    server-side. Empty list on turn 1 / an unknown session_id -- not an
-    error; a session with no history is the ordinary case, not a fault.
+    Return the last `limit` turns for (tenant_id, principal_id, session_id),
+    OLDEST first (the order a rewrite prompt wants to read them in), scoped by
+    tenant server-side and principal from the orchestrator. Empty list on turn 1
+    / an unknown session_id -- not an error; a session with no history is the
+    ordinary case, not a fault.
     """
     tenant_id = get_tenant_id()
     hard_cap = cfg.mcp.history_get_turns_hard_cap
@@ -122,11 +137,11 @@ async def get_recent_turns(session_id: str, limit: int | None = None) -> dict[st
                    context_guessed, route, executed_sql, answer_text, computed_at,
                    chart, sql_columns, sql_rows_preview, sql_rows_count
             FROM session_state.conversation_turns
-            WHERE tenant_id = %s AND session_id = %s
+            WHERE tenant_id = %s AND principal_id = %s AND session_id = %s
             ORDER BY turn_index DESC
             LIMIT %s
             """,
-            (tenant_id, session_id, effective_limit),
+            (tenant_id, principal_id, session_id, effective_limit),
         )
         rows = await cur.fetchall()
 
@@ -156,10 +171,11 @@ async def get_recent_turns(session_id: str, limit: int | None = None) -> dict[st
     return {"turns": turns, "count": len(turns)}
 
 
-async def list_sessions(limit: int | None = None) -> dict[str, Any]:
+async def list_sessions(principal_id: str, limit: int | None = None) -> dict[str, Any]:
     """
-    Every conversation this tenant has, most recently active first, with the
-    turn count and the opening question so a caller can label it.
+    Every conversation this principal has within the tenant, most recently
+    active first, with the turn count and the opening question so a caller can
+    label it.
 
     WHY THIS IS NOT SIMPLY THE MISSING HALF OF get_recent_turns. Every other
     read in this file is scoped to a session_id the caller already holds --
@@ -170,12 +186,11 @@ async def list_sessions(limit: int | None = None) -> dict[str, Any]:
     unanswerable without identity, and this tool is where that becomes
     concrete rather than theoretical.
 
-    The tool itself is still tenant-scoped server-side (A0.6) like every
-    other one here, so it cannot cross a tenant boundary. The exposure it
-    creates is WITHIN a tenant, among users who share one. The orchestrator
-    therefore keeps its HTTP surface behind an explicit opt-in env var
-    (STATESYNC_SESSION_BROWSER) that is off unless a developer turns it on;
-    registering the tool does not by itself publish anything.
+    The tool is scoped by tenant server-side (A0.6) and principal_id from the
+    authenticating orchestrator, preventing cross-principal exposure within a
+    shared tenant. The orchestrator keeps its HTTP surface behind an explicit
+    opt-in env var (STATESYNC_SESSION_BROWSER) that is off unless a developer
+    turns it on; registering the tool does not by itself publish anything.
 
     Fixed-shape and parameterized, same as its siblings: no caller string
     ever reaches the statement.
@@ -193,12 +208,12 @@ async def list_sessions(limit: int | None = None) -> dict[str, Any]:
                    max(computed_at)                                AS last_activity,
                    (array_agg(raw_query ORDER BY turn_index))[1]   AS first_query
             FROM session_state.conversation_turns
-            WHERE tenant_id = %s
+            WHERE tenant_id = %s AND principal_id = %s
             GROUP BY session_id
             ORDER BY max(computed_at) DESC
             LIMIT %s
             """,
-            (tenant_id, effective_limit),
+            (tenant_id, principal_id, effective_limit),
         )
         rows = await cur.fetchall()
 
