@@ -507,6 +507,138 @@ therefore **measured and reported** on any B1 attempt (it costs nothing; the
 is no evidence on which to set a bar, and inventing one is how the first bar
 rotted.
 
+### ✎ B1 ATTEMPT 1 — 2026-09-02. Hypothesis refuted, nothing shipped, bar unmet.
+
+**Status: B1 stays OPEN.** No fix was shipped and no acceptance clause was met.
+The working tree is back to its committed state (`verify_deployed.py` 19/19,
+`pytest` 125, `lint-no-literals` PASS, `verify_seams` 26/0, `verify_e2` 46/0,
+shipped flags clean). What this attempt bought is **three eliminated
+mechanisms and a much sharper diagnosis**, recorded so attempt 2 does not
+re-run any of it.
+
+**The paired pre-measurement was taken first, as the amendment requires**, and
+then taken a SECOND time on the same build:
+
+| | PRE run 1 | PRE run 2 | anchor for |
+|---|---|---|---|
+| D-V1 control | 15/40 | 15/40 | — |
+| D-V1 treatment | 25/40 | 25/40 | clause 3 (POST ≥ 25/40) |
+| English reference | 11/20 | 11/20 | clause 2 (POST ≥ 12/20) |
+| D-V2 total | 27/32 | 27/32 | clause 1 (POST ≥ 26/32 = 81.25%) |
+| D-V1 hinglish | 12/20 | 12/20 | clause 4 |
+| D-V2 hinglish | 12/16 | 12/16 | clause 4 |
+
+Artifacts: `docs/bench_multilingual_report_pre_b1.json`,
+`docs/bench_multilingual_report_pre_b1_run2.json`.
+**Clause 4 is read as BOTH halves** (D-V1 on the 20 hinglish queries AND D-V2
+on the 16 hinglish proper-noun queries) — the aggregate D-V2 clause can be held
+while the Hinglish half degrades and the Devanagari half improves, which is
+migration 005's own trade in mirror image. D-V1-only is the convenient reading.
+
+### ⚠ F-007-10 IS REFUTED. M3 is deterministic on a fixed build.
+
+Audit 007 concluded M3 "does not reproduce" and inferred a **±7.5pp noise
+floor**, on the strength of 2026-08-17 vs 2026-08-24 differing. Two full M3 runs
+taken back to back on one build, an hour apart, **agree on every one of the 60
+queries — zero flips**, across the orchestrator restart the harness performs
+between its own control and treatment passes.
+
+F-007-10's premise was *"no code change between the two measurements on any path
+D-V1 exercises."* That is false:
+
+```
+$ git log --oneline --since=2026-08-17 --until=2026-08-25 -- orchestrator/nodes/ \
+      orchestrator/language_normalizer.py orchestrator/schema_retriever.py \
+      orchestrator/graph.py config/statesync.toml
+cb61a53 Cycle 007: rewrite_node for multi-turn ...
+cdecb72 Cycle 007: session history storage ...
+80d35c8 The agent was querying the SYNTHETIC corpus while being scored against the real one
+527441d The Gemini wall was per-MINUTE, not per-day ...
+$ git log --oneline --since=2026-08-17 --until=2026-08-25 | wc -l
+     112
+```
+
+112 commits, four on D-V1's own paths. **The 08-17 → 08-24 movement was build
+movement, not sampling noise.** Consequence: M3 IS a usable instrument, and
+clause 2's one-query threshold on n=20 is decidable rather than lost in noise.
+The unsent `cfg.models.seed` remains a real latent defect (F-007-10's other
+half stands) but is not the explanation — at `temperature = 0.0` decoding is
+greedy and a seed would change nothing.
+
+### The hypothesis that was tested, and how it died
+
+`open_items.md`'s recorded hypothesis is *"symmetric, script-triggered wording."*
+**That wording already ships**, in a more salient prompt position than a column
+comment, and has since before migration 005 — `orchestrator/nodes/sql_agent.py`
+`_format_entity_hint`, which names all six columns and says *"Do NOT use a
+_local column for a Latin-script value."*
+
+A second hypothesis was formed and tested: interrogation
+(`_pick_interrogation_targets` / `_target_for`) selected `columns: nullable_cols`,
+and on **every** pair the romanised half is NOT NULL while the `_local` half is
+NULLABLE — so the agent was shown Devanagari samples and never shown that
+`city` holds `'Mumbai'`. Verified live in the trace
+(`columns_sampled: ["digipin","city_local","pincode"]`).
+
+**It was implemented, deployed, and refuted three independent ways:**
+
+1. **Direct experiment.** With the fix live and the prompt demonstrably
+   containing `"city": "Mumbai", "city_local": "मुंबई"` side by side, the model
+   still emitted `city_local = 'Lucknow'` / `' Bengaluru'` / `' Chennai'` /
+   `'Delhi'` on 6/6 target queries, including the three English-line failures
+   clause 2 needs.
+2. **Not sufficient.** 4 queries already chose `city =` correctly under the OLD
+   nullable-only regime (`d_ml_015_en`, `d_ml_016_en`, `d_ml_035`, `d_ml_036`).
+3. **Same-schema counter-example — the decisive one.** `sellers.display_name`
+   has *identical* NOT NULL/NULLABLE geometry and identical sampling, computed
+   from `bench_multilingual_report_pre_b1.json`:
+
+   | column | control | treatment | flips local→plain | flips plain→local |
+   |---|---|---|---|---|
+   | `display_name` | local 22, plain 1 | local 8, plain 20 | **15** | 0 |
+   | `city` | local 14, plain 4 | local 18, plain 1 | **0** | **3** |
+
+   A cause constant across both columns cannot produce opposite outcomes. This
+   was computable from committed data **before any code was written**.
+
+**The patch also had two defects of its own**, found in adversarial review and
+confirmed: it was not purely additive — `orders`, `order_items` and
+`logistics_providers` have ZERO nullable columns, so the old code sent
+`columns=None` → `SELECT *`, and the patch *shrank* them (dropping
+`order_value`, `placed_at`, `quantity`), on the highest-traffic interrogation
+target; and it newly sampled `document_chunks.content_md` (`text NOT NULL`),
+putting ingested RAG text into the SQL-agent prompt through a `SELECT` with no
+tenant predicate. Both are reasons the change should not ship even if it had
+worked.
+
+### What attempt 2 should start from
+
+**The live lead is the asymmetry in the table above:** normalization *fixes*
+`display_name` (+15 flips to the romanised column, zero reverse) and *worsens*
+`city` (romanised uses 4 → 1). Same schema shape, same sampling, opposite
+result. Whatever distinguishes the two is B1's actual cause, and it is now
+localised to the normalizer/entity-hint interaction rather than the schema.
+
+**Three prompt-side channels are now eliminated** — column comments (005,
+measured), the entity-hint instruction (shipped, still fails), and sampled
+evidence (this attempt, measured). Attempt 2 should consider a **non-prompt**
+mechanism, e.g. deterministic post-generation value linking: a literal that
+cannot match its column's stored script is a checkable property, not a hint.
+That is a genuine change in kind and should be proposed to the owner before
+being built — it is closer to a feature than a fix.
+
+**Two fixture defects that will distort any future B1 measurement:**
+- `d_ml_034` is a **false pass**. Its SQL is `WHERE l.city_local = 'Nagpur'` —
+  the exact B1 defect — and it scores `match=True` AND `all_preserved=True`
+  because both it and the ground truth return scalar `0`. The defect is
+  credited twice. `d_ml_017` and `d_ml_037` are also scalar-`0` ground truths.
+- `d_ml_031`'s `'जयपुर'` is the **correct stored value**, not an invention; it
+  fails D-V1 only for a missing `fulfillments` join. Genuine invented spellings
+  are exactly two: `d_ml_035` `'पतन'` (stored `पटना`) and `d_ml_036` `'इंदोर'`
+  (stored `इंदौर`).
+
+---
+
 ### `da6e49f`'s D-V1 regression — carried separately, not absorbed
 
 **Status: open, unfixed, deliberately not folded into the B1 bar above.**

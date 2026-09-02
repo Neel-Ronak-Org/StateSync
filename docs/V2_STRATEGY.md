@@ -34,7 +34,7 @@ survived contact with a corpus they were never designed for.
 | single-turn EX, synthetic corrected fixture (25 q) | 60.0% (54.5% over the 22 references that can fail — 3 are unfailable empty-vs-empty matches, audit 004 F-004-3; 52.4% over the 21 that can also discriminate — a 4th, `c2g_15`, has a filter that is a no-op on this data, audit 005 F-005-2 — `AGENT_HANDOFF.md` §6) |
 | single-turn EX, synthetic original fixture | 44.0% |
 | adversarial suite | 40/40 |
-| corpora | synthetic 550 orders · **Olist 1,451,414 real rows** |
+| corpora | synthetic 550 orders · **Olist 1,551,698 real rows** (⚠ every doc in this repo says 1,451,414; that figure has been wrong since `cb2450e` — see §3a's row-count correction) |
 | providers behind one seam | local · anthropic · azure · gemini |
 
 **⚠⚠ 88.9%/94.4% is NOT "88.9% at text-to-SQL on real data," and the word
@@ -238,7 +238,8 @@ and a count of ungrounded-but-true answers.
 
 | | |
 |---|---|
-| corpus | **18 documents, 36 chunks** — while the SQL side now has 1,451,414 real rows |
+| corpus | **2,585 documents, 20,245 chunks** — of which the *policy* corpus this section is about is still **18 documents / 36 chunks**; the rest is 2,567 Olist review digests (20,209 chunks) added by cycle 006 |
+| SQL side, for comparison | **1,551,698 real rows** (not 1,451,414 — see the row-count correction below) |
 | context precision | **0.622** — ~38% of retrieved context is irrelevant |
 | faithfulness | 0.8125 |
 | provenance | measured **pre-`da6e49f`**, never re-measured; flagged stale in `metrics-report.md` |
@@ -247,6 +248,61 @@ The asymmetry is the finding: v2's predecessor spent three days making the
 structured half real and did not touch the unstructured half once. A
 "conversational analytics agent" with a 36-chunk knowledge base is half a
 product.
+
+> **✎ CORRECTED 2026-09-02.** The corpus row above read *"18 documents, 36
+> chunks"*, written before cycle 006. **Verified live against the running
+> database**, the corpus is now:
+>
+> ```
+> $ docker compose exec -T postgres psql -U statesync_migrator -d statesync -c \
+>     "select d.doc_type, count(distinct d.document_id) docs, count(c.chunk_id) chunks
+>        from documents d left join document_chunks c using(document_id) group by 1 order by 1;"
+>
+>        doc_type      | docs | chunks
+>   -------------------+------+--------
+>    policy            |    4 |      8
+>    review_digest     | 2567 |  20209
+>    sla_annexure      |    4 |      8
+>    sop               |    4 |      8
+>    supplier_agreement|    6 |     12
+>   TOTAL              | 2585 |  20245
+> ```
+>
+> **The paragraph above still stands, and that is the point of correcting the
+> number rather than deleting the finding.** The 2,567 review digests are
+> short-form customer text; the *policy/SOP/agreement* corpus a threshold-in-a-
+> paragraph question needs is **unchanged at 18 documents / 36 chunks**, and
+> M6's fixture retrieves **zero** review chunks (measured before and after the
+> ingest — `docs/limitations.md` § "The review-digest corpus"). So the
+> retrieval-at-scale problem is solved and the policy-retrieval problem is not.
+> Quoting either figure alone misleads: 18/36 understates the corpus, 2,585
+> overstates what M6 actually exercises.
+
+> **✎ ROW-COUNT CORRECTION 2026-09-02. `1,451,414` is wrong and has been since
+> the commit that introduced it.** Five documents carry it (`V2_STRATEGY` §2,
+> §3a, §7; `limitations.md` ×3; `AGENT_HANDOFF.md` ×2; `metrics-report.md`).
+> The true figure is **1,551,698**, and the authority is the load script's own
+> canonical assertion, which passes:
+>
+> ```
+> $ docker compose exec -T postgres psql -U statesync_migrator -d statesync -Atc \
+>     "select sum((xpath('/row/c/text()', query_to_xml('select count(*) c from olist.'
+>        ||quote_ident(table_name), false,true,'')))[1]::text::bigint)
+>      from information_schema.tables where table_schema='olist';"
+> 1551698
+> ```
+>
+> `scripts/load_olist.sh`'s `expected` jsonb sums to exactly 1,551,698, and the
+> live count matches it table for table — **the data is intact; only the
+> headline was ever wrong.** `order_reviews: 100000` was in that assertion from
+> the *first* commit, `cb2450e`, whose own message reads *"1.45M rows of Olist
+> loaded"* — so the number never matched the script it shipped beside. It is
+> 100,284 below the true total and 284 below even the all-but-`order_reviews`
+> subtotal (1,451,698), so it does not reconcile with any subset; recorded as
+> unexplained rather than given an invented derivation.
+>
+> **This makes §7's demo bar easier, not harder** — "over 1.45M real rows" is
+> cleared by 1.55M. Nothing that depends on the row count is invalidated.
 
 **The corpus problem is already solved and nobody noticed.** `olist.order_reviews`
 holds **41,755 real free-text customer reviews** (Portuguese, messy, embedded
@@ -448,9 +504,48 @@ the clean-machine condition v1 never actually performed.
 number names its fixture, its scorer and its model. No number appears without
 its caveat attached at the point of use.
 
-**Demo.** A ≥3-turn conversation over 1.45M real rows, ending in a chart, with
-the trace visible. If a viewer cannot tell it is a conversation, the workstream
-is not done.
+**Demo.** A ≥3-turn conversation over the real corpus (**1,551,698 rows** —
+see §3a's row-count correction; this line used to say 1.45M), ending in a
+chart, with the trace visible. If a viewer cannot tell it is a conversation,
+the workstream is not done.
+
+> **✎ CORPUS RESOLVED 2026-09-02.** This bar was quietly unmet: it demands real
+> rows while the shipped default is `schema_retriever.target_schema = "public"`
+> — the **550-order synthetic** corpus. Verified in `config/flags.toml:181` and
+> in `scripts/shipped_flags.py:77`, which hardcodes `"public"` as the shipped
+> value. So the demo, run as shipped, does **not** meet this bar.
+>
+> **Decision: the demo runs on Olist, via an explicit flag flip, and the
+> shipped default stays `public`.** Both halves matter:
+>
+> - **Why not change the default.** `target_schema` is not a preference, it is
+>   an instrument setting. M3's multilingual fixture, the adversarial suite and
+>   the whole `public` measurement history are defined against it, and
+>   `shipped_flags.py` refuses to run a benchmark whose fixture and
+>   `target_schema` disagree (audit 002 F-002-3, added after `80d35c8` scored
+>   the agent against the real corpus while it queried the synthetic one).
+>   Flipping the default would silently invalidate every guard built to catch
+>   exactly that mistake. Olist also has **no `_local` columns**, so the
+>   multilingual demo cannot run there at all.
+> - **Why Olist is nonetheless the honest demo corpus.** The multi-turn
+>   capability §3 is judged on was *already measured* on Olist — cycle 007's
+>   QM/IM run is 12 conversations / 36 turns with `target_schema="olist"`
+>   (`scripts/gen_multiturn_fixture.py:6`). Demoing on synthetic data would show
+>   less than the project has already measured.
+>
+> **So the demo is a flag-flipped run, recorded as one**, exactly as every Olist
+> measurement in this repo already is — the deviation is declared and lands in
+> the artifact's `flag_provenance`, not hidden. Concretely: set
+> `schema_retriever.target_schema = "olist"`, restart the orchestrator (flags
+> are read at process start), run the conversation, restore. `memory.enabled`
+> must stay `false` — trajectory memory is keyed on the A5 fingerprint, which
+> only `public` participates in.
+>
+> **What is still owed:** a scripted, repeatable demo path that does the flip,
+> the restore, and fails loudly if the restore does not happen. Until that
+> exists this is a documented manual procedure, not a deliverable, and the bar
+> is **met in principle and unautomated in practice** — recorded as owed rather
+> than quietly claimed.
 
 **Paper.** Defect rates and their accuracy cost measured on **three
 independently authored fixtures**, at least one multi-turn. Below that it is a
