@@ -37,6 +37,7 @@ from pathlib import Path
 
 from shipped_flags import (require_shipped_flags, add_flag_guard_argument,
                            FlagStateError)
+from api_auth import auth_headers
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -54,7 +55,7 @@ def run_query(base_url: str, text: str, timeout_s: float) -> dict[str, Any]:
     req = urllib.request.Request(
         f"{base_url}/query",
         data=json.dumps({"query": text}).encode(),
-        headers={"Content-Type": "application/json"},
+        headers=auth_headers({"Content-Type": "application/json"}),
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=timeout_s) as resp:

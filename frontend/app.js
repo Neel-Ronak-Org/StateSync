@@ -38,6 +38,70 @@
   const THEME_KEY   = 'statesync_theme';
   const THREAD_KEY  = 'statesync_thread';
 
+  // ── Authentication & Token Storage ─────────────────────────────────────────
+  // Security tradeoff: localStorage is readable by any script that achieves
+  // XSS, accepted here because the page's CSP forbids inline script and
+  // unsafe-eval, and because the alternative (a cross-origin cookie) would
+  // require SameSite=None; Secure and therefore HTTPS, which local development
+  // does not have.
+  const AUTH_TOKEN_KEY   = 'statesync.apiToken';
+  const AUTH_EXPIRED_MSG = 'Session expired or token invalid. Enter your API token.';
+
+  // In-memory fallback variable.
+  // EVERY localStorage access MUST be wrapped in try/catch and degrade to an
+  // in-memory fallback variable. A browser with site data blocked throws on
+  // access, and an uncaught throw here would white-screen the whole app.
+  let inMemoryToken = null;
+
+  function getToken() {
+    try {
+      const val = window.localStorage.getItem(AUTH_TOKEN_KEY);
+      return val !== null ? val : inMemoryToken;
+    } catch {
+      // A browser with site data blocked throws on access, and an uncaught throw
+      // here would white-screen the whole app.
+      return inMemoryToken;
+    }
+  }
+
+  function setToken(t) {
+    inMemoryToken = t || null;
+    try {
+      if (t) {
+        window.localStorage.setItem(AUTH_TOKEN_KEY, t);
+      } else {
+        window.localStorage.removeItem(AUTH_TOKEN_KEY);
+      }
+    } catch {
+      // A browser with site data blocked throws on access, and an uncaught throw
+      // here would white-screen the whole app.
+    }
+  }
+
+  function clearToken() {
+    inMemoryToken = null;
+    try {
+      window.localStorage.removeItem(AUTH_TOKEN_KEY);
+    } catch {
+      // A browser with site data blocked throws on access, and an uncaught throw
+      // here would white-screen the whole app.
+    }
+  }
+
+  // ── Auth Header Helper ─────────────────────────────────────────────────────
+  function authHeaders(extra) {
+    const token = getToken();
+    if (!token) return extra;
+    return Object.assign({}, extra, { Authorization: `Bearer ${token}` });
+  }
+
+  function rateLimitMessage(resp) {
+    const retry = resp && resp.headers && resp.headers.get ? resp.headers.get('Retry-After') : null;
+    return retry
+      ? `Rate limit reached. Try again in ${retry} seconds.`
+      : 'Rate limit reached. Try again later.';
+  }
+
   function getOrCreateSessionId() {
     let id = sessionStorage.getItem(SESSION_KEY);
     if (!id) {
@@ -51,6 +115,7 @@
 
   // ── Elements ───────────────────────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
+  const appEl        = $('app');
   const thread       = $('thread');
   const cover        = $('cover');
   const form         = $('query-form');
@@ -63,6 +128,40 @@
   const railBody     = $('rail-body');
   const banner       = $('composer-banner');
   const bannerText   = $('composer-banner-text');
+  const loginGate    = $('login-gate');
+  const loginForm    = $('login-form');
+  const tokenInput   = $('token-input');
+  const loginSubmitBtn = $('login-submit-btn');
+  const loginError   = $('login-error');
+  const signOutBtn   = $('sign-out-btn');
+
+  // ── Login Gate UI Helpers ──────────────────────────────────────────────────
+  function showGate(errMsg) {
+    if (loginGate) loginGate.hidden = false;
+    if (appEl) appEl.hidden = true;
+    if (loginError) {
+      if (errMsg) {
+        loginError.textContent = errMsg;
+        loginError.hidden = false;
+      } else {
+        loginError.textContent = '';
+        loginError.hidden = true;
+      }
+    }
+    if (tokenInput) {
+      tokenInput.value = '';
+      tokenInput.focus();
+    }
+  }
+
+  function hideGate() {
+    if (loginGate) loginGate.hidden = true;
+    if (appEl) appEl.hidden = false;
+    if (loginError) {
+      loginError.textContent = '';
+      loginError.hidden = true;
+    }
+  }
 
   // ── 2. Theme ───────────────────────────────────────────────────────────────
   // Three states. 'system' removes data-theme entirely so the media query in
@@ -71,14 +170,22 @@
   const THEMES = ['light', 'system', 'dark'];
 
   function currentTheme() {
-    const stored = localStorage.getItem(THEME_KEY);
-    return THEMES.includes(stored) ? stored : 'system';
+    try {
+      const stored = localStorage.getItem(THEME_KEY);
+      return THEMES.includes(stored) ? stored : 'system';
+    } catch {
+      return 'system';
+    }
   }
 
   function applyTheme(mode) {
     if (mode === 'system') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', mode);
-    localStorage.setItem(THEME_KEY, mode);
+    try {
+      localStorage.setItem(THEME_KEY, mode);
+    } catch {
+      // In-memory fallback: if localStorage throws, mode remains applied to documentElement
+    }
     THEMES.forEach((m) => {
       const btn = $(`theme-${m}`);
       if (btn) btn.setAttribute('aria-pressed', String(m === mode));
@@ -1140,10 +1247,18 @@
     try {
       const resp = await fetch(`${ORCHESTRATOR_URL}/query`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ query: question, session_id: sessionId }),
         signal: activeController.signal,
       });
+      if (resp.status === 401) {
+        clearToken();
+        showGate(AUTH_EXPIRED_MSG);
+        throw new Error(AUTH_EXPIRED_MSG);
+      }
+      if (resp.status === 429) {
+        throw new Error(rateLimitMessage(resp));
+      }
       if (!resp.ok) {
         const errBody = await resp.json().catch(() => ({ detail: resp.statusText }));
         throw new Error(errBody.detail || `HTTP ${resp.status}`);
@@ -1197,6 +1312,79 @@
     copyText(threadAsMarkdown(), 'Conversation copied as Markdown.');
   });
 
+  if (signOutBtn) {
+    signOutBtn.addEventListener('click', () => {
+      clearToken();
+      if (sidebarOpen && sidebarOpen()) closeSidebar();
+      showGate();
+      status('Signed out.');
+    });
+  }
+
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const val = tokenInput ? tokenInput.value.trim() : '';
+      if (!val) {
+        if (loginError) {
+          loginError.textContent = 'API token is required.';
+          loginError.hidden = false;
+        }
+        return;
+      }
+
+      if (loginSubmitBtn) loginSubmitBtn.disabled = true;
+      if (loginError) loginError.hidden = true;
+
+      // Store the token immediately so authHeaders() can attach it to the validation request
+      setToken(val);
+
+      try {
+        const resp = await fetch(`${ORCHESTRATOR_URL}/sessions?limit=1`, {
+          headers: authHeaders(),
+        });
+
+        if (resp.status === 401) {
+          clearToken();
+          if (loginError) {
+            loginError.textContent = 'Invalid API token.';
+            loginError.hidden = false;
+          }
+          if (loginSubmitBtn) loginSubmitBtn.disabled = false;
+          return;
+        }
+
+        if (resp.status === 429) {
+          const msg = rateLimitMessage(resp);
+          if (loginError) {
+            loginError.textContent = msg;
+            loginError.hidden = false;
+          }
+          if (loginSubmitBtn) loginSubmitBtn.disabled = false;
+          return;
+        }
+
+        // ANY other response, including 404, is considered success.
+        // 404 means the session browser is disabled, which still proves the token authenticated.
+        hideGate();
+        if (loginSubmitBtn) loginSubmitBtn.disabled = false;
+        if (resp.ok) {
+          historyBtn.hidden = false;
+          openHistory();
+        }
+        input.focus();
+        status('Ready.');
+      } catch (err) {
+        clearToken();
+        if (loginError) {
+          loginError.textContent = `Connection error: ${(err && err.message) || 'failed to reach orchestrator'}`;
+          loginError.hidden = false;
+        }
+        if (loginSubmitBtn) loginSubmitBtn.disabled = false;
+      }
+    });
+  }
+
   // ── Past conversations (local dev only) ───────────────────────────────────
   // The button stays hidden unless GET /sessions actually answers. The route
   // 404s when STATESYNC_SESSION_BROWSER is unset, which is the shipped state,
@@ -1211,7 +1399,19 @@
 
   async function probeSessionBrowser() {
     try {
-      const r = await fetch(`${ORCHESTRATOR_URL}/sessions?limit=1`);
+      const r = await fetch(`${ORCHESTRATOR_URL}/sessions?limit=1`, {
+        headers: authHeaders(),
+      });
+      if (r.status === 401) {
+        clearToken();
+        showGate(AUTH_EXPIRED_MSG);
+        status(AUTH_EXPIRED_MSG);
+        return;
+      }
+      if (r.status === 429) {
+        status(rateLimitMessage(r));
+        return;
+      }
       if (r.ok) { historyBtn.hidden = false; openHistory(); }
     } catch (err) {
       /* orchestrator down or route absent -- leave the button hidden. */
@@ -1233,7 +1433,24 @@
     clear(historyList);
     historyList.appendChild(el('div', 'rail__empty', 'Loading…'));
     try {
-      const r = await fetch(`${ORCHESTRATOR_URL}/sessions?limit=50`);
+      const r = await fetch(`${ORCHESTRATOR_URL}/sessions?limit=50`, {
+        headers: authHeaders(),
+      });
+      if (r.status === 401) {
+        clearToken();
+        showGate(AUTH_EXPIRED_MSG);
+        status(AUTH_EXPIRED_MSG);
+        clear(historyList);
+        historyList.appendChild(el('div', 'rail__empty', AUTH_EXPIRED_MSG));
+        return;
+      }
+      if (r.status === 429) {
+        const msg = rateLimitMessage(r);
+        status(msg);
+        clear(historyList);
+        historyList.appendChild(el('div', 'rail__empty', msg));
+        return;
+      }
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = await r.json();
       clear(historyList);
@@ -1284,7 +1501,19 @@
   // would silently start a new conversation wearing an old one's transcript.
   async function loadSession(id) {
     try {
-      const r = await fetch(`${ORCHESTRATOR_URL}/sessions/${encodeURIComponent(id)}?limit=100`);
+      const r = await fetch(`${ORCHESTRATOR_URL}/sessions/${encodeURIComponent(id)}?limit=100`, {
+        headers: authHeaders(),
+      });
+      if (r.status === 401) {
+        clearToken();
+        showGate(AUTH_EXPIRED_MSG);
+        status(AUTH_EXPIRED_MSG);
+        return;
+      }
+      if (r.status === 429) {
+        status(rateLimitMessage(r));
+        return;
+      }
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = await r.json();
       sessionId = id;
@@ -1376,6 +1605,7 @@
     // "not checked yet".
     if (document.hidden && !force) return;
     try {
+      // Deliberately unauthenticated: /health is an open route used as a liveness probe before login.
       const r = await fetch(`${ORCHESTRATOR_URL}/health`, { method: 'GET' });
       const ok = r.ok;
       healthDot.dataset.state = ok ? 'ok' : 'down';
@@ -1397,9 +1627,17 @@
   }
   updateSessionMeta();
   autosize();
-  input.focus();
+
+  const token = getToken();
+  if (!token) {
+    showGate();
+  } else {
+    hideGate();
+    input.focus();
+    probeSessionBrowser();
+  }
+
   pollHealth(true);
-  probeSessionBrowser();
   setInterval(pollHealth, 30000);
   window.addEventListener('focus', () => pollHealth(true));
   document.addEventListener('visibilitychange', () => { if (!document.hidden) pollHealth(true); });

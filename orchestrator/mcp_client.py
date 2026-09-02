@@ -297,3 +297,32 @@ async def history_list_sessions(
     if limit is not None:
         params["limit"] = limit
     return await session.call("history.list_sessions", params)
+
+
+# ── audit.* (cycle 008, Workstream C1) ──────────────────────────────────────
+async def audit_record(
+    session: MCPSession,
+    principal_id: str,
+    route: str,
+    outcome: str,
+    query_id: str | None = None,
+    session_id: str | None = None,
+    client_ip: str | None = None,
+    detail: str | None = None,
+) -> dict[str, Any]:
+    """audit.record"""
+    params: dict[str, Any] = {
+        "principal_id": principal_id,
+        "route": route,
+        "outcome": outcome,
+    }
+    if query_id is not None:
+        params["query_id"] = query_id
+    if session_id is not None:
+        params["session_id"] = session_id
+    if client_ip is not None:
+        params["client_ip"] = client_ip
+    if detail is not None:
+        params["detail"] = detail
+    return await session.call("audit.record", params)
+

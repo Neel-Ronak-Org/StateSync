@@ -27,6 +27,11 @@ session_browser_turn_limit = 100    # turns fetched when resuming one conversati
 # turn in full grows session_state.conversation_turns without bound. The true
 # count is stored separately so a truncated preview is never shown as complete.
 history_row_preview_max   = 100
+# Free-text detail persisted per audit event (migration 013). An audit record
+# must never become a storage-amplification vector across high request volumes,
+# so detail is clamped to this ceiling. The cap is enforced at the write in
+# mcp/tools/history_tools.py.
+audit_detail_max_chars    = 500
 
 [sql]
 retry_max                 = 3       # attempts after the first; 4 executions maximum
@@ -150,6 +155,21 @@ allowed_tenants           = ["t_capstone_default"]
 # fingerprint and invalidate every stored trajectory under D4 -- see
 # docs/open_items.md.
 relational_plane_shared_ack = false
+
+[api]
+# Maximum requests allowed per principal in a fixed rate-limiting window.
+# Bounds token expenditure and prevents denial-of-wallet loops on expensive
+# graph executions while preserving high headroom for interactive query bursts.
+rate_limit_max_requests   = 30
+# Duration of the fixed rate-limiting window in seconds. Balances rapid window
+# rollover for bursty exploration with effective throttling against sustained
+# high-throughput automated abuse.
+rate_limit_window_seconds = 60
+# Permitted browser origins for cross-origin orchestrator requests. The previous
+# configuration used allow_origins=["*"], but a wildcard origin is incompatible
+# with credentialed requests and unsafe for authenticated APIs. The frontend is
+# served on port 3000 in development.
+cors_allowed_origins      = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
 [experiment]
 # F-V2 over-exposure experiment (M9). Surface sizes reuse mcp.tool_ceiling's

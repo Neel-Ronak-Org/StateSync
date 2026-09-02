@@ -14,6 +14,7 @@ Tools exposed (A4):
   memory.put_trajectory   (A4.8, C1)
   history.append_turn       (cycle 007, Workstream A)
   history.get_recent_turns  (cycle 007, Workstream A)
+  audit.record              (per-identity audit log)
 
 Per A4: tenant_id is bound at session establishment from the X-Tenant-ID header.
 It is not a tool parameter — it is injected server-side by session middleware.
@@ -44,7 +45,7 @@ from tools.schema_tools import list_tables, describe_table
 from tools.data_tools import sample_rows, run_select
 from tools.vector_tools import semantic_search, hybrid_select, get_passage
 from tools.memory_tools import get_trajectory, put_trajectory
-from tools.history_tools import append_turn, get_recent_turns, list_sessions
+from tools.history_tools import append_turn, get_recent_turns, list_sessions, record_audit
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
@@ -99,6 +100,7 @@ _REGISTERED_TOOLS: dict[str, Any] = {
     "history.append_turn":      append_turn,
     "history.get_recent_turns": get_recent_turns,
     "history.list_sessions":    list_sessions,
+    "audit.record": record_audit,
 }
 
 assert len(_REGISTERED_TOOLS) <= TOOL_CEILING, (

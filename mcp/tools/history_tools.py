@@ -213,3 +213,74 @@ async def list_sessions(limit: int | None = None) -> dict[str, Any]:
         for (session_id, turn_count, started_at, last_activity, first_query) in rows
     ]
     return {"sessions": sessions, "count": len(sessions)}
+
+
+_ALLOWED_OUTCOMES = frozenset({
+    "allowed",
+    "denied_auth",
+    "denied_rate",
+    "error",
+    "denied_tenant",
+})
+
+
+async def record_audit(
+    principal_id: str,
+    route: str,
+    outcome: str,
+    query_id: str | None = None,
+    session_id: str | None = None,
+    client_ip: str | None = None,
+    detail: str | None = None,
+) -> dict[str, Any]:
+    """
+    Record an identity-scoped audit event in session_state.audit_log.
+
+    tenant_id is bound server-side from session context (A0.6), never accepted
+    as a caller parameter. outcome is validated against the allowed set matching
+    the database CHECK constraint. detail is clamped to cfg.mcp.audit_detail_max_chars to
+    prevent storage amplification vectors. Uses a single parameterized INSERT
+    via get_history_connection() and returns the generated audit_id.
+    """
+    tenant_id = get_tenant_id()
+
+    if outcome not in _ALLOWED_OUTCOMES:
+        raise ValueError(
+            f"Invalid outcome: {outcome!r}. Must be one of {sorted(_ALLOWED_OUTCOMES)}"
+        )
+
+    truncated_detail = detail[:cfg.mcp.audit_detail_max_chars] if detail is not None else None
+
+    async with get_history_connection() as conn:
+        cur = await conn.execute(
+            """
+            INSERT INTO session_state.audit_log
+                (principal_id, tenant_id, route, outcome,
+                 query_id, session_id, client_ip, detail)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING audit_id
+            """,
+            (
+                principal_id,
+                tenant_id,
+                route,
+                outcome,
+                query_id,
+                session_id,
+                client_ip,
+                truncated_detail,
+            ),
+        )
+        row = await cur.fetchone()
+
+    audit_id: int = int(row[0])  # type: ignore[index]
+    logger.info(
+        "audit.record: recorded audit %d (principal=%s tenant=%s route=%s outcome=%s)",
+        audit_id,
+        principal_id,
+        tenant_id,
+        route,
+        outcome,
+    )
+    return {"ok": True, "audit_id": audit_id}
+

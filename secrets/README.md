@@ -72,3 +72,37 @@ Verify the wiring with no key at all, then one live call once you have one:
 python3 scripts/verify_provider_seam.py --provider gemini
 docker compose exec -T orchestrator python3 - --provider gemini --smoke < scripts/verify_provider_seam.py
 ```
+
+### Orchestrator API Authentication & Principals (Workstream C1)
+
+The orchestrator requires bearer-token authentication on protected routes
+(`POST /query`, `GET /sessions`, `GET /sessions/{id}`). It loads authorized
+principals from `secrets/api_principals.json` (mounted into the container as
+`/run/secrets/api_principals`).
+
+The orchestrator **fails to start** if `secrets/api_principals.json` is missing,
+empty, or malformed.
+
+- `secrets/api_principals.json`: JSON array of `{principal_id, tenant_id, token_sha256}`.
+  Holds **only** SHA-256 hex digests of bearer tokens. Plaintext tokens are never stored here.
+- `secrets/api_token_dev`: The raw bearer token for local development and test
+  scripts (written with mode 0600), read automatically by `scripts/api_auth.py`.
+
+Generate both files using the operator utility:
+
+```bash
+python3 scripts/gen_api_principal.py
+```
+
+To append an additional principal to an existing principals file:
+
+```bash
+python3 scripts/gen_api_principal.py --principal-id p_eval --append
+```
+
+The orchestrator reads the principal file **once at startup**. If you generate a
+new principal while the stack is running, restart the orchestrator:
+
+```bash
+docker compose restart orchestrator
+```

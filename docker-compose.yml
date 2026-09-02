@@ -175,6 +175,7 @@ services:
       - anthropic_api_key
       - azure_openai_api_key
       - gemini_api_key
+      - api_principals
     depends_on:
       mcp:
         condition: service_healthy
@@ -272,3 +273,5 @@ secrets:
     file: ./secrets/azure_openai_api_key
   gemini_api_key:
     file: ./secrets/gemini_api_key
+  api_principals:
+    file: ./secrets/api_principals.json

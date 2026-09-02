@@ -862,3 +862,46 @@ verification was actually carried out:
   Everything else checked out: all 13 referenced scripts exist, all four
   secrets files are named correctly, and all four published ports
   (3000/8080/8090/8095) match `docker-compose*.yml`.
+
+---
+
+## C1 authentication — what it does not cover (added 2026-09-02)
+
+Auth, rate limiting and a per-identity audit log shipped and are verified
+(`V2_STRATEGY` §5 C1). These are the limits of that work, recorded now rather
+than discovered later.
+
+**The rate limiter is in-process and per-instance.** `orchestrator/auth.py`
+holds fixed windows in a dict behind a `threading.Lock`. Two consequences,
+both observed rather than reasoned: a `docker compose restart orchestrator`
+**clears every window** (I used exactly that to reset a limit mid-test), and a
+second orchestrator replica would enforce its own independent limit, so N
+replicas permit N× the configured rate. Fine for one instance; it is not a
+distributed rate limiter and must not be described as one.
+
+**Tokens are long-lived and have no expiry.** There is no rotation, no refresh
+and no per-token TTL. Revocation means editing `secrets/api_principals.json`
+and restarting the orchestrator, because the principal file is read **once at
+startup**. A leaked token is valid until someone does that.
+
+**The frontend stores the token in `localStorage`.** Any script achieving XSS
+can read it. Accepted because the page's CSP forbids inline script and
+`unsafe-eval`, and because the alternative — a cross-origin cookie — needs
+`SameSite=None; Secure` and therefore HTTPS, which local development does not
+have. It is a real exposure, not a non-issue.
+
+**Per-principal history scoping does not exist.** See the ⚠ block in
+`V2_STRATEGY` §5: `session_state.conversation_turns` carries `tenant_id` and
+`session_id` but no `principal_id`, so principals sharing a tenant can read
+each other's conversations. This is why the `STATESYNC_SESSION_BROWSER` env
+gate stays.
+
+**MCP is unauthenticated, by design and unchanged.** Port 8080 is an internal
+service on the compose network; nothing in C1 altered that, and no script's
+MCP call gained an `Authorization` header. If MCP is ever exposed beyond the
+compose network this becomes the next thing to fix.
+
+**The audit log has no retention policy.** `session_state.audit_log` grows
+without bound, one row per request to a protected route including every
+denial. That is the same unbounded-growth problem already recorded for full
+row storage, and it now applies to a second table.

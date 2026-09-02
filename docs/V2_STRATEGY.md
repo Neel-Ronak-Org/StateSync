@@ -450,6 +450,44 @@ what. None of these differentiate — their **absence** disqualifies.
 *Completion:* auth on the UI and API, per-identity audit log, rate limit;
 adversarial suite re-run and still 40/40.
 
+> **✎ BUILT AND VERIFIED 2026-09-02.** All four completion clauses met. Every
+> claim below was verified by execution against the running stack, not by
+> reading code.
+>
+> | clause | evidence |
+> |---|---|
+> | auth on the **API** | `POST /query` returns 401 with no token, a bad token, and a raw token missing the `Bearer` scheme; the 401 carries `WWW-Authenticate: Bearer`. `GET /sessions` likewise. `GET /health` stays open by design. |
+> | auth on the **UI** | Login gate renders, a wrong token is refused with "Invalid API token.", the correct token loads the app, a real question returned "There are 30 sellers in the logistics network." through the authenticated path, and Sign out clears the stored token (`localStorage.getItem` → `null`). |
+> | **per-identity audit log** | `session_state.audit_log` (migration 013) via the new MCP tool `audit.record`. Rows carry principal, tenant, route, outcome, query_id and client IP for **allowed, denied_auth and denied_rate alike**. The `query_id` in the audit row matches the one the UI displayed — end-to-end traceability. |
+> | **rate limit** | Per principal, 30 requests / 60s. Measured: exactly 30 × `200`, then `429` with `Retry-After: 53`. |
+> | **adversarial suite still 40/40** | `bash scripts/verify_security.sh` → **PASSED: 40, FAILED: 0**, run with authentication in force. Its diff contains only token plumbing: not one payload, assertion or expected value was touched. |
+>
+> **Design decisions, and why.** Bearer tokens rather than cookies: the frontend
+> calls the orchestrator **cross-origin**, and a cross-origin cookie needs
+> `SameSite=None; Secure`, i.e. HTTPS, which local development does not have.
+> Tokens are stored only as SHA-256 hashes, compared with
+> `hmac.compare_digest` over **every** principal with no early exit. Auth
+> **fails closed at startup** — a missing or malformed principal file stops the
+> service rather than letting it serve traffic unauthenticated, the same
+> posture `validate_llm_config()` already takes. The tenant is now derived
+> **from the authenticated principal**, replacing the hardcoded
+> `cfg.tenancy.default_tenant`.
+>
+> Operators run `python3 scripts/gen_api_principal.py`; `secrets/` is
+> gitignored, so no token is ever committed.
+
+> **⚠ WHAT C1 DOES *NOT* FIX — the session browser is only PARTLY unblocked.**
+> §3b and `main.py`'s own comment say the session browser cannot ship without
+> auth because history is scoped by `tenant_id` + `session_id` alone. Auth now
+> exists, but **`session_state.conversation_turns` still has no
+> `principal_id` column** — so two principals on the *same tenant* can still
+> enumerate and read each other's conversations. Authentication fixed *who is
+> asking*; it did not fix *whose history this is*. The
+> `STATESYNC_SESSION_BROWSER` env gate is therefore **deliberately left in
+> place**, and removing it needs per-principal history scoping (a
+> `principal_id` column on that table, written at append and filtered on read)
+> — not merely the auth that now exists.
+
 **C2. Indian corpus.** With a Kaggle account, order-level Indian e-commerce data
 is reachable. **Caveat that decides how it is used:** these sets are typically
 *flat, denormalized single tables* — weak for text-to-SQL, which needs joins.

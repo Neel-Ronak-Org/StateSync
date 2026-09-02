@@ -17,16 +17,18 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from auth import (AuthError, Principal, RateLimited, authenticate, init_auth,
+                  rate_limiter)
 from config_loader import cfg, flags, snapshot_flags
 from graph import graph
 from llm.provider import validate_llm_config
-from mcp_client import (MCPSession, history_append_turn, history_get_recent_turns,
-                        history_list_sessions)
+from mcp_client import (MCPSession, audit_record, history_append_turn,
+                        history_get_recent_turns, history_list_sessions)
 from nodes.synthesizer import build_citations
 from schemas.synthesizer_output import safe_synthesizer_output
 from state import StateSyncState
@@ -43,16 +45,17 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     provider: str = str(flags.llm.provider)
     logger.info(
-        "StateSync Orchestrator starting up. "
-        "LLM provider: %s. Tenant: %s.",
+        "StateSync Orchestrator starting up. LLM provider: %s.",
         provider,
-        cfg.tenancy.default_tenant,
     )
     # Validate LLM config eagerly — fails loudly here rather than mid-query.
     # For provider='local' this does NOT check the Anthropic key.
     # For provider='anthropic' this validates key presence and all role→model
     # mappings before accepting traffic.
     validate_llm_config()
+    # Eagerly load and validate API principals — fails closed at startup if the
+    # secret file is missing, empty, or malformed, preventing unauthenticated deploys.
+    init_auth()
     yield
     logger.info("StateSync Orchestrator shutting down.")
 
@@ -65,12 +68,107 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Wildcard origins are incompatible with credentialed requests and unsafe for
+# authenticated APIs. Explicitly allow only trusted origins from config.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # frontend is same-origin in prod; wildcard ok for dev
+    allow_origins=list(cfg.api.cors_allowed_origins),
+    allow_credentials=False,
     allow_methods=["GET", "POST"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+
+# ── Audit & Security Dependencies ─────────────────────────────────────────────
+async def _audit(
+    principal_id: str,
+    tenant_id: str,
+    route: str,
+    outcome: str,
+    query_id: str | None = None,
+    session_id: str | None = None,
+    client_ip: str | None = None,
+    detail: str | None = None,
+) -> None:
+    """
+    Record an identity audit event via MCP audit.record.
+
+    Swallows all exceptions: an audit logging failure must never fail an
+    otherwise successful user request or mask the underlying error.
+    """
+    try:
+        async with MCPSession(
+            tenant_id=tenant_id,
+            base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
+        ) as session:
+            await audit_record(
+                session,
+                principal_id=principal_id,
+                route=route,
+                outcome=outcome,
+                query_id=query_id,
+                session_id=session_id,
+                client_ip=client_ip,
+                detail=detail,
+            )
+    except Exception as exc:
+        logger.error(
+            "Audit record failed (principal=%s tenant=%s route=%s outcome=%s): %s",
+            principal_id,
+            tenant_id,
+            route,
+            outcome,
+            exc,
+            exc_info=True,
+        )
+
+
+async def require_principal(request: Request) -> Principal:
+    """
+    FastAPI dependency authenticating the caller and enforcing principal rate limits.
+
+    Extracts bearer token from the Authorization header and verifies it against
+    known principals. Enforces in-process fixed-window rate limits. Records audit
+    events on auth or rate limit failures before raising corresponding HTTP exceptions.
+    """
+    client_ip = request.client.host if request.client else None
+    route = request.url.path
+
+    try:
+        principal = authenticate(request.headers.get("Authorization"))
+    except AuthError as exc:
+        await _audit(
+            "anonymous",
+            cfg.tenancy.default_tenant,
+            route,
+            "denied_auth",
+            client_ip=client_ip,
+            detail=str(exc),
+        )
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing bearer token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    try:
+        rate_limiter.check(principal.principal_id)
+    except RateLimited as exc:
+        await _audit(
+            principal.principal_id,
+            principal.tenant_id,
+            route,
+            "denied_rate",
+            client_ip=client_ip,
+        )
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded.",
+            headers={"Retry-After": str(exc.retry_after)},
+        )
+
+    return principal
+
 
 
 # ── Request / Response models ─────────────────────────────────────────────────
@@ -133,42 +231,75 @@ def _require_session_browser() -> None:
 
 
 @app.get("/sessions", tags=["history"])
-async def list_sessions_route(limit: int = cfg.mcp.session_browser_list_limit) -> dict:
+async def list_sessions_route(
+    request: Request,
+    limit: int = cfg.mcp.session_browser_list_limit,
+    principal: Principal = Depends(require_principal),
+) -> dict:
     """Past conversations for this tenant, most recently active first."""
     _require_session_browser()
     async with MCPSession(
-        tenant_id=cfg.tenancy.default_tenant,
+        tenant_id=principal.tenant_id,
         base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
     ) as session:
-        return await history_list_sessions(session, limit=limit)
+        result = await history_list_sessions(session, limit=limit)
+    client_ip = request.client.host if request.client else None
+    await _audit(
+        principal.principal_id,
+        principal.tenant_id,
+        "/sessions",
+        "allowed",
+        client_ip=client_ip,
+    )
+    return result
 
 
 @app.get("/sessions/{session_id}", tags=["history"])
-async def get_session_route(session_id: str,
-                            limit: int = cfg.mcp.session_browser_turn_limit) -> dict:
+async def get_session_route(
+    session_id: str,
+    request: Request,
+    limit: int = cfg.mcp.session_browser_turn_limit,
+    principal: Principal = Depends(require_principal),
+) -> dict:
     """Every stored turn of one past conversation, oldest first."""
     _require_session_browser()
     async with MCPSession(
-        tenant_id=cfg.tenancy.default_tenant,
+        tenant_id=principal.tenant_id,
         base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
     ) as session:
-        return await history_get_recent_turns(session, session_id, limit=limit)
+        result = await history_get_recent_turns(session, session_id, limit=limit)
+    client_ip = request.client.host if request.client else None
+    await _audit(
+        principal.principal_id,
+        principal.tenant_id,
+        f"/sessions/{session_id}",
+        "allowed",
+        session_id=session_id,
+        client_ip=client_ip,
+    )
+    return result
 
 
 @app.post("/query", response_model=QueryResponse, tags=["query"])
-async def run_query(request: QueryRequest) -> QueryResponse:
-    if not request.query or not request.query.strip():
+async def run_query(
+    body: QueryRequest,
+    request: Request,
+    principal: Principal = Depends(require_principal),
+) -> QueryResponse:
+    if not body.query or not body.query.strip():
         raise HTTPException(status_code=422, detail="query must not be empty")
 
-    session_id = request.session_id or str(uuid.uuid4())
-    tenant_id = cfg.tenancy.default_tenant
+    session_id = body.session_id or str(uuid.uuid4())
+    tenant_id = principal.tenant_id
+    client_ip = request.client.host if request.client else None
+    query_id = str(uuid.uuid4())
 
     # Build the initial state input for the entry node
     initial_input = {
-        "query_id": str(uuid.uuid4()),   # A2: set once here, immutable from here on
+        "query_id": query_id,   # A2: set once here, immutable from here on
         "tenant_id": tenant_id,
         "session_id": session_id,
-        "raw_query": request.query,
+        "raw_query": body.query,
         "flags_snapshot": snapshot_flags(),
     }
 
@@ -181,12 +312,22 @@ async def run_query(request: QueryRequest) -> QueryResponse:
                 session_id=initial_input["session_id"],
                 raw_query=initial_input["raw_query"],
                 flags_snapshot=initial_input["flags_snapshot"],
-                debug_candidate_sql=request.debug_candidate_sql,
+                debug_candidate_sql=body.debug_candidate_sql,
             )
         )
         final_state: StateSyncState = StateSyncState(**raw_final) if isinstance(raw_final, dict) else raw_final
     except Exception as exc:
         logger.error("Graph execution failed: %s", exc, exc_info=True)
+        await _audit(
+            principal.principal_id,
+            principal.tenant_id,
+            "/query",
+            "error",
+            query_id=query_id,
+            session_id=session_id,
+            client_ip=client_ip,
+            detail=str(exc),
+        )
         raise HTTPException(status_code=500, detail=f"Graph execution error: {exc}")
 
     latency_ms = int((time.monotonic() - t0) * 1000)  # noqa: literals — ms conversion factor
@@ -308,7 +449,7 @@ async def run_query(request: QueryRequest) -> QueryResponse:
         "present" if validated["chart"] is not None else "null",
     )
 
-    return QueryResponse(
+    response = QueryResponse(
         query_id=final_state.query_id,
         answer_text=validated["answer_text"],
         chart=validated["chart"],
@@ -316,6 +457,18 @@ async def run_query(request: QueryRequest) -> QueryResponse:
         state_trace=state_trace,
         latency_ms=latency_ms,
     )
+
+    await _audit(
+        principal.principal_id,
+        principal.tenant_id,
+        "/query",
+        "allowed",
+        query_id=final_state.query_id,
+        session_id=session_id,
+        client_ip=client_ip,
+    )
+
+    return response
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

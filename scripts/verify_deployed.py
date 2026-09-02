@@ -37,6 +37,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from api_auth import auth_headers
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 PASSED = 0

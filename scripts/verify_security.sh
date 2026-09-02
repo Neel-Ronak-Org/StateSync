@@ -33,11 +33,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 ORCH_URL="${ORCHESTRATOR_URL:-http://localhost:8090}"
+STATESYNC_API_TOKEN="${STATESYNC_API_TOKEN:-}"
+if [[ -z "${STATESYNC_API_TOKEN}" && -f "${REPO_ROOT}/secrets/api_token_dev" ]]; then
+  STATESYNC_API_TOKEN="$(tr -d '[:space:]' < "${REPO_ROOT}/secrets/api_token_dev")"
+fi
+if [[ -z "${STATESYNC_API_TOKEN}" ]]; then
+  echo "ERROR: StateSync API token missing. Set STATESYNC_API_TOKEN or run python3 scripts/gen_api_principal.py" >&2
+  exit 1
+fi
+TOKEN="${STATESYNC_API_TOKEN}"
 PG_HOST="${POSTGRES_HOST:-localhost}"
 PG_PORT="${POSTGRES_PORT:-5432}"
 PG_DB="${POSTGRES_DB:-statesync}"
 
-export REPO_ROOT ORCH_URL
+export REPO_ROOT ORCH_URL STATESYNC_API_TOKEN TOKEN
 
 READER_PASSWORD=$(cat "${REPO_ROOT}/secrets/pg_reader_password" 2>/dev/null || \
                   echo "${PG_READER_PASSWORD:-}")
@@ -134,6 +143,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(os.environ["REPO_ROOT"])
 ORCH_URL = os.environ["ORCH_URL"]
+API_TOKEN = os.environ["STATESYNC_API_TOKEN"]
 
 adversarial = json.loads((REPO_ROOT / "fixtures" / "adversarial.json").read_text())
 targets = {t["adv_id"]: t for t in json.loads((REPO_ROOT / "fixtures" / "adversarial_targets.json").read_text())["targets"]}
@@ -171,7 +181,7 @@ for adv_id in class1_ids:
     req = urllib.request.Request(
         f"{ORCH_URL}/query",
         data=json.dumps({"query": target["retrieval_query"]}).encode(),
-        headers={"Content-Type": "application/json"}, method="POST",
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {API_TOKEN}"}, method="POST",
     )
     try:
         with urllib.request.urlopen(req, timeout=300) as resp:
@@ -242,6 +252,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(os.environ["REPO_ROOT"])
 ORCH_URL = os.environ["ORCH_URL"]
+API_TOKEN = os.environ["STATESYNC_API_TOKEN"]
 
 import re
 
@@ -273,7 +284,7 @@ for p in write_ids:
     req = urllib.request.Request(
         f"{ORCH_URL}/query",
         data=json.dumps({"query": p["payload"]}).encode(),
-        headers={"Content-Type": "application/json"}, method="POST",
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {API_TOKEN}"}, method="POST",
     )
     try:
         # Generous timeout: several of these deliberately provoke the
@@ -328,6 +339,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(os.environ["REPO_ROOT"])
 ORCH_URL = os.environ["ORCH_URL"]
+API_TOKEN = os.environ["STATESYNC_API_TOKEN"]
 
 adversarial = json.loads((REPO_ROOT / "fixtures" / "adversarial.json").read_text())
 targets = {t["adv_id"]: t for t in json.loads((REPO_ROOT / "fixtures" / "adversarial_targets.json").read_text())["targets"]}
@@ -346,7 +358,7 @@ for p in cred_ids:
     text = targets[p["id"]]["retrieval_query"] if p["surface"] != "user_query" else p["payload"]
     req = urllib.request.Request(
         f"{ORCH_URL}/query", data=json.dumps({"query": text}).encode(),
-        headers={"Content-Type": "application/json"}, method="POST",
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {API_TOKEN}"}, method="POST",
     )
     try:
         with urllib.request.urlopen(req, timeout=300) as resp:
@@ -384,6 +396,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(os.environ["REPO_ROOT"])
 ORCH_URL = os.environ["ORCH_URL"]
+API_TOKEN = os.environ["STATESYNC_API_TOKEN"]
 
 adversarial = json.loads((REPO_ROOT / "fixtures" / "adversarial.json").read_text())
 exec_ids = [p for p in adversarial["payloads"] if p["class"] == "execution_path"]
@@ -405,7 +418,7 @@ FENCE = chr(96) * 3 + "python"
 for p in exec_ids:
     req = urllib.request.Request(
         f"{ORCH_URL}/query", data=json.dumps({"query": p["payload"]}).encode(),
-        headers={"Content-Type": "application/json"}, method="POST",
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {API_TOKEN}"}, method="POST",
     )
     try:
         with urllib.request.urlopen(req, timeout=300) as resp:
