@@ -440,7 +440,29 @@ trace as `script_repairs` (registered in `_APPEND_FIELDS`).
 Live: `"Lucknow mein kitne sellers hain?"` → **"There are 4 sellers in
 Lucknow."** `"How many sellers are located in Bengaluru?"` → **4** (was 0).
 
-**⚠ CAVEAT ON CLAUSE 1, stated because the margin is zero.** D-V2 read 27/32
+**✎ CAVEAT RESOLVED 2026-09-04 by a clean re-run
+(`docs/bench_multilingual_report_post_b2_run2.json`).** The re-run had NO
+timed-out queries and reports **D-V2 27/32** (hi 15/16), identical to the
+pre-measurement. So the B1 repair caused **no D-V2 regression whatsoever**;
+the 26/32 below was entirely the `d_ml_011` timeout, exactly as diagnosed.
+Clause 1 passes with margin, not at the floor:
+
+| metric | PRE | POST run 1 | POST run 2 (clean) |
+|---|---|---|---|
+| D-V2 total | 27/32 | 26/32 | **27/32** |
+| D-V2 hi | 15/16 | 14/16 | **15/16** |
+| English line | 11/20 | 13/20 | **13/20** |
+| D-V1 treatment | 25/40 | 25/39 | **25/40** |
+| timed out | none | `d_ml_011` | **none** |
+
+A separate risk was flagged before this run and did NOT materialise: exposing
+`candidate_sql` in the trace made `bench_multilingual.py`'s previously-dead
+`executed_sql or candidate_sql` fallback live, which could have inflated D-V2.
+It could not have here — the fallback only fires for FAILED queries and this
+run had none, and POST-2's D-V2 matches PRE exactly. The concern was real and
+is recorded as measured-and-refuted rather than left standing as a warning.
+
+**⚠ ORIGINAL CAVEAT, retained for the record.** D-V2 read 27/32
 before and 26/32 after, and the lost query is `d_ml_011` — which **TIMED OUT**
 (`ok: false, error: "timed out"`). Re-run live on the deployed build it
 behaves correctly: `preserved_entities {'मुंबई': 'मुंबई'}`, the noun verbatim

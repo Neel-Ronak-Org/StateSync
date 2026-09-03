@@ -807,7 +807,10 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 query_id, attempt, category, sqlstate, message,
             )
 
-            update["executed_sql"] = candidate_sql
+            # The statement did not execute, so naming it executed_sql would
+            # misreport what happened. It remains available as candidate_sql,
+            # which the update dict already sets unconditionally above, and
+            # the error entry already carries offending_sql.
             update["sql_rows"] = []
             update["sql_columns"] = []
             update["errors"] = [{

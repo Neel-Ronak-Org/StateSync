@@ -368,6 +368,9 @@ async def run_query(
         "principal_id": final_state.principal_id,
         "route":       final_state.route,
         "executed_sql": final_state.executed_sql,
+        # executed_sql is null when a statement was rejected before execution,
+        # so candidate_sql is what a caller inspects to see what the agent actually proposed.
+        "candidate_sql": final_state.candidate_sql,
         "sql_rows_count": len(final_state.sql_rows),
         "sql_rows":    final_state.sql_rows,
         "sql_columns": final_state.sql_columns,
