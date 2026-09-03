@@ -510,6 +510,15 @@
     table.results tbody tr:hover { background: var(--surface-hover); }
     table.results td.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
     table.results td.null { color: var(--text-muted); font-style: italic; }
+    .results-caption-row {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 24px;
+    }
+    .results-indicator {
+      color: var(--text-muted); font-size: var(--fs-3xs);
+    }
+    .results-retention-note {
+      color: var(--text-muted); font-size: var(--fs-3xs); font-style: italic;
+    }
 
     .citation-list { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
     .citation {

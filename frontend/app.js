@@ -582,29 +582,177 @@
     // Small results open by default; large ones stay collapsed so the reading
     // flow is not swamped.
     if (rows.length <= 12) d.open = true;
+
+    let currentRows = rows;
+    const tr = turn.trace || {};
+    const titleEl = el('span', 'artifact__title', `Results · ${fmtInt.format(rows.length)} × ${cols.length}`);
+
     const s = el('summary');
     s.appendChild(el('span', 'disclosure-caret', '▶'));
-    s.appendChild(el('span', 'artifact__title', `Results · ${fmtInt.format(rows.length)} × ${cols.length}`));
+    s.appendChild(titleEl);
     s.appendChild(el('span', 'artifact__spacer'));
     s.appendChild(button('CSV', 'btn btn--sm', (ev) => {
-      ev.preventDefault(); ev.stopPropagation(); downloadCSV(turn, cols, rows);
+      ev.preventDefault(); ev.stopPropagation(); downloadCSV(turn, cols, currentRows);
     }, 'Download as CSV'));
     s.appendChild(button('JSON', 'btn btn--sm', (ev) => {
-      ev.preventDefault(); ev.stopPropagation(); downloadJSON(turn, rows);
+      ev.preventDefault(); ev.stopPropagation(); downloadJSON(turn, currentRows);
     }, 'Download as JSON'));
     s.appendChild(button('Copy TSV', 'btn btn--sm', (ev) => {
       ev.preventDefault(); ev.stopPropagation();
-      copyText(toDelimited(cols, rows, '\t', false), 'Copied — paste into Sheets or Excel.');
+      copyText(toDelimited(cols, currentRows, '\t', false), 'Copied — paste into Sheets or Excel.');
     }));
     d.appendChild(s);
 
-    const numeric = inferNumericColumns(cols, rows);
+    // A turn stored inline holds at most 100 preview rows (mcp.history_row_preview_max),
+    // while sql_rows_count carries the true result size. Silently displaying a
+    // partial table as complete is a core correctness violation: when preview_truncated
+    // is set, show an honest "Showing X of Y rows" indicator and offer a button to
+    // pull the full stored result from the dedicated turn rows endpoint.
+    const isTruncated = Boolean(
+      tr.preview_truncated !== undefined
+        ? tr.preview_truncated
+        : (turn.preview_truncated !== undefined
+          ? turn.preview_truncated
+          : (typeof tr.sql_rows_count === 'number' && tr.sql_rows_count > rows.length))
+    );
+    const sqlRowsCount = typeof tr.sql_rows_count === 'number'
+      ? tr.sql_rows_count
+      : (typeof turn.sql_rows_count === 'number' ? turn.sql_rows_count : null);
+    const turnSessionId = turn.sessionId || (tr && (tr.session_id || tr.sessionId)) || (typeof sessionId === 'string' && sessionId ? sessionId : null);
+    const turnIndex = (tr && typeof tr.turn_index === 'number')
+      ? tr.turn_index
+      : (typeof turn.turn_index === 'number'
+        ? turn.turn_index
+        : (typeof turn.backendTurn === 'number' ? turn.backendTurn : null));
+
+    const canLoadFull = isTruncated && Boolean(turnSessionId) && typeof turnIndex === 'number' && Number.isFinite(turnIndex);
+
+    let initialIndicatorText;
+    if (isTruncated) {
+      initialIndicatorText = (typeof sqlRowsCount === 'number')
+        ? `Showing ${rows.length.toLocaleString()} of ${sqlRowsCount.toLocaleString()} rows`
+        : `Showing ${rows.length.toLocaleString()} rows`;
+    } else {
+      initialIndicatorText = rows.length > 500
+        ? `Showing the first 500 of ${rows.length.toLocaleString()} rows. Export for the full set.`
+        : `${rows.length.toLocaleString()} row${rows.length === 1 ? '' : 's'}.`;
+    }
+
     const wrap = el('div', 'table-scroll');
     const table = el('table', 'results');
-    const cap = el('caption', null,
-      rows.length > 500
-        ? `Showing the first 500 of ${fmtInt.format(rows.length)} rows. Export for the full set.`
-        : `${fmtInt.format(rows.length)} row${rows.length === 1 ? '' : 's'}.`);
+    const cap = el('caption');
+    const capRow = el('div', 'results-caption-row');
+    const indicator = el('span', 'results-indicator', initialIndicatorText);
+    capRow.appendChild(indicator);
+
+    let loadBtn = null;
+    let sepNode = null;
+    if (canLoadFull) {
+      sepNode = document.createTextNode(' ');
+      capRow.appendChild(sepNode);
+      loadBtn = button('Load full result', 'btn btn--sm', async (ev) => {
+        if (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+        }
+        loadBtn.disabled = true;
+        loadBtn.textContent = 'Loading…';
+
+        try {
+          const url = `${ORCHESTRATOR_URL}/sessions/${encodeURIComponent(turnSessionId)}/turns/${encodeURIComponent(turnIndex)}/rows`;
+          const resp = await fetch(url, {
+            method: 'GET',
+            headers: authHeaders(),
+          });
+
+          if (resp.status === 401) {
+            loadBtn.disabled = false;
+            loadBtn.textContent = 'Load full result';
+            clearToken();
+            showGate(AUTH_EXPIRED_MSG);
+            status(AUTH_EXPIRED_MSG);
+            return;
+          }
+          if (resp.status === 429) {
+            loadBtn.disabled = false;
+            loadBtn.textContent = 'Load full result';
+            status(rateLimitMessage(resp));
+            return;
+          }
+          if (!resp.ok) {
+            loadBtn.disabled = false;
+            loadBtn.textContent = 'Load full result';
+            const errBody = await resp.json().catch(() => ({ detail: resp.statusText }));
+            status(errBody.detail || `HTTP ${resp.status}`);
+            return;
+          }
+
+          const data = await resp.json();
+          if (!data || data.available === false) {
+            // available: false is NORMAL — pruned by the 30-day retention policy or
+            // never stored. It is not a fault and must not be reported as one; replace
+            // the button with a neutral retention note while preserving the preview rows.
+            const note = el(
+              'span',
+              'results-retention-note',
+              'Full result is no longer stored (retention); rows above are what remains.'
+            );
+            loadBtn.replaceWith(note);
+            return;
+          }
+
+          // available: true: replace table body rows with full stored rows
+          const returnedRows = Array.isArray(data.rows) ? data.rows : [];
+          currentRows = returnedRows;
+          if (turn.trace) {
+            turn.trace.sql_rows = returnedRows;
+            turn.trace.preview_truncated = false;
+          }
+
+          // SECURITY: textContent only (A7 sink safety). Row data is untrusted DB output.
+          clear(tbody);
+          const newNumeric = inferNumericColumns(cols, returnedRows);
+          returnedRows.forEach((r) => {
+            const tr2 = el('tr');
+            cols.forEach((c) => {
+              const v = r[c];
+              let td;
+              if (v === null || v === undefined) td = el('td', 'null', 'null');
+              else if (newNumeric.has(c)) td = el('td', 'num', fmtNumber(v));
+              else td = el('td', null, typeof v === 'object' ? JSON.stringify(v) : String(v));
+              td.title = v === null || v === undefined ? 'null' : String(v);
+              tr2.appendChild(td);
+            });
+            tbody.appendChild(tr2);
+          });
+
+          // Never conflate what is displayed / stored with the true count: if server caps
+          // (1000 rows / 1 MiB) truncated what was stored, the indicator must keep saying so.
+          const storedCount = typeof data.stored_row_count === 'number' ? data.stored_row_count : returnedRows.length;
+          const totalCount = (typeof sqlRowsCount === 'number') ? sqlRowsCount : storedCount;
+
+          if (storedCount < totalCount) {
+            indicator.textContent = `Showing ${storedCount.toLocaleString()} of ${totalCount.toLocaleString()} rows — full result was capped at storage time`;
+          } else {
+            indicator.textContent = `Showing all ${storedCount.toLocaleString()} rows`;
+          }
+
+          loadBtn.remove();
+          if (sepNode && sepNode.parentNode) sepNode.remove();
+          if (titleEl) {
+            titleEl.textContent = `Results · ${storedCount.toLocaleString()} × ${cols.length}`;
+          }
+          persistThread();
+        } catch (err) {
+          loadBtn.disabled = false;
+          loadBtn.textContent = 'Load full result';
+          status((err && err.message) || 'Network error.');
+        }
+      }, 'Fetch the full stored result set for this turn');
+      capRow.appendChild(loadBtn);
+    }
+
+    cap.appendChild(capRow);
     table.appendChild(cap);
 
     const thead = el('thead');
@@ -617,6 +765,7 @@
     thead.appendChild(htr);
     table.appendChild(thead);
 
+    const numeric = inferNumericColumns(cols, rows);
     const tbody = el('tbody');
     rows.slice(0, 500).forEach((r) => {
       const tr2 = el('tr');
@@ -1266,10 +1415,12 @@
       const data = await resp.json();
 
       turn.state = 'done';
+      turn.sessionId = sessionId;
       turn.answer = data.answer_text || '';
       turn.chart = data.chart || null;
       turn.citations = data.citations || [];
       turn.trace = data.state_trace || {};
+      if (turn.trace) turn.trace.session_id = sessionId;
       turn.latency = data.latency_ms;
       turn.queryId = data.query_id;
       // The backend's own turn index is authoritative; the local counter is
@@ -1527,6 +1678,7 @@
           id: `turn-${turnSeq}`, ordinal: t.turn_index || turnSeq,
           question: t.raw_query, state: 'done',
           answer: t.answer_text || '', chart: t.chart || null, citations: [],
+          sessionId: id,
           // Artifacts come back from migration 012. sql_rows_preview is a
           // CAPPED slice, so sql_rows_count (the true size) travels with it
           // and the turn is stamped: a rendered table must not imply it is
@@ -1534,6 +1686,7 @@
           // has all four fields NULL and degrades to prose + SQL, which is
           // exactly the old behaviour rather than an empty table frame.
           trace: {
+            session_id: id,
             route: t.route, executed_sql: t.executed_sql,
             normalized_query: t.rewritten_query,
             rewrite_applied: t.rewrite_applied,
