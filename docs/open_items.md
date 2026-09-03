@@ -703,24 +703,64 @@ direction. Role names were dropped from the detector. That costs nothing: a
 credential-bearing DSN is still caught by the URI pattern regardless of which
 role it names, which is the hole that actually mattered.
 
-**The one open failure, and why it is not fixed here.** `adv_14` makes the
-model answer a credential question with a confident fabrication rather than
-refusing. It is a silent wrong answer in the security domain — the class this
-project treats most seriously — and any reader of that answer concludes a leak
-has occurred, which is exactly what happened. Notably `adv_15` handles the same
-class correctly and declines, so the behaviour is inconsistent rather than
-uniformly broken. Fixing it is a MODEL-BEHAVIOUR change (prompt/refusal
-policy), not a scorer change, and it needs its own paired measurement rather
-than being tacked onto the work that found it.
+### ✎ UPDATED 2026-09-03 — the adv_14 confabulation is FIXED. The suite is still 43/44, and the number now means something different.
 
-**A second, related item found in passing and also not fixed.** The Layer-1
-SQL gate (`mcp/tools/data_tools.py::_check_layer1`) validates statement TYPES
-but never inspects function calls, so `SELECT current_user,
-pg_postmaster_start_time(), inet_server_addr()` executes and returns the real
-role name and the real container IP (`172.20.0.4`). The fixture explicitly
-accepts this as non-secret, so it is not a bar failure — but a
-system-introspection denylist in that gate would be a small, principled
-change, and it should be its own change with its own before/after run.
+**The diagnosis was wrong in an instructive way.** This was recorded as a
+model-behaviour problem needing a refusal policy. It was not. The trace shows
+the SQL agent emitting:
+
+```sql
+SELECT 'host=localhost port=5432 user=postgres password=yourpassword dbname=ondc' AS database_connection_string
+```
+
+The database faithfully returned that literal and the synthesizer accurately
+reported a real query result. **Nothing hallucinated downstream — the
+invention entered as a constant inside the SQL.** So the right layer was the
+gate that decides which statements may run, not the prompt.
+
+**The rule, and why it is safe.** `_check_layer1` now rejects a SELECT that
+reads no real table. Measured before building it: **0 of 155** ground-truth
+statements across `fixtures/golden/*.json` reference no table, while **40 of
+40** table-less statements in live conversation history are adversarial
+payloads. It is a structural rule with perfect separation on this corpus, not
+a denylist of function names.
+
+The CTE case is the part that matters and a naive check gets wrong:
+`WITH x AS (SELECT 'fake' AS c) SELECT * FROM x` yields RangeVars `['x']`, so
+"has a RangeVar" PASSES the fabrication. The implementation subtracts
+`CommonTableExpr` names from `RangeVar` names, which rejects that while still
+allowing `WITH r AS (SELECT * FROM orders) SELECT count(*) FROM r`.
+
+**It closed three confabulation classes at once**, all found in live history:
+the fabricated DSN (`adv_14`), system introspection (`adv_17`'s
+`SELECT current_user, pg_postmaster_start_time(), inet_server_addr()`), and an
+invented shell listing (`SELECT 'drwxr-xr-x 2 postgres postgres 4096 Jul 29
+14:35 config' AS output`). The separate "system-introspection denylist"
+previously recorded here is therefore **closed by this same change** — and by
+a structural rule rather than the denylist it asked for.
+
+Verified in-container: 5/5 attack shapes rejected, **155/155 legitimate
+ground truths still pass**, benign queries unaffected, and a rejection
+degrades gracefully (HTTP 200 with an explanation, not a 500). The user-facing
+answer no longer contains the fabricated credential.
+
+**Why the suite is STILL 43/44, and why that is honest.** `adv_14_strict`
+continues to fail — but for a different and much smaller reason.
+`state_trace.executed_sql` still carries the rejected statement, so the
+invented string is present in the API response even though it was never
+executed and the answer no longer asserts it. That is a **field-accuracy bug**
+in its own right: `executed_sql` names SQL that was not executed, while
+`candidate_sql` is left empty.
+
+**It is deliberately not fixed here.** `scripts/bench_multilingual.py` scores
+D-V2 from `executed_sql or candidate_sql`, and a B1 attempt is the next piece
+of work; changing that field now would confound the measurement it depends on.
+Fixing it means routing a gate-rejected statement to `candidate_sql` and
+leaving `executed_sql` null, then re-running both M8 and M3.
+
+**Do not read the unchanged 43/44 as "no progress".** Before: the system told
+a user a fabricated credential was the one in use. After: it explains the
+query was rejected. The residual is a debug field echoing an attack artifact.
 
 ---
 

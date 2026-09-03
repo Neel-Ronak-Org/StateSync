@@ -43,6 +43,7 @@ try:
     import pglast
     from pglast import parse_sql
     from pglast.enums import NodeTag
+    from pglast.visitors import Visitor
     _PGLAST_AVAILABLE = True
 except ImportError:
     logger.warning(
@@ -50,6 +51,7 @@ except ImportError:
         "Install pglast to enable the parser gate."
     )
     _PGLAST_AVAILABLE = False
+    Visitor = object  # type: ignore[assignment,misc]
 
 # Statement types that must never appear in submitted SQL
 _REJECTED_STATEMENT_TYPES = {
@@ -65,6 +67,32 @@ _SAMPLE_ROWS_HARD_CAP: int = int(os.environ.get("SAMPLE_ROWS_HARD_CAP", "20"))
 _MAX_ROWS_HARD_CAP:    int = int(os.environ.get("MAX_ROWS_HARD_CAP", "5000"))
 _MAX_ROWS_DEFAULT:     int = int(os.environ.get("MAX_ROWS_DEFAULT", "1000"))
 _MAX_SQL_LENGTH:       int = int(os.environ.get("MAX_SQL_LENGTH", "8000"))
+
+
+class _TableReferenceCollector(Visitor if _PGLAST_AVAILABLE else object):
+    """
+    Collects relation references (RangeVar.relname) and CTE definitions
+    (CommonTableExpr.ctename) across the parsed query AST.
+
+    Used by Layer 1 to enforce that every SELECT reads from at least one real
+    table. Pure constant projections (e.g. fabricated credentials or shell output)
+    and system introspection functions (e.g. current_user, inet_server_addr)
+    reference no real tables and must be rejected at this gate.
+    """
+
+    def __init__(self) -> None:
+        self.tables: set[str] = set()
+        self.ctes: set[str] = set()
+
+    def visit_RangeVar(self, ancestors, node) -> None:  # noqa: N802 — pglast visitor naming
+        relname = getattr(node, "relname", None)
+        if relname:
+            self.tables.add(relname)
+
+    def visit_CommonTableExpr(self, ancestors, node) -> None:  # noqa: N802 — pglast visitor naming
+        ctename = getattr(node, "ctename", None)
+        if ctename:
+            self.ctes.add(ctename)
 
 
 def _check_layer1(sql: str) -> str | None:
@@ -136,6 +164,24 @@ def _check_layer1(sql: str) -> str | None:
                             f"Rejected: data-modifying CTE ({cte_query_type!r}) "
                             "inside WITH clause is not permitted."
                         )
+
+    # Ensure the query reads at least one real table.
+    # Reject table-less SELECT statements (constant projections, system introspection).
+    # CTE names defined in WITH clauses are not real schema tables and must be
+    # subtracted so a CTE-wrapped constant cannot bypass this structural gate.
+    collector = _TableReferenceCollector()
+    collector(stmt)
+    cte_names = {c.lower() for c in collector.ctes}
+    real_tables = {
+        r for r in collector.tables
+        if r not in collector.ctes and r.lower() not in cte_names
+    }
+    if not real_tables:
+        return (
+            "Rejected: statement reads no table. Queries must read data from the "
+            "schema rather than compute constants or server introspection. "
+            "This rejection is based on query shape, not content safety."
+        )
 
     return None  # accepted
 
