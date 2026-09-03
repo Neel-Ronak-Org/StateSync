@@ -27,6 +27,19 @@ session_browser_turn_limit = 100    # turns fetched when resuming one conversati
 # turn in full grows session_state.conversation_turns without bound. The true
 # count is stored separately so a truncated preview is never shown as complete.
 history_row_preview_max   = 100
+# Full result sets persisted per turn in session_state.turn_rows (migration 015).
+# Stored in a separate table to keep history.get_recent_turns fast on follow-up
+# queries. Three independent bounds govern storage, because one alone is not enough:
+# history_full_rows_max bounds ROW COUNT, history_full_rows_max_bytes bounds
+# PAYLOAD SIZE (a 200-row result of wide text columns can dwarf a 1000-row result
+# of integers, so a row cap alone does not bound storage), retention_days bounds
+# AGE, and prune_batch_limit bounds the work done per write so pruning can never
+# become a long transaction on the user-facing path.
+history_full_rows_enabled          = true
+history_full_rows_max              = 1000
+history_full_rows_max_bytes        = 1048576
+history_full_rows_retention_days   = 30
+history_prune_batch_limit          = 200
 # Free-text detail persisted per audit event (migration 013). An audit record
 # must never become a storage-amplification vector across high request volumes,
 # so detail is clamped to this ceiling. The cap is enforced at the write in

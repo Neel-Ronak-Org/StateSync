@@ -1,12 +1,13 @@
 """
 mcp/tools/history_tools.py
-MCP history tools: history.append_turn, history.get_recent_turns and
-history.list_sessions (scoped by tenant and principal).
+MCP history tools: history.append_turn, history.get_recent_turns,
+history.get_turn_rows and history.list_sessions (scoped by tenant and principal).
 
-Backed by session_state.conversation_turns (migrations/011, 014), via db.py's
-SEPARATE statesync_history pool -- not the statesync_reader pool every other
-tool in this package uses. That role has INSERT+SELECT on exactly this one
-table and nothing else (see migrations/011's header for the full reasoning).
+Backed by session_state.conversation_turns (migrations/011, 014) and
+session_state.turn_rows (migration 015), via db.py's SEPARATE statesync_history pool
+-- not the statesync_reader pool every other tool in this package uses. That role
+has INSERT+SELECT on conversation_turns, and INSERT+SELECT+DELETE on turn_rows,
+and nothing else (see migrations/011 and 015 headers for the full reasoning).
 
 All queries below are fixed-shape and parameterized. Neither function
 accepts, builds, or executes a SQL string from a caller -- there is no path
@@ -21,6 +22,7 @@ conversation turns and sessions per identity within the tenant.
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -31,6 +33,9 @@ from db import get_history_connection
 from session import get_tenant_id
 
 logger = logging.getLogger(__name__)
+
+# Algorithmic convergence parameters for byte-budget fitting (not configuration constants under A0.2).
+_BYTE_FIT_DROP_FRACTION: float = 0.10  # noqa: literals - algorithmic convergence step, not configuration
 
 
 # NOTE on principal_id parameter passing:
@@ -58,6 +63,7 @@ async def append_turn(
     sql_columns: list[str] | None = None,
     sql_rows_preview: list[dict[str, Any]] | None = None,
     sql_rows_count: int | None = None,
+    sql_rows_full: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """
     Insert one completed turn scoped by tenant and principal. Called once per
@@ -73,6 +79,11 @@ async def append_turn(
     invariant of this table, so it is enforced at the write, and
     sql_rows_count carries the true size so a truncated preview can never be
     presented as a complete result set.
+
+    Full result sets (migration 015) are persisted in session_state.turn_rows
+    as an enrichment inside the same connection block. Clamped by row count
+    (history_full_rows_max) and byte size (history_full_rows_max_bytes), followed
+    by bounded retention pruning (history_full_rows_retention_days).
     """
     tenant_id = get_tenant_id()
 
@@ -105,17 +116,103 @@ async def append_turn(
         )
         row = await cur.fetchone()
 
-    if row is None:
-        # ON CONFLICT DO NOTHING fired -- this (tenant, session, turn_index)
-        # was already written. Not an error (a retried request should not
-        # duplicate a turn); the caller gets told rather than assuming success.
-        logger.warning(
-            "history.append_turn: turn already recorded, no-op (tenant=%s session=%s turn=%d)",
-            tenant_id, session_id, turn_index,
-        )
-        return {"written": False, "turn_id": None, "computed_at": None}
+        if row is None:
+            # ON CONFLICT DO NOTHING fired -- this (tenant, session, turn_index)
+            # was already written. Not an error (a retried request should not
+            # duplicate a turn); the caller gets told rather than assuming success.
+            logger.warning(
+                "history.append_turn: turn already recorded, no-op (tenant=%s session=%s turn=%d)",
+                tenant_id, session_id, turn_index,
+            )
+            return {"written": False, "turn_id": None, "computed_at": None}
 
-    return {"written": True, "turn_id": row[0], "computed_at": row[1].isoformat()}
+        turn_id = row[0]
+        computed_at = row[1]
+
+        # Full result sets (migration 015): enrichment persisted in session_state.turn_rows
+        # inside the same atomic connection block.
+        if cfg.mcp.history_full_rows_enabled and sql_rows_full:
+            initial_count = len(sql_rows_full)
+            payload_rows = list(sql_rows_full)
+            row_capped = False
+            max_rows = cfg.mcp.history_full_rows_max
+            if len(payload_rows) > max_rows:
+                row_capped = True
+                payload_rows = payload_rows[:max_rows]
+
+            payload_bytes = json.dumps(payload_rows, default=str).encode("utf-8")
+            byte_capped = False
+            max_bytes = cfg.mcp.history_full_rows_max_bytes
+
+            while payload_rows and len(payload_bytes) > max_bytes:
+                byte_capped = True
+                drop_count = max(1, int(len(payload_rows) * _BYTE_FIT_DROP_FRACTION))
+                payload_rows = payload_rows[:-drop_count]
+                payload_bytes = json.dumps(payload_rows, default=str).encode("utf-8")
+
+            if not payload_rows:
+                logger.info(
+                    "history.append_turn: full rows discarded, byte cap %d bytes exceeded (tenant=%s session=%s turn=%d initial_rows=%d)",
+                    max_bytes, tenant_id, session_id, turn_index, initial_count,
+                )
+            else:
+                stored_row_count = len(payload_rows)
+                byte_size = len(payload_bytes)
+
+                if row_capped and byte_capped:
+                    logger.info(
+                        "history.append_turn: full rows truncated by row cap and byte cap %d -> %d (tenant=%s session=%s turn=%d)",
+                        initial_count, stored_row_count, tenant_id, session_id, turn_index,
+                    )
+                elif row_capped:
+                    logger.info(
+                        "history.append_turn: full rows truncated by row cap %d -> %d (tenant=%s session=%s turn=%d)",
+                        initial_count, stored_row_count, tenant_id, session_id, turn_index,
+                    )
+                elif byte_capped:
+                    logger.info(
+                        "history.append_turn: full rows truncated by byte cap %d -> %d (tenant=%s session=%s turn=%d)",
+                        initial_count, stored_row_count, tenant_id, session_id, turn_index,
+                    )
+
+                await conn.execute(
+                    """
+                    INSERT INTO session_state.turn_rows
+                        (turn_id, tenant_id, principal_id, rows, stored_row_count, byte_size)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (turn_id) DO NOTHING
+                    """,
+                    (turn_id, tenant_id, principal_id, Jsonb(payload_rows), stored_row_count, byte_size),
+                )
+
+        # Retention pruning: inline deletion of expired rows (migration 015).
+        # Bounded by cfg.mcp.history_prune_batch_limit to avoid long transactions.
+        if cfg.mcp.history_full_rows_enabled:
+            try:
+                cur_prune = await conn.execute(
+                    """
+                    DELETE FROM session_state.turn_rows
+                    WHERE turn_id IN (
+                        SELECT turn_id FROM session_state.turn_rows
+                        WHERE computed_at < now() - make_interval(days => %s)
+                        ORDER BY computed_at
+                        LIMIT %s
+                    )
+                    """,
+                    (cfg.mcp.history_full_rows_retention_days, cfg.mcp.history_prune_batch_limit),
+                )
+                if cur_prune.rowcount and cur_prune.rowcount > 0:
+                    logger.info(
+                        "history.append_turn: pruned %d expired turn rows",
+                        cur_prune.rowcount,
+                    )
+            except Exception as exc:
+                logger.warning(
+                    "history.append_turn: pruning expired turn rows failed (non-fatal): %s",
+                    exc,
+                )
+
+    return {"written": True, "turn_id": turn_id, "computed_at": computed_at.isoformat()}
 
 
 async def get_recent_turns(session_id: str, principal_id: str, limit: int | None = None) -> dict[str, Any]:
@@ -169,6 +266,47 @@ async def get_recent_turns(session_id: str, principal_id: str, limit: int | None
             "sql_rows_count": sql_rows_count,
         })
     return {"turns": turns, "count": len(turns)}
+
+
+async def get_turn_rows(session_id: str, principal_id: str, turn_index: int) -> dict[str, Any]:
+    """
+    Fetch the full result-set rows for a specific conversation turn (migration 015).
+
+    Scoped by tenant_id bound server-side from session context (A0.6) and
+    principal_id from the authenticating orchestrator. Joins turn_rows to
+    conversation_turns to enforce tenant and principal ownership; without this
+    join filter, any caller could read arbitrary turn rows by guessing a turn_id.
+
+    Returns {"rows": [...], "stored_row_count": int, "byte_size": int, "available": True}
+    when present. When absent or pruned, returns {"rows": [], "stored_row_count": 0,
+    "byte_size": 0, "available": False}. available: False is a normal, expected state,
+    not an error; the caller should fall back to the turn's sql_rows_preview when
+    available is False.
+    """
+    tenant_id = get_tenant_id()
+
+    async with get_history_connection() as conn:
+        cur = await conn.execute(
+            """
+            SELECT tr.rows, tr.stored_row_count, tr.byte_size
+            FROM session_state.turn_rows tr
+            JOIN session_state.conversation_turns ct ON tr.turn_id = ct.turn_id
+            WHERE ct.tenant_id = %s AND ct.principal_id = %s AND ct.session_id = %s AND ct.turn_index = %s
+            """,
+            (tenant_id, principal_id, session_id, turn_index),
+        )
+        row = await cur.fetchone()
+
+    if row is None:
+        return {"rows": [], "stored_row_count": 0, "byte_size": 0, "available": False}
+
+    rows, stored_row_count, byte_size = row
+    return {
+        "rows": rows if isinstance(rows, list) else [],
+        "stored_row_count": stored_row_count,
+        "byte_size": byte_size,
+        "available": True,
+    }
 
 
 async def list_sessions(principal_id: str, limit: int | None = None) -> dict[str, Any]:
