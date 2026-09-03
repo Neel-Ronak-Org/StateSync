@@ -908,5 +908,42 @@ compose network this becomes the next thing to fix.
 
 **The audit log has no retention policy.** `session_state.audit_log` grows
 without bound, one row per request to a protected route including every
-denial. That is the same unbounded-growth problem already recorded for full
-row storage, and it now applies to a second table.
+denial. `session_state.turn_rows` (task 4) now HAS one — a 30-day TTL, a
+1 MiB/turn byte cap and a row cap, pruned opportunistically on write and
+forceable with `scripts/prune_turn_rows.py`. **`audit_log` has none of that**,
+and the asymmetry is deliberate rather than an oversight: deleting an audit
+record destroys the compliance artifact the log exists to be, so its retention
+is a policy question for the owner, not a default a build should pick. Until
+that is decided, it grows.
+
+---
+
+## Full result-set storage (task 4) — what it does and does not guarantee
+
+**Retention is opportunistic, so an IDLE deployment keeps expired rows.**
+Pruning runs inside `history.append_turn`, bounded by
+`history_prune_batch_limit`. That is self-maintaining only while the system is
+being used: a deployment that stops receiving queries stops pruning, and one
+restored from a backup holds whatever the backup held until the next write.
+This is not laziness — there is no cron, scheduler or periodic worker anywhere
+in this stack, so a policy needing one would never execute at all.
+`scripts/prune_turn_rows.py` is the manual lever; it is dry-run by default.
+
+**A stored payload can be smaller than the result the user saw.** Three caps
+apply: `history_full_rows_max` (rows), `history_full_rows_max_bytes` (payload
+size), and the 30-day TTL. Measured: 1500 rows / 1.75 MB in became 810 rows /
+967 kB stored. That truncation is logged and
+`conversation_turns.sql_rows_count` still carries the TRUE count, so it is
+visible rather than silent — but a client that renders `turn_rows` without
+comparing against `sql_rows_count` would show a partial result as if it were
+whole. The comparison is the client's job and nothing enforces it.
+
+**Pruned turns degrade, they do not disappear.** Deleting from `turn_rows`
+leaves the turn, its answer, its chart and its 100-row preview intact.
+Verified: a payload backdated 90 days was reclaimed while all 588
+conversation turns survived.
+
+**The frontend does not use any of this yet.** Full rows are stored and
+readable over `GET /sessions/{id}/turns/{n}/rows`, but the UI still renders
+only the stored preview and shows no "N of M" indicator. Nothing is wrong; it
+is simply not wired, and no claim is made that it is.

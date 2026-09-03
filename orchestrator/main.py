@@ -28,7 +28,8 @@ from config_loader import cfg, flags, snapshot_flags
 from graph import graph
 from llm.provider import validate_llm_config
 from mcp_client import (MCPSession, audit_record, history_append_turn,
-                        history_get_recent_turns, history_list_sessions)
+                        history_get_recent_turns, history_get_turn_rows,
+                        history_list_sessions)
 from nodes.synthesizer import build_citations
 from schemas.synthesizer_output import safe_synthesizer_output
 from state import StateSyncState
@@ -264,6 +265,45 @@ async def get_session_route(
     return result
 
 
+@app.get("/sessions/{session_id}/turns/{turn_index}/rows", tags=["history"])
+async def get_turn_rows_route(
+    session_id: str,
+    turn_index: int,
+    request: Request,
+    principal: Principal = Depends(require_principal),
+) -> dict:
+    """Fetch stored full result set for a conversation turn."""
+    async with MCPSession(
+        tenant_id=principal.tenant_id,
+        base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
+    ) as session:
+        result = await history_get_turn_rows(
+            session,
+            session_id=session_id,
+            principal_id=principal.principal_id,
+            turn_index=turn_index,
+        )
+    client_ip = request.client.host if request.client else None
+    # An absent payload and a full payload are both "allowed", so without this the audit row
+    # cannot distinguish a caller who read a result set from one who was correctly scoped out of it.
+    audit_detail = (
+        f"available={'true' if result.get('available') else 'false'} "
+        f"stored_row_count={result.get('stored_row_count', 0)}"
+    )
+    await _audit(
+        principal.principal_id,
+        principal.tenant_id,
+        f"/sessions/{session_id}/turns/{turn_index}/rows",
+        "allowed",
+        session_id=session_id,
+        client_ip=client_ip,
+        detail=audit_detail,
+    )
+    # Return unchanged: available:false is a normal state (not found or pruned) that the
+    # client must distinguish from an error, falling back to the turn's stored preview.
+    return result
+
+
 @app.post("/query", response_model=QueryResponse, tags=["query"])
 async def run_query(
     body: QueryRequest,
@@ -420,6 +460,8 @@ async def run_query(
                 sql_rows_preview=(final_state.sql_rows or None) and
                     final_state.sql_rows[: cfg.mcp.history_row_preview_max],
                 sql_rows_count=len(final_state.sql_rows),
+                # Do NOT slice it — MCP applies the caps and logs truncation; slicing here would hide from those logs how large the real result was.
+                sql_rows_full=(final_state.sql_rows or None),
             )
     except Exception as exc:
         logger.error(

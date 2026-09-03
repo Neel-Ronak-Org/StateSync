@@ -254,6 +254,7 @@ async def history_append_turn(
     sql_columns: list[str] | None = None,
     sql_rows_preview: list[dict[str, Any]] | None = None,
     sql_rows_count: int | None = None,
+    sql_rows_full: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """history.append_turn"""
     params: dict[str, Any] = {
@@ -278,6 +279,8 @@ async def history_append_turn(
         params["sql_rows_preview"] = sql_rows_preview
     if sql_rows_count is not None:
         params["sql_rows_count"] = sql_rows_count
+    if sql_rows_full is not None:
+        params["sql_rows_full"] = sql_rows_full
     return await session.call("history.append_turn", params)
 
 
@@ -289,6 +292,18 @@ async def history_get_recent_turns(
     if limit is not None:
         params["limit"] = limit
     return await session.call("history.get_recent_turns", params)
+
+
+async def history_get_turn_rows(
+    session: MCPSession, session_id: str, principal_id: str, turn_index: int,
+) -> dict[str, Any]:
+    """history.get_turn_rows"""
+    params: dict[str, Any] = {
+        "session_id": session_id,
+        "principal_id": principal_id,
+        "turn_index": turn_index,
+    }
+    return await session.call("history.get_turn_rows", params)
 
 
 async def history_list_sessions(
