@@ -390,6 +390,85 @@ after, not folded into unrelated work.
 `unsafe-eval`, which is satisfied and verified. This is an improvement beyond
 the spec's bar, recorded so it is a decision rather than an oversight.
 
+## ✅ B1 — CLOSED 2026-09-03. All four pre-committed clauses met, by a mechanical repair.
+
+**The defect.** `"Lucknow mein kitne sellers hain?"` produced
+`WHERE l.city_local = 'Lucknow'` — a Latin literal against the Devanagari
+column — matched zero rows, and the system answered "0" confidently. The
+correct answer is 4.
+
+**Five explanations were eliminated before this one worked.** Column comments
+(migration 005, measured harmful, reverted); a prompt instruction
+(`_format_entity_hint`, which already ships the exact rule and is disobeyed);
+sampled evidence; interrogation column selection (attempt 1, refuted by probe);
+and finally sampling asymmetry — ruled out on 2026-09-03 because NEITHER plain
+column is sampled for EITHER table, yet `sellers` resolves correctly (20 plain
+vs 8 `_local`) while `locations` does not (1 vs 17). Every attempt that tried
+to *persuade the model* failed. This one does not involve the model.
+
+**The fix, and why it is provably safe.** `_repair_script_column_mismatch` in
+`orchestrator/nodes/sql_agent.py` rewrites an equality predicate onto its
+paired column when the literal's script cannot occur in the column filtered.
+Verified in the live database first:
+
+| column | rows | violating the invariant |
+|---|---|---|
+| `locations.city_local` | 51 | 0 Latin-only |
+| `locations.city` | 51 | 0 non-ASCII |
+| `sellers.display_name_local` | 30 | 0 Latin-only |
+| `sellers.display_name` | 30 | 0 non-ASCII |
+| `catalog_items.title_local` | 100 | 0 Latin-only |
+| `catalog_items.title` | 100 | 0 non-ASCII |
+
+A script/column mismatch is therefore a **provably zero-row predicate**. The
+repair can only fire on a query that could not have been correct, so it cannot
+turn a right answer into a wrong one. Pairs are DERIVED from
+`describe_table` output, so it is a verified no-op on `olist`, which has no
+`_local` columns. The literal is never altered — no trimming, no
+transliteration. Every repair is logged at INFO and recorded in the state
+trace as `script_repairs` (registered in `_APPEND_FIELDS`).
+
+**Measured, paired, on the build the fix landed on:**
+
+| clause | anchor | POST | verdict |
+|---|---|---|---|
+| 1. D-V2 ≥ 81.25% absolute | 26/32 floor | **26/32** | PASS (see caveat) |
+| 2. English line must improve | 11/20 | **13/20** | PASS |
+| 3. D-V1 treatment ≥ pre | 25 | **25** | PASS |
+| 4. Hinglish no worse | D-V1 12, D-V2 12 | **12, 12** | PASS |
+
+Live: `"Lucknow mein kitne sellers hain?"` → **"There are 4 sellers in
+Lucknow."** `"How many sellers are located in Bengaluru?"` → **4** (was 0).
+
+**⚠ CAVEAT ON CLAUSE 1, stated because the margin is zero.** D-V2 read 27/32
+before and 26/32 after, and the lost query is `d_ml_011` — which **TIMED OUT**
+(`ok: false, error: "timed out"`). Re-run live on the deployed build it
+behaves correctly: `preserved_entities {'मुंबई': 'मुंबई'}`, the noun verbatim
+in the SQL, and `script_repairs: []` — the repair correctly did NOT fire on a
+Devanagari literal against the `_local` column, which is exactly the
+migration-005 failure mode and is absent. The true post-fix D-V2 is almost
+certainly 27/32; the bar is met either way, but it is met at the floor and a
+re-run would be worth having before this number is published.
+
+**INSTRUMENT DEFECT found while checking that caveat — worth its own fix.**
+A failed query is scored INCONSISTENTLY: `accuracy()` filters on `ok` so the
+D-V1 denominator dropped 40 → 39, while `score_entity_preservation()` does not
+filter and counted the timeout as a D-V2 *failure* against a fixed denominator
+of 32. So one transport failure depresses D-V2 but not D-V1. Any published
+D-V2 figure is therefore a lower bound whenever a run contains a timeout.
+Not fixed here — it is a scorer change and would need its own before/after.
+
+**What the repair does NOT fix, measured rather than assumed.** Two of the
+four repaired predicates still fail, each for an unrelated reason:
+`d_ml_012_en` gets the right column (`city = 'Delhi'`) but omits the
+`fulfillments` join the ground truth requires; `d_ml_033` becomes
+`city = ' Lucknow '` — the padded literal still matches nothing. Repairing a
+literal is a second variable and was deliberately left out of scope. That is
+why the English line moved +2 rather than the +3 the six measured mismatches
+suggested.
+
+---
+
 ## Schema column semantics (reverted)
 
 **Status: open. Mechanism identified, one fix attempted and measured as

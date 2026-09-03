@@ -100,6 +100,7 @@ _APPEND_FIELDS: frozenset[str] = frozenset({
     "retrievals",
     "route_history",
     "interrogation_samples",
+    "script_repairs",
 })
 
 # Fields whose reducer is "field-wise sum"
@@ -157,6 +158,8 @@ class StateSyncState(BaseModel):
     memory_hit:              bool = False
     memory_trace_id:         str | None = None
     interrogation_samples:   list[dict] = Field(default_factory=list)  # ACCUMULATE (Part C2)
+    # Pre-execution mechanical script/column repairs (B1) -- auditable from trace rather than only logs
+    script_repairs:          list[str] = Field(default_factory=list)   # ACCUMULATE
     candidate_sql:           str | None = None
     executed_sql:            str | None = None
     sql_rows:                list[dict] = Field(default_factory=list)

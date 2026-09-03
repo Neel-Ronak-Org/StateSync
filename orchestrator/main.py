@@ -374,6 +374,7 @@ async def run_query(
         "attempt":     final_state.attempt,
         "errors":      [e.model_dump() for e in final_state.errors],
         "interrogation_samples": final_state.interrogation_samples,
+        "script_repairs": final_state.script_repairs,
         "metrics":     final_state.metrics.model_dump(),
         "memory_hit":       final_state.memory_hit,
         "memory_trace_id":  final_state.memory_trace_id,
