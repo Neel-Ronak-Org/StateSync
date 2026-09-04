@@ -37,6 +37,7 @@
   const SESSION_KEY = 'statesync_session_id';
   const THEME_KEY   = 'statesync_theme';
   const THREAD_KEY  = 'statesync_thread';
+  const CORPUS_KEY  = 'statesync_corpus';
 
   // ── Authentication & Token Storage ─────────────────────────────────────────
   // Security tradeoff: localStorage is readable by any script that achieves
@@ -88,6 +89,35 @@
     }
   }
 
+  // ── Corpus Storage Helper ──────────────────────────────────────────────────
+  // Persists the chosen corpus per browser in localStorage.
+  // EVERY localStorage access MUST be wrapped in try/catch and degrade to an
+  // in-memory fallback variable. A browser with site data blocked throws on
+  // access, and an uncaught throw here would white-screen the whole app.
+  let inMemoryCorpus = null;
+
+  function getStoredCorpus() {
+    try {
+      const val = window.localStorage.getItem(CORPUS_KEY);
+      return val !== null ? val : inMemoryCorpus;
+    } catch {
+      return inMemoryCorpus;
+    }
+  }
+
+  function setStoredCorpus(c) {
+    inMemoryCorpus = c || null;
+    try {
+      if (c) {
+        window.localStorage.setItem(CORPUS_KEY, c);
+      } else {
+        window.localStorage.removeItem(CORPUS_KEY);
+      }
+    } catch {
+      // In-memory fallback
+    }
+  }
+
   // ── Auth Header Helper ─────────────────────────────────────────────────────
   function authHeaders(extra) {
     const token = getToken();
@@ -124,7 +154,13 @@
   const footerStatus = $('footer-status');
   const sessionMeta  = $('session-meta');
   const healthDot    = $('health-dot');
+  const corpusSelect = $('corpus-select');
   const railEl       = $('rail');
+
+  // Corpus state: tracked to know whether the switcher was populated from /health
+  // and what the active selection is.
+  let currentCorpus = null;
+  let corpusPopulated = false;
   const railBody     = $('rail-body');
   const banner       = $('composer-banner');
   const bannerText   = $('composer-banner-text');
@@ -535,6 +571,11 @@
 
   function metaRow(turn, tr) {
     const row = el('div', 'meta-row');
+    if (tr.target_schema) {
+      const chip = el('span', 'chip chip--corpus', tr.target_schema);
+      chip.title = `Corpus: ${tr.target_schema}`;
+      row.appendChild(chip);
+    }
     const route = (tr.route || 'unknown').toLowerCase();
     row.appendChild(el('span', `chip chip--${['sql', 'docs', 'hybrid'].includes(route) ? route : ''}`.trim(), route));
     if (typeof turn.latency === 'number') row.appendChild(el('span', 'chip', `${fmtInt.format(turn.latency)} ms`));
@@ -926,6 +967,7 @@
       parts.push(`\n${t.answer || ''}`);
       if (tr.executed_sql) parts.push('\n```sql\n' + tr.executed_sql + '\n```');
       const bits = [];
+      if (tr.target_schema) bits.push(`corpus: ${tr.target_schema}`);
       if (tr.route) bits.push(`route: ${tr.route}`);
       if (typeof tr.sql_rows_count === 'number') bits.push(`rows: ${tr.sql_rows_count}`);
       if (typeof t.latency === 'number') bits.push(`${t.latency} ms`);
@@ -1394,10 +1436,19 @@
     status('Running…');
 
     try {
+      const reqBody = { query: question, session_id: sessionId };
+      // The selected corpus is sent as `schema` on every POST /query.
+      // If the selector has not been populated yet (/health not answered), omit
+      // the field entirely rather than guessing -- omitting is defined by the
+      // orchestrator API to mean "use the server default".
+      if (corpusPopulated && currentCorpus) {
+        reqBody.schema = currentCorpus;
+      }
+
       const resp = await fetch(`${ORCHESTRATOR_URL}/query`, {
         method: 'POST',
         headers: authHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ query: question, session_id: sessionId }),
+        body: JSON.stringify(reqBody),
         signal: activeController.signal,
       });
       if (resp.status === 401) {
@@ -1410,7 +1461,11 @@
       }
       if (!resp.ok) {
         const errBody = await resp.json().catch(() => ({ detail: resp.statusText }));
-        throw new Error(errBody.detail || `HTTP ${resp.status}`);
+        let msg = errBody.detail;
+        if (typeof msg !== 'string') {
+          msg = msg ? JSON.stringify(msg) : `HTTP ${resp.status}`;
+        }
+        throw new Error(msg || `HTTP ${resp.status}`);
       }
       const data = await resp.json();
 
@@ -1444,8 +1499,8 @@
     }
   }
 
-  // ── Masthead actions ───────────────────────────────────────────────────────
-  $('new-conversation-btn').addEventListener('click', () => {
+  // ── Conversation lifecycle ────────────────────────────────────────────────
+  function startNewConversation(corpusChangeNote) {
     sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(THREAD_KEY);
     sessionId = getOrCreateSessionId();
@@ -1455,8 +1510,37 @@
     thread.appendChild(cover);
     buildSuggestions();
     updateSessionMeta();
-    status('Started a new conversation.');
-  });
+    if (corpusChangeNote) {
+      const existing = cover.querySelector('.notice--corpus');
+      if (existing) existing.remove();
+      const note = el('div', 'notice notice--corpus', corpusChangeNote);
+      cover.prepend(note);
+      status(corpusChangeNote);
+    } else {
+      status('Started a new conversation.');
+    }
+  }
+
+  $('new-conversation-btn').addEventListener('click', () => startNewConversation());
+
+  // WHY CHANGING THE CORPUS MUST START A NEW CONVERSATION:
+  // Follow-up turns are rewritten using earlier turns in the same session as
+  // context. If a thread whose turn 1 answered "550 orders" from synthetic data
+  // were allowed to continue into Olist, the contextual rewriter would inject
+  // numbers, constraints, or entities from the wrong corpus into subsequent
+  // queries. Turn 2 would run against Olist carrying a constraint or entity from
+  // synthetic data -- producing a silent wrong answer with no visible cause.
+  // Reusing the "New" control to wipe the session and thread state ensures
+  // stale cross-corpus context cannot leak across schema boundaries.
+  if (corpusSelect) {
+    corpusSelect.addEventListener('change', () => {
+      const next = corpusSelect.value;
+      if (!next || next === currentCorpus) return;
+      currentCorpus = next;
+      setStoredCorpus(next);
+      startNewConversation(`Corpus changed to “${next}”. Started a new conversation.`);
+    });
+  }
 
   $('copy-thread-btn').addEventListener('click', () => {
     if (!turns.some((t) => t.state === 'done')) { status('Nothing to copy yet.'); return; }
@@ -1687,6 +1771,7 @@
           // exactly the old behaviour rather than an empty table frame.
           trace: {
             session_id: id,
+            target_schema: t.target_schema,
             route: t.route, executed_sql: t.executed_sql,
             normalized_query: t.rewritten_query,
             rewrite_applied: t.rewrite_applied,
@@ -1750,6 +1835,53 @@
     });
   }
 
+  // ── Corpus switcher management ─────────────────────────────────────────────
+  // The available schemas and default schema are read from /health so that
+  // schema options cannot drift between the backend and frontend.
+  function updateCorpusSelector(availableSchemas, defaultSchema) {
+    if (!corpusSelect || !Array.isArray(availableSchemas) || !availableSchemas.length) return;
+
+    // Check stored preference in localStorage (wrapped in try/catch with in-memory fallback).
+    // If the persisted value is not in available_schemas, discard it and fall back to default_schema.
+    let stored = getStoredCorpus();
+    if (stored && !availableSchemas.includes(stored)) {
+      stored = null;
+      setStoredCorpus(null);
+    }
+
+    const fallback = (defaultSchema && availableSchemas.includes(defaultSchema))
+      ? defaultSchema
+      : availableSchemas[0];
+
+    // Determine target selection: active user selection (if valid), else stored, else default
+    let chosen = (currentCorpus && availableSchemas.includes(currentCorpus))
+      ? currentCorpus
+      : (stored || fallback);
+
+    if (!availableSchemas.includes(chosen)) {
+      chosen = fallback;
+    }
+
+    // Populate or sync the <select> options from available_schemas
+    const existingOpts = Array.from(corpusSelect.options).map(o => o.value);
+    const matches = existingOpts.length === availableSchemas.length &&
+                    existingOpts.every((v, i) => v === availableSchemas[i]);
+
+    if (!matches) {
+      clear(corpusSelect);
+      availableSchemas.forEach((schema) => {
+        const opt = el('option', null, schema);
+        opt.value = schema;
+        corpusSelect.appendChild(opt);
+      });
+    }
+
+    corpusSelect.value = chosen;
+    currentCorpus = chosen;
+    setStoredCorpus(chosen);
+    corpusPopulated = true;
+  }
+
   // ── Health ─────────────────────────────────────────────────────────────────
   async function pollHealth(force) {
     // Skip only the RECURRING poll while hidden. The first call must always
@@ -1763,6 +1895,12 @@
       const ok = r.ok;
       healthDot.dataset.state = ok ? 'ok' : 'down';
       healthDot.title = ok ? 'Orchestrator reachable' : `Orchestrator returned HTTP ${r.status}`;
+      if (ok) {
+        const data = await r.json().catch(() => null);
+        if (data && Array.isArray(data.available_schemas)) {
+          updateCorpusSelector(data.available_schemas, data.default_schema);
+        }
+      }
     } catch (err) {
       healthDot.dataset.state = 'down';
       healthDot.title = `Orchestrator unreachable: ${(err && err.message) || 'network error'}`;
