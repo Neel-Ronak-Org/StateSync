@@ -115,6 +115,7 @@ _IMMUTABLE_FIELDS: frozenset[str] = frozenset({
     "principal_id",
     "session_id",
     "raw_query",
+    "target_schema",
 })
 
 
@@ -127,6 +128,9 @@ class StateSyncState(BaseModel):
     tenant_id:    str                      # derived from authenticated principal (C1)
     principal_id: str                      # authenticated caller (C1); scopes conversation history
     session_id:   str
+    # Chosen once at entry and must never change mid-query — a query that switched
+    # corpus halfway would produce an answer whose provenance is unknowable.
+    target_schema: str
 
     # --- input & normalization (Part D) ---
     raw_query:    str

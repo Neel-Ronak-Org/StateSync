@@ -545,7 +545,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
 
     async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id) as session:
         # Always needed: fingerprint (memory key on attempt 0) and table list.
-        _schema = target_schema()
+        _schema = state_dict.get("target_schema") or target_schema()
         tables_result = await schema_list_tables(session, _schema)
         schema_fingerprint: str = tables_result.get("fingerprint", "")
         table_names = [t["name"] for t in tables_result.get("tables", [])]

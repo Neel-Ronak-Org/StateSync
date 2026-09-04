@@ -183,6 +183,12 @@ rate_limit_window_seconds = 60
 # with credentialed requests and unsafe for authenticated APIs. The frontend is
 # served on port 3000 in development.
 cors_allowed_origins      = ["http://localhost:3000", "http://127.0.0.1:3000"]
+# UX allowlist so a bad value returns a clean 422 instead of a 500; the
+# AUTHORITATIVE check is mcp/tools/schema_tools.py::_validate_schema, which
+# validates server-side and cannot be bypassed by the orchestrator. If the two
+# lists ever drift, MCP wins and the caller gets an error — never a silent
+# fallback to another corpus.
+allowed_schemas           = ["public", "olist"]
 
 [experiment]
 # F-V2 over-exposure experiment (M9). Surface sizes reuse mcp.tool_ceiling's

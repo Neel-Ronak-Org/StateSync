@@ -31,6 +31,7 @@ from mcp_client import (MCPSession, audit_record, history_append_turn,
                         history_get_recent_turns, history_get_turn_rows,
                         history_list_sessions)
 from nodes.synthesizer import build_citations
+from schema_retriever import target_schema
 from schemas.synthesizer_output import safe_synthesizer_output
 from state import StateSyncState
 
@@ -176,6 +177,9 @@ async def require_principal(request: Request) -> Principal:
 class QueryRequest(BaseModel):
     query: str
     session_id: str | None = None
+    # None means "use the configured default", which keeps existing callers
+    # and every measurement script byte-identical in behaviour.
+    schema: str | None = None
     # Test harness only (C2-V1/V2): seeds the attempt-0 candidate SQL,
     # bypassing LLM generation. Never sent by the frontend.
     debug_candidate_sql: str | None = None
@@ -198,6 +202,8 @@ async def health() -> dict:
         "service": "orchestrator",
         "phase": "B",
         "llm_provider": str(flags.llm.provider),
+        "default_schema": target_schema(),
+        "available_schemas": sorted(cfg.api.allowed_schemas),
     }
 
 
@@ -313,6 +319,13 @@ async def run_query(
     if not body.query or not body.query.strip():
         raise HTTPException(status_code=422, detail="query must not be empty")
 
+    requested = body.schema or target_schema()
+    if requested not in cfg.api.allowed_schemas:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Schema {requested!r} is not allowed. Allowed schemas: {sorted(cfg.api.allowed_schemas)}",
+        )
+
     session_id = body.session_id or str(uuid.uuid4())
     tenant_id = principal.tenant_id
     client_ip = request.client.host if request.client else None
@@ -325,6 +338,7 @@ async def run_query(
         "principal_id": principal.principal_id,
         "session_id": session_id,
         "raw_query": body.query,
+        "target_schema": requested,
         "flags_snapshot": snapshot_flags(),
     }
 
@@ -337,6 +351,7 @@ async def run_query(
                 principal_id=principal.principal_id,
                 session_id=initial_input["session_id"],
                 raw_query=initial_input["raw_query"],
+                target_schema=requested,
                 flags_snapshot=initial_input["flags_snapshot"],
                 debug_candidate_sql=body.debug_candidate_sql,
             )
@@ -352,7 +367,7 @@ async def run_query(
             query_id=query_id,
             session_id=session_id,
             client_ip=client_ip,
-            detail=str(exc),
+            detail=f"{exc} schema={requested}",
         )
         raise HTTPException(status_code=500, detail=f"Graph execution error: {exc}")
 
@@ -366,6 +381,7 @@ async def run_query(
         "query_id":    final_state.query_id,
         "tenant_id":   final_state.tenant_id,
         "principal_id": final_state.principal_id,
+        "target_schema": final_state.target_schema,
         "route":       final_state.route,
         "executed_sql": final_state.executed_sql,
         # executed_sql is null when a statement was rejected before execution,
@@ -500,6 +516,7 @@ async def run_query(
         query_id=final_state.query_id,
         session_id=session_id,
         client_ip=client_ip,
+        detail=f"schema={final_state.target_schema}",
     )
 
     return response
