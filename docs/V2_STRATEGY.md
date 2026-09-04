@@ -570,6 +570,52 @@ see §3a's row-count correction; this line used to say 1.45M), ending in a
 chart, with the trace visible. If a viewer cannot tell it is a conversation,
 the workstream is not done.
 
+> **✎ MET 2026-09-04. `scripts/demo_olist.py`, and the bar is now
+> MACHINE-CHECKED rather than asserted** — the script exits non-zero unless all
+> four clauses hold, so this claim cannot silently rot.
+>
+> | clause | result |
+> |---|---|
+> | ≥3 turns complete without error | **3/3** |
+> | it is a CONVERSATION (`rewrite_applied`) | true on turns **2 and 3** |
+> | final turn returns a chart | **Vega-Lite `bar`, 5 values** |
+> | ran on the REAL corpus (`olist.`-qualified SQL) | turns **1, 2 and 3** |
+>
+> The transcript (`docs/demo_olist_transcript.json`) shows the carryover
+> plainly — turn 2's rewrite pulls the *number* from turn 1:
+>
+> ```
+> T1  "How many orders are there in total?"          -> 99,441
+> T2  "How many of those were delivered?"
+>       rewritten: "How many of the total 99,441 orders were delivered?"
+>                                                    -> 96,478 (97.0%)
+> T3  "Break that down by customer state — top 5, as a chart."
+>       rewritten: "Create a chart showing the top 5 customer states by the
+>                   number of delivered orders."     -> SP RJ MG RS PR + bar chart
+> ```
+>
+> **Every figure independently verified against the database**, not taken from
+> the model: 99,441 total, 96,478 delivered, and SP/RJ/MG/RS/PR as the top five.
+>
+> **⚠ One honest defect the demo exposes, recorded rather than trimmed away.**
+> Turn 2 and turn 3 use DIFFERENT definitions of "delivered". Turn 2 counts
+> `order_status='delivered' AND order_purchase_timestamp IS NOT NULL` (96,478);
+> turn 3 counts `order_status='delivered' AND order_delivered_customer_date IS
+> NOT NULL` (**96,470**). The conversation therefore drifts by 8 orders between
+> turns without saying so. Worse, turn 2's extra clause is a **no-op** — the
+> count is identical with and without it, so the query states a restriction the
+> data makes invisible, which is exactly the fixture-defect class audit 006
+> F-006-4 catalogued. Neither breaks the demo bar, and both are the kind of
+> cross-turn inconsistency §3's error-propagation metric exists to surface.
+>
+> **The shipped default stays `public`.** The demo FLIPS
+> `schema_retriever.target_schema` to `olist`, runs, and restores the original
+> file bytes verbatim in a `finally:` block covering exceptions and
+> KeyboardInterrupt — then verifies restoration twice (the flag value on disk,
+> and `shipped_flags.py` reporting `shipped: true`), failing loudly if either
+> check fails. That is not ceremony: leftover flag state has silently
+> contaminated a measurement in this repo twice.
+
 > **✎ CORPUS RESOLVED 2026-09-02.** This bar was quietly unmet: it demands real
 > rows while the shipped default is `schema_retriever.target_schema = "public"`
 > — the **550-order synthetic** corpus. Verified in `config/flags.toml:181` and

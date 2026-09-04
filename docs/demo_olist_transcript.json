@@ -1,0 +1,148 @@
+{
+  "_about": {
+    "description": "V2_STRATEGY §7 demo transcript over real Olist corpus (1,551,698 rows)",
+    "corpus": "olist",
+    "verified_olist_row_count": 1551698,
+    "timestamp": "2026-09-04T02:53:25.406865+00:00",
+    "session_id": "demo-olist-af277255609f",
+    "bar_passed": true
+  },
+  "deviation_note": "This run deliberately pointed the agent at the olist corpus (schema_retriever.target_schema='olist') to demonstrate multi-turn query rewriting and chart generation over real data, and restored shipped state (target_schema='public') immediately afterwards.",
+  "flag_provenance": {
+    "llm": {
+      "provider": "local",
+      "models": {
+        "supervisor": "qwen2.5:7b",
+        "sql": "qwen2.5:7b",
+        "synthesizer": "qwen2.5:7b",
+        "memory_summarizer": "qwen2.5:7b",
+        "normalizer": "qwen2.5:7b",
+        "decomposer": "qwen2.5:7b",
+        "judge": "qwen2.5:7b",
+        "rewriter": "qwen2.5:7b"
+      }
+    },
+    "flag_state": {
+      "memory.enabled": "false",
+      "normalization.enabled": "true",
+      "tenancy.enforced": "false",
+      "evaluation.vision_scorer.enabled": "false",
+      "schema_retriever.target_schema": "olist"
+    },
+    "shipped": false,
+    "disk_deviations": {
+      "schema_retriever.target_schema": {
+        "expected": "public",
+        "found": "olist"
+      }
+    },
+    "live_staleness": null,
+    "allow_nonshipped": true,
+    "fixture_corpus_check": null
+  },
+  "verified_olist_row_count": 1551698,
+  "timestamp": "2026-09-04T02:53:25.406865+00:00",
+  "session_id": "demo-olist-af277255609f",
+  "bar_evaluation": {
+    "passed": true,
+    "clauses": [
+      {
+        "clause": "At least 3 turns completed without error",
+        "passed": true,
+        "detail": "3/3 turns completed without error"
+      },
+      {
+        "clause": "At least one turn had rewrite_applied=true (is a conversation)",
+        "passed": true,
+        "detail": "rewrite_applied=True on turn(s) [2, 3]"
+      },
+      {
+        "clause": "Final turn returned a chart",
+        "passed": true,
+        "detail": "Chart returned on turn 3 (mark: 'bar', values: 5)"
+      },
+      {
+        "clause": "At least one executed SQL is schema-qualified with 'olist.' (real corpus)",
+        "passed": true,
+        "detail": "Schema-qualified 'olist.' present in turn(s) [1, 2, 3]"
+      }
+    ]
+  },
+  "turns": [
+    {
+      "turn_index": 1,
+      "question": "How many orders are there in total?",
+      "rewritten_query": "How many orders are there in total?",
+      "rewrite_applied": false,
+      "route": "sql",
+      "executed_sql": "SELECT COUNT(*) FROM olist.orders",
+      "row_count": 1,
+      "answer_text": "There are a total of 99,441 orders in the logistics network.",
+      "chart": null,
+      "latency_ms": 6487
+    },
+    {
+      "turn_index": 2,
+      "question": "How many of those were delivered?",
+      "rewritten_query": "How many of the total 99,441 orders were delivered?",
+      "rewrite_applied": true,
+      "route": "sql",
+      "executed_sql": "SELECT COUNT(*) \nFROM olist.orders \nWHERE order_status = 'delivered' AND order_purchase_timestamp IS NOT NULL LIMIT 1000;",
+      "row_count": 1,
+      "answer_text": "96,478 out of 99,441 orders were delivered, which means approximately 97.0% of the orders were delivered.",
+      "chart": null,
+      "latency_ms": 9852
+    },
+    {
+      "turn_index": 3,
+      "question": "Break that down by customer state — top 5, as a chart.",
+      "rewritten_query": "Create a chart showing the top 5 customer states by the number of delivered orders.",
+      "rewrite_applied": true,
+      "route": "sql",
+      "executed_sql": "SELECT c.customer_state, COUNT(o.order_id) AS delivered_orders_count\nFROM olist.customers c\nJOIN olist.orders o ON c.customer_id = o.customer_id\nWHERE o.order_status = 'delivered' AND o.order_delivered_customer_date IS NOT NULL\nGROUP BY c.customer_state\nORDER BY delivered_orders_count DESC\nLIMIT 5;",
+      "row_count": 5,
+      "answer_text": "The top 5 customer states by the number of delivered orders are SP, RJ, MG, RS, and PR. A bar chart would effectively display this data, with the states on the x-axis and the number of delivered orders on the y-axis.",
+      "chart": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "mark": "bar",
+        "data": {
+          "values": [
+            {
+              "customer_state": "SP",
+              "delivered_orders_count": 40494
+            },
+            {
+              "customer_state": "RJ",
+              "delivered_orders_count": 12350
+            },
+            {
+              "customer_state": "MG",
+              "delivered_orders_count": 11354
+            },
+            {
+              "customer_state": "RS",
+              "delivered_orders_count": 5344
+            },
+            {
+              "customer_state": "PR",
+              "delivered_orders_count": 4923
+            }
+          ]
+        },
+        "encoding": {
+          "x": {
+            "field": "customer_state",
+            "type": "nominal"
+          },
+          "y": {
+            "field": "delivered_orders_count",
+            "type": "quantitative",
+            "aggregate": "sum"
+          }
+        },
+        "title": "Top 5 Customer States by Delivered Orders"
+      },
+      "latency_ms": 17368
+    }
+  ]
+}
