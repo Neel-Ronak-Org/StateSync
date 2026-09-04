@@ -1,320 +1,211 @@
-# StateSync — Multi-Agent Analytics Infrastructure for ONDC
+# StateSync
 
-> **Picking this up cold (human or agent)?** Start with [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md) — history, settled decisions, and current direction — then [`docs/PROJECT_DIRECTION.md`](docs/PROJECT_DIRECTION.md).
+> **Picking this up cold (human or agent)?** Start with [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md) — history, settled decisions, and current direction.
 
+StateSync is a conversational analytics agent over e-commerce data. A natural-language question is routed to SQL, to documents, or to both; read-only queries run; the answer comes back as prose plus a citation and, when it helps, a Vega-Lite chart. Multi-turn: follow-ups keep context.
 
-StateSync is an enterprise-grade multi-agent analytics platform for open network (ONDC) e-commerce data. It provides natural language analytics, schema-guided SQL generation, deterministic security guarantees, and interactive Vega-Lite visualizations.
+## Quick start
 
----
+Follow these numbered steps to set up and run StateSync on a clean machine:
 
-## 🚀 Development Quick Start
+1. **Prerequisites**
+   - Docker Desktop with Compose v2.
+   - The native Ollama app running on the host (`config/flags.toml` points generation at `http://host.docker.internal:11434`).
+   - Python 3.12+ for the operator scripts.
 
-### 1. Prerequisites
-- **Docker Desktop** (with Compose v2)
-- **Python 3.12+** (for running migration & seeding tools locally)
-- *(Optional)* **Anthropic API Key** (only needed if running in `anthropic` provider mode; local dev runs fully offline using Ollama)
+   Pull the required models:
+   ```bash
+   # Embeddings always run inside the container
+   docker compose up -d ollama
+   docker compose exec ollama ollama pull mxbai-embed-large
 
----
+   # Generation runs via native host Ollama
+   ollama pull qwen2.5:7b
+   ```
 
-### 2. Set Up Environment & Local Secrets
-Create local secrets files (ignored by Git):
+2. **Create secrets**
+   Create the four secrets the stack needs to boot (`secrets/` is gitignored):
+   ```bash
+   mkdir -p secrets
+   echo "changeme_migrator" > secrets/pg_migrator_password
+   echo "changeme_reader"   > secrets/pg_reader_password
+   echo "changeme_history"  > secrets/pg_history_password
+
+   # Provider API keys. The orchestrator ATTACHES all three, so the FILES must
+   # exist even when you only run the local provider -- `docker compose up`
+   # fails on a missing secret file, not at the point the key is used. Leave
+   # them empty unless you switch provider in config/flags.toml.
+   touch secrets/anthropic_api_key secrets/azure_openai_api_key secrets/gemini_api_key
+   ```
+   These cover database administration (`pg_migrator_password`), read-only analytics
+   queries (`pg_reader_password`), session history and audit writes
+   (`pg_history_password`), and the three hosted-provider keys. Only
+   `anthropic_api_key` needs a real value, and only when
+   `config/flags.toml` sets `provider = "anthropic"` — but all three files must be
+   present or the orchestrator will not start.
+
+3. **Start the services**
+   Launch the 7 Docker Compose services:
+   ```bash
+   docker compose up -d
+   ```
+
+4. **Run migrations**
+   Apply the database schema and compute the fingerprint:
+   ```bash
+   bash scripts/migrate.sh
+   ```
+   `migrate.sh` only runs 001, 002 and 004; there is no ledger, and migrations 005 onward are applied by hand with psql.
+
+5. **Generate an API principal**
+   Generate a bearer token and configure the orchestrator:
+   ```bash
+   python3 scripts/gen_api_principal.py
+   docker compose restart orchestrator
+   ```
+   `python3 scripts/gen_api_principal.py` prints a bearer token ONCE and writes `secrets/api_principals.json` (as well as `secrets/api_token_dev`). Then `docker compose restart orchestrator`, because the principal file is read at startup.
+
+6. **Open the web interface**
+   Open http://localhost:3000 and paste the token into the login gate.
+
+7. **Run the demo**
+   Run `python3 scripts/demo_olist.py` to see the 3-turn Olist conversation.
+
+**Troubleshooting:** If the orchestrator will not start, the usual cause is a missing or malformed `secrets/api_principals.json` — auth fails closed on purpose.
+
+## Architecture
+
+The stack consists of 7 services in `docker-compose.yml`:
+
+- `postgres`: PostgreSQL database with PostGIS spatial extensions and pgvector. Resides on `db_net`.
+
+- `mcp`: Model Context Protocol server on port 8080. Sole holder of database credentials. Bridges `db_net` and `app_net`.
+
+- `orchestrator`: LangGraph multi-agent pipeline on port 8090. Resides on `app_net`.
+
+- `evaluator`: Continuous evaluation engine and metrics service on port 8095. Resides on `app_net`.
+
+- `frontend`: Nginx web interface served on port 3000. Resides on `app_net`.
+
+- `ollama`: Containerized Ollama instance on port 11434 serving `mxbai-embed-large` embeddings to `mcp`. Sits on both networks.
+
+- `qdrant`: Vector database on port 6333 storing execution trajectories. Resides on `db_net`.
+
+The orchestrator has NO direct database access — every database operation goes through the mcp service over JSON-RPC. `postgres` and `qdrant` reside on an internal network (`db_net`) inaccessible to the orchestrator (`app_net`). The frontend is served on port 3000 and calls the orchestrator cross-origin on port 8090.
+
+Three layers on generated SQL (stated plainly, no adjectives):
+
+- **Layer 1 (Parser Gate):** MCP parses SQL with `pglast`. It rejects multi-statement queries, data-modifying CTEs, anything other than a single read-only `SELECT`, and now also rejects a `SELECT` that reads no real table.
+
+- **Layer 2 (Session Guards):** MCP connection pool configures sessions with `SET TRANSACTION READ ONLY`, `statement_timeout = 15000ms`, and mandatory transaction rollback on release.
+
+- **Layer 3 (PostgreSQL Role):** MCP connects as `statesync_reader`, which holds `GRANT SELECT` exclusively. Write capability is absent by design: the query role holds no `INSERT`, `UPDATE`, or `DELETE`.
+
+## Security
+
+- Three layers on generated SQL. Layer 1 parses with pglast and rejects anything that is not a single read-only SELECT, and now also rejects a SELECT that reads no real table.
+
+- Write capability is absent by design: the query role holds no INSERT/UPDATE/DELETE.
+
+- Bearer-token auth on POST /query, GET /sessions and GET /sessions/{id}; GET /health is deliberately open. Tokens are stored only as SHA-256 hashes and compared with hmac.compare_digest. Startup FAILS CLOSED if the principal file is missing or malformed.
+
+- Per-identity audit log in session_state.audit_log recording principal, tenant, route, outcome and client IP for allowed, denied_auth and denied_rate alike.
+
+- Per-principal rate limiting, 30 requests / 60 seconds, 429 with Retry-After.
+
+- Conversation history is scoped per principal: two principals on one tenant cannot read each other's conversations, including by session id.
+
+- The adversarial suite (`scripts/verify_security.sh`) reports **43/44** — see [What is measured](#what-is-measured) for the one failure and why it stands.
+
+## Corpora
+
+- `public` (synthetic ONDC schema): 550 orders. This is the SHIPPED default (schema_retriever.target_schema = "public").
+
+- `olist` (real Brazilian e-commerce): 1,551,698 rows across 9 tables, including 99,441 orders and 96,478 delivered.
+
+- `documents`: 2,585 documents / 20,245 chunks, of which 2,567 documents / 20,209 chunks are Olist review digests and 18 documents / 36 chunks are the synthetic policy corpus.
+
+## What is measured
+
+The effect table from §2:
+
+| intervention | effect |
+|---|---|
+| fixing the fixture's ground truths | +16.0pp |
+| 7B → hosted, under-specified questions | +20.0pp |
+| 7B → hosted, well-specified questions | +5.5pp — one query |
+| 7B → 14B general (local) | +0.0pp |
+| 7B → 14B coder (local) | −8.0pp |
+
+Instrument quality is worth as much as a frontier model, and a bigger local model is worth nothing.
+ 
+The adversarial suite (scripts/verify_security.sh) reports 43/44. The 40 original checks all pass. Four strict credential-shape checks were added alongside them and ONE fails: adv_14_strict. The failure stands because while the user-facing answer is correct, the residual is that /query echoes the model's own rejected SQL in a debug field.
+
+## The demo
+
+`python3 scripts/demo_olist.py`. It runs a 3-turn conversation over the real Olist corpus and exits non-zero unless all four §7 clauses hold:
+- Clause 1: >=3 turns complete without error.
+- Clause 2: rewrite applied on >=1 turn.
+- Clause 3: final turn returns a Vega-Lite chart.
+- Clause 4: SQL queries execute against real `olist.` schema tables.
+
+Verified transcript in docs/demo_olist_transcript.json:
+- **T1:** `"How many orders are there in total?"` -> 99,441
+- **T2:** `"How many of those were delivered?"` -> rewritten to `"How many of the total 99,441 orders were delivered?"` -> 96,478
+- **T3:** `"Break that down by customer state — top 5, as a chart."` -> SP, RJ, MG, RS, PR + a Vega-Lite bar chart
+
+Turn 2's rewrite carrying the number 99,441 out of turn 1 is what makes it a conversation rather than three questions.
+
+The demo flips target_schema to olist and restores shipped state afterwards, verifying the restoration.
+
+## Limitations
+
+- Accuracy depends heavily on question phrasing; the headline single-turn numbers were measured on questions whose projections and denominators were stated by construction, which removes schema linking and ambiguity resolution from the task.
+
+- The local 7B model is the shipped default and is NOT representative of hosted-model quality.
+
+- The rate limiter is in-process: a restart clears every window, and N replicas permit N× the rate.
+
+- Bearer tokens have no expiry; revocation means editing the secret and restarting.
+
+- The frontend keeps its token in localStorage, readable by any script achieving XSS.
+
+- session_state.audit_log has no retention policy and grows without bound. Full stored result rows DO have one (30-day TTL, 1 MiB/turn cap), pruned on write and forceable with scripts/prune_turn_rows.py.
+
+- Conversation history written before authentication existed is attributed to a sentinel principal and is invisible in the UI by design.
+
+- Point at [`docs/limitations.md`](docs/limitations.md) for the full list and say that it is long on purpose.
+
+## Repo map
+
+| Document | Purpose |
+|---|---|
+| [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md) | Project history, settled decisions, and current direction. Read this first. |
+| [`docs/V2_STRATEGY.md`](docs/V2_STRATEGY.md) | Strategy, workstream deliverables, completion conditions, and cut-lines. |
+| [`docs/limitations.md`](docs/limitations.md) | Full inventory of known limitations, weak metrics, and unbuilt seams. |
+| [`docs/open_items.md`](docs/open_items.md) | Active defects, audit findings, and open technical investigations. |
+| [`docs/metrics-report.md`](docs/metrics-report.md) | Recorded experimental results, benchmark numbers, and evaluation methodology. |
+
+## Verification gates
+
+Run the gates from the repository root:
+
 ```bash
-mkdir -p secrets
-echo "statesync_migrator_pass" > secrets/pg_migrator_password
-echo "statesync_reader_pass"   > secrets/pg_reader_password
-echo "statesync_ingest_pass"   > secrets/pg_ingest_password
+# Unit and integration test suite
+pytest tests/ -q
 
-# Optional: Only needed if config/flags.toml sets provider = "anthropic"
-echo "sk-ant-your-key-here"    > secrets/anthropic_api_key
-```
-
----
-
-### 3. Choose Your LLM Provider Mode
-StateSync features a **D2 Provider Seam** allowing seamless switching between local open-weight models (Ollama) and cloud APIs (Anthropic Claude).
-
-Edit `config/flags.toml`:
-```toml
-[llm]
-provider = "local"    # "local" for offline dev, "anthropic" for graded metrics & evaluation runs
-ollama_url = "http://host.docker.internal:11434"
-```
-
-> ⚠️ **`ollama_url` governs GENERATION only — embeddings are a separate,
-> fixed path. Get this wrong and you get a connection error on some calls
-> but not others, which is more confusing than an outright failure.**
-> **Corrected 2026-08-23 (cycle 006 D2, audit 006 F-006-6)** — this note
-> used to present two mutually exclusive topologies for "the models,"
-> plural, singular. There is only one topology for generation; embeddings
-> are never part of the choice.
->
-> **Embeddings (`mxbai-embed-large`) always go to the Dockerized `ollama`
-> service**, `http://ollama:11434` — `mcp`'s `OLLAMA_URL` is set directly in
-> `docker-compose.yml` and does not read `ollama_url` or any other flag.
-> **This is true regardless of which generation topology you pick below.**
-> Whichever topology you choose, `mxbai-embed-large` still needs to be
-> pulled into the *container*, even if you never touch it for anything
-> else — `docker compose exec ollama ollama pull mxbai-embed-large`.
->
-> **Generation (`qwen2.5:7b`) follows `ollama_url`, and there are two valid
-> settings:**
->
-> | You are running generation on… | Set `ollama_url` to | Pull `qwen2.5:7b` with |
-> |---|---|---|
-> | The same Dockerized `ollama` service the embeddings already use | `http://ollama:11434` | `docker compose exec ollama ollama pull qwen2.5:7b` |
-> | A **native** Ollama app on the host (macOS/Windows desktop install) | `http://host.docker.internal:11434` | `ollama pull qwen2.5:7b` on the host |
->
-> **The value currently committed is `http://host.docker.internal:11434`**, because this repo's development machine runs a native Ollama app for generation — **and pulls `mxbai-embed-large` into the container regardless**, per above. **If you'd rather generate from the container too**, pull `qwen2.5:7b` there and change `ollama_url` to `http://ollama:11434`; `docker-compose.yml`'s own comment above the `ollama` service spells out exactly this. `host.docker.internal` resolves only from inside a container — it is never reachable from the host itself, so host-side scripts needing a real completion must run via `docker compose exec orchestrator …`.
-
-> 💡 **Developer Note:** When `provider = "local"`, no Anthropic API key is required and the system starts completely offline.
-
----
-
-### 4. Pull Local LLM & Embedding Models (First Time Only)
-
-**`mxbai-embed-large` always goes into the Dockerized `ollama` container** —
-`mcp` reaches it there unconditionally (see step 3's note), regardless of
-your `ollama_url` setting:
-```bash
-docker compose up -d ollama
-docker compose exec ollama ollama pull mxbai-embed-large
-```
-
-**`qwen2.5:7b` (generation) goes wherever `ollama_url` points** (see the
-table in step 3):
-
-**Dockerized Ollama** (`ollama_url = "http://ollama:11434"`):
-```bash
-docker compose exec ollama ollama pull qwen2.5:7b
-```
-
-**Native host Ollama** (`ollama_url = "http://host.docker.internal:11434"`):
-```bash
-ollama pull qwen2.5:7b
-```
-
-Confirm the right model is present in the right place — a missing model
-surfaces as an HTTP 404 (`model ... not found`) on the first query or
-ingest, not at startup:
-```bash
-docker compose exec ollama ollama list   # MUST show mxbai-embed-large always;
-                                          # also qwen2.5:7b if generating here
-ollama list                              # native host — only relevant if
-                                          # ollama_url points here for generation
-```
-
----
-
-### 5. Launch StateSync Stack & Seed Database
-```bash
-# 1. Start all 7 microservices
-docker compose up -d
-
-# 2. Run Database Migrations & Fingerprint Calculation
-#    (includes ss_embed, the Part E1 vector.hybrid_select function)
-bash scripts/migrate.sh
-
-# 3. Seed Database with Frozen Synthetic ONDC Fixtures
-python scripts/seed.py
-```
-
-If `docker compose build` stalls indefinitely with no output (a known Docker
-Desktop BuildKit issue on some hosts, unrelated to this repo), fall back to
-the classic builder:
-```bash
-DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0 docker compose build
-```
-
----
-
-### 6. Ingest the Document Corpus (Part E1 — Hybrid Knowledge)
-The `docs` and `hybrid` routes answer from a corpus of supplier agreements,
-SLA annexures, and policy/SOP documents. This is a **one-time, operator-run
-step** — never invoked by the orchestrator or any agent (A1) — using its own
-`statesync_ingest` database role, distinct from the `statesync_reader` role
-every live query uses.
-```bash
-# 1. Generate the synthetic PDF corpus (frozen once generated; re-run only to regenerate)
-python scripts/gen_document_corpus.py
-
-# 2. Parse, chunk, embed, and load into documents/document_chunks
-python scripts/ingest.py
-```
-
-**Optional: the per-seller review-digest corpus** (`olist.order_reviews`,
-2,567 documents — requires the `olist` schema already loaded:
-`scripts/fetch_olist.sh` then `scripts/load_olist.sh`, not otherwise
-documented in this quickstart). Its manifest is **not committed** (`.gitignore`: verbatim CC BY-NC-SA review
-text, same reasoning as `data/olist/` two lines above it) — generate it
-locally, then ingest it the same way:
-```bash
-# 1. Generate the manifest (deterministic, ~40s against the checksummed
-#    olist data; reproduces byte-for-byte on re-run — see the script's
-#    own docstring for how that was verified)
-python scripts/gen_olist_review_digests.py \
-    --out fixtures/documents/olist_review_digests_manifest.json
-
-# 2. Ingest it through the same chunker/embedder as step 6 above
-python scripts/ingest.py --manifest fixtures/documents/olist_review_digests_manifest.json
-```
-Reversible the same way it's isolated: `doc_type='review_digest'` is unique
-to this corpus, so
-`DELETE FROM document_chunks WHERE document_id IN (SELECT document_id FROM documents WHERE doc_type='review_digest'); DELETE FROM documents WHERE doc_type='review_digest';`
-removes exactly this corpus and nothing else (demonstrated live, cycle 006 —
-see `docs/limitations.md`'s review-digest corpus section).
-
----
-
-### 7. Seed the Adversarial Test Corpus (Part F — Security Suite)
-`scripts/verify_security.sh` (F-V1 / M8) needs specific adversarial payloads
-already present in `delivery_events.note` / `disputes.narrative` before it
-runs — this seeds them (also via `statesync_ingest`, same isolation as step 6):
-```bash
-python scripts/seed_adversarial.py
-```
-
----
-
-### 8. Access Applications & Dashboards
-- **Frontend Dashboard:** [http://localhost:3000](http://localhost:3000)
-- **Orchestrator API:** [http://localhost:8090/health](http://localhost:8090/health)
-- **MCP Service API:** [http://localhost:8080](http://localhost:8080)
-- **Evaluator API:** [http://localhost:8095/health](http://localhost:8095/health) (`GET /history`, `POST /run`)
-
----
-
-### 9. Run the Verification Suites
-```bash
-# Config discipline & literal lint (A0.2) — orchestrator/, mcp/, evaluator/
+# Config discipline and literal lint (A0.2)
 bash scripts/lint-no-literals.sh
 
-# Phase B structural + golden-query suite (B-V1..B-V9)
-bash scripts/verify_b.sh
+# Architectural seams verification
+python3 scripts/verify_seams.py
 
-# Phase E2 — A7 dual validation, CSP/vega-interpreter, malicious-spec suite
-python scripts/verify_e2.py
+# Visualization and CSP validation suite (Phase E2)
+python3 scripts/verify_e2.py
 
-# Phase F — seams exist (A0.5/Appendix 4), vision-scorer registration seam
-python scripts/verify_seams.py
+# Deployed container health and connectivity checks
+python3 scripts/verify_deployed.py
 
-# Phase F — M8 adversarial security suite (binary; run step 7 first)
+# Adversarial security evaluation suite (reports 43/44)
 bash scripts/verify_security.sh
-
-# Phase F — M9 routing determinism + tool-ceiling over-exposure experiment
-# (writes docs/f_v2_report.json; refuses to overwrite an existing report --
-#  pass --out <new path> to record a re-run alongside it)
-python scripts/experiment_tool_ceiling.py
-
-# Phase E2 — E2-V1: run all 30 chart queries live, validate each response
-# against A7 (binary), then score the generated specs for M7.
-python scripts/run_e2_v1.py --out docs/e2_v1_generated_<label>.json
-python scripts/score_specs.py --score docs/e2_v1_generated_<label>.json
 ```
-Model-sensitive re-verification (M2/M4/M6/M7 and related checks) reuses each
-phase's own bench script unchanged — see `docs/metrics-report.md` for the
-full list and `docs/rebaseline_runbook.md` for the graded (Anthropic)
-re-baseline procedure.
-
----
-
-## 🏗️ System Architecture & Service Network Isolation
-
-StateSync strictly isolates database infrastructure (`db_net`) from public-facing/app services (`app_net`). The **Model Context Protocol (MCP)** service bridges the network boundary as the single credential-holding data gateway.
-
-```
-┌─────────────────── db_net (internal, non-routable) ───────────────────┐
-│  postgres:5432            qdrant:6333                                 │
-└───────────────────────────────────────────────────────────────────────┘
-                                ▲
-                                │ (MCP is the ONLY bridge; sole credential holder)
-                                ▼
-┌─────────────────── app_net (application network) ────────────────────┐
-│  mcp:8080    orchestrator:8090    frontend:3000    evaluator:8095     │
-└───────────────────────────────────────────────────────────────────────┘
-
-        ollama:11434 sits on BOTH networks (it holds no credentials
-        and fronts no data): db_net so mcp can embed, app_net so the
-        orchestrator can generate. postgres and qdrant remain
-        db_net-only — an orchestrator process attempting a direct
-        database connection fails at the network layer (B-V3).
-```
-
-### Microservice Directory
-
-| Service | Port | Description |
-|---|---|---|
-| `postgres` | `5432` | PostgreSQL + PostGIS spatial extension + pgvector |
-| `qdrant` | `6333` | Vector database storing AgentSM execution trajectories |
-| `ollama` | `11434` | Local LLM host. Always serves `mxbai-embed-large` embeddings to `mcp`; `qwen2.5:7b` generation only if `llm.ollama_url` points here instead of a native host Ollama — see step 3/4 above |
-| `mcp` | `8080` | Model Context Protocol server — sole database credential holder |
-| `orchestrator` | `8090` | LangGraph multi-agent pipeline (`supervisor`, `sql_agent`, `synthesizer`) |
-| `frontend` | `3000` | Nginx-served stateless UI with Vega-Embed & Vega-Interpreter (CSP compliant) |
-| `evaluator` | `8095` | Continuous evaluation engine & metric calculation service |
-
----
-
-## 🛡️ 3-Layer SELECT Security Model (A4.5)
-
-StateSync enforces absolute `SELECT`-only execution to prevent data modification or exfiltration:
-
-| Layer | Component | Mechanism |
-|---|---|---|
-| **Layer 1: Parser Gate** | MCP Service | Parses raw SQL AST with `pglast` (PostgreSQL parser engine). Rejects multi-statement queries, data-modifying CTEs (`WITH x AS (INSERT...)`), and non-SELECT statements prior to DB dispatch. |
-| **Layer 2: Session Guards** | MCP Connection Pool | Configures connection session with `SET TRANSACTION READ ONLY`, `statement_timeout = 15000ms`, and mandatory transaction rollback on release. |
-| **Layer 3: PostgreSQL Role** | Postgres Engine | Connects as restricted `statesync_reader` role possessing `GRANT SELECT` privileges exclusively. Any write attempt causes PostgreSQL error `SQLSTATE 42501 (permission denied)`. |
-
----
-
-## 📊 Current Progress & Phase B Deliverables Status
-
-All Phase B core deliverables and D2 provider seam refactorings are **fully implemented, tested, and verified**:
-
-- [x] **Deliverable 1:** Docker Compose orchestration across 7 isolated containers.
-- [x] **Deliverable 2:** Configuration system (`config/statesync.toml`, `config/flags.toml`, `config/error_taxonomy.json`) with zero hardcoded code literals.
-- [x] **Deliverable 3:** Schema migrations, role privileges (`statesync_reader`, `statesync_ingest`), and dynamic schema fingerprint computation.
-- [x] **Deliverable 4:** Frozen synthetic ONDC data fixtures (50 locations, 30 sellers, 10 LPs, 550 orders, 1,917 delivery events, 80 disputes).
-- [x] **Deliverable 5:** Model Context Protocol (MCP) JSON-RPC 2.0 service with 3-layer security enforcement.
-- [x] **Deliverable 6:** LangGraph Orchestrator pipeline with Entry, Supervisor, Specialist SQL Agent, and Synthesizer nodes.
-- [x] **Deliverable 7:** D2 LLM Provider Seam (`orchestrator/llm/provider.py`) supporting local Ollama models and cloud Anthropic APIs.
-- [x] **Deliverable 8:** Stateless frontend UI with strict CSP headers (no `unsafe-eval`) and Vega-Interpreter support.
-- [x] **Deliverable 9:** Evaluator service stub for phase transition readiness.
-- [x] **Deliverable 10:** Comprehensive verification suite (`scripts/verify_b.sh`) validating tests B-V1 through B-V9.
-
----
-
-## 🤝 Developer Partner Collaboration Guide
-
-### 1. Code & Configuration Discipline (A0.2)
-- **No Hardcoded Literals:** Never place numeric constants, model names, or timeouts inside Python application code. Add them to `config/statesync.toml` or `config/flags.toml` and load them via `config_loader.py`.
-- **Run Literal Lint:** Verify compliance anytime you touch orchestrator or MCP code:
-  ```bash
-  bash scripts/lint-no-literals.sh
-  ```
-
-### 2. Working on LLM Nodes
-- All nodes (`supervisor.py`, `sql_agent.py`, `synthesizer.py`) call the LLM factory:
-  ```python
-  from llm.provider import get_agent_llm
-  llm = get_agent_llm("sql")
-  response = await llm.complete(system=..., messages=..., max_tokens=...)
-  ```
-- **Never import `anthropic` or vendor SDKs directly in nodes.** Keep provider logic inside `orchestrator/llm/adapters/`.
-
-### 3. Testing Local Changes
-1. Run local stack with `provider = "local"`.
-2. Run `bash scripts/verify_b.sh` to verify end-to-end routing, database isolation, security enforcement, and schema compliance.
-3. Check `walkthrough.md` or `docs/spec-gaps.md` for specification details or open questions.
-
----
-
-## 📅 Roadmap & Upcoming Development Phases
-
-- 🔄 **Phase C:** AgentSM Memory (Qdrant trajectory storage), schema fingerprint caching, active interrogation, and C2 correction loop.
-- 🗺️ **Phase D:** Spatial analytics engine, PostGIS queries, and DigiPin reference integration.
-- 📈 **Phase E:** Vega-Lite chart synthesis engine and malicious spec sanitizer.
-- 🎯 **Phase F:** Evaluator metrics calculation engine and automated benchmark reporting.
-
----
-
-## 📄 License & Project Standards
-Internal project repository for ONDC multi-agent analytics development. All contributions must adhere to specification guidelines defined in `statesync_phase_B.md`.
