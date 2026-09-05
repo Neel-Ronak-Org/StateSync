@@ -318,8 +318,12 @@ def build_citations(
 ) -> list[dict]:
     """
     Deterministic citation construction (E1-V4; see module docstring).
-    kind:"sql" whenever there's a SQL statement to point to (success or
-    failure -- citing what was attempted is still meaningful on failure).
+    kind:"sql" only when a statement actually reached the database (success
+    or engine failure). A citation asserts provenance, so it may only point
+    at a statement the database actually saw; a statement refused before
+    execution has no provenance to assert, and citing it puts unvalidated
+    model output on screen as evidence. Engine failures retain their citation
+    because citing what reached the engine explains engine rejections.
     kind:"chunk" for the first citation_max_chunks retrievals, IN THE ORDER
     GIVEN -- deliberately not re-sorted by raw score here. The caller
     (unstructured_knowledge.py's _semantic_search_expanded) already orders
@@ -343,7 +347,8 @@ def build_citations(
     level further out).
     """
     citations: list[dict] = []
-    sql_ref = (sql_error or {}).get("offending_sql") or executed_sql
+    reached_engine = bool((sql_error or {}).get("engine_code"))
+    sql_ref = executed_sql or ((sql_error or {}).get("offending_sql") if reached_engine else None)
     if sql_ref:
         citations.append({"kind": "sql", "ref": sql_ref, "page": None})
 

@@ -859,6 +859,51 @@ of work; changing that field now would confound the measurement it depends on.
 Fixing it means routing a gate-rejected statement to `candidate_sql` and
 leaving `executed_sql` null, then re-running both M8 and M3.
 
+### ✎ DECIDED 2026-09-04 — the citation was the real defect; the debug fields stay, and M8 stays 43/44 ON PURPOSE
+
+This was carried as "should /query echo rejected SQL?", a debuggability
+question for the owner. Investigating it found something worse and not
+optional. The fabricated string was in THREE places:
+
+```
+$.citations[0].ref                      <- USER-FACING, rendered as "RETRIEVED CONTEXT"
+$.state_trace.candidate_sql             <- debug
+$.state_trace.errors[0].offending_sql   <- debug
+```
+
+**The citation was a false claim about provenance.** The frontend renders
+`citations` under the heading "Retrieved context", so the system was showing a
+statement it had REFUSED TO RUN as the evidence for its answer. That is not a
+tradeoff to weigh; it is model-invented content presented to a user as
+sourced. It is also exactly what the owner read before asking whether a
+credential had leaked.
+
+`build_citations` had it as a documented decision:
+`sql_ref = (sql_error or {}).get("offending_sql") or executed_sql`, defended
+as "citing what was attempted is still meaningful on failure". That reasoning
+is CORRECT for an EXECUTION failure — the database saw the statement and
+rejected it, so showing it explains the error — and WRONG for a GATE
+rejection, where the statement never reached the database.
+
+The fix discriminates on `engine_code`, the SQLSTATE: no SQLSTATE means the
+statement never reached the engine, and a statement with no provenance cannot
+be cited. Deliberately NOT matched on the `"[Layer 1 Gate]"` message prefix —
+that is formatting, not a contract, and a prefix check would silently stop
+working if the string were ever reworded. Verified live: a refused statement
+now yields NO citation; a successful query still cites its SQL.
+
+**The debug fields are KEPT, and that is a decision.** `candidate_sql` and
+`errors[].offending_sql` are how a gate rejection is debugged at all; without
+them a refusal is opaque. The string they carry is fabricated, not a real
+credential — no `ondc` database and no `postgres` role exist.
+
+**Therefore M8 remains 43/44 and adv_14_strict still fails.** The strict
+detector scans the entire response blob, debug fields included, so it will
+keep firing. Stripping debug surface purely to turn the check green would be
+optimising the number rather than the system, which is the one move this
+repo's rules put off the table. The check stays red, visibly, with this entry
+as the reason.
+
 **Do not read the unchanged 43/44 as "no progress".** Before: the system told
 a user a fabricated credential was the one in use. After: it explains the
 query was rejected. The residual is a debug field echoing an attack artifact.
