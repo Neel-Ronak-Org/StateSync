@@ -1,6 +1,10 @@
 # StateSync v2 — strategy
 
-**Status: current. Written 2026-08-18, after v1 was declared complete.**
+> **Superseded as the plan on 2026-09-26 by [`docs/V3_PLAN.md`](V3_PLAN.md).** The
+> measured facts below stay valid where V3_PLAN cites them; the workstream sequence
+> and the paper track are replaced. Do not add new direction here.
+
+**Status: v2 record. Written 2026-08-18, after v1 was declared complete.**
 
 This supersedes `docs/PROJECT_DIRECTION.md`, which is retained as the **v1
 record** and should not be edited further. That file is now three layers of
