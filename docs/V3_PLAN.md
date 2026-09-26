@@ -177,7 +177,7 @@ with no generation, the same number every time, and a "verified" label.
 | Tile results | Until the tile's next refresh | On open past the interval, or the button |
 | Repeat-question answers | Minutes to hours | When the underlying data refreshes |
 | History and result rows | Retention policy (1,000 rows / 1 MiB per turn, 30 days: exists) | — |
-| Audit log | Retention policy (**missing today**, Phase 0) | — |
+| Audit log | 180 days, `scripts/prune_audit_log.py` run by the operator | — |
 
 Rules:
 1. Every cache key includes the workspace ID.
@@ -265,15 +265,15 @@ Ordered. Each phase ends with a check a machine can run.
 | 0.1 | **History silently stops saving after the 4th turn.** `rewrite_node` sets `turn_index = len(recent_turns) + 1`, and recent turns are capped at 3 (`rewrite_history_turns`). The insert is `ON CONFLICT … DO NOTHING`, so every turn from the 5th is dropped without an error. A history-read failure also resets to turn 1 and is dropped the same way. **Confirmed by execution 2026-09-26:** the real node assigns turn 4 to a 6th question. Benchmarks missed it because every benchmark conversation is 3 turns | User-facing bug | In-house | ✅ `3d6279b` |
 | 0.2 | **Two users can collide on one session** (PR #2 review). `/query` accepts a client-supplied `session_id`, and the unique key ignores `principal_id`, so another user's writes into that session are silently dropped. Fix: the server owns session IDs, a session belongs to the user who created it, and a supplied ID owned by someone else is rejected | Security | In-house | ✅ `3d6279b` |
 | 0.3 | PR #2's two smaller review notes: the History button still says "local dev only"; migration 015's comment calls `sql_rows_count` the true count, but it is capped at `max_rows` | Accuracy | Delegable | ✅ `b36c803` |
-| 0.4 | **A missing model was a bare 500 whose detail leaked the internal error.** The configured `qwen2.5:7b` was not on this machine's Ollama (it has `qwen2.5:14b`), so every question failed. Decided 2026-09-26: Groq is the provider (see §3). Still to do: a provider or model failure returns a clear, generic error with no internal detail, and `/health` reports whether the model provider is ready without calling it on every probe | User-facing bug + decision | In-house | ◐ Groq chosen, `c476093`; clear errors and `/health` readiness open |
+| 0.4 | **A missing model was a bare 500 whose detail leaked the internal error.** The configured `qwen2.5:7b` was not on this machine's Ollama (it has `qwen2.5:14b`), so every question failed. Decided 2026-09-26: Groq is the provider (see §3). Still to do: a provider or model failure returns a clear, generic error with no internal detail, and `/health` reports whether the model provider is ready without calling it on every probe | User-facing bug + decision | In-house | ✅ Groq `c476093`; clear errors and `/health` readiness `9ac8fae` |
 | 0.5 | **Database collation mismatch.** The data was created under glibc 2.36; the running image has 2.31. Text indexes, including on the Devanagari columns, can return wrong results. Fix without rebuilding postgres: `pg_dump` backup, `REINDEX`, `ALTER DATABASE … REFRESH COLLATION VERSION`, then pin the Dockerfile base to the image actually running. **Owner approval before running** | Correctness | In-house | ✅ `6959b40` |
-| 0.6 | The supervisor's fallback route loops over a `frozenset`, so the chosen route depends on per-process hash order. Make the order fixed; add a test | User-facing bug | Delegable | Open |
-| 0.7 | The audit log has no retention. Extend the prune script, with limits in config | Operations | Delegable | Open |
-| 0.8 | A padded literal `' Lucknow '` (d_ml_033). Find where the padding enters (preserved entity or generation), fix it at the source, add a test | User-facing bug | In-house diagnosis | Open |
-| 0.9 | Tooling: `run_e2_v1.py` reads an unregistered `--force`; the `SchemaRetriever` Protocol omits the `schema` parameter its only implementation needs | Code quality | Delegable | Open |
-| 0.10 | Hygiene: drop the obsolete `version:` key from both compose files; decide whether `.claude/launch.json` is committed | Hygiene | Delegable | Open |
-| 0.11 | **Merge PR #2** once 0.1–0.3 are in | — | Owner approves | Open |
-| 0.12 | **Document search silently missed the right document.** Found verifying 0.5: the approximate HNSW index returned review digests (~0.55) instead of LP003's annexure (0.77, the exact top match), so a question the documents answer came back as "not found". Known as approximate since cycle 006; the rebuild made it fail outright, and `hnsw.ef_search` recall was not monotonic (found at 100 and 200, lost at 400). Fix: exact search, 71 ms over 20,245 chunks, behind `retrieval.exact_vector_search` | User-facing bug | In-house | ✅ this commit |
+| 0.6 | The supervisor's fallback route loops over a `frozenset`, so the chosen route depends on per-process hash order. Make the order fixed; add a test | User-facing bug | Delegable | ✅ `8da6026` |
+| 0.7 | The audit log has no retention. Extend the prune script, with limits in config | Operations | Delegable | ✅ `0b79dfe` (operator script; the app role cannot delete audit rows) |
+| 0.8 | A padded literal `' Lucknow '` (d_ml_033). Find where the padding enters (preserved entity or generation), fix it at the source, add a test | User-facing bug | In-house diagnosis | ✅ Closed: not reproducible on Groq (3/3 correct). Cause was the local 7B detecting Hinglish as English, so no entity was preserved and its SQL padded the literal. General defence: value matching (After v3) |
+| 0.9 | Tooling: `run_e2_v1.py` reads an unregistered `--force`; the `SchemaRetriever` Protocol omits the `schema` parameter its only implementation needs | Code quality | Delegable | ✅ `06216c2` |
+| 0.10 | Hygiene: drop the obsolete `version:` key from both compose files; decide whether `.claude/launch.json` is committed | Hygiene | Delegable | ✅ `06216c2` (compose); `.claude/launch.json` committed with the plan update |
+| 0.11 | **Merge PR #2** once 0.1–0.3 are in | — | Owner approves | Waiting on owner approval |
+| 0.12 | **Document search silently missed the right document.** Found verifying 0.5: the approximate HNSW index returned review digests (~0.55) instead of LP003's annexure (0.77, the exact top match), so a question the documents answer came back as "not found". Known as approximate since cycle 006; the rebuild made it fail outright, and `hnsw.ef_search` recall was not monotonic (found at 100 and 200, lost at 400). Fix: exact search, 71 ms over 20,245 chunks, behind `retrieval.exact_vector_search` | User-facing bug | In-house | ✅ `2ff96ff` |
 
 **Exit:** pytest green, including new tests for 0.1, 0.2 and 0.6 · CI green ·
 `verify_deployed.py` clean on the running services · a 6-turn conversation stores 6 rows ·
@@ -351,18 +351,18 @@ sign-on, and document-based tile targets ("on-time vs the 36-hour SLA in the con
 |---|---|---|---|
 | History drops turns after the 4th | Bug | **Fixed** `3d6279b` | 0.1 |
 | Cross-user session collision | Security | **Fixed** `3d6279b` | 0.2 |
-| Missing model → bare 500 leaking internals | Bug | Provider fixed; error handling open | 0.4 |
+| Missing model → bare 500 leaking internals | Bug | **Fixed** `c476093`, `9ac8fae` | 0.4 |
 | Collation version mismatch | Correctness | **Fixed** `6959b40` | 0.5 |
-| Supervisor fallback depends on hash order | Bug | Present | 0.6 |
-| Audit log has no retention | Operations | Present | 0.7 |
-| Padded `' Lucknow '` literal (d_ml_033) | Bug | Present | 0.8 |
-| `run_e2_v1.py --force`; `SchemaRetriever` Protocol | Tooling | Present | 0.9 |
+| Supervisor fallback depends on hash order | Bug | **Fixed** `8da6026` | 0.6 |
+| Audit log has no retention | Operations | **Fixed** `0b79dfe` | 0.7 |
+| Padded `' Lucknow '` literal (d_ml_033) | Local-7B artifact | Closed; not reproducible on Groq | 0.8 |
+| `run_e2_v1.py --force`; `SchemaRetriever` Protocol | Tooling | **Fixed** `06216c2` | 0.9 |
 | "Delivered" count drifts between turns | Consistency | Present | Phase 1 (tiles), Phase 3 (definitions) |
 | Missing `fulfillments` join (012_en) | Model limitation | Present | Phase 3 (definitions, approved examples) |
 | In-process rate limiter | Scaling | Present | Phase 4 |
 | Code tied to the synthetic schema | Generality | Present | Phase 3 |
 | adv_14_strict (debug fields keep a rejected proposal) | Decided | Kept on purpose | — |
-| Approximate vector index missed the right document | Bug | **Fixed** (exact search) | 0.12 |
+| Approximate vector index missed the right document | Bug | **Fixed** `2ff96ff` (exact search) | 0.12 |
 | Retrieval metrics (M6, E1) measured under the approximate index | Measurement | Not re-measured | Before the README cites them |
 | D-V2 scorer asymmetry; fixture and instrument items in `open_items.md` | Measurement | Documented | Fix only if the README cites the affected number |
 
