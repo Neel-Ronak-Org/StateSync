@@ -280,7 +280,27 @@ Ordered. Each phase ends with a check a machine can run.
 a second user cannot write into another user's session · a missing model returns a
 readable error · PR #2 merged.
 
-### Phase 1 — Dashboard tiles (backend and API)
+### Phase 1 — Dashboard tiles (backend and API) — ✅ done (`0f92cf4`, `848ed0e`)
+
+**Exit met, checked live by `scripts/verify_tiles.py` (36/36):** a refresh returns the
+identical SQL with a newer timestamp; a changed fingerprint flips the tile to
+`needs_review` and keeps the last good result; another principal is refused on every
+route. The API Phase 2 builds on:
+
+| Route | Does |
+|---|---|
+| `POST /tiles` `{session_id, turn_index, title?, refresh_interval_s?}` | Pin a stored database answer (201) |
+| `GET /tiles` | All my tiles, each refreshed first if due |
+| `GET /tiles/{id}` | One tile, with its version history |
+| `POST /tiles/{id}/refresh` | Re-run now |
+| `POST /tiles/{id}/replace` `{session_id, turn_index}` | New version from a follow-up answer (the "edit") |
+| `PATCH /tiles/{id}` `{title?, refresh_interval_s?}` | Rename, change interval |
+| `POST /tiles/{id}/confirm` | Accept a schema change (new version) |
+| `DELETE /tiles/{id}` | Unpin |
+
+Every tile comes back with `chart.data.values` bound to its current rows, plus `state`,
+`stale`, `result.computed_at` and `last_error` for the UI to show.
+
 
 - Migration: `tiles` (saved SQL, chart spec, source, author, created, schema fingerprint,
   refresh interval, version) and `tile_results` (rows, computed_at).
