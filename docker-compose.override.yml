@@ -3,8 +3,6 @@
 # Exposes ports locally so developers can psql directly, inspect qdrant, etc.
 # These ports are NOT exposed in docker-compose.yml (production).
 
-version: "3.9"
-
 services:
   postgres:
     ports:

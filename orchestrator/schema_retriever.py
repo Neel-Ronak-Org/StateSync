@@ -42,8 +42,14 @@ def target_schema() -> str:
 class SchemaRetriever(Protocol):
     async def retrieve(
         self, session: MCPSession, table_names: list[str],
+        schema: str | None = None,
     ) -> tuple[str, list[dict]]:
         """
+        `schema` selects the corpus (None = target_schema()); the Protocol
+        omitted it while its only implementation required it (audit 007
+        F-007-5), so a second implementation written to the Protocol would
+        have silently ignored the per-request corpus.
+
         Returns (formatted schema-context string, raw describe_table
         responses). The raw responses (one dict per table, each with the
         A4.2 shape -- table/columns/foreign_keys/fingerprint) let callers

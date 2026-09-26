@@ -1,5 +1,3 @@
-version: "3.9"
-
 # ─── Networks ────────────────────────────────────────────────────────────────
 # Security property (A1): postgres & qdrant are ONLY on db_net.
 # orchestrator is ONLY on app_net. An orchestrator process that tries to reach
