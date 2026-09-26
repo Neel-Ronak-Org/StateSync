@@ -477,6 +477,19 @@ graph".
 
 ## Vector retrieval runs on an approximate index — added cycle 006, found investigating an M6 movement
 
+> **UPDATE 2026-09-26 — retrieval is now EXACT by default** (`retrieval.exact_vector_search
+> = true`, docs/V3_PLAN.md 0.12). After a `REINDEX` rebuilt the HNSW graph (0.5, the
+> collation fix), the approximation failed outright: for "What transit time has FastShip
+> 3 (LP003) committed to for Metro Mumbai…?" the index's top 5 were review digests
+> (cosine ~0.55) while the exact top match was LP003's annexure (0.77), and the answer
+> said the documents held no such information. Raising `hnsw.ef_search` found it at 100
+> and 200 and lost it again at 400 -- recall did not improve monotonically, so no
+> setting could be trusted. Exact search over all 20,245 chunks took 71 ms (HNSW:
+> 2.6 ms), negligible next to a model call. Vector queries now run with index scans
+> off for their one transaction; the index still exists for a future, measured return.
+> **Every retrieval-based number measured before this date (M6, E1) was taken under the
+> approximation described below and has not been re-measured under exact search.**
+
 `document_chunks.embedding` is indexed HNSW (`pg_indexes`:
 `USING hnsw (embedding vector_cosine_ops)`) — an **approximate**
 nearest-neighbor structure. This was true before cycle 006; nothing in this

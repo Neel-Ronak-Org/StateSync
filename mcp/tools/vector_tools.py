@@ -227,6 +227,7 @@ async def semantic_search(
     """
 
     async with get_connection() as conn:
+        await _use_exact_search(conn)
         cur = await conn.execute(sql, params)
         rows = await cur.fetchall()
         col_names = [desc.name for desc in cur.description] if cur.description else []
@@ -237,6 +238,20 @@ async def semantic_search(
         tenant_id, effective_top_k, len(matches),
     )
     return {"matches": matches}
+
+
+async def _use_exact_search(conn: Any) -> None:
+    """Make this transaction's vector ORDER BY exact instead of approximate.
+
+    With retrieval.exact_vector_search on, index scans are switched off for the
+    current transaction only, so the planner cannot pick the approximate HNSW
+    index and ranks every chunk by true cosine distance (see the config
+    comment for the measurement behind this). SET LOCAL ends with the
+    transaction, and get_connection() always rolls back, so it never reaches
+    the next pooled use of the connection.
+    """
+    if cfg.retrieval.exact_vector_search:
+        await conn.execute("SET LOCAL enable_indexscan = off")
 
 
 # ── A4.7 vector.hybrid_select ───────────────────────────────────────────────
@@ -270,6 +285,7 @@ async def hybrid_select(
                     (_format_vector_literal(vector),),
                 )
 
+            await _use_exact_search(conn)
             cur = await conn.execute(sql)
             rows = await cur.fetchmany(effective_max + 1)
             col_names = [desc.name for desc in cur.description] if cur.description else []

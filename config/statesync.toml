@@ -111,6 +111,16 @@ embedding_model           = "mxbai-embed-large"  # E1: same model as memory's, o
 embedding_dim             = 1024    # must match document_chunks.embedding VECTOR(1024), A5
 embedding_timeout_s       = 30      # mcp -> ollama /api/embeddings HTTP timeout, ingestion + query-time
 citation_max_chunks       = 3       # synthesizer: max kind:"chunk" citations deterministically emitted
+# EXACT nearest-neighbour search (docs/V3_PLAN.md 0.12). The HNSW index on
+# document_chunks.embedding is approximate, and measured on 2026-09-26 it was
+# wrong in a way no tuning fixed: for a question naming FastShip 3 / LP003, the
+# exact top match (LP003's annexure, cosine 0.77) was absent from the index's
+# top 5 (review digests, ~0.55); raising hnsw.ef_search found it at 100 and 200
+# and lost it again at 400. Exact search over the 20,245 chunks took 71 ms --
+# noise next to a model call. true = vector queries run with index scans off
+# for that one transaction. Revisit with a measured recall target if the
+# corpus grows past what a sequential scan can serve.
+exact_vector_search       = true
 
 [scoring]
 recall_weight             = 0.70    # spec score; recall over precision per VegaChat
