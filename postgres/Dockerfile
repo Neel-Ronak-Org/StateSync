@@ -1,4 +1,11 @@
-FROM postgres:16
+# PINNED 2026-09-26 (docs/V3_PLAN.md 0.5) to the base the running data was last
+# reindexed under: PostgreSQL 16.4 on Debian 11, glibc 2.31. The floating
+# `postgres:16` tag has since moved to 16.15 on Debian 13 (glibc 2.41); text
+# indexes sort by glibc's collation rules, so rebuilding against a different
+# glibc silently mis-orders them. That is how the data (created under 2.36) came
+# to run on 2.31. Changing this base needs, in the same step: a pg_dump backup,
+# REINDEX DATABASE, and ALTER DATABASE ... REFRESH COLLATION VERSION.
+FROM postgres:16.4-bullseye@sha256:f47712331e3b7069c954893719347ff304839b2933bae84e30a0ba99974c8c32
 
 RUN sed -i 's#http://deb.debian.org#https://cdn-fastly.deb.debian.org#g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || true && \
     apt-get update && apt-get install -y --no-install-recommends \
