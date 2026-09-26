@@ -198,6 +198,26 @@ def main() -> int:
                    f"AND route LIKE '/tiles%' AND outcome = 'allowed' AND detail LIKE '%{tile_id}%'")
     check(audited.isdigit() and int(audited) >= 5, "tile changes are in the audit log", f"{audited} rows")
 
+    print("── a chart tile binds its current rows ──")
+    t4 = ask("Show the number of orders by status as a bar chart.", session)
+    status, body = call("POST", "/tiles", body={"session_id": session, "turn_index": t4["turn_index"]})
+    chart_tile = body.get("tile") or {}
+    chart_id = chart_tile.get("tile_id")
+    if status in (200, 201) and chart_tile.get("chart") is not None:
+        rows = (chart_tile.get("result") or {}).get("rows", [])
+        check(chart_tile["chart"].get("data", {}).get("values") == rows[:CHART_MAX] and len(rows) > 1,
+              "a chart tile comes back with its result rows bound as data.values", f"{len(rows)} rows")
+        stored = psql(f"SELECT chart->'data' FROM session_state.tile_versions WHERE tile_id = '{chart_id}'")
+        check("values" not in stored, "the stored chart design holds no rows (they are bound at read time)", stored)
+        _, body = call("POST", f"/tiles/{chart_id}/refresh")
+        again = body.get("tile") or {}
+        check((again.get("chart") or {}).get("data", {}).get("values") == (again.get("result") or {}).get("rows"),
+              "after a refresh the chart carries the new result's rows")
+    else:
+        check(False, "a chart answer can be pinned", f"HTTP {status}; route={t4.get('route')} {str(body)[:160]}")
+    if chart_id:
+        call("DELETE", f"/tiles/{chart_id}")
+
     print("── delete ──")
     status, _ = call("DELETE", f"/tiles/{tile_id}")
     check(status == 200, "delete", f"got {status}")
