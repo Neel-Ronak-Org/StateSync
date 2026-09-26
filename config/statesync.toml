@@ -40,6 +40,10 @@ history_full_rows_max              = 1000
 history_full_rows_max_bytes        = 1048576
 history_full_rows_retention_days   = 30
 history_prune_batch_limit          = 200
+# Audit log retention, enforced by scripts/prune_audit_log.py run as the
+# migrator (docs/V3_PLAN.md 0.7). Not pruned on write: that would need DELETE
+# for the app role, which could then erase its own audit trail.
+audit_retention_days               = 180
 # history.append_turn assigns the turn number itself (docs/V3_PLAN.md 0.1); two
 # concurrent writes in one session can pick the same number, and the loser
 # retries up to this many times before reporting the turn as not recorded.
