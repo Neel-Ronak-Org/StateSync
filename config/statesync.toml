@@ -232,6 +232,16 @@ gemini_retry_base_delay_s = 4.0
 # Raising this requires raising the [sql] max_tokens_* caps too -- a BD under
 # A0.3 -- because thinking silently eats the visible-output budget.
 gemini_thinking_level     = "minimal"
+# Groq. Per-minute TOKEN limits (8K/min per model on the owner's key) make 429s
+# routine mid-question; the adapter waits for the server's retry-after, capped
+# below, and falls back to doubling the base delay when none is sent.
+groq_timeout_s                  = 60
+groq_max_retries                = 6
+groq_retry_base_delay_s         = 2.0
+groq_retry_max_wait_s           = 60.0
+# Added to max_tokens for models in flags.llm.groq.reasoning_effort, so
+# reasoning tokens cannot consume the visible-output budget.
+groq_reasoning_headroom_tokens  = 1024
 # CLIENT-SIDE PACING. The free tier's binding constraint is REQUESTS PER MINUTE,
 # not per day -- measured from the AI Studio dashboard: Flash models 5 RPM /
 # 20 RPD, Flash-Lite 15 RPM / 500 RPD, TPM 250K (peak use 19.9K, never close).

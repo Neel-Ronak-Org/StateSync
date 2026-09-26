@@ -106,3 +106,15 @@ new principal while the stack is running, restart the orchestrator:
 ```bash
 docker compose restart orchestrator
 ```
+
+### Groq (BD1 seam, provider = "groq" — the v3 default)
+
+```bash
+# Free key from console.groq.com → API Keys
+printf '%s' '<your-groq-key>' > secrets/groq_api_key
+chmod 600 secrets/groq_api_key
+```
+
+`config/flags.toml` ships `provider = "groq"`. Without a key the orchestrator
+refuses to start and says so; to run fully offline instead, set
+`provider = "local"` and `ollama pull qwen2.5:7b`.

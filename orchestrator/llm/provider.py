@@ -10,9 +10,9 @@ Public API:
     "normalizer", "decomposer", "judge", "rewriter"
 
 The factory:
-  1. Reads flags.llm.provider ("local" | "anthropic")
+  1. Reads flags.llm.provider ("local" | "anthropic" | "azure" | "gemini" | "groq")
   2. Resolves the role → model name from flags.llm.models.<provider>.<role>
-  3. Returns the appropriate adapter (OllamaAdapter or AnthropicAdapter)
+  3. Returns the matching adapter (Ollama, Anthropic, Azure, Gemini or Groq)
   4. Is cached per (provider, role) — one adapter instance per role per process
 
 Startup behaviour:
@@ -106,9 +106,13 @@ def get_agent_llm(role: str) -> "ChatModel":
         from llm.adapters.gemini_adapter import GeminiAdapter
         return GeminiAdapter(model=model)
 
+    if provider == "groq":
+        from llm.adapters.groq_adapter import GroqAdapter
+        return GroqAdapter(model=model)
+
     raise RuntimeError(
         f"Unknown LLM provider {provider!r}. "
-        "Valid values: 'local', 'anthropic', 'azure', 'gemini'. "
+        "Valid values: 'local', 'anthropic', 'azure', 'gemini', 'groq'. "
         "Check flags.llm.provider in config/flags.toml."
     )
 
@@ -163,6 +167,15 @@ def validate_llm_config() -> None:
             "run issues ~5.2 calls/query; the adapter retries 429 with backoff "
             "(models.gemini_max_retries)."
         )
+    elif provider == "groq":
+        # The key and the base URL are the two things a startup check can
+        # catch. Limits are per MODEL (8K tokens/min, 1K requests/day on the
+        # owner's key, measured 2026-09-26), which is why flags.toml spreads
+        # the roles across two models; the adapter waits out 429s.
+        from llm.adapters.groq_adapter import GroqAdapter
+        GroqAdapter._read_api_key()        # raises GroqConfigError if absent
+        GroqAdapter._read_base_url()       # raises GroqConfigError if malformed
+        logger.info("  Groq API key: present ✓")
     else:
         logger.info(
             "  Provider=%s — Anthropic key NOT required. "

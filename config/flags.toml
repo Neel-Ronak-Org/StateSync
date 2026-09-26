@@ -10,7 +10,10 @@
 # never appear in reported metrics or panel demos. Always run on anthropic for
 # any result you intend to show.
 [llm]
-provider = "local"          # "local" | "anthropic" | "azure" | "gemini"
+# 2026-09-26: "groq" by owner decision (docs/V3_PLAN.md 0.4). The configured
+# local model was not installed on the dev machine, and v3 demos on a hosted
+# model. "local" still works offline once `ollama pull qwen2.5:7b` is done.
+provider = "groq"           # "local" | "anthropic" | "azure" | "gemini" | "groq"
 ollama_url = "http://host.docker.internal:11434"
 
 # Azure OpenAI / AI Foundry (BD1 seam, third implementation).
@@ -24,6 +27,18 @@ ollama_url = "http://host.docker.internal:11434"
 [llm.azure]
 endpoint    = ""            # REPLACE — startup refuses while this is empty
 api_version = "2024-10-21"
+
+# Groq (fifth implementation, OpenAI-compatible). NOT a secret -- the key goes
+# in secrets/groq_api_key (or GROQ_API_KEY).
+[llm.groq]
+base_url = "https://api.groq.com/openai/v1"
+
+# Models listed here are REASONING models: they get this effort level, and
+# models.groq_reasoning_headroom_tokens on top of the role's max_tokens so the
+# reasoning cannot eat the visible answer. Models not listed get neither --
+# the accepted values differ by model family.
+[llm.groq.reasoning_effort]
+"openai/gpt-oss-120b" = "low"
 
 # THREE LOCAL MODELS MEASURED, all seven roles, corrected fixture, 25 queries.
 # 7b ships because a 14b buys NOTHING and costs 3x the latency:
@@ -152,6 +167,21 @@ normalizer        = "claude-sonnet-4-5"   # D: language detection + entity-prese
 decomposer        = "claude-sonnet-4-5"   # E1: hybrid query decomposition into sub-tasks
 judge             = "claude-opus-4-5"     # E1: bench_grounding.py context precision / faithfulness scoring
 rewriter          = "claude-sonnet-4-5"   # cycle 007: contextual query rewriting (multi-turn)
+
+# Published Groq model ids. ROLE ASSIGNMENT DRIVEN BY MEASURED LIMITS: every
+# model on the owner's key has its OWN budget of 8,000 tokens/min and 1,000
+# requests/day (response headers, 2026-09-26). The two roles whose output the
+# user reads -- SQL and the answer -- get the strongest model; the short
+# classification-style roles get a fast one. Two budgets instead of one.
+[llm.models.groq]
+supervisor        = "qwen/qwen3.8-27b"
+sql               = "openai/gpt-oss-120b"
+synthesizer       = "openai/gpt-oss-120b"
+memory_summarizer = "qwen/qwen3.8-27b"
+normalizer        = "qwen/qwen3.8-27b"
+decomposer        = "qwen/qwen3.8-27b"
+judge             = "openai/gpt-oss-120b"
+rewriter          = "qwen/qwen3.8-27b"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # that is the point of the flag system. Changing the *existence* of a flag

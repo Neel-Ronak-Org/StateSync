@@ -168,6 +168,8 @@ services:
       # provider="local" never opens it, so the placeholder file is harmless.
       - AZURE_OPENAI_API_KEY_FILE=/run/secrets/azure_openai_api_key
       - GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key
+      # Groq (provider = "groq", the v3 default -- docs/V3_PLAN.md 0.4).
+      - GROQ_API_KEY_FILE=/run/secrets/groq_api_key
       - CONFIG_DIR=/app/config
     volumes:
       - ./config:/app/config:ro
@@ -175,6 +177,7 @@ services:
       - anthropic_api_key
       - azure_openai_api_key
       - gemini_api_key
+      - groq_api_key
       - api_principals
     depends_on:
       mcp:
@@ -273,5 +276,7 @@ secrets:
     file: ./secrets/azure_openai_api_key
   gemini_api_key:
     file: ./secrets/gemini_api_key
+  groq_api_key:
+    file: ./secrets/groq_api_key
   api_principals:
     file: ./secrets/api_principals.json
