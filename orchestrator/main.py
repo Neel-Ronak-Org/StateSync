@@ -26,7 +26,8 @@ from auth import (AuthError, Principal, RateLimited, authenticate, init_auth,
                   rate_limiter)
 from config_loader import cfg, flags, snapshot_flags
 from graph import graph
-from llm.provider import validate_llm_config
+from llm.provider import LLM_READINESS, validate_llm_config
+from failures import user_facing_failure
 from mcp_client import (MCPSession, audit_record, history_append_turn,
                         history_check_session, history_get_recent_turns,
                         history_get_turn_rows, history_list_sessions)
@@ -202,6 +203,9 @@ async def health() -> dict:
         "service": "orchestrator",
         "phase": "B",
         "llm_provider": str(flags.llm.provider),
+        # From startup's check, never a live model call (docs/V3_PLAN.md 0.4).
+        "llm_ready": LLM_READINESS["ready"],
+        "llm_detail": LLM_READINESS["detail"],
         "default_schema": target_schema(),
         "available_schemas": sorted(cfg.api.allowed_schemas),
     }
@@ -396,7 +400,8 @@ async def run_query(
             client_ip=client_ip,
             detail=f"{exc} schema={requested}",
         )
-        raise HTTPException(status_code=500, detail=f"Graph execution error: {exc}")
+        status_code, message = user_facing_failure(exc, query_id)
+        raise HTTPException(status_code=status_code, detail=message)
 
     latency_ms = int((time.monotonic() - t0) * 1000)  # noqa: literals — ms conversion factor
 

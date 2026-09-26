@@ -226,6 +226,7 @@ temperature               = 0.0
 seed                      = 20260807
 # LLM provider choice is set in flags.toml; model name is also there.
 ollama_timeout_s          = 120     # generous — local inference can be slow
+ollama_tags_timeout_s     = 5       # startup check that the configured local models exist (V3_PLAN 0.4)
 # Azure OpenAI. Much shorter than the local timeout: a hosted frontier model
 # answering in 120s means something is wrong, not that it is thinking.
 azure_timeout_s           = 60
