@@ -242,7 +242,6 @@ async def history_append_turn(
     session: MCPSession,
     session_id: str,
     principal_id: str,
-    turn_index: int,
     raw_query: str,
     rewritten_query: str,
     rewrite_applied: bool,
@@ -256,11 +255,10 @@ async def history_append_turn(
     sql_rows_count: int | None = None,
     sql_rows_full: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """history.append_turn"""
+    """history.append_turn -- MCP assigns the turn number and returns it."""
     params: dict[str, Any] = {
         "session_id": session_id,
         "principal_id": principal_id,
-        "turn_index": turn_index,
         "raw_query": raw_query,
         "rewritten_query": rewritten_query,
         "rewrite_applied": rewrite_applied,
@@ -292,6 +290,15 @@ async def history_get_recent_turns(
     if limit is not None:
         params["limit"] = limit
     return await session.call("history.get_recent_turns", params)
+
+
+async def history_check_session(
+    session: MCPSession, session_id: str, principal_id: str,
+) -> dict[str, Any]:
+    """history.check_session -- {"exists": bool, "usable": bool} for this principal."""
+    return await session.call(
+        "history.check_session", {"session_id": session_id, "principal_id": principal_id},
+    )
 
 
 async def history_get_turn_rows(

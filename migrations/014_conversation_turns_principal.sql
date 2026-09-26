@@ -29,9 +29,13 @@
 -- NO NEW GRANTS OR CONSTRAINT CHANGES.
 -- statesync_history already holds INSERT and SELECT on session_state.conversation_turns
 -- from migration 011; PostgreSQL table-level grants automatically cover new columns.
--- The existing unique constraint on (tenant_id, session_id, turn_index) is unchanged:
--- session_id is a server-generated uuid4, so it is already unique across principals
--- and widening the constraint would buy nothing.
+-- The existing unique constraint on (tenant_id, session_id, turn_index) is unchanged.
+-- CORRECTED 2026-09-26 (PR #2 review; docs/V3_PLAN.md 0.2): this used to say
+-- session_id is server-generated and therefore unique across principals. It is
+-- not -- /query accepts a client-supplied session_id, and the web client
+-- generates one. Uniqueness across principals is now enforced by ownership
+-- instead: a session belongs to the principal who wrote its first turn, and
+-- history.append_turn / history.check_session refuse anyone else.
 --
 -- IDEMPOTENCY.
 -- Like 011-013, this migration must be safely re-runnable by hand since

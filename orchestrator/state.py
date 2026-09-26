@@ -147,7 +147,7 @@ class StateSyncState(BaseModel):
     # These three fields are provenance ABOUT that rewrite, read by nobody
     # downstream in the graph -- only by main.py's history write and by
     # bench_multiturn.py's scoring.
-    turn_index:       int = 1       # 1 on a fresh session; loaded history + 1 otherwise
+    turn_index:       int = 1       # expected number; MCP assigns the stored one (V3_PLAN 0.1)
     rewrite_applied:  bool = False  # normalized_query changed from the pre-rewrite text
     context_guessed:  bool = False  # rewrite required resolving an ambiguous reference
                                      # with no clarification path available (A5 cut-line)

@@ -1,7 +1,8 @@
 """
 mcp/tools/history_tools.py
 MCP history tools: history.append_turn, history.get_recent_turns,
-history.get_turn_rows and history.list_sessions (scoped by tenant and principal).
+history.check_session, history.get_turn_rows and history.list_sessions (scoped by
+tenant and principal).
 
 Backed by session_state.conversation_turns (migrations/011, 014) and
 session_state.turn_rows (migration 015), via db.py's SEPARATE statesync_history pool
@@ -51,7 +52,6 @@ _BYTE_FIT_DROP_FRACTION: float = 0.10  # noqa: literals - algorithmic convergenc
 async def append_turn(
     session_id: str,
     principal_id: str,
-    turn_index: int,
     raw_query: str,
     rewritten_query: str,
     rewrite_applied: bool,
@@ -84,6 +84,20 @@ async def append_turn(
     as an enrichment inside the same connection block. Clamped by row count
     (history_full_rows_max) and byte size (history_full_rows_max_bytes), followed
     by bounded retention pruning (history_full_rows_retention_days).
+
+    THE TURN NUMBER IS ASSIGNED HERE, NOT BY THE CALLER (docs/V3_PLAN.md 0.1).
+    The orchestrator used to send len(recent_turns) + 1, but recent turns are a
+    3-turn window, so from the 5th question on it sent 4 again, hit the unique
+    key, and ON CONFLICT DO NOTHING dropped the turn without an error. Now the
+    insert computes MAX(turn_index) + 1 for the session in the same statement.
+    Two concurrent writes can still pick the same number; the loser retries
+    (mcp.history_append_max_attempts).
+
+    A SESSION BELONGS TO THE PRINCIPAL WHO WROTE ITS FIRST TURN (0.2). session_id
+    is client-generated, so another principal who learns it could otherwise have
+    their turns silently dropped or interleaved. The insert only fires while
+    every existing row in the session belongs to this principal; otherwise the
+    result says so -- {"written": False, "error": ...} -- instead of a no-op.
     """
     tenant_id = get_tenant_id()
 
@@ -92,42 +106,86 @@ async def append_turn(
         cap = cfg.mcp.history_row_preview_max
         if len(preview) > cap:
             logger.info(
-                "history.append_turn: clamping row preview %d -> %d (tenant=%s session=%s turn=%d)",
-                len(preview), cap, tenant_id, session_id, turn_index,
+                "history.append_turn: clamping row preview %d -> %d (tenant=%s session=%s)",
+                len(preview), cap, tenant_id, session_id,
             )
             preview = preview[:cap]
+
+    params = {
+        "tenant": tenant_id,
+        "principal": principal_id,
+        "session": session_id,
+        "raw_query": raw_query,
+        "rewritten_query": rewritten_query,
+        "rewrite_applied": rewrite_applied,
+        "context_guessed": context_guessed,
+        "route": route,
+        "executed_sql": executed_sql,
+        "answer_text": answer_text,
+        "chart": Jsonb(chart) if chart is not None else None,
+        "sql_columns": Jsonb(sql_columns) if sql_columns is not None else None,
+        "preview": Jsonb(preview) if preview is not None else None,
+        "rows_count": sql_rows_count,
+    }
+    max_attempts = cfg.mcp.history_append_max_attempts
     async with get_history_connection() as conn:
-        cur = await conn.execute(
-            """
-            INSERT INTO session_state.conversation_turns
-                (tenant_id, principal_id, session_id, turn_index, raw_query, rewritten_query,
-                 rewrite_applied, context_guessed, route, executed_sql, answer_text,
-                 chart, sql_columns, sql_rows_preview, sql_rows_count)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (tenant_id, session_id, turn_index) DO NOTHING
-            RETURNING turn_id, computed_at
-            """,
-            (tenant_id, principal_id, session_id, turn_index, raw_query, rewritten_query,
-             rewrite_applied, context_guessed, route, executed_sql, answer_text,
-             Jsonb(chart) if chart is not None else None,
-             Jsonb(sql_columns) if sql_columns is not None else None,
-             Jsonb(preview) if preview is not None else None,
-             sql_rows_count),
-        )
-        row = await cur.fetchone()
+        row = None
+        for attempt in range(max_attempts):
+            # An aggregate with no GROUP BY yields exactly one row even for a new
+            # session (MAX -> NULL -> 1, BOOL_AND -> NULL -> TRUE), and none when
+            # HAVING fails because another principal owns the session. The casts
+            # are needed because INSERT ... SELECT, unlike VALUES, does not infer
+            # parameter types from the target columns.
+            cur = await conn.execute(
+                """
+                INSERT INTO session_state.conversation_turns
+                    (tenant_id, principal_id, session_id, turn_index, raw_query, rewritten_query,
+                     rewrite_applied, context_guessed, route, executed_sql, answer_text,
+                     chart, sql_columns, sql_rows_preview, sql_rows_count)
+                SELECT %(tenant)s, %(principal)s, %(session)s,
+                       COALESCE(MAX(t.turn_index), 0) + 1,
+                       %(raw_query)s::text, %(rewritten_query)s::text,
+                       %(rewrite_applied)s::boolean, %(context_guessed)s::boolean,
+                       %(route)s::text, %(executed_sql)s::text, %(answer_text)s::text,
+                       %(chart)s::jsonb, %(sql_columns)s::jsonb, %(preview)s::jsonb,
+                       %(rows_count)s::integer
+                FROM session_state.conversation_turns t
+                WHERE t.tenant_id = %(tenant)s AND t.session_id = %(session)s
+                HAVING COALESCE(BOOL_AND(t.principal_id = %(principal)s), TRUE)
+                ON CONFLICT (tenant_id, session_id, turn_index) DO NOTHING
+                RETURNING turn_id, computed_at, turn_index
+                """,
+                params,
+            )
+            row = await cur.fetchone()
+            if row is not None:
+                break
+
+            owner = await _session_owner(conn, tenant_id, session_id)
+            if owner is not None and owner != principal_id:
+                logger.warning(
+                    "history.append_turn: refused, session belongs to another principal "
+                    "(tenant=%s session=%s principal=%s)",
+                    tenant_id, session_id, principal_id,
+                )
+                return {"written": False, "error": "session_owned_by_another_principal",
+                        "turn_id": None, "computed_at": None, "turn_index": None}
+            logger.info(
+                "history.append_turn: turn number taken by a concurrent write, retrying "
+                "(attempt %d/%d, tenant=%s session=%s)",
+                attempt + 1, max_attempts, tenant_id, session_id,
+            )
 
         if row is None:
-            # ON CONFLICT DO NOTHING fired -- this (tenant, session, turn_index)
-            # was already written. Not an error (a retried request should not
-            # duplicate a turn); the caller gets told rather than assuming success.
-            logger.warning(
-                "history.append_turn: turn already recorded, no-op (tenant=%s session=%s turn=%d)",
-                tenant_id, session_id, turn_index,
+            logger.error(
+                "history.append_turn: gave up after %d attempts; turn NOT recorded "
+                "(tenant=%s session=%s)",
+                max_attempts, tenant_id, session_id,
             )
-            return {"written": False, "turn_id": None, "computed_at": None}
+            return {"written": False, "error": "turn_index_contention",
+                    "turn_id": None, "computed_at": None, "turn_index": None}
 
-        turn_id = row[0]
-        computed_at = row[1]
+        turn_id, computed_at, turn_index = row
 
         # Full result sets (migration 015): enrichment persisted in session_state.turn_rows
         # inside the same atomic connection block.
@@ -212,7 +270,38 @@ async def append_turn(
                     exc,
                 )
 
-    return {"written": True, "turn_id": turn_id, "computed_at": computed_at.isoformat()}
+    return {"written": True, "turn_id": turn_id, "computed_at": computed_at.isoformat(),
+            "turn_index": turn_index}
+
+
+async def _session_owner(conn: Any, tenant_id: str, session_id: str) -> str | None:
+    """The principal that owns a session (wrote its first turn), or None if it has no turns."""
+    cur = await conn.execute(
+        """
+        SELECT principal_id FROM session_state.conversation_turns
+        WHERE tenant_id = %s AND session_id = %s
+        ORDER BY turn_index
+        LIMIT 1
+        """,
+        (tenant_id, session_id),
+    )
+    row = await cur.fetchone()
+    return row[0] if row else None
+
+
+async def check_session(session_id: str, principal_id: str) -> dict[str, Any]:
+    """
+    May this principal use this session_id? Called by the orchestrator before a
+    query runs, so a session owned by someone else is refused up front rather
+    than answered and then silently not recorded (docs/V3_PLAN.md 0.2).
+
+    A session_id with no turns is usable: the web client generates the id, and
+    its first write claims it. Returns {"exists": bool, "usable": bool}.
+    """
+    tenant_id = get_tenant_id()
+    async with get_history_connection() as conn:
+        owner = await _session_owner(conn, tenant_id, session_id)
+    return {"exists": owner is not None, "usable": owner is None or owner == principal_id}
 
 
 async def get_recent_turns(session_id: str, principal_id: str, limit: int | None = None) -> dict[str, Any]:
@@ -265,7 +354,10 @@ async def get_recent_turns(session_id: str, principal_id: str, limit: int | None
             "sql_rows_preview": sql_rows_preview,
             "sql_rows_count": sql_rows_count,
         })
-    return {"turns": turns, "count": len(turns)}
+    # rows[0] is the newest turn (DESC fetch), so this is correct however
+    # small `limit` is -- the bug 0.1 fixed came from counting the window.
+    next_turn_index = rows[0][0] + 1 if rows else 1
+    return {"turns": turns, "count": len(turns), "next_turn_index": next_turn_index}
 
 
 async def get_turn_rows(session_id: str, principal_id: str, turn_index: int) -> dict[str, Any]:
@@ -326,9 +418,10 @@ async def list_sessions(principal_id: str, limit: int | None = None) -> dict[str
 
     The tool is scoped by tenant server-side (A0.6) and principal_id from the
     authenticating orchestrator, preventing cross-principal exposure within a
-    shared tenant. The orchestrator keeps its HTTP surface behind an explicit
-    opt-in env var (STATESYNC_SESSION_BROWSER) that is off unless a developer
-    turns it on; registering the tool does not by itself publish anything.
+    shared tenant. Its HTTP surface (GET /sessions) is open to any authenticated
+    principal and returns only that principal's conversations; the developer
+    opt-in env var that used to gate it was removed once history became
+    principal-scoped (migration 014).
 
     Fixed-shape and parameterized, same as its siblings: no caller string
     ever reaches the statement.
@@ -374,6 +467,7 @@ _ALLOWED_OUTCOMES = frozenset({
     "denied_rate",
     "error",
     "denied_tenant",
+    "denied_session",   # migration 016: a session id owned by another principal
 })
 
 

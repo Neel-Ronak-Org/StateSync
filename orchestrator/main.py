@@ -28,8 +28,8 @@ from config_loader import cfg, flags, snapshot_flags
 from graph import graph
 from llm.provider import validate_llm_config
 from mcp_client import (MCPSession, audit_record, history_append_turn,
-                        history_get_recent_turns, history_get_turn_rows,
-                        history_list_sessions)
+                        history_check_session, history_get_recent_turns,
+                        history_get_turn_rows, history_list_sessions)
 from nodes.synthesizer import build_citations
 from schema_retriever import target_schema
 from schemas.synthesizer_output import safe_synthesizer_output
@@ -331,6 +331,33 @@ async def run_query(
     client_ip = request.client.host if request.client else None
     query_id = str(uuid.uuid4())
 
+    # A session belongs to the principal who wrote its first turn (docs/V3_PLAN.md
+    # 0.2). The web client generates session ids, so one owned by someone else is
+    # refused here, before any model call -- rather than answered and then not
+    # recorded. history.append_turn enforces the same rule at the write.
+    if body.session_id:
+        try:
+            async with MCPSession(
+                tenant_id=tenant_id,
+                base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
+                session_id=session_id,
+            ) as check_session:
+                access = await history_check_session(check_session, session_id, principal.principal_id)
+        except Exception as exc:
+            logger.error("Session ownership check failed for session_id=%s: %s", session_id, exc)
+            raise HTTPException(status_code=503, detail="History service unavailable. Try again shortly.")
+        if not access.get("usable", False):
+            await _audit(
+                principal.principal_id,
+                tenant_id,
+                "/query",
+                "denied_session",
+                session_id=session_id,
+                client_ip=client_ip,
+                detail="session belongs to another principal",
+            )
+            raise HTTPException(status_code=404, detail="Conversation not found. Start a new conversation.")
+
     # Build the initial state input for the entry node
     initial_input = {
         "query_id": query_id,   # A2: set once here, immutable from here on
@@ -455,11 +482,10 @@ async def run_query(
             base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
             session_id=final_state.session_id,
         ) as history_session:
-            await history_append_turn(
+            write = await history_append_turn(
                 history_session,
                 session_id=final_state.session_id,
                 principal_id=final_state.principal_id,
-                turn_index=final_state.turn_index,
                 raw_query=final_state.raw_query,
                 rewritten_query=final_state.normalized_query or final_state.raw_query,
                 rewrite_applied=final_state.rewrite_applied,
@@ -483,11 +509,24 @@ async def run_query(
                 # Do NOT slice it — MCP applies the caps and logs truncation; slicing here would hide from those logs how large the real result was.
                 sql_rows_full=(final_state.sql_rows or None),
             )
+        # MCP assigns the turn number (0.1), so the trace reports the stored one --
+        # the web client uses it to fetch this turn's full rows later. A turn that
+        # was not recorded gets no number, which turns that button off.
+        if write.get("written"):
+            state_trace["turn_index"] = write.get("turn_index")
+        else:
+            state_trace["turn_index"] = None
+            logger.error(
+                "History write refused for query_id=%s session_id=%s: %s "
+                "-- response still returned to the user.",
+                final_state.query_id, final_state.session_id, write.get("error"),
+            )
     except Exception as exc:
+        state_trace["turn_index"] = None
         logger.error(
-            "History write failed for query_id=%s session_id=%s turn_index=%d: %s "
+            "History write failed for query_id=%s session_id=%s: %s "
             "-- response still returned to the user unaffected.",
-            final_state.query_id, final_state.session_id, final_state.turn_index, exc,
+            final_state.query_id, final_state.session_id, exc,
         )
 
     logger.info(
