@@ -13,9 +13,12 @@
 -- stored_row_count records how many rows actually fit within the row and byte
 -- bounds (cfg.mcp.history_full_rows_max and history_full_rows_max_bytes).
 -- When a result set is truncated by either bound, stored_row_count will be
--- strictly LESS than conversation_turns.sql_rows_count (the TRUE count of the
--- original execution). The difference between the two is exactly what makes
--- truncation visible to callers and users rather than silent.
+-- strictly LESS than conversation_turns.sql_rows_count. CORRECTED 2026-09-26
+-- (PR #2 review): sql_rows_count is the number of rows the query RETURNED to
+-- the orchestrator, which data.run_select already caps at its max_rows -- it
+-- is not the full size of the underlying result. The difference between the
+-- two counts makes truncation by THIS table's bounds visible; truncation at
+-- run_select's cap is a separate, earlier limit.
 --
 -- DISPOSABLE BY DESIGN.
 -- session_state.turn_rows is explicitly disposable. Pruning expired rows via
