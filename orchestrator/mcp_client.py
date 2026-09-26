@@ -350,3 +350,17 @@ async def audit_record(
         params["detail"] = detail
     return await session.call("audit.record", params)
 
+
+# ── tiles.* (Phase 1) ────────────────────────────────────────────────────────
+async def tiles_manage(
+    session: MCPSession,
+    principal_id: str,
+    action: str,
+    **params: Any,
+) -> dict[str, Any]:
+    """Forward a dashboard tile management action to the MCP tiles.manage tool."""
+    return await session.call(
+        "tiles.manage",
+        {"action": action, "principal_id": principal_id, **{k: v for k, v in params.items() if v is not None}},
+    )
+

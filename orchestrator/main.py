@@ -35,6 +35,7 @@ from nodes.synthesizer import build_citations
 from schema_retriever import target_schema
 from schemas.synthesizer_output import safe_synthesizer_output
 from state import StateSyncState
+from tiles_api import register_tile_routes
 
 logging.basicConfig(
     level=logging.INFO,
@@ -77,7 +78,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=list(cfg.api.cors_allowed_origins),
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    # PATCH and DELETE for the /tiles routes (rename, unpin). Without them the
+    # browser preflight refuses those calls from the web UI's origin, which no
+    # server-side test can see (found auditing Phase 1).
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
@@ -564,6 +568,9 @@ async def run_query(
     )
 
     return response
+
+
+register_tile_routes(app, require_principal=require_principal, audit=_audit)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

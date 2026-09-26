@@ -27,7 +27,8 @@ ENV MAX_ROWS_DEFAULT=1000
 ENV MAX_SQL_LENGTH=8000
 ENV STATEMENT_TIMEOUT_MS=15000
 ENV SESSION_IDLE_TIMEOUT_MS=60000
-ENV TOOL_CEILING=15
+# TOOL_CEILING is deliberately NOT set here: mcp/main.py reads mcp.tool_ceiling
+# from config/statesync.toml. A baked copy silently overrode the config once.
 
 EXPOSE 8080
 

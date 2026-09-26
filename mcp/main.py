@@ -15,6 +15,7 @@ Tools exposed (A4):
   history.append_turn       (cycle 007, Workstream A)
   history.get_recent_turns  (cycle 007, Workstream A)
   history.check_session     (session ownership, docs/V3_PLAN.md 0.2)
+  tiles.manage              (dashboard tiles, docs/V3_PLAN.md Phase 1)
   history.get_turn_rows     (full result-set storage)
   audit.record              (per-identity audit log)
 
@@ -36,6 +37,7 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from config_loader import cfg
 from db import init_pool, close_pool, get_connection, init_history_pool, close_history_pool
 from embeddings import close_embeddings_client
 from fingerprint import verify_fingerprint_at_startup
@@ -47,6 +49,7 @@ from tools.schema_tools import list_tables, describe_table
 from tools.data_tools import sample_rows, run_select
 from tools.vector_tools import semantic_search, hybrid_select, get_passage
 from tools.memory_tools import get_trajectory, put_trajectory
+from tools.tile_tools import manage as tiles_manage
 from tools.history_tools import (append_turn, check_session, get_recent_turns, get_turn_rows,
                                  list_sessions, record_audit)
 
@@ -88,7 +91,9 @@ app = FastAPI(
 
 
 # ── JSON-RPC dispatch ─────────────────────────────────────────────────────────
-TOOL_CEILING = int(os.environ.get("TOOL_CEILING", "15"))
+# mcp.tool_ceiling is the single source of truth; the env var remains an
+# explicit override. Raised 15 -> 20 for tiles (docs/V3_PLAN.md decision log).
+TOOL_CEILING = int(os.environ.get("TOOL_CEILING", cfg.mcp.tool_ceiling))
 
 _REGISTERED_TOOLS: dict[str, Any] = {
     "schema.list_tables":    list_tables,
@@ -105,6 +110,7 @@ _REGISTERED_TOOLS: dict[str, Any] = {
     "history.check_session":    check_session,
     "history.get_turn_rows":    get_turn_rows,
     "history.list_sessions":    list_sessions,
+    "tiles.manage":             tiles_manage,
     "audit.record": record_audit,
 }
 

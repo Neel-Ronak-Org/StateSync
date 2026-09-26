@@ -222,7 +222,8 @@ async def get_history_connection() -> AsyncIterator[psycopg.AsyncConnection]:
     (non-read-only) transaction that COMMITS on success. This is the only
     write-capable connection path in this codebase -- see this module's
     docstring for why it exists and what constrains it. Never used by any
-    agent-facing tool; only mcp/tools/history_tools.py calls this.
+    agent-facing tool; only mcp/tools/history_tools.py and tile_tools.py
+    (user-owned tiles, migration 017) call this.
     """
     if _history_pool is None:
         raise RuntimeError("History database pool not initialized. Call init_history_pool() first.")

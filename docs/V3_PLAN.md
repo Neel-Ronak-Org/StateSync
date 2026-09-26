@@ -258,7 +258,7 @@ billing · single sign-on · value matching and multilingual expansion beyond wh
 
 Ordered. Each phase ends with a check a machine can run.
 
-### Phase 0 — Clean up (next)
+### Phase 0 — Clean up (done)
 
 | ID | Item | Type | Handled | Status |
 |---|---|---|---|---|
@@ -272,7 +272,7 @@ Ordered. Each phase ends with a check a machine can run.
 | 0.8 | A padded literal `' Lucknow '` (d_ml_033). Find where the padding enters (preserved entity or generation), fix it at the source, add a test | User-facing bug | In-house diagnosis | ✅ Closed: not reproducible on Groq (3/3 correct). Cause was the local 7B detecting Hinglish as English, so no entity was preserved and its SQL padded the literal. General defence: value matching (After v3) |
 | 0.9 | Tooling: `run_e2_v1.py` reads an unregistered `--force`; the `SchemaRetriever` Protocol omits the `schema` parameter its only implementation needs | Code quality | Delegable | ✅ `06216c2` |
 | 0.10 | Hygiene: drop the obsolete `version:` key from both compose files; decide whether `.claude/launch.json` is committed | Hygiene | Delegable | ✅ `06216c2` (compose); `.claude/launch.json` committed with the plan update |
-| 0.11 | **Merge PR #2** once 0.1–0.3 are in | — | Owner approves | Waiting on owner approval |
+| 0.11 | **Merge PR #2** once 0.1–0.3 are in | — | Owner approves | ✅ merged as `83bdea8` (merge commit, so the SHAs cited here stay valid) |
 | 0.12 | **Document search silently missed the right document.** Found verifying 0.5: the approximate HNSW index returned review digests (~0.55) instead of LP003's annexure (0.77, the exact top match), so a question the documents answer came back as "not found". Known as approximate since cycle 006; the rebuild made it fail outright, and `hnsw.ef_search` recall was not monotonic (found at 100 and 200, lost at 400). Fix: exact search, 71 ms over 20,245 chunks, behind `retrieval.exact_vector_search` | User-facing bug | In-house | ✅ `2ff96ff` |
 
 **Exit:** pytest green, including new tests for 0.1, 0.2 and 0.6 · CI green ·
@@ -280,14 +280,37 @@ Ordered. Each phase ends with a check a machine can run.
 a second user cannot write into another user's session · a missing model returns a
 readable error · PR #2 merged.
 
-### Phase 1 — Dashboard tiles (backend and API)
+### Phase 1 — Dashboard tiles (backend and API) — ✅ done (`0f92cf4`, `848ed0e`)
+
+**Exit met, checked live by `scripts/verify_tiles.py` (36/36):** a refresh returns the
+identical SQL with a newer timestamp; a changed fingerprint flips the tile to
+`needs_review` and keeps the last good result; another principal is refused on every
+route. The API Phase 2 builds on:
+
+| Route | Does |
+|---|---|
+| `POST /tiles` `{session_id, turn_index, title?, refresh_interval_s?}` | Pin a stored database answer (201) |
+| `GET /tiles` | All my tiles, each refreshed first if due |
+| `GET /tiles/{id}` | One tile, with its version history |
+| `POST /tiles/{id}/refresh` | Re-run now |
+| `POST /tiles/{id}/replace` `{session_id, turn_index}` | New version from a follow-up answer (the "edit") |
+| `PATCH /tiles/{id}` `{title?, refresh_interval_s?}` | Rename, change interval |
+| `POST /tiles/{id}/confirm` | Accept a schema change (new version) |
+| `DELETE /tiles/{id}` | Unpin |
+
+Every tile comes back with `chart.data.values` bound to its current rows, plus `state`,
+`stale`, `result.computed_at` and `last_error` for the UI to show.
+
 
 - Migration: `tiles` (saved SQL, chart spec, source, author, created, schema fingerprint,
   refresh interval, version) and `tile_results` (rows, computed_at).
 - MCP tools: pin, list, refresh-if-stale, force refresh, unpin, edit (propose → approve).
-  Every refresh passes the SQL gate. **The MCP tool ceiling (`mcp.tool_ceiling` = 15) is
-  full** since `history.check_session` (0.2): either one `tiles` tool that takes an
-  action, or a recorded decision to raise the ceiling.
+  Every refresh passes the SQL gate. Built as ONE method, `tiles.manage`, taking an
+  action. The ceiling was full at 15 after `history.check_session` (0.2), so even one
+  method needed it raised: decision D-v3-1 below.
+- Edit is "replace from a turn": the user asks the change in chat ("same, last 30 days"),
+  and replacing the tile with that answer is the approval. The tiles API never accepts
+  a SQL string, so it cannot become a SQL console.
 - Fingerprint mismatch → "needs review".
 - **Exit:** tests show a refresh returns identical SQL and a new timestamp; a changed
   fingerprint flips the state; a tile cannot be read across workspaces.
@@ -344,6 +367,17 @@ readable error · PR #2 merged.
 
 Value matching (Bombay → the spellings actually stored), MySQL, OCR, alerts, single
 sign-on, and document-based tile targets ("on-time vs the 36-hour SLA in the contract").
+
+## 8a. Decision log
+
+Decisions that change a locked constant or a recorded design rule (config/statesync.toml's
+header requires a record for any change there).
+
+| ID | Date | Decision | Why |
+|---|---|---|---|
+| D-v3-1 | 2026-09-26 | `mcp.tool_ceiling` 15 → 20; `mcp/main.py` reads it from config, and `mcp/Dockerfile` no longer bakes `ENV TOOL_CEILING=15` (which had silently overridden the config) | The ceiling came from the M9 over-exposure experiment, but the supervisor never sees MCP methods (D1 decoupled routing from MCP; `scripts/experiment_tool_ceiling.py`), so it guards API sprawl, not model accuracy. Tiles add one method (16 in use); Phase 3 needs room |
+| D-v3-2 | 2026-09-26 | Retrieval is exact (`retrieval.exact_vector_search = true`) | 0.12: the HNSW index missed the right document outright; exact search costs 71 ms at this size |
+| D-v3-3 | 2026-09-26 | Groq is the provider | 0.4: the shipped local model was missing; v3 demos on a hosted model |
 
 ## 9. Issue register
 
