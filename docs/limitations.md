@@ -477,6 +477,19 @@ graph".
 
 ## Vector retrieval runs on an approximate index — added cycle 006, found investigating an M6 movement
 
+> **UPDATE 2026-09-26 — retrieval is now EXACT by default** (`retrieval.exact_vector_search
+> = true`, docs/V3_PLAN.md 0.12). After a `REINDEX` rebuilt the HNSW graph (0.5, the
+> collation fix), the approximation failed outright: for "What transit time has FastShip
+> 3 (LP003) committed to for Metro Mumbai…?" the index's top 5 were review digests
+> (cosine ~0.55) while the exact top match was LP003's annexure (0.77), and the answer
+> said the documents held no such information. Raising `hnsw.ef_search` found it at 100
+> and 200 and lost it again at 400 -- recall did not improve monotonically, so no
+> setting could be trusted. Exact search over all 20,245 chunks took 71 ms (HNSW:
+> 2.6 ms), negligible next to a model call. Vector queries now run with index scans
+> off for their one transaction; the index still exists for a future, measured return.
+> **Every retrieval-based number measured before this date (M6, E1) was taken under the
+> approximation described below and has not been re-measured under exact search.**
+
 `document_chunks.embedding` is indexed HNSW (`pg_indexes`:
 `USING hnsw (embedding vector_cosine_ops)`) — an **approximate**
 nearest-neighbor structure. This was true before cycle 006; nothing in this
@@ -862,3 +875,88 @@ verification was actually carried out:
   Everything else checked out: all 13 referenced scripts exist, all four
   secrets files are named correctly, and all four published ports
   (3000/8080/8090/8095) match `docker-compose*.yml`.
+
+---
+
+## C1 authentication — what it does not cover (added 2026-09-02)
+
+Auth, rate limiting and a per-identity audit log shipped and are verified
+(`V2_STRATEGY` §5 C1). These are the limits of that work, recorded now rather
+than discovered later.
+
+**The rate limiter is in-process and per-instance.** `orchestrator/auth.py`
+holds fixed windows in a dict behind a `threading.Lock`. Two consequences,
+both observed rather than reasoned: a `docker compose restart orchestrator`
+**clears every window** (I used exactly that to reset a limit mid-test), and a
+second orchestrator replica would enforce its own independent limit, so N
+replicas permit N× the configured rate. Fine for one instance; it is not a
+distributed rate limiter and must not be described as one.
+
+**Tokens are long-lived and have no expiry.** There is no rotation, no refresh
+and no per-token TTL. Revocation means editing `secrets/api_principals.json`
+and restarting the orchestrator, because the principal file is read **once at
+startup**. A leaked token is valid until someone does that.
+
+**The frontend stores the token in `localStorage`.** Any script achieving XSS
+can read it. Accepted because the page's CSP forbids inline script and
+`unsafe-eval`, and because the alternative — a cross-origin cookie — needs
+`SameSite=None; Secure` and therefore HTTPS, which local development does not
+have. It is a real exposure, not a non-issue.
+
+**Per-principal history scoping — CLOSED 2026-09-03.** This entry used to
+record that `conversation_turns` had no `principal_id`, so principals sharing
+a tenant could read each other's conversations, and that the
+`STATESYNC_SESSION_BROWSER` gate stayed because of it. Migration 014 added the
+column, all three history tools filter on it, and the gate is deleted.
+Verified with two principals on one tenant, including the direct-read case:
+requesting another principal's session by its exact id returns zero turns.
+**The residual limitation is the sentinel:** pre-auth rows carry
+`p_preauth_legacy` and are therefore invisible to everyone. They are retained
+for forensics, not shown.
+
+**MCP is unauthenticated, by design and unchanged.** Port 8080 is an internal
+service on the compose network; nothing in C1 altered that, and no script's
+MCP call gained an `Authorization` header. If MCP is ever exposed beyond the
+compose network this becomes the next thing to fix.
+
+**The audit log has no retention policy.** `session_state.audit_log` grows
+without bound, one row per request to a protected route including every
+denial. `session_state.turn_rows` (task 4) now HAS one — a 30-day TTL, a
+1 MiB/turn byte cap and a row cap, pruned opportunistically on write and
+forceable with `scripts/prune_turn_rows.py`. **`audit_log` has none of that**,
+and the asymmetry is deliberate rather than an oversight: deleting an audit
+record destroys the compliance artifact the log exists to be, so its retention
+is a policy question for the owner, not a default a build should pick. Until
+that is decided, it grows.
+
+---
+
+## Full result-set storage (task 4) — what it does and does not guarantee
+
+**Retention is opportunistic, so an IDLE deployment keeps expired rows.**
+Pruning runs inside `history.append_turn`, bounded by
+`history_prune_batch_limit`. That is self-maintaining only while the system is
+being used: a deployment that stops receiving queries stops pruning, and one
+restored from a backup holds whatever the backup held until the next write.
+This is not laziness — there is no cron, scheduler or periodic worker anywhere
+in this stack, so a policy needing one would never execute at all.
+`scripts/prune_turn_rows.py` is the manual lever; it is dry-run by default.
+
+**A stored payload can be smaller than the result the user saw.** Three caps
+apply: `history_full_rows_max` (rows), `history_full_rows_max_bytes` (payload
+size), and the 30-day TTL. Measured: 1500 rows / 1.75 MB in became 810 rows /
+967 kB stored. That truncation is logged and
+`conversation_turns.sql_rows_count` still carries the TRUE count, so it is
+visible rather than silent — but a client that renders `turn_rows` without
+comparing against `sql_rows_count` would show a partial result as if it were
+whole. The comparison is the client's job and nothing enforces it.
+
+**Pruned turns degrade, they do not disappear.** Deleting from `turn_rows`
+leaves the turn, its answer, its chart and its 100-row preview intact.
+Verified: a payload backdated 90 days was reclaimed while all 588
+conversation turns survived.
+
+**The frontend does not use any of this yet.** Full rows are stored and
+readable over `GET /sessions/{id}/turns/{n}/rows`, but the UI still renders
+only the stored preview and shows no "N of M" indicator. Nothing is wrong; it
+is simply not wired, and no claim is made that it is.

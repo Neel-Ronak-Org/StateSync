@@ -27,6 +27,32 @@ session_browser_turn_limit = 100    # turns fetched when resuming one conversati
 # turn in full grows session_state.conversation_turns without bound. The true
 # count is stored separately so a truncated preview is never shown as complete.
 history_row_preview_max   = 100
+# Full result sets persisted per turn in session_state.turn_rows (migration 015).
+# Stored in a separate table to keep history.get_recent_turns fast on follow-up
+# queries. Three independent bounds govern storage, because one alone is not enough:
+# history_full_rows_max bounds ROW COUNT, history_full_rows_max_bytes bounds
+# PAYLOAD SIZE (a 200-row result of wide text columns can dwarf a 1000-row result
+# of integers, so a row cap alone does not bound storage), retention_days bounds
+# AGE, and prune_batch_limit bounds the work done per write so pruning can never
+# become a long transaction on the user-facing path.
+history_full_rows_enabled          = true
+history_full_rows_max              = 1000
+history_full_rows_max_bytes        = 1048576
+history_full_rows_retention_days   = 30
+history_prune_batch_limit          = 200
+# Audit log retention, enforced by scripts/prune_audit_log.py run as the
+# migrator (docs/V3_PLAN.md 0.7). Not pruned on write: that would need DELETE
+# for the app role, which could then erase its own audit trail.
+audit_retention_days               = 180
+# history.append_turn assigns the turn number itself (docs/V3_PLAN.md 0.1); two
+# concurrent writes in one session can pick the same number, and the loser
+# retries up to this many times before reporting the turn as not recorded.
+history_append_max_attempts        = 3
+# Free-text detail persisted per audit event (migration 013). An audit record
+# must never become a storage-amplification vector across high request volumes,
+# so detail is clamped to this ceiling. The cap is enforced at the write in
+# mcp/tools/history_tools.py.
+audit_detail_max_chars    = 500
 
 [sql]
 retry_max                 = 3       # attempts after the first; 4 executions maximum
@@ -89,6 +115,16 @@ embedding_model           = "mxbai-embed-large"  # E1: same model as memory's, o
 embedding_dim             = 1024    # must match document_chunks.embedding VECTOR(1024), A5
 embedding_timeout_s       = 30      # mcp -> ollama /api/embeddings HTTP timeout, ingestion + query-time
 citation_max_chunks       = 3       # synthesizer: max kind:"chunk" citations deterministically emitted
+# EXACT nearest-neighbour search (docs/V3_PLAN.md 0.12). The HNSW index on
+# document_chunks.embedding is approximate, and measured on 2026-09-26 it was
+# wrong in a way no tuning fixed: for a question naming FastShip 3 / LP003, the
+# exact top match (LP003's annexure, cosine 0.77) was absent from the index's
+# top 5 (review digests, ~0.55); raising hnsw.ef_search found it at 100 and 200
+# and lost it again at 400. Exact search over the 20,245 chunks took 71 ms --
+# noise next to a model call. true = vector queries run with index scans off
+# for that one transaction. Revisit with a measured recall target if the
+# corpus grows past what a sequential scan can serve.
+exact_vector_search       = true
 
 [scoring]
 recall_weight             = 0.70    # spec score; recall over precision per VegaChat
@@ -151,6 +187,27 @@ allowed_tenants           = ["t_capstone_default"]
 # docs/open_items.md.
 relational_plane_shared_ack = false
 
+[api]
+# Maximum requests allowed per principal in a fixed rate-limiting window.
+# Bounds token expenditure and prevents denial-of-wallet loops on expensive
+# graph executions while preserving high headroom for interactive query bursts.
+rate_limit_max_requests   = 30
+# Duration of the fixed rate-limiting window in seconds. Balances rapid window
+# rollover for bursty exploration with effective throttling against sustained
+# high-throughput automated abuse.
+rate_limit_window_seconds = 60
+# Permitted browser origins for cross-origin orchestrator requests. The previous
+# configuration used allow_origins=["*"], but a wildcard origin is incompatible
+# with credentialed requests and unsafe for authenticated APIs. The frontend is
+# served on port 3000 in development.
+cors_allowed_origins      = ["http://localhost:3000", "http://127.0.0.1:3000"]
+# UX allowlist so a bad value returns a clean 422 instead of a 500; the
+# AUTHORITATIVE check is mcp/tools/schema_tools.py::_validate_schema, which
+# validates server-side and cannot be bypassed by the orchestrator. If the two
+# lists ever drift, MCP wins and the caller gets an error — never a silent
+# fallback to another corpus.
+allowed_schemas           = ["public", "olist"]
+
 [experiment]
 # F-V2 over-exposure experiment (M9). Surface sizes reuse mcp.tool_ceiling's
 # own scale (9 = current registered tool count, 15 = the configured ceiling)
@@ -173,6 +230,7 @@ temperature               = 0.0
 seed                      = 20260807
 # LLM provider choice is set in flags.toml; model name is also there.
 ollama_timeout_s          = 120     # generous — local inference can be slow
+ollama_tags_timeout_s     = 5       # startup check that the configured local models exist (V3_PLAN 0.4)
 # Azure OpenAI. Much shorter than the local timeout: a hosted frontier model
 # answering in 120s means something is wrong, not that it is thinking.
 azure_timeout_s           = 60
@@ -193,6 +251,16 @@ gemini_retry_base_delay_s = 4.0
 # Raising this requires raising the [sql] max_tokens_* caps too -- a BD under
 # A0.3 -- because thinking silently eats the visible-output budget.
 gemini_thinking_level     = "minimal"
+# Groq. Per-minute TOKEN limits (8K/min per model on the owner's key) make 429s
+# routine mid-question; the adapter waits for the server's retry-after, capped
+# below, and falls back to doubling the base delay when none is sent.
+groq_timeout_s                  = 60
+groq_max_retries                = 6
+groq_retry_base_delay_s         = 2.0
+groq_retry_max_wait_s           = 60.0
+# Added to max_tokens for models in flags.llm.groq.reasoning_effort, so
+# reasoning tokens cannot consume the visible-output budget.
+groq_reasoning_headroom_tokens  = 1024
 # CLIENT-SIDE PACING. The free tier's binding constraint is REQUESTS PER MINUTE,
 # not per day -- measured from the AI Studio dashboard: Flash models 5 RPM /
 # 20 RPD, Flash-Lite 15 RPM / 500 RPD, TPM 250K (peak use 19.9K, never close).

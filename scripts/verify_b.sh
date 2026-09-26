@@ -20,6 +20,15 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 ORCH_URL="${ORCHESTRATOR_URL:-http://localhost:8090}"
 MCP_URL="${MCP_URL:-http://localhost:8080}"
+STATESYNC_API_TOKEN="${STATESYNC_API_TOKEN:-}"
+if [[ -z "${STATESYNC_API_TOKEN}" && -f "${REPO_ROOT}/secrets/api_token_dev" ]]; then
+  STATESYNC_API_TOKEN="$(tr -d '[:space:]' < "${REPO_ROOT}/secrets/api_token_dev")"
+fi
+if [[ -z "${STATESYNC_API_TOKEN}" ]]; then
+  echo "ERROR: StateSync API token missing. Set STATESYNC_API_TOKEN or run python3 scripts/gen_api_principal.py" >&2
+  exit 1
+fi
+TOKEN="${STATESYNC_API_TOKEN}"
 PG_HOST="${POSTGRES_HOST:-localhost}"
 PG_PORT="${POSTGRES_PORT:-5432}"
 PG_DB="${POSTGRES_DB:-statesync}"
@@ -63,6 +72,7 @@ from pathlib import Path
 
 fixture = json.loads(Path("${REPO_ROOT}/fixtures/golden/phase_b.json").read_text())
 orch_url = "${ORCH_URL}"
+token = "${TOKEN}"
 
 for q in fixture["queries"]:
     payload = json.dumps({"query": q["text"]}).encode()
@@ -70,7 +80,7 @@ for q in fixture["queries"]:
         req = urllib.request.Request(
             f"{orch_url}/query",
             data=payload,
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
             method="POST",
         )
         with urllib.request.urlopen(req, timeout=60) as resp:
@@ -109,6 +119,7 @@ section "B-V2 — End-to-end, not mocked"
 
 echo "Submitting canonical query..."
 RESPONSE=$(curl -sf -X POST "${ORCH_URL}/query" \
+  -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"query": "How many orders were placed in Mumbai last month?"}' \
   2>/dev/null || echo "{}")
@@ -319,6 +330,7 @@ REQUIRED = {"answer_text", "chart", "citations"}
 
 fixture = json.loads(Path("${REPO_ROOT}/fixtures/golden/phase_b.json").read_text())
 orch_url = "${ORCH_URL}"
+token = "${TOKEN}"
 
 valid_count = 0
 for q in fixture["queries"]:
@@ -327,7 +339,7 @@ for q in fixture["queries"]:
         req = urllib.request.Request(
             f"{orch_url}/query",
             data=payload,
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
             method="POST",
         )
         with urllib.request.urlopen(req, timeout=60) as resp:

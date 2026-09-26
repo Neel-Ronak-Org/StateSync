@@ -37,6 +37,100 @@
   const SESSION_KEY = 'statesync_session_id';
   const THEME_KEY   = 'statesync_theme';
   const THREAD_KEY  = 'statesync_thread';
+  const CORPUS_KEY  = 'statesync_corpus';
+
+  // ── Authentication & Token Storage ─────────────────────────────────────────
+  // Security tradeoff: localStorage is readable by any script that achieves
+  // XSS, accepted here because the page's CSP forbids inline script and
+  // unsafe-eval, and because the alternative (a cross-origin cookie) would
+  // require SameSite=None; Secure and therefore HTTPS, which local development
+  // does not have.
+  const AUTH_TOKEN_KEY   = 'statesync.apiToken';
+  const AUTH_EXPIRED_MSG = 'Session expired or token invalid. Enter your API token.';
+
+  // In-memory fallback variable.
+  // EVERY localStorage access MUST be wrapped in try/catch and degrade to an
+  // in-memory fallback variable. A browser with site data blocked throws on
+  // access, and an uncaught throw here would white-screen the whole app.
+  let inMemoryToken = null;
+
+  function getToken() {
+    try {
+      const val = window.localStorage.getItem(AUTH_TOKEN_KEY);
+      return val !== null ? val : inMemoryToken;
+    } catch {
+      // A browser with site data blocked throws on access, and an uncaught throw
+      // here would white-screen the whole app.
+      return inMemoryToken;
+    }
+  }
+
+  function setToken(t) {
+    inMemoryToken = t || null;
+    try {
+      if (t) {
+        window.localStorage.setItem(AUTH_TOKEN_KEY, t);
+      } else {
+        window.localStorage.removeItem(AUTH_TOKEN_KEY);
+      }
+    } catch {
+      // A browser with site data blocked throws on access, and an uncaught throw
+      // here would white-screen the whole app.
+    }
+  }
+
+  function clearToken() {
+    inMemoryToken = null;
+    try {
+      window.localStorage.removeItem(AUTH_TOKEN_KEY);
+    } catch {
+      // A browser with site data blocked throws on access, and an uncaught throw
+      // here would white-screen the whole app.
+    }
+  }
+
+  // ── Corpus Storage Helper ──────────────────────────────────────────────────
+  // Persists the chosen corpus per browser in localStorage.
+  // EVERY localStorage access MUST be wrapped in try/catch and degrade to an
+  // in-memory fallback variable. A browser with site data blocked throws on
+  // access, and an uncaught throw here would white-screen the whole app.
+  let inMemoryCorpus = null;
+
+  function getStoredCorpus() {
+    try {
+      const val = window.localStorage.getItem(CORPUS_KEY);
+      return val !== null ? val : inMemoryCorpus;
+    } catch {
+      return inMemoryCorpus;
+    }
+  }
+
+  function setStoredCorpus(c) {
+    inMemoryCorpus = c || null;
+    try {
+      if (c) {
+        window.localStorage.setItem(CORPUS_KEY, c);
+      } else {
+        window.localStorage.removeItem(CORPUS_KEY);
+      }
+    } catch {
+      // In-memory fallback
+    }
+  }
+
+  // ── Auth Header Helper ─────────────────────────────────────────────────────
+  function authHeaders(extra) {
+    const token = getToken();
+    if (!token) return extra;
+    return Object.assign({}, extra, { Authorization: `Bearer ${token}` });
+  }
+
+  function rateLimitMessage(resp) {
+    const retry = resp && resp.headers && resp.headers.get ? resp.headers.get('Retry-After') : null;
+    return retry
+      ? `Rate limit reached. Try again in ${retry} seconds.`
+      : 'Rate limit reached. Try again later.';
+  }
 
   function getOrCreateSessionId() {
     let id = sessionStorage.getItem(SESSION_KEY);
@@ -51,6 +145,7 @@
 
   // ── Elements ───────────────────────────────────────────────────────────────
   const $ = (id) => document.getElementById(id);
+  const appEl        = $('app');
   const thread       = $('thread');
   const cover        = $('cover');
   const form         = $('query-form');
@@ -59,10 +154,50 @@
   const footerStatus = $('footer-status');
   const sessionMeta  = $('session-meta');
   const healthDot    = $('health-dot');
+  const corpusSelect = $('corpus-select');
   const railEl       = $('rail');
+
+  // Corpus state: tracked to know whether the switcher was populated from /health
+  // and what the active selection is.
+  let currentCorpus = null;
+  let corpusPopulated = false;
   const railBody     = $('rail-body');
   const banner       = $('composer-banner');
   const bannerText   = $('composer-banner-text');
+  const loginGate    = $('login-gate');
+  const loginForm    = $('login-form');
+  const tokenInput   = $('token-input');
+  const loginSubmitBtn = $('login-submit-btn');
+  const loginError   = $('login-error');
+  const signOutBtn   = $('sign-out-btn');
+
+  // ── Login Gate UI Helpers ──────────────────────────────────────────────────
+  function showGate(errMsg) {
+    if (loginGate) loginGate.hidden = false;
+    if (appEl) appEl.hidden = true;
+    if (loginError) {
+      if (errMsg) {
+        loginError.textContent = errMsg;
+        loginError.hidden = false;
+      } else {
+        loginError.textContent = '';
+        loginError.hidden = true;
+      }
+    }
+    if (tokenInput) {
+      tokenInput.value = '';
+      tokenInput.focus();
+    }
+  }
+
+  function hideGate() {
+    if (loginGate) loginGate.hidden = true;
+    if (appEl) appEl.hidden = false;
+    if (loginError) {
+      loginError.textContent = '';
+      loginError.hidden = true;
+    }
+  }
 
   // ── 2. Theme ───────────────────────────────────────────────────────────────
   // Three states. 'system' removes data-theme entirely so the media query in
@@ -71,14 +206,22 @@
   const THEMES = ['light', 'system', 'dark'];
 
   function currentTheme() {
-    const stored = localStorage.getItem(THEME_KEY);
-    return THEMES.includes(stored) ? stored : 'system';
+    try {
+      const stored = localStorage.getItem(THEME_KEY);
+      return THEMES.includes(stored) ? stored : 'system';
+    } catch {
+      return 'system';
+    }
   }
 
   function applyTheme(mode) {
     if (mode === 'system') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', mode);
-    localStorage.setItem(THEME_KEY, mode);
+    try {
+      localStorage.setItem(THEME_KEY, mode);
+    } catch {
+      // In-memory fallback: if localStorage throws, mode remains applied to documentElement
+    }
     THEMES.forEach((m) => {
       const btn = $(`theme-${m}`);
       if (btn) btn.setAttribute('aria-pressed', String(m === mode));
@@ -428,6 +571,11 @@
 
   function metaRow(turn, tr) {
     const row = el('div', 'meta-row');
+    if (tr.target_schema) {
+      const chip = el('span', 'chip chip--corpus', tr.target_schema);
+      chip.title = `Corpus: ${tr.target_schema}`;
+      row.appendChild(chip);
+    }
     const route = (tr.route || 'unknown').toLowerCase();
     row.appendChild(el('span', `chip chip--${['sql', 'docs', 'hybrid'].includes(route) ? route : ''}`.trim(), route));
     if (typeof turn.latency === 'number') row.appendChild(el('span', 'chip', `${fmtInt.format(turn.latency)} ms`));
@@ -475,29 +623,177 @@
     // Small results open by default; large ones stay collapsed so the reading
     // flow is not swamped.
     if (rows.length <= 12) d.open = true;
+
+    let currentRows = rows;
+    const tr = turn.trace || {};
+    const titleEl = el('span', 'artifact__title', `Results · ${fmtInt.format(rows.length)} × ${cols.length}`);
+
     const s = el('summary');
     s.appendChild(el('span', 'disclosure-caret', '▶'));
-    s.appendChild(el('span', 'artifact__title', `Results · ${fmtInt.format(rows.length)} × ${cols.length}`));
+    s.appendChild(titleEl);
     s.appendChild(el('span', 'artifact__spacer'));
     s.appendChild(button('CSV', 'btn btn--sm', (ev) => {
-      ev.preventDefault(); ev.stopPropagation(); downloadCSV(turn, cols, rows);
+      ev.preventDefault(); ev.stopPropagation(); downloadCSV(turn, cols, currentRows);
     }, 'Download as CSV'));
     s.appendChild(button('JSON', 'btn btn--sm', (ev) => {
-      ev.preventDefault(); ev.stopPropagation(); downloadJSON(turn, rows);
+      ev.preventDefault(); ev.stopPropagation(); downloadJSON(turn, currentRows);
     }, 'Download as JSON'));
     s.appendChild(button('Copy TSV', 'btn btn--sm', (ev) => {
       ev.preventDefault(); ev.stopPropagation();
-      copyText(toDelimited(cols, rows, '\t', false), 'Copied — paste into Sheets or Excel.');
+      copyText(toDelimited(cols, currentRows, '\t', false), 'Copied — paste into Sheets or Excel.');
     }));
     d.appendChild(s);
 
-    const numeric = inferNumericColumns(cols, rows);
+    // A turn stored inline holds at most 100 preview rows (mcp.history_row_preview_max),
+    // while sql_rows_count carries the true result size. Silently displaying a
+    // partial table as complete is a core correctness violation: when preview_truncated
+    // is set, show an honest "Showing X of Y rows" indicator and offer a button to
+    // pull the full stored result from the dedicated turn rows endpoint.
+    const isTruncated = Boolean(
+      tr.preview_truncated !== undefined
+        ? tr.preview_truncated
+        : (turn.preview_truncated !== undefined
+          ? turn.preview_truncated
+          : (typeof tr.sql_rows_count === 'number' && tr.sql_rows_count > rows.length))
+    );
+    const sqlRowsCount = typeof tr.sql_rows_count === 'number'
+      ? tr.sql_rows_count
+      : (typeof turn.sql_rows_count === 'number' ? turn.sql_rows_count : null);
+    const turnSessionId = turn.sessionId || (tr && (tr.session_id || tr.sessionId)) || (typeof sessionId === 'string' && sessionId ? sessionId : null);
+    const turnIndex = (tr && typeof tr.turn_index === 'number')
+      ? tr.turn_index
+      : (typeof turn.turn_index === 'number'
+        ? turn.turn_index
+        : (typeof turn.backendTurn === 'number' ? turn.backendTurn : null));
+
+    const canLoadFull = isTruncated && Boolean(turnSessionId) && typeof turnIndex === 'number' && Number.isFinite(turnIndex);
+
+    let initialIndicatorText;
+    if (isTruncated) {
+      initialIndicatorText = (typeof sqlRowsCount === 'number')
+        ? `Showing ${rows.length.toLocaleString()} of ${sqlRowsCount.toLocaleString()} rows`
+        : `Showing ${rows.length.toLocaleString()} rows`;
+    } else {
+      initialIndicatorText = rows.length > 500
+        ? `Showing the first 500 of ${rows.length.toLocaleString()} rows. Export for the full set.`
+        : `${rows.length.toLocaleString()} row${rows.length === 1 ? '' : 's'}.`;
+    }
+
     const wrap = el('div', 'table-scroll');
     const table = el('table', 'results');
-    const cap = el('caption', null,
-      rows.length > 500
-        ? `Showing the first 500 of ${fmtInt.format(rows.length)} rows. Export for the full set.`
-        : `${fmtInt.format(rows.length)} row${rows.length === 1 ? '' : 's'}.`);
+    const cap = el('caption');
+    const capRow = el('div', 'results-caption-row');
+    const indicator = el('span', 'results-indicator', initialIndicatorText);
+    capRow.appendChild(indicator);
+
+    let loadBtn = null;
+    let sepNode = null;
+    if (canLoadFull) {
+      sepNode = document.createTextNode(' ');
+      capRow.appendChild(sepNode);
+      loadBtn = button('Load full result', 'btn btn--sm', async (ev) => {
+        if (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+        }
+        loadBtn.disabled = true;
+        loadBtn.textContent = 'Loading…';
+
+        try {
+          const url = `${ORCHESTRATOR_URL}/sessions/${encodeURIComponent(turnSessionId)}/turns/${encodeURIComponent(turnIndex)}/rows`;
+          const resp = await fetch(url, {
+            method: 'GET',
+            headers: authHeaders(),
+          });
+
+          if (resp.status === 401) {
+            loadBtn.disabled = false;
+            loadBtn.textContent = 'Load full result';
+            clearToken();
+            showGate(AUTH_EXPIRED_MSG);
+            status(AUTH_EXPIRED_MSG);
+            return;
+          }
+          if (resp.status === 429) {
+            loadBtn.disabled = false;
+            loadBtn.textContent = 'Load full result';
+            status(rateLimitMessage(resp));
+            return;
+          }
+          if (!resp.ok) {
+            loadBtn.disabled = false;
+            loadBtn.textContent = 'Load full result';
+            const errBody = await resp.json().catch(() => ({ detail: resp.statusText }));
+            status(errBody.detail || `HTTP ${resp.status}`);
+            return;
+          }
+
+          const data = await resp.json();
+          if (!data || data.available === false) {
+            // available: false is NORMAL — pruned by the 30-day retention policy or
+            // never stored. It is not a fault and must not be reported as one; replace
+            // the button with a neutral retention note while preserving the preview rows.
+            const note = el(
+              'span',
+              'results-retention-note',
+              'Full result is no longer stored (retention); rows above are what remains.'
+            );
+            loadBtn.replaceWith(note);
+            return;
+          }
+
+          // available: true: replace table body rows with full stored rows
+          const returnedRows = Array.isArray(data.rows) ? data.rows : [];
+          currentRows = returnedRows;
+          if (turn.trace) {
+            turn.trace.sql_rows = returnedRows;
+            turn.trace.preview_truncated = false;
+          }
+
+          // SECURITY: textContent only (A7 sink safety). Row data is untrusted DB output.
+          clear(tbody);
+          const newNumeric = inferNumericColumns(cols, returnedRows);
+          returnedRows.forEach((r) => {
+            const tr2 = el('tr');
+            cols.forEach((c) => {
+              const v = r[c];
+              let td;
+              if (v === null || v === undefined) td = el('td', 'null', 'null');
+              else if (newNumeric.has(c)) td = el('td', 'num', fmtNumber(v));
+              else td = el('td', null, typeof v === 'object' ? JSON.stringify(v) : String(v));
+              td.title = v === null || v === undefined ? 'null' : String(v);
+              tr2.appendChild(td);
+            });
+            tbody.appendChild(tr2);
+          });
+
+          // Never conflate what is displayed / stored with the true count: if server caps
+          // (1000 rows / 1 MiB) truncated what was stored, the indicator must keep saying so.
+          const storedCount = typeof data.stored_row_count === 'number' ? data.stored_row_count : returnedRows.length;
+          const totalCount = (typeof sqlRowsCount === 'number') ? sqlRowsCount : storedCount;
+
+          if (storedCount < totalCount) {
+            indicator.textContent = `Showing ${storedCount.toLocaleString()} of ${totalCount.toLocaleString()} rows — full result was capped at storage time`;
+          } else {
+            indicator.textContent = `Showing all ${storedCount.toLocaleString()} rows`;
+          }
+
+          loadBtn.remove();
+          if (sepNode && sepNode.parentNode) sepNode.remove();
+          if (titleEl) {
+            titleEl.textContent = `Results · ${storedCount.toLocaleString()} × ${cols.length}`;
+          }
+          persistThread();
+        } catch (err) {
+          loadBtn.disabled = false;
+          loadBtn.textContent = 'Load full result';
+          status((err && err.message) || 'Network error.');
+        }
+      }, 'Fetch the full stored result set for this turn');
+      capRow.appendChild(loadBtn);
+    }
+
+    cap.appendChild(capRow);
     table.appendChild(cap);
 
     const thead = el('thead');
@@ -510,6 +806,7 @@
     thead.appendChild(htr);
     table.appendChild(thead);
 
+    const numeric = inferNumericColumns(cols, rows);
     const tbody = el('tbody');
     rows.slice(0, 500).forEach((r) => {
       const tr2 = el('tr');
@@ -670,6 +967,7 @@
       parts.push(`\n${t.answer || ''}`);
       if (tr.executed_sql) parts.push('\n```sql\n' + tr.executed_sql + '\n```');
       const bits = [];
+      if (tr.target_schema) bits.push(`corpus: ${tr.target_schema}`);
       if (tr.route) bits.push(`route: ${tr.route}`);
       if (typeof tr.sql_rows_count === 'number') bits.push(`rows: ${tr.sql_rows_count}`);
       if (typeof t.latency === 'number') bits.push(`${t.latency} ms`);
@@ -1138,23 +1436,46 @@
     status('Running…');
 
     try {
+      const reqBody = { query: question, session_id: sessionId };
+      // The selected corpus is sent as `schema` on every POST /query.
+      // If the selector has not been populated yet (/health not answered), omit
+      // the field entirely rather than guessing -- omitting is defined by the
+      // orchestrator API to mean "use the server default".
+      if (corpusPopulated && currentCorpus) {
+        reqBody.schema = currentCorpus;
+      }
+
       const resp = await fetch(`${ORCHESTRATOR_URL}/query`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: question, session_id: sessionId }),
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(reqBody),
         signal: activeController.signal,
       });
+      if (resp.status === 401) {
+        clearToken();
+        showGate(AUTH_EXPIRED_MSG);
+        throw new Error(AUTH_EXPIRED_MSG);
+      }
+      if (resp.status === 429) {
+        throw new Error(rateLimitMessage(resp));
+      }
       if (!resp.ok) {
         const errBody = await resp.json().catch(() => ({ detail: resp.statusText }));
-        throw new Error(errBody.detail || `HTTP ${resp.status}`);
+        let msg = errBody.detail;
+        if (typeof msg !== 'string') {
+          msg = msg ? JSON.stringify(msg) : `HTTP ${resp.status}`;
+        }
+        throw new Error(msg || `HTTP ${resp.status}`);
       }
       const data = await resp.json();
 
       turn.state = 'done';
+      turn.sessionId = sessionId;
       turn.answer = data.answer_text || '';
       turn.chart = data.chart || null;
       turn.citations = data.citations || [];
       turn.trace = data.state_trace || {};
+      if (turn.trace) turn.trace.session_id = sessionId;
       turn.latency = data.latency_ms;
       turn.queryId = data.query_id;
       // The backend's own turn index is authoritative; the local counter is
@@ -1178,8 +1499,8 @@
     }
   }
 
-  // ── Masthead actions ───────────────────────────────────────────────────────
-  $('new-conversation-btn').addEventListener('click', () => {
+  // ── Conversation lifecycle ────────────────────────────────────────────────
+  function startNewConversation(corpusChangeNote) {
     sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(THREAD_KEY);
     sessionId = getOrCreateSessionId();
@@ -1189,19 +1510,121 @@
     thread.appendChild(cover);
     buildSuggestions();
     updateSessionMeta();
-    status('Started a new conversation.');
-  });
+    if (corpusChangeNote) {
+      const existing = cover.querySelector('.notice--corpus');
+      if (existing) existing.remove();
+      const note = el('div', 'notice notice--corpus', corpusChangeNote);
+      cover.prepend(note);
+      status(corpusChangeNote);
+    } else {
+      status('Started a new conversation.');
+    }
+  }
+
+  $('new-conversation-btn').addEventListener('click', () => startNewConversation());
+
+  // WHY CHANGING THE CORPUS MUST START A NEW CONVERSATION:
+  // Follow-up turns are rewritten using earlier turns in the same session as
+  // context. If a thread whose turn 1 answered "550 orders" from synthetic data
+  // were allowed to continue into Olist, the contextual rewriter would inject
+  // numbers, constraints, or entities from the wrong corpus into subsequent
+  // queries. Turn 2 would run against Olist carrying a constraint or entity from
+  // synthetic data -- producing a silent wrong answer with no visible cause.
+  // Reusing the "New" control to wipe the session and thread state ensures
+  // stale cross-corpus context cannot leak across schema boundaries.
+  if (corpusSelect) {
+    corpusSelect.addEventListener('change', () => {
+      const next = corpusSelect.value;
+      if (!next || next === currentCorpus) return;
+      currentCorpus = next;
+      setStoredCorpus(next);
+      startNewConversation(`Corpus changed to “${next}”. Started a new conversation.`);
+    });
+  }
 
   $('copy-thread-btn').addEventListener('click', () => {
     if (!turns.some((t) => t.state === 'done')) { status('Nothing to copy yet.'); return; }
     copyText(threadAsMarkdown(), 'Conversation copied as Markdown.');
   });
 
-  // ── Past conversations (local dev only) ───────────────────────────────────
+  if (signOutBtn) {
+    signOutBtn.addEventListener('click', () => {
+      clearToken();
+      if (sidebarOpen && sidebarOpen()) closeSidebar();
+      showGate();
+      status('Signed out.');
+    });
+  }
+
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const val = tokenInput ? tokenInput.value.trim() : '';
+      if (!val) {
+        if (loginError) {
+          loginError.textContent = 'API token is required.';
+          loginError.hidden = false;
+        }
+        return;
+      }
+
+      if (loginSubmitBtn) loginSubmitBtn.disabled = true;
+      if (loginError) loginError.hidden = true;
+
+      // Store the token immediately so authHeaders() can attach it to the validation request
+      setToken(val);
+
+      try {
+        const resp = await fetch(`${ORCHESTRATOR_URL}/sessions?limit=1`, {
+          headers: authHeaders(),
+        });
+
+        if (resp.status === 401) {
+          clearToken();
+          if (loginError) {
+            loginError.textContent = 'Invalid API token.';
+            loginError.hidden = false;
+          }
+          if (loginSubmitBtn) loginSubmitBtn.disabled = false;
+          return;
+        }
+
+        if (resp.status === 429) {
+          const msg = rateLimitMessage(resp);
+          if (loginError) {
+            loginError.textContent = msg;
+            loginError.hidden = false;
+          }
+          if (loginSubmitBtn) loginSubmitBtn.disabled = false;
+          return;
+        }
+
+        // ANY other response, including 404, is considered success.
+        // 404 means the session browser is disabled, which still proves the token authenticated.
+        hideGate();
+        if (loginSubmitBtn) loginSubmitBtn.disabled = false;
+        if (resp.ok) {
+          historyBtn.hidden = false;
+          openHistory();
+        }
+        input.focus();
+        status('Ready.');
+      } catch (err) {
+        clearToken();
+        if (loginError) {
+          loginError.textContent = `Connection error: ${(err && err.message) || 'failed to reach orchestrator'}`;
+          loginError.hidden = false;
+        }
+        if (loginSubmitBtn) loginSubmitBtn.disabled = false;
+      }
+    });
+  }
+
+  // ── Past conversations ────────────────────────────────────────────────────
   // The button stays hidden unless GET /sessions actually answers. The route
-  // 404s when STATESYNC_SESSION_BROWSER is unset, which is the shipped state,
-  // so probing is how the UI discovers whether the feature exists rather than
-  // advertising a control that would only produce an error.
+  // is now always available to an authenticated caller and returns only that
+  // principal's own conversations. Probing discovers whether the endpoint is
+  // reachable so the UI degrades gracefully if the orchestrator is unavailable.
   const historyBtn  = $('history-btn');
   const historyList = $('history-list');
 
@@ -1211,7 +1634,19 @@
 
   async function probeSessionBrowser() {
     try {
-      const r = await fetch(`${ORCHESTRATOR_URL}/sessions?limit=1`);
+      const r = await fetch(`${ORCHESTRATOR_URL}/sessions?limit=1`, {
+        headers: authHeaders(),
+      });
+      if (r.status === 401) {
+        clearToken();
+        showGate(AUTH_EXPIRED_MSG);
+        status(AUTH_EXPIRED_MSG);
+        return;
+      }
+      if (r.status === 429) {
+        status(rateLimitMessage(r));
+        return;
+      }
       if (r.ok) { historyBtn.hidden = false; openHistory(); }
     } catch (err) {
       /* orchestrator down or route absent -- leave the button hidden. */
@@ -1233,7 +1668,24 @@
     clear(historyList);
     historyList.appendChild(el('div', 'rail__empty', 'Loading…'));
     try {
-      const r = await fetch(`${ORCHESTRATOR_URL}/sessions?limit=50`);
+      const r = await fetch(`${ORCHESTRATOR_URL}/sessions?limit=50`, {
+        headers: authHeaders(),
+      });
+      if (r.status === 401) {
+        clearToken();
+        showGate(AUTH_EXPIRED_MSG);
+        status(AUTH_EXPIRED_MSG);
+        clear(historyList);
+        historyList.appendChild(el('div', 'rail__empty', AUTH_EXPIRED_MSG));
+        return;
+      }
+      if (r.status === 429) {
+        const msg = rateLimitMessage(r);
+        status(msg);
+        clear(historyList);
+        historyList.appendChild(el('div', 'rail__empty', msg));
+        return;
+      }
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = await r.json();
       clear(historyList);
@@ -1284,7 +1736,19 @@
   // would silently start a new conversation wearing an old one's transcript.
   async function loadSession(id) {
     try {
-      const r = await fetch(`${ORCHESTRATOR_URL}/sessions/${encodeURIComponent(id)}?limit=100`);
+      const r = await fetch(`${ORCHESTRATOR_URL}/sessions/${encodeURIComponent(id)}?limit=100`, {
+        headers: authHeaders(),
+      });
+      if (r.status === 401) {
+        clearToken();
+        showGate(AUTH_EXPIRED_MSG);
+        status(AUTH_EXPIRED_MSG);
+        return;
+      }
+      if (r.status === 429) {
+        status(rateLimitMessage(r));
+        return;
+      }
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = await r.json();
       sessionId = id;
@@ -1298,6 +1762,7 @@
           id: `turn-${turnSeq}`, ordinal: t.turn_index || turnSeq,
           question: t.raw_query, state: 'done',
           answer: t.answer_text || '', chart: t.chart || null, citations: [],
+          sessionId: id,
           // Artifacts come back from migration 012. sql_rows_preview is a
           // CAPPED slice, so sql_rows_count (the true size) travels with it
           // and the turn is stamped: a rendered table must not imply it is
@@ -1305,6 +1770,8 @@
           // has all four fields NULL and degrades to prose + SQL, which is
           // exactly the old behaviour rather than an empty table frame.
           trace: {
+            session_id: id,
+            target_schema: t.target_schema,
             route: t.route, executed_sql: t.executed_sql,
             normalized_query: t.rewritten_query,
             rewrite_applied: t.rewrite_applied,
@@ -1368,6 +1835,53 @@
     });
   }
 
+  // ── Corpus switcher management ─────────────────────────────────────────────
+  // The available schemas and default schema are read from /health so that
+  // schema options cannot drift between the backend and frontend.
+  function updateCorpusSelector(availableSchemas, defaultSchema) {
+    if (!corpusSelect || !Array.isArray(availableSchemas) || !availableSchemas.length) return;
+
+    // Check stored preference in localStorage (wrapped in try/catch with in-memory fallback).
+    // If the persisted value is not in available_schemas, discard it and fall back to default_schema.
+    let stored = getStoredCorpus();
+    if (stored && !availableSchemas.includes(stored)) {
+      stored = null;
+      setStoredCorpus(null);
+    }
+
+    const fallback = (defaultSchema && availableSchemas.includes(defaultSchema))
+      ? defaultSchema
+      : availableSchemas[0];
+
+    // Determine target selection: active user selection (if valid), else stored, else default
+    let chosen = (currentCorpus && availableSchemas.includes(currentCorpus))
+      ? currentCorpus
+      : (stored || fallback);
+
+    if (!availableSchemas.includes(chosen)) {
+      chosen = fallback;
+    }
+
+    // Populate or sync the <select> options from available_schemas
+    const existingOpts = Array.from(corpusSelect.options).map(o => o.value);
+    const matches = existingOpts.length === availableSchemas.length &&
+                    existingOpts.every((v, i) => v === availableSchemas[i]);
+
+    if (!matches) {
+      clear(corpusSelect);
+      availableSchemas.forEach((schema) => {
+        const opt = el('option', null, schema);
+        opt.value = schema;
+        corpusSelect.appendChild(opt);
+      });
+    }
+
+    corpusSelect.value = chosen;
+    currentCorpus = chosen;
+    setStoredCorpus(chosen);
+    corpusPopulated = true;
+  }
+
   // ── Health ─────────────────────────────────────────────────────────────────
   async function pollHealth(force) {
     // Skip only the RECURRING poll while hidden. The first call must always
@@ -1376,10 +1890,17 @@
     // "not checked yet".
     if (document.hidden && !force) return;
     try {
+      // Deliberately unauthenticated: /health is an open route used as a liveness probe before login.
       const r = await fetch(`${ORCHESTRATOR_URL}/health`, { method: 'GET' });
       const ok = r.ok;
       healthDot.dataset.state = ok ? 'ok' : 'down';
       healthDot.title = ok ? 'Orchestrator reachable' : `Orchestrator returned HTTP ${r.status}`;
+      if (ok) {
+        const data = await r.json().catch(() => null);
+        if (data && Array.isArray(data.available_schemas)) {
+          updateCorpusSelector(data.available_schemas, data.default_schema);
+        }
+      }
     } catch (err) {
       healthDot.dataset.state = 'down';
       healthDot.title = `Orchestrator unreachable: ${(err && err.message) || 'network error'}`;
@@ -1397,9 +1918,17 @@
   }
   updateSessionMeta();
   autosize();
-  input.focus();
+
+  const token = getToken();
+  if (!token) {
+    showGate();
+  } else {
+    hideGate();
+    input.focus();
+    probeSessionBrowser();
+  }
+
   pollHealth(true);
-  probeSessionBrowser();
   setInterval(pollHealth, 30000);
   window.addEventListener('focus', () => pollHealth(true));
   document.addEventListener('visibilitychange', () => { if (!document.hidden) pollHealth(true); });

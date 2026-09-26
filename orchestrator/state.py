@@ -100,6 +100,7 @@ _APPEND_FIELDS: frozenset[str] = frozenset({
     "retrievals",
     "route_history",
     "interrogation_samples",
+    "script_repairs",
 })
 
 # Fields whose reducer is "field-wise sum"
@@ -111,8 +112,10 @@ _SUM_FIELDS: frozenset[str] = frozenset({
 _IMMUTABLE_FIELDS: frozenset[str] = frozenset({
     "query_id",
     "tenant_id",
+    "principal_id",
     "session_id",
     "raw_query",
+    "target_schema",
 })
 
 
@@ -122,8 +125,12 @@ class StateSyncState(BaseModel):
 
     # --- identity (set once at entry, never mutated) ---
     query_id:     str                      # uuid4
-    tenant_id:    str                      # A0.6; always config default
+    tenant_id:    str                      # derived from authenticated principal (C1)
+    principal_id: str                      # authenticated caller (C1); scopes conversation history
     session_id:   str
+    # Chosen once at entry and must never change mid-query — a query that switched
+    # corpus halfway would produce an answer whose provenance is unknowable.
+    target_schema: str
 
     # --- input & normalization (Part D) ---
     raw_query:    str
@@ -140,7 +147,7 @@ class StateSyncState(BaseModel):
     # These three fields are provenance ABOUT that rewrite, read by nobody
     # downstream in the graph -- only by main.py's history write and by
     # bench_multiturn.py's scoring.
-    turn_index:       int = 1       # 1 on a fresh session; loaded history + 1 otherwise
+    turn_index:       int = 1       # expected number; MCP assigns the stored one (V3_PLAN 0.1)
     rewrite_applied:  bool = False  # normalized_query changed from the pre-rewrite text
     context_guessed:  bool = False  # rewrite required resolving an ambiguous reference
                                      # with no clarification path available (A5 cut-line)
@@ -155,6 +162,8 @@ class StateSyncState(BaseModel):
     memory_hit:              bool = False
     memory_trace_id:         str | None = None
     interrogation_samples:   list[dict] = Field(default_factory=list)  # ACCUMULATE (Part C2)
+    # Pre-execution mechanical script/column repairs (B1) -- auditable from trace rather than only logs
+    script_repairs:          list[str] = Field(default_factory=list)   # ACCUMULATE
     candidate_sql:           str | None = None
     executed_sql:            str | None = None
     sql_rows:                list[dict] = Field(default_factory=list)

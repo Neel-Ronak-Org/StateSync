@@ -93,10 +93,19 @@ def _extract_route(text: str) -> str:
     except (json.JSONDecodeError, AttributeError):
         pass
 
-    # Regex fallback
-    for candidate in _VALID_ROUTES:
-        if re.search(rf'\b{candidate}\b', text, re.IGNORECASE):
-            return candidate
+    # Regex fallback: the route named EARLIEST in the text wins. It used to be
+    # whichever came first while iterating the frozenset, and set order changes
+    # with each process's hash seed, so the same unparseable reply could route
+    # differently after a restart (audit 007 F-007-7; docs/V3_PLAN.md 0.6).
+    # Earliest mention is order-independent, and a model that fails to emit
+    # JSON still tends to lead with its answer ("hybrid: needs sql and docs").
+    mentions = []
+    for candidate in sorted(_VALID_ROUTES):
+        match = re.search(rf'\b{candidate}\b', text, re.IGNORECASE)
+        if match:
+            mentions.append((match.start(), candidate))
+    if mentions:
+        return min(mentions)[1]
 
     logger.warning("Supervisor could not parse route from %r — defaulting to 'sql'.", text[:80])  # noqa: literals — log truncation width
     return "sql"

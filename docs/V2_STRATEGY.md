@@ -1,6 +1,10 @@
 # StateSync v2 — strategy
 
-**Status: current. Written 2026-08-18, after v1 was declared complete.**
+> **Superseded as the plan on 2026-09-26 by [`docs/V3_PLAN.md`](V3_PLAN.md).** The
+> measured facts below stay valid where V3_PLAN cites them; the workstream sequence
+> and the paper track are replaced. Do not add new direction here.
+
+**Status: v2 record. Written 2026-08-18, after v1 was declared complete.**
 
 This supersedes `docs/PROJECT_DIRECTION.md`, which is retained as the **v1
 record** and should not be edited further. That file is now three layers of
@@ -34,7 +38,7 @@ survived contact with a corpus they were never designed for.
 | single-turn EX, synthetic corrected fixture (25 q) | 60.0% (54.5% over the 22 references that can fail — 3 are unfailable empty-vs-empty matches, audit 004 F-004-3; 52.4% over the 21 that can also discriminate — a 4th, `c2g_15`, has a filter that is a no-op on this data, audit 005 F-005-2 — `AGENT_HANDOFF.md` §6) |
 | single-turn EX, synthetic original fixture | 44.0% |
 | adversarial suite | 40/40 |
-| corpora | synthetic 550 orders · **Olist 1,451,414 real rows** |
+| corpora | synthetic 550 orders · **Olist 1,551,698 real rows** (⚠ every doc in this repo says 1,451,414; that figure has been wrong since `cb2450e` — see §3a's row-count correction) |
 | providers behind one seam | local · anthropic · azure · gemini |
 
 **⚠⚠ 88.9%/94.4% is NOT "88.9% at text-to-SQL on real data," and the word
@@ -238,7 +242,8 @@ and a count of ungrounded-but-true answers.
 
 | | |
 |---|---|
-| corpus | **18 documents, 36 chunks** — while the SQL side now has 1,451,414 real rows |
+| corpus | **2,585 documents, 20,245 chunks** — of which the *policy* corpus this section is about is still **18 documents / 36 chunks**; the rest is 2,567 Olist review digests (20,209 chunks) added by cycle 006 |
+| SQL side, for comparison | **1,551,698 real rows** (not 1,451,414 — see the row-count correction below) |
 | context precision | **0.622** — ~38% of retrieved context is irrelevant |
 | faithfulness | 0.8125 |
 | provenance | measured **pre-`da6e49f`**, never re-measured; flagged stale in `metrics-report.md` |
@@ -247,6 +252,61 @@ The asymmetry is the finding: v2's predecessor spent three days making the
 structured half real and did not touch the unstructured half once. A
 "conversational analytics agent" with a 36-chunk knowledge base is half a
 product.
+
+> **✎ CORRECTED 2026-09-02.** The corpus row above read *"18 documents, 36
+> chunks"*, written before cycle 006. **Verified live against the running
+> database**, the corpus is now:
+>
+> ```
+> $ docker compose exec -T postgres psql -U statesync_migrator -d statesync -c \
+>     "select d.doc_type, count(distinct d.document_id) docs, count(c.chunk_id) chunks
+>        from documents d left join document_chunks c using(document_id) group by 1 order by 1;"
+>
+>        doc_type      | docs | chunks
+>   -------------------+------+--------
+>    policy            |    4 |      8
+>    review_digest     | 2567 |  20209
+>    sla_annexure      |    4 |      8
+>    sop               |    4 |      8
+>    supplier_agreement|    6 |     12
+>   TOTAL              | 2585 |  20245
+> ```
+>
+> **The paragraph above still stands, and that is the point of correcting the
+> number rather than deleting the finding.** The 2,567 review digests are
+> short-form customer text; the *policy/SOP/agreement* corpus a threshold-in-a-
+> paragraph question needs is **unchanged at 18 documents / 36 chunks**, and
+> M6's fixture retrieves **zero** review chunks (measured before and after the
+> ingest — `docs/limitations.md` § "The review-digest corpus"). So the
+> retrieval-at-scale problem is solved and the policy-retrieval problem is not.
+> Quoting either figure alone misleads: 18/36 understates the corpus, 2,585
+> overstates what M6 actually exercises.
+
+> **✎ ROW-COUNT CORRECTION 2026-09-02. `1,451,414` is wrong and has been since
+> the commit that introduced it.** Five documents carry it (`V2_STRATEGY` §2,
+> §3a, §7; `limitations.md` ×3; `AGENT_HANDOFF.md` ×2; `metrics-report.md`).
+> The true figure is **1,551,698**, and the authority is the load script's own
+> canonical assertion, which passes:
+>
+> ```
+> $ docker compose exec -T postgres psql -U statesync_migrator -d statesync -Atc \
+>     "select sum((xpath('/row/c/text()', query_to_xml('select count(*) c from olist.'
+>        ||quote_ident(table_name), false,true,'')))[1]::text::bigint)
+>      from information_schema.tables where table_schema='olist';"
+> 1551698
+> ```
+>
+> `scripts/load_olist.sh`'s `expected` jsonb sums to exactly 1,551,698, and the
+> live count matches it table for table — **the data is intact; only the
+> headline was ever wrong.** `order_reviews: 100000` was in that assertion from
+> the *first* commit, `cb2450e`, whose own message reads *"1.45M rows of Olist
+> loaded"* — so the number never matched the script it shipped beside. It is
+> 100,284 below the true total and 284 below even the all-but-`order_reviews`
+> subtotal (1,451,698), so it does not reconcile with any subset; recorded as
+> unexplained rather than given an invented derivation.
+>
+> **This makes §7's demo bar easier, not harder** — "over 1.45M real rows" is
+> cleared by 1.55M. Nothing that depends on the row count is invalidated.
 
 **The corpus problem is already solved and nobody noticed.** `olist.order_reviews`
 holds **41,755 real free-text customer reviews** (Portuguese, messy, embedded
@@ -394,6 +454,67 @@ what. None of these differentiate — their **absence** disqualifies.
 *Completion:* auth on the UI and API, per-identity audit log, rate limit;
 adversarial suite re-run and still 40/40.
 
+> **✎ BUILT AND VERIFIED 2026-09-02.** All four completion clauses met. Every
+> claim below was verified by execution against the running stack, not by
+> reading code.
+>
+> | clause | evidence |
+> |---|---|
+> | auth on the **API** | `POST /query` returns 401 with no token, a bad token, and a raw token missing the `Bearer` scheme; the 401 carries `WWW-Authenticate: Bearer`. `GET /sessions` likewise. `GET /health` stays open by design. |
+> | auth on the **UI** | Login gate renders, a wrong token is refused with "Invalid API token.", the correct token loads the app, a real question returned "There are 30 sellers in the logistics network." through the authenticated path, and Sign out clears the stored token (`localStorage.getItem` → `null`). |
+> | **per-identity audit log** | `session_state.audit_log` (migration 013) via the new MCP tool `audit.record`. Rows carry principal, tenant, route, outcome, query_id and client IP for **allowed, denied_auth and denied_rate alike**. The `query_id` in the audit row matches the one the UI displayed — end-to-end traceability. |
+> | **rate limit** | Per principal, 30 requests / 60s. Measured: exactly 30 × `200`, then `429` with `Retry-After: 53`. |
+> | **adversarial suite still 40/40** | `bash scripts/verify_security.sh` → **PASSED: 40, FAILED: 0**, run with authentication in force. Its diff contains only token plumbing: not one payload, assertion or expected value was touched. ⚠ **Still true, but read with the 2026-09-03 note below:** those 40 checks all still pass and are byte-identical. Four STRICT credential-shape checks were added alongside them, one of which fails, so the suite as a whole now exits non-zero at **43/44**. C1's completion condition is met by the 40; the new failure is a separate, newly-visible defect. Full account: `docs/open_items.md` § "M8 now FAILS 43/44". |
+>
+> **Design decisions, and why.** Bearer tokens rather than cookies: the frontend
+> calls the orchestrator **cross-origin**, and a cross-origin cookie needs
+> `SameSite=None; Secure`, i.e. HTTPS, which local development does not have.
+> Tokens are stored only as SHA-256 hashes, compared with
+> `hmac.compare_digest` over **every** principal with no early exit. Auth
+> **fails closed at startup** — a missing or malformed principal file stops the
+> service rather than letting it serve traffic unauthenticated, the same
+> posture `validate_llm_config()` already takes. The tenant is now derived
+> **from the authenticated principal**, replacing the hardcoded
+> `cfg.tenancy.default_tenant`.
+>
+> Operators run `python3 scripts/gen_api_principal.py`; `secrets/` is
+> gitignored, so no token is ever committed.
+
+> **✎ CLOSED 2026-09-03 — the session browser is now fully unblocked and the
+> env gate is DELETED.** The block that stood here recorded that C1 fixed *who
+> is asking* but not *whose history this is*: `conversation_turns` was scoped
+> by `tenant_id` + `session_id` alone, so principals sharing a tenant could
+> enumerate and read each other's conversations, and `STATESYNC_SESSION_BROWSER`
+> was the honest stopgap.
+>
+> **Migration 014** adds a `NOT NULL principal_id` to
+> `session_state.conversation_turns`; `history.append_turn` writes it,
+> `history.get_recent_turns` filters `tenant_id AND principal_id AND
+> session_id`, and `history.list_sessions` filters `tenant_id AND
+> principal_id`. `principal_id` is now an immutable identity field on
+> `StateSyncState`, so the multi-turn rewrite node scopes its history read the
+> same way. `STATESYNC_SESSION_BROWSER`, `SESSION_BROWSER_ENABLED` and
+> `_require_session_browser()` are removed outright — not left as a dead
+> fallback.
+>
+> **Verified live with two principals on the SAME tenant:**
+>
+> | check | result |
+> |---|---|
+> | env var actually unset in the container | `STATESYNC_SESSION_BROWSER=[UNSET]`, `GET /sessions` → **200** |
+> | enumeration isolation | `p_dev_local` sees **2** sessions, `p_dev_second` sees **1** — each only its own |
+> | **direct-read escape** (the one that matters: knowing a session id) | `p_dev_second` requesting `p_dev_local`'s session by exact id → **0 turns**; the owner gets **1** |
+> | pre-auth history | 556 legacy rows backfilled to `p_preauth_legacy` → **0 sessions visible** to any real principal |
+> | multi-turn not broken by the new scoping | *"and how many of those were delivered?"* → rewritten to *"How many of the 550 orders were delivered?"*, answered 323/550 |
+> | adversarial suite | re-run, still **40/40** |
+>
+> **One deliberate, visible consequence:** history written before auth existed
+> cannot be attributed to anyone, so it is backfilled to a sentinel no
+> principal holds and is invisible in the UI. That is the correct default —
+> the alternative is showing one user another user's conversations — but it
+> does mean existing history disappears, and that is a choice, not an
+> accident.
+
 **C2. Indian corpus.** With a Kaggle account, order-level Indian e-commerce data
 is reachable. **Caveat that decides how it is used:** these sets are typically
 *flat, denormalized single tables* — weak for text-to-SQL, which needs joins.
@@ -448,9 +569,94 @@ the clean-machine condition v1 never actually performed.
 number names its fixture, its scorer and its model. No number appears without
 its caveat attached at the point of use.
 
-**Demo.** A ≥3-turn conversation over 1.45M real rows, ending in a chart, with
-the trace visible. If a viewer cannot tell it is a conversation, the workstream
-is not done.
+**Demo.** A ≥3-turn conversation over the real corpus (**1,551,698 rows** —
+see §3a's row-count correction; this line used to say 1.45M), ending in a
+chart, with the trace visible. If a viewer cannot tell it is a conversation,
+the workstream is not done.
+
+> **✎ MET 2026-09-04. `scripts/demo_olist.py`, and the bar is now
+> MACHINE-CHECKED rather than asserted** — the script exits non-zero unless all
+> four clauses hold, so this claim cannot silently rot.
+>
+> | clause | result |
+> |---|---|
+> | ≥3 turns complete without error | **3/3** |
+> | it is a CONVERSATION (`rewrite_applied`) | true on turns **2 and 3** |
+> | final turn returns a chart | **Vega-Lite `bar`, 5 values** |
+> | ran on the REAL corpus (`olist.`-qualified SQL) | turns **1, 2 and 3** |
+>
+> The transcript (`docs/demo_olist_transcript.json`) shows the carryover
+> plainly — turn 2's rewrite pulls the *number* from turn 1:
+>
+> ```
+> T1  "How many orders are there in total?"          -> 99,441
+> T2  "How many of those were delivered?"
+>       rewritten: "How many of the total 99,441 orders were delivered?"
+>                                                    -> 96,478 (97.0%)
+> T3  "Break that down by customer state — top 5, as a chart."
+>       rewritten: "Create a chart showing the top 5 customer states by the
+>                   number of delivered orders."     -> SP RJ MG RS PR + bar chart
+> ```
+>
+> **Every figure independently verified against the database**, not taken from
+> the model: 99,441 total, 96,478 delivered, and SP/RJ/MG/RS/PR as the top five.
+>
+> **⚠ One honest defect the demo exposes, recorded rather than trimmed away.**
+> Turn 2 and turn 3 use DIFFERENT definitions of "delivered". Turn 2 counts
+> `order_status='delivered' AND order_purchase_timestamp IS NOT NULL` (96,478);
+> turn 3 counts `order_status='delivered' AND order_delivered_customer_date IS
+> NOT NULL` (**96,470**). The conversation therefore drifts by 8 orders between
+> turns without saying so. Worse, turn 2's extra clause is a **no-op** — the
+> count is identical with and without it, so the query states a restriction the
+> data makes invisible, which is exactly the fixture-defect class audit 006
+> F-006-4 catalogued. Neither breaks the demo bar, and both are the kind of
+> cross-turn inconsistency §3's error-propagation metric exists to surface.
+>
+> **The shipped default stays `public`.** The demo FLIPS
+> `schema_retriever.target_schema` to `olist`, runs, and restores the original
+> file bytes verbatim in a `finally:` block covering exceptions and
+> KeyboardInterrupt — then verifies restoration twice (the flag value on disk,
+> and `shipped_flags.py` reporting `shipped: true`), failing loudly if either
+> check fails. That is not ceremony: leftover flag state has silently
+> contaminated a measurement in this repo twice.
+
+> **✎ CORPUS RESOLVED 2026-09-02.** This bar was quietly unmet: it demands real
+> rows while the shipped default is `schema_retriever.target_schema = "public"`
+> — the **550-order synthetic** corpus. Verified in `config/flags.toml:181` and
+> in `scripts/shipped_flags.py:77`, which hardcodes `"public"` as the shipped
+> value. So the demo, run as shipped, does **not** meet this bar.
+>
+> **Decision: the demo runs on Olist, via an explicit flag flip, and the
+> shipped default stays `public`.** Both halves matter:
+>
+> - **Why not change the default.** `target_schema` is not a preference, it is
+>   an instrument setting. M3's multilingual fixture, the adversarial suite and
+>   the whole `public` measurement history are defined against it, and
+>   `shipped_flags.py` refuses to run a benchmark whose fixture and
+>   `target_schema` disagree (audit 002 F-002-3, added after `80d35c8` scored
+>   the agent against the real corpus while it queried the synthetic one).
+>   Flipping the default would silently invalidate every guard built to catch
+>   exactly that mistake. Olist also has **no `_local` columns**, so the
+>   multilingual demo cannot run there at all.
+> - **Why Olist is nonetheless the honest demo corpus.** The multi-turn
+>   capability §3 is judged on was *already measured* on Olist — cycle 007's
+>   QM/IM run is 12 conversations / 36 turns with `target_schema="olist"`
+>   (`scripts/gen_multiturn_fixture.py:6`). Demoing on synthetic data would show
+>   less than the project has already measured.
+>
+> **So the demo is a flag-flipped run, recorded as one**, exactly as every Olist
+> measurement in this repo already is — the deviation is declared and lands in
+> the artifact's `flag_provenance`, not hidden. Concretely: set
+> `schema_retriever.target_schema = "olist"`, restart the orchestrator (flags
+> are read at process start), run the conversation, restore. `memory.enabled`
+> must stay `false` — trajectory memory is keyed on the A5 fingerprint, which
+> only `public` participates in.
+>
+> **What is still owed:** a scripted, repeatable demo path that does the flip,
+> the restore, and fails loudly if the restore does not happen. Until that
+> exists this is a documented manual procedure, not a deliverable, and the bar
+> is **met in principle and unautomated in practice** — recorded as owed rather
+> than quietly claimed.
 
 **Paper.** Defect rates and their accuracy cost measured on **three
 independently authored fixtures**, at least one multi-turn. Below that it is a

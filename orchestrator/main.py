@@ -17,17 +17,22 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from auth import (AuthError, Principal, RateLimited, authenticate, init_auth,
+                  rate_limiter)
 from config_loader import cfg, flags, snapshot_flags
 from graph import graph
-from llm.provider import validate_llm_config
-from mcp_client import (MCPSession, history_append_turn, history_get_recent_turns,
-                        history_list_sessions)
+from llm.provider import LLM_READINESS, validate_llm_config
+from failures import user_facing_failure
+from mcp_client import (MCPSession, audit_record, history_append_turn,
+                        history_check_session, history_get_recent_turns,
+                        history_get_turn_rows, history_list_sessions)
 from nodes.synthesizer import build_citations
+from schema_retriever import target_schema
 from schemas.synthesizer_output import safe_synthesizer_output
 from state import StateSyncState
 
@@ -43,16 +48,17 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     provider: str = str(flags.llm.provider)
     logger.info(
-        "StateSync Orchestrator starting up. "
-        "LLM provider: %s. Tenant: %s.",
+        "StateSync Orchestrator starting up. LLM provider: %s.",
         provider,
-        cfg.tenancy.default_tenant,
     )
     # Validate LLM config eagerly — fails loudly here rather than mid-query.
     # For provider='local' this does NOT check the Anthropic key.
     # For provider='anthropic' this validates key presence and all role→model
     # mappings before accepting traffic.
     validate_llm_config()
+    # Eagerly load and validate API principals — fails closed at startup if the
+    # secret file is missing, empty, or malformed, preventing unauthenticated deploys.
+    init_auth()
     yield
     logger.info("StateSync Orchestrator shutting down.")
 
@@ -65,18 +71,116 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Wildcard origins are incompatible with credentialed requests and unsafe for
+# authenticated APIs. Explicitly allow only trusted origins from config.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # frontend is same-origin in prod; wildcard ok for dev
+    allow_origins=list(cfg.api.cors_allowed_origins),
+    allow_credentials=False,
     allow_methods=["GET", "POST"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+
+# ── Audit & Security Dependencies ─────────────────────────────────────────────
+async def _audit(
+    principal_id: str,
+    tenant_id: str,
+    route: str,
+    outcome: str,
+    query_id: str | None = None,
+    session_id: str | None = None,
+    client_ip: str | None = None,
+    detail: str | None = None,
+) -> None:
+    """
+    Record an identity audit event via MCP audit.record.
+
+    Swallows all exceptions: an audit logging failure must never fail an
+    otherwise successful user request or mask the underlying error.
+    """
+    try:
+        async with MCPSession(
+            tenant_id=tenant_id,
+            base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
+        ) as session:
+            await audit_record(
+                session,
+                principal_id=principal_id,
+                route=route,
+                outcome=outcome,
+                query_id=query_id,
+                session_id=session_id,
+                client_ip=client_ip,
+                detail=detail,
+            )
+    except Exception as exc:
+        logger.error(
+            "Audit record failed (principal=%s tenant=%s route=%s outcome=%s): %s",
+            principal_id,
+            tenant_id,
+            route,
+            outcome,
+            exc,
+            exc_info=True,
+        )
+
+
+async def require_principal(request: Request) -> Principal:
+    """
+    FastAPI dependency authenticating the caller and enforcing principal rate limits.
+
+    Extracts bearer token from the Authorization header and verifies it against
+    known principals. Enforces in-process fixed-window rate limits. Records audit
+    events on auth or rate limit failures before raising corresponding HTTP exceptions.
+    """
+    client_ip = request.client.host if request.client else None
+    route = request.url.path
+
+    try:
+        principal = authenticate(request.headers.get("Authorization"))
+    except AuthError as exc:
+        await _audit(
+            "anonymous",
+            cfg.tenancy.default_tenant,
+            route,
+            "denied_auth",
+            client_ip=client_ip,
+            detail=str(exc),
+        )
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing bearer token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    try:
+        rate_limiter.check(principal.principal_id)
+    except RateLimited as exc:
+        await _audit(
+            principal.principal_id,
+            principal.tenant_id,
+            route,
+            "denied_rate",
+            client_ip=client_ip,
+        )
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded.",
+            headers={"Retry-After": str(exc.retry_after)},
+        )
+
+    return principal
+
 
 
 # ── Request / Response models ─────────────────────────────────────────────────
 class QueryRequest(BaseModel):
     query: str
     session_id: str | None = None
+    # None means "use the configured default", which keeps existing callers
+    # and every measurement script byte-identical in behaviour.
+    schema: str | None = None
     # Test harness only (C2-V1/V2): seeds the attempt-0 candidate SQL,
     # bypassing LLM generation. Never sent by the frontend.
     debug_candidate_sql: str | None = None
@@ -99,76 +203,173 @@ async def health() -> dict:
         "service": "orchestrator",
         "phase": "B",
         "llm_provider": str(flags.llm.provider),
+        # From startup's check, never a live model call (docs/V3_PLAN.md 0.4).
+        "llm_ready": LLM_READINESS["ready"],
+        "llm_detail": LLM_READINESS["detail"],
+        "default_schema": target_schema(),
+        "available_schemas": sorted(cfg.api.allowed_schemas),
     }
 
 
-# ── Session browser (LOCAL DEVELOPMENT ONLY) ─────────────────────────────────
-# Off unless STATESYNC_SESSION_BROWSER is explicitly set. This is not timidity
-# about an extra route: history shipped WITHOUT auth (V2_STRATEGY §3b, an
-# owner decision recorded in docs/cycles/007.md §3), so conversations are
-# scoped by tenant_id + session_id alone. Listing them means any user of a
-# shared tenant can read every other user's questions and answers -- and
-# stored answers contain real rows, which §3b names as an exfiltration
-# target in its own right.
-#
-# Every other read path in this service can only return a conversation whose
-# session_id the caller already had. These two routes are the first that
-# ENUMERATE, so they are the first that need to know WHO is asking. Until
-# auth exists, the honest control is a switch that a developer turns on for
-# their own single-user machine and that is off everywhere else.
-SESSION_BROWSER_ENABLED = os.environ.get("STATESYNC_SESSION_BROWSER", "").strip().lower() in (
-    "1", "true", "yes", "on",
-)
-
-
-def _require_session_browser() -> None:
-    if not SESSION_BROWSER_ENABLED:
-        raise HTTPException(
-            status_code=404,
-            detail="Session browser is disabled. It is local-development only and "
-                   "requires STATESYNC_SESSION_BROWSER=1 on the orchestrator, because "
-                   "conversation history is not access-controlled without auth "
-                   "(V2_STRATEGY 3b).",
-        )
+# ── Session browser ───────────────────────────────────────────────────────────
+# Formerly gated for local development only: history was scoped by tenant_id +
+# session_id alone, so any user of a shared tenant could enumerate every other
+# user's questions and answers (and stored answers contain real rows). C1 added
+# authentication and migration 014 added a NOT NULL principal_id to
+# conversation_turns. Both routes now filter on the authenticated principal, so
+# a caller can only enumerate and read their own conversations. Turns written
+# before auth carry the sentinel principal 'p_preauth_legacy', which no real
+# principal holds, so pre-auth history is deliberately invisible rather than
+# shown to an arbitrary caller.
 
 
 @app.get("/sessions", tags=["history"])
-async def list_sessions_route(limit: int = cfg.mcp.session_browser_list_limit) -> dict:
+async def list_sessions_route(
+    request: Request,
+    limit: int = cfg.mcp.session_browser_list_limit,
+    principal: Principal = Depends(require_principal),
+) -> dict:
     """Past conversations for this tenant, most recently active first."""
-    _require_session_browser()
     async with MCPSession(
-        tenant_id=cfg.tenancy.default_tenant,
+        tenant_id=principal.tenant_id,
         base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
     ) as session:
-        return await history_list_sessions(session, limit=limit)
+        result = await history_list_sessions(
+            session, principal_id=principal.principal_id, limit=limit
+        )
+    client_ip = request.client.host if request.client else None
+    await _audit(
+        principal.principal_id,
+        principal.tenant_id,
+        "/sessions",
+        "allowed",
+        client_ip=client_ip,
+    )
+    return result
 
 
 @app.get("/sessions/{session_id}", tags=["history"])
-async def get_session_route(session_id: str,
-                            limit: int = cfg.mcp.session_browser_turn_limit) -> dict:
+async def get_session_route(
+    session_id: str,
+    request: Request,
+    limit: int = cfg.mcp.session_browser_turn_limit,
+    principal: Principal = Depends(require_principal),
+) -> dict:
     """Every stored turn of one past conversation, oldest first."""
-    _require_session_browser()
     async with MCPSession(
-        tenant_id=cfg.tenancy.default_tenant,
+        tenant_id=principal.tenant_id,
         base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
     ) as session:
-        return await history_get_recent_turns(session, session_id, limit=limit)
+        result = await history_get_recent_turns(
+            session, session_id, principal_id=principal.principal_id, limit=limit
+        )
+    client_ip = request.client.host if request.client else None
+    await _audit(
+        principal.principal_id,
+        principal.tenant_id,
+        f"/sessions/{session_id}",
+        "allowed",
+        session_id=session_id,
+        client_ip=client_ip,
+    )
+    return result
+
+
+@app.get("/sessions/{session_id}/turns/{turn_index}/rows", tags=["history"])
+async def get_turn_rows_route(
+    session_id: str,
+    turn_index: int,
+    request: Request,
+    principal: Principal = Depends(require_principal),
+) -> dict:
+    """Fetch stored full result set for a conversation turn."""
+    async with MCPSession(
+        tenant_id=principal.tenant_id,
+        base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
+    ) as session:
+        result = await history_get_turn_rows(
+            session,
+            session_id=session_id,
+            principal_id=principal.principal_id,
+            turn_index=turn_index,
+        )
+    client_ip = request.client.host if request.client else None
+    # An absent payload and a full payload are both "allowed", so without this the audit row
+    # cannot distinguish a caller who read a result set from one who was correctly scoped out of it.
+    audit_detail = (
+        f"available={'true' if result.get('available') else 'false'} "
+        f"stored_row_count={result.get('stored_row_count', 0)}"
+    )
+    await _audit(
+        principal.principal_id,
+        principal.tenant_id,
+        f"/sessions/{session_id}/turns/{turn_index}/rows",
+        "allowed",
+        session_id=session_id,
+        client_ip=client_ip,
+        detail=audit_detail,
+    )
+    # Return unchanged: available:false is a normal state (not found or pruned) that the
+    # client must distinguish from an error, falling back to the turn's stored preview.
+    return result
 
 
 @app.post("/query", response_model=QueryResponse, tags=["query"])
-async def run_query(request: QueryRequest) -> QueryResponse:
-    if not request.query or not request.query.strip():
+async def run_query(
+    body: QueryRequest,
+    request: Request,
+    principal: Principal = Depends(require_principal),
+) -> QueryResponse:
+    if not body.query or not body.query.strip():
         raise HTTPException(status_code=422, detail="query must not be empty")
 
-    session_id = request.session_id or str(uuid.uuid4())
-    tenant_id = cfg.tenancy.default_tenant
+    requested = body.schema or target_schema()
+    if requested not in cfg.api.allowed_schemas:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Schema {requested!r} is not allowed. Allowed schemas: {sorted(cfg.api.allowed_schemas)}",
+        )
+
+    session_id = body.session_id or str(uuid.uuid4())
+    tenant_id = principal.tenant_id
+    client_ip = request.client.host if request.client else None
+    query_id = str(uuid.uuid4())
+
+    # A session belongs to the principal who wrote its first turn (docs/V3_PLAN.md
+    # 0.2). The web client generates session ids, so one owned by someone else is
+    # refused here, before any model call -- rather than answered and then not
+    # recorded. history.append_turn enforces the same rule at the write.
+    if body.session_id:
+        try:
+            async with MCPSession(
+                tenant_id=tenant_id,
+                base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
+                session_id=session_id,
+            ) as check_session:
+                access = await history_check_session(check_session, session_id, principal.principal_id)
+        except Exception as exc:
+            logger.error("Session ownership check failed for session_id=%s: %s", session_id, exc)
+            raise HTTPException(status_code=503, detail="History service unavailable. Try again shortly.")
+        if not access.get("usable", False):
+            await _audit(
+                principal.principal_id,
+                tenant_id,
+                "/query",
+                "denied_session",
+                session_id=session_id,
+                client_ip=client_ip,
+                detail="session belongs to another principal",
+            )
+            raise HTTPException(status_code=404, detail="Conversation not found. Start a new conversation.")
 
     # Build the initial state input for the entry node
     initial_input = {
-        "query_id": str(uuid.uuid4()),   # A2: set once here, immutable from here on
+        "query_id": query_id,   # A2: set once here, immutable from here on
         "tenant_id": tenant_id,
+        "principal_id": principal.principal_id,
         "session_id": session_id,
-        "raw_query": request.query,
+        "raw_query": body.query,
+        "target_schema": requested,
         "flags_snapshot": snapshot_flags(),
     }
 
@@ -178,16 +379,29 @@ async def run_query(request: QueryRequest) -> QueryResponse:
             StateSyncState(
                 query_id=initial_input["query_id"],
                 tenant_id=initial_input["tenant_id"],
+                principal_id=principal.principal_id,
                 session_id=initial_input["session_id"],
                 raw_query=initial_input["raw_query"],
+                target_schema=requested,
                 flags_snapshot=initial_input["flags_snapshot"],
-                debug_candidate_sql=request.debug_candidate_sql,
+                debug_candidate_sql=body.debug_candidate_sql,
             )
         )
         final_state: StateSyncState = StateSyncState(**raw_final) if isinstance(raw_final, dict) else raw_final
     except Exception as exc:
         logger.error("Graph execution failed: %s", exc, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Graph execution error: {exc}")
+        await _audit(
+            principal.principal_id,
+            principal.tenant_id,
+            "/query",
+            "error",
+            query_id=query_id,
+            session_id=session_id,
+            client_ip=client_ip,
+            detail=f"{exc} schema={requested}",
+        )
+        status_code, message = user_facing_failure(exc, query_id)
+        raise HTTPException(status_code=status_code, detail=message)
 
     latency_ms = int((time.monotonic() - t0) * 1000)  # noqa: literals — ms conversion factor
 
@@ -198,14 +412,20 @@ async def run_query(request: QueryRequest) -> QueryResponse:
     state_trace = {
         "query_id":    final_state.query_id,
         "tenant_id":   final_state.tenant_id,
+        "principal_id": final_state.principal_id,
+        "target_schema": final_state.target_schema,
         "route":       final_state.route,
         "executed_sql": final_state.executed_sql,
+        # executed_sql is null when a statement was rejected before execution,
+        # so candidate_sql is what a caller inspects to see what the agent actually proposed.
+        "candidate_sql": final_state.candidate_sql,
         "sql_rows_count": len(final_state.sql_rows),
         "sql_rows":    final_state.sql_rows,
         "sql_columns": final_state.sql_columns,
         "attempt":     final_state.attempt,
         "errors":      [e.model_dump() for e in final_state.errors],
         "interrogation_samples": final_state.interrogation_samples,
+        "script_repairs": final_state.script_repairs,
         "metrics":     final_state.metrics.model_dump(),
         "memory_hit":       final_state.memory_hit,
         "memory_trace_id":  final_state.memory_trace_id,
@@ -267,10 +487,10 @@ async def run_query(request: QueryRequest) -> QueryResponse:
             base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
             session_id=final_state.session_id,
         ) as history_session:
-            await history_append_turn(
+            write = await history_append_turn(
                 history_session,
                 session_id=final_state.session_id,
-                turn_index=final_state.turn_index,
+                principal_id=final_state.principal_id,
                 raw_query=final_state.raw_query,
                 rewritten_query=final_state.normalized_query or final_state.raw_query,
                 rewrite_applied=final_state.rewrite_applied,
@@ -291,12 +511,27 @@ async def run_query(request: QueryRequest) -> QueryResponse:
                 sql_rows_preview=(final_state.sql_rows or None) and
                     final_state.sql_rows[: cfg.mcp.history_row_preview_max],
                 sql_rows_count=len(final_state.sql_rows),
+                # Do NOT slice it — MCP applies the caps and logs truncation; slicing here would hide from those logs how large the real result was.
+                sql_rows_full=(final_state.sql_rows or None),
+            )
+        # MCP assigns the turn number (0.1), so the trace reports the stored one --
+        # the web client uses it to fetch this turn's full rows later. A turn that
+        # was not recorded gets no number, which turns that button off.
+        if write.get("written"):
+            state_trace["turn_index"] = write.get("turn_index")
+        else:
+            state_trace["turn_index"] = None
+            logger.error(
+                "History write refused for query_id=%s session_id=%s: %s "
+                "-- response still returned to the user.",
+                final_state.query_id, final_state.session_id, write.get("error"),
             )
     except Exception as exc:
+        state_trace["turn_index"] = None
         logger.error(
-            "History write failed for query_id=%s session_id=%s turn_index=%d: %s "
+            "History write failed for query_id=%s session_id=%s: %s "
             "-- response still returned to the user unaffected.",
-            final_state.query_id, final_state.session_id, final_state.turn_index, exc,
+            final_state.query_id, final_state.session_id, exc,
         )
 
     logger.info(
@@ -308,7 +543,7 @@ async def run_query(request: QueryRequest) -> QueryResponse:
         "present" if validated["chart"] is not None else "null",
     )
 
-    return QueryResponse(
+    response = QueryResponse(
         query_id=final_state.query_id,
         answer_text=validated["answer_text"],
         chart=validated["chart"],
@@ -316,6 +551,19 @@ async def run_query(request: QueryRequest) -> QueryResponse:
         state_trace=state_trace,
         latency_ms=latency_ms,
     )
+
+    await _audit(
+        principal.principal_id,
+        principal.tenant_id,
+        "/query",
+        "allowed",
+        query_id=final_state.query_id,
+        session_id=session_id,
+        client_ip=client_ip,
+        detail=f"schema={final_state.target_schema}",
+    )
+
+    return response
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

@@ -10,9 +10,9 @@ Public API:
     "normalizer", "decomposer", "judge", "rewriter"
 
 The factory:
-  1. Reads flags.llm.provider ("local" | "anthropic")
+  1. Reads flags.llm.provider ("local" | "anthropic" | "azure" | "gemini" | "groq")
   2. Resolves the role → model name from flags.llm.models.<provider>.<role>
-  3. Returns the appropriate adapter (OllamaAdapter or AnthropicAdapter)
+  3. Returns the matching adapter (Ollama, Anthropic, Azure, Gemini or Groq)
   4. Is cached per (provider, role) — one adapter instance per role per process
 
 Startup behaviour:
@@ -28,7 +28,7 @@ import os
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
-from config_loader import flags
+from config_loader import cfg, flags
 
 if TYPE_CHECKING:
     from llm.adapters.base import ChatModel
@@ -106,11 +106,53 @@ def get_agent_llm(role: str) -> "ChatModel":
         from llm.adapters.gemini_adapter import GeminiAdapter
         return GeminiAdapter(model=model)
 
+    if provider == "groq":
+        from llm.adapters.groq_adapter import GroqAdapter
+        return GroqAdapter(model=model)
+
     raise RuntimeError(
         f"Unknown LLM provider {provider!r}. "
-        "Valid values: 'local', 'anthropic', 'azure', 'gemini'. "
+        "Valid values: 'local', 'anthropic', 'azure', 'gemini', 'groq'. "
         "Check flags.llm.provider in config/flags.toml."
     )
+
+
+# What startup learned about whether the provider can answer, for /health
+# (docs/V3_PLAN.md 0.4). Filled once by validate_llm_config(); /health reads it
+# and never calls the model itself, so health probes cost nothing.
+LLM_READINESS: dict = {"ready": True, "detail": None}
+
+
+def _check_local_models(ollama_url: str) -> None:
+    """Record whether the Ollama host actually has every configured model.
+
+    Config resolving is not the same as the model existing: the shipped
+    qwen2.5:7b was absent from this machine's Ollama and every question failed
+    at the first model call. One cheap /api/tags read at startup turns that into
+    a readable log line and a /health field. It warns rather than refusing to
+    start, so the UI can still come up and explain what is wrong.
+    """
+    import httpx
+
+    wanted = sorted({_resolve_model("local", role) for role in _VALID_ROLES})
+    try:
+        response = httpx.get(f"{ollama_url}/api/tags", timeout=float(cfg.models.ollama_tags_timeout_s))
+        response.raise_for_status()
+        present = {m.get("name", "") for m in response.json().get("models", [])}
+    except Exception as exc:                                   # noqa: BLE001
+        LLM_READINESS.update(ready=False, detail=f"Ollama at {ollama_url} is unreachable")
+        logger.warning("  Ollama at %s is unreachable (%s): every question will fail.", ollama_url, exc)
+        return
+    missing = [m for m in wanted if m not in present and f"{m}:latest" not in present]
+    if missing:
+        LLM_READINESS.update(ready=False, detail="Ollama is missing: " + ", ".join(missing))
+        logger.warning(
+            "  Ollama at %s does not have %s. Every question will fail until you run "
+            "`ollama pull %s` there, or set flags.llm.provider to a hosted provider.",
+            ollama_url, ", ".join(missing), " && ollama pull ".join(missing),
+        )
+    else:
+        logger.info("  Ollama models present ✓ (%s)", ", ".join(wanted))
 
 
 def validate_llm_config() -> None:
@@ -163,6 +205,17 @@ def validate_llm_config() -> None:
             "run issues ~5.2 calls/query; the adapter retries 429 with backoff "
             "(models.gemini_max_retries)."
         )
+    elif provider == "groq":
+        # The key and the base URL are the two things a startup check can
+        # catch. Limits are per MODEL (8K tokens/min, 1K requests/day on the
+        # owner's key, measured 2026-09-26), which is why flags.toml spreads
+        # the roles across two models; the adapter waits out 429s.
+        from llm.adapters.groq_adapter import GroqAdapter
+        GroqAdapter._read_api_key()        # raises GroqConfigError if absent
+        GroqAdapter._read_base_url()       # raises GroqConfigError if malformed
+        logger.info("  Groq API key: present ✓")
+    elif provider == "local":
+        _check_local_models(str(flags.llm.ollama_url))
     else:
         logger.info(
             "  Provider=%s — Anthropic key NOT required. "

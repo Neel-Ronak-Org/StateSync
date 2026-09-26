@@ -245,6 +245,10 @@ def test_rewrite_node_empty_history_turn_one_structural_guarantee(monkeypatch):
     input_query = "What is the revenue for customer 42?"
     state = {
         "tenant_id": "tenant-test",
+        # Required identity field since migration 014 scoped history per
+        # principal; rewrite_node reads it with bracket access because a
+        # missing one is a defect, not a degradable condition.
+        "principal_id": "p_test",
         "session_id": "session-test",
         "query_id": "query-test",
         "normalized_query": input_query,
@@ -277,6 +281,10 @@ def test_rewrite_node_history_read_failure_degrades_to_turn_one_fallback(monkeyp
     input_query = "List all active subscriptions"
     state = {
         "tenant_id": "tenant-test-2",
+        # Required identity field since migration 014 scoped history per
+        # principal; rewrite_node reads it with bracket access because a
+        # missing one is a defect, not a degradable condition.
+        "principal_id": "p_test",
         "session_id": "session-test-2",
         "query_id": "query-test-2",
         "normalized_query": input_query,
@@ -289,3 +297,36 @@ def test_rewrite_node_history_read_failure_degrades_to_turn_one_fallback(monkeyp
     assert result["context_guessed"] is False
     assert result["metrics"]["llm_calls"] == 0
     assert result["normalized_query"] == input_query
+
+
+def test_rewrite_node_numbers_a_long_conversation_from_mcp_not_the_window(monkeypatch):
+    """
+    Regression for docs/V3_PLAN.md 0.1. The history read returns a 3-turn
+    window; the node used to number the turn len(window) + 1 = 4 on every
+    question after the 4th. It must use MCP's next_turn_index instead.
+    """
+    class _LLM:
+        async def complete(self, *args, **kwargs):
+            from types import SimpleNamespace
+            return SimpleNamespace(text='{"needs_context": false, "rewritten_query": ""}',
+                                   tokens_in=1, tokens_out=1)
+
+    async def _window_of_three(*args, **kwargs):
+        turns = [{"turn_index": i, "rewritten_query": f"Q{i}", "answer_text": f"A{i}"} for i in (3, 4, 5)]
+        return {"turns": turns, "count": 3, "next_turn_index": 6}
+
+    monkeypatch.setattr(nodes.rewrite, "get_agent_llm", lambda *a, **k: _LLM())
+    monkeypatch.setattr(nodes.rewrite, "MCPSession", _FakeSession)
+    monkeypatch.setattr(nodes.rewrite, "history_get_recent_turns", _window_of_three)
+
+    state = {
+        "tenant_id": "tenant-test-3",
+        "principal_id": "p_test",
+        "session_id": "session-test-3",
+        "query_id": "query-test-3",
+        "normalized_query": "How many locations?",
+    }
+
+    result = asyncio.run(rewrite_node(state))
+
+    assert result["turn_index"] == 6

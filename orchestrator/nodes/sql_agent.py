@@ -348,6 +348,170 @@ def _format_error_history(errors: list[dict]) -> str:
     return "\n".join(parts)
 
 
+# Unicode Devanagari block U+0900–U+097F
+# Script/column mismatch repair (Workstream B1 defect)
+_DEVANAGARI_START = 0x0900  # noqa: literals — Unicode Devanagari block start (U+0900)
+_DEVANAGARI_END = 0x097F    # noqa: literals — Unicode Devanagari block end (U+097F)
+
+
+def _is_indic_literal(text: str) -> bool:
+    """
+    Classify the literal: it is INDIC if it contains any character in the
+    Devanagari block U+0900–U+097F, otherwise LATIN.
+    """
+    return any(_DEVANAGARI_START <= ord(ch) <= _DEVANAGARI_END for ch in text)
+
+
+def _derive_paired_columns(
+    table_descriptions: list[dict],
+) -> tuple[dict[str, str], dict[str, str]]:
+    """
+    Build the set of PAIRED columns from table_descriptions (the A4.2 describe_table dicts):
+    a column named `<base>_local` is paired iff a column named `<base>` exists in the SAME table.
+    Never assume the three known pairs — derive them, so the repair is a no-op on a schema
+    without this convention (e.g. the olist corpus has no _local columns at all).
+    """
+    local_to_base: dict[str, str] = {}
+    base_to_local: dict[str, str] = {}
+    for desc in table_descriptions:
+        cols = {
+            c["name"]
+            for c in desc.get("columns", [])
+            if isinstance(c, dict) and "name" in c
+        }
+        for col in cols:
+            if col.endswith("_local"):
+                base = col[:-len("_local")]
+                if base in cols:
+                    local_to_base[col] = base
+                    base_to_local[base] = col
+    return local_to_base, base_to_local
+
+
+def _repair_script_column_mismatch(
+    sql: str, table_descriptions: list[dict],
+) -> tuple[str, list[str]]:
+    """
+    Returns (possibly rewritten sql, list of human-readable repair notes).
+
+    === WHY THE REPAIR IS PROVABLY SAFE (verified in the live database) ===
+      locations.city_local        51 rows, 0 Latin-only
+      locations.city              51 rows, 0 non-ASCII
+      sellers.display_name_local  30 rows, 0 Latin-only
+      sellers.display_name        30 rows, 0 non-ASCII
+      catalog_items.title_local  100 rows, 0 Latin-only
+      catalog_items.title        100 rows, 0 non-ASCII
+
+    So a script/column mismatch predicate is GUARANTEED to match zero rows.
+    Rewriting it onto the paired column cannot turn a correct query into an
+    incorrect one, because the original could not have been correct.
+
+    Four earlier attempts to fix this by INFLUENCING the model all failed and
+    are documented: column comments (migration 005, measured harmful, reverted),
+    a prompt instruction (_format_entity_hint, still shipped, still disobeyed),
+    sampled evidence, and interrogation column selection. This repair is
+    deliberately MECHANICAL and involves no model call.
+    """
+    if not _PGLAST_AVAILABLE or not sql.strip():
+        return sql, []
+
+    local_to_base, base_to_local = _derive_paired_columns(table_descriptions)
+    if not local_to_base:
+        return sql, []
+
+    prefix = ""
+    try:
+        tree = pglast.parse_sql(sql)
+    except Exception:
+        try:
+            tree = pglast.parse_sql("SELECT 1 " + sql)
+            prefix = "SELECT 1 "
+        except Exception:
+            return sql, []
+
+    parse_text = prefix + sql
+    try:
+        tokens = list(pglast.scan(parse_text))
+    except Exception:
+        return sql, []
+
+    replacements: list[tuple[int, int, str, str]] = []
+    seen_spans: set[tuple[int, int]] = set()
+
+    class _PredicateVisitor(Visitor):
+        def visit_A_Expr(self, ancestors, node):  # noqa: N802 — pglast visitor naming
+            op = "".join(getattr(x, "sval", "") for x in getattr(node, "name", ()))
+            if op != "=":
+                return
+            col_ref, const_node = None, None
+            if isinstance(node.lexpr, pglast.ast.ColumnRef) and isinstance(node.rexpr, pglast.ast.A_Const):
+                col_ref, const_node = node.lexpr, node.rexpr
+            elif isinstance(node.rexpr, pglast.ast.ColumnRef) and isinstance(node.lexpr, pglast.ast.A_Const):
+                col_ref, const_node = node.rexpr, node.lexpr
+            if not col_ref or not const_node:
+                return
+            literal = getattr(getattr(const_node, "val", None), "sval", None)
+            if literal is None:
+                return
+            fields = [getattr(f, "sval", None) for f in getattr(col_ref, "fields", ())]
+            if not fields:
+                return
+            col_name = fields[-1]
+            if not col_name:
+                return
+
+            is_indic = _is_indic_literal(literal)
+            new_col = None
+            note = None
+
+            if col_name in local_to_base and not is_indic:
+                new_col = local_to_base[col_name]
+                note = f"{col_name} -> {new_col} (Latin literal cannot match an Indic-script column)"
+            elif col_name in base_to_local and is_indic:
+                new_col = base_to_local[col_name]
+                note = f"{col_name} -> {new_col} (Indic literal cannot match a Latin-script column)"
+
+            if new_col:
+                start_indices = [i for i, t in enumerate(tokens) if t.start == col_ref.location]
+                if not start_indices:
+                    return
+                start_idx = start_indices[0]
+                col_tok_idx = start_idx + (len(fields) - 1) * 2
+                if col_tok_idx < len(tokens):
+                    target_tok = tokens[col_tok_idx]
+                    start = target_tok.start - len(prefix)
+                    end = target_tok.end + 1 - len(prefix)
+                    if (start, end) in seen_spans:
+                        return
+                    seen_spans.add((start, end))
+                    raw_token = sql[start:end]
+                    replacement_token = f'"{new_col}"' if raw_token.startswith('"') and raw_token.endswith('"') else new_col
+                    replacements.append((start, end, replacement_token, note))
+
+    _PredicateVisitor()(tree)
+
+    if not replacements:
+        return sql, []
+
+    # Sort descending so right-to-left replacements preserve earlier string offsets
+    replacements.sort(key=lambda r: r[0], reverse=True)
+    rewritten_sql = sql
+    collected_notes: list[str] = []
+    for start, end, rep_tok, note in replacements:
+        rewritten_sql = rewritten_sql[:start] + rep_tok + rewritten_sql[end:]
+        collected_notes.append(note)
+    collected_notes.reverse()
+
+    # Step 6: Validate re-parse
+    validation_text = prefix + rewritten_sql if prefix else rewritten_sql
+    try:
+        pglast.parse_sql(validation_text)
+    except Exception as exc:
+        return sql, [f"Repair discarded: rewritten SQL failed pglast validation ({exc})"]
+
+    return rewritten_sql, collected_notes
+
+
 async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     """
     SQL Agent node. Attempt 0: consults memory, interrogates (miss path
@@ -381,7 +545,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
 
     async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id) as session:
         # Always needed: fingerprint (memory key on attempt 0) and table list.
-        _schema = target_schema()
+        _schema = state_dict.get("target_schema") or target_schema()
         tables_result = await schema_list_tables(session, _schema)
         schema_fingerprint: str = tables_result.get("fingerprint", "")
         table_names = [t["name"] for t in tables_result.get("tables", [])]
@@ -390,6 +554,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         memory_hit = False
         memory_trace_id: str | None = None
         new_interrogation_samples: list[dict] = []
+        table_descriptions: list[dict] = []
 
         if attempt == 0:
             # Step 1: consult memory (attempt 0 only -- C2-V6).
@@ -475,7 +640,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             # no memory re-consultation, no interrogation (already in state
             # from attempt 0, if any -- not re-sampled).
             retriever = get_schema_retriever()
-            schema_context, _ = await retriever.retrieve(session, table_names, _schema)
+            schema_context, table_descriptions = await retriever.retrieve(session, table_names, _schema)
             trajectory_steps += len(table_names)
             context_block = f"Schema:\n{schema_context}"
 
@@ -543,6 +708,15 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             query_id, attempt, memory_hit, candidate_sql,
         )
 
+        candidate_sql, script_repairs = _repair_script_column_mismatch(
+            candidate_sql, table_descriptions,
+        )
+        for repair_note in script_repairs:
+            logger.info(
+                "SQL Agent script repair for query_id=%s: %s",
+                query_id, repair_note,
+            )
+
         # Step 5: execute.
         exec_result = await data_run_select(session, candidate_sql, max_rows=max_rows)
         elapsed_ms = int(time.monotonic() * 1000) - start_ms
@@ -554,6 +728,8 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         }
         if new_interrogation_samples:
             update["interrogation_samples"] = new_interrogation_samples
+        if script_repairs:
+            update["script_repairs"] = script_repairs
         if attempt == 0:
             update["memory_hit"] = memory_hit
             update["memory_trace_id"] = memory_trace_id
@@ -631,7 +807,10 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 query_id, attempt, category, sqlstate, message,
             )
 
-            update["executed_sql"] = candidate_sql
+            # The statement did not execute, so naming it executed_sql would
+            # misreport what happened. It remains available as candidate_sql,
+            # which the update dict already sets unconditionally above, and
+            # the error entry already carries offending_sql.
             update["sql_rows"] = []
             update["sql_columns"] = []
             update["errors"] = [{

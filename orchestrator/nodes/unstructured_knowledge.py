@@ -250,7 +250,7 @@ async def _decompose(query_text: str) -> tuple[str, str, int, int]:
 
 
 async def _run_sql_subtask(
-    session: MCPSession, question: str,
+    session: MCPSession, question: str, state_dict: dict[str, Any] | None = None,
 ) -> tuple[str | None, list[dict], list[str], dict | None, int, int, int, int]:
     """
     Simplified single-shot SQL sub-task: full schema, no memory, no
@@ -282,10 +282,14 @@ async def _run_sql_subtask(
     change is needed there; retriever.retrieve()'s qualification of the
     schema_context (e.g. "TABLE olist.orders:") is what makes the model
     write schema-qualified FROM clauses, same mechanism sql_agent.py relies
-    on for the exact same reason.
+    on for the exact same reason. The value now arrives per request, so this
+    path must read it from state for the same reason it originally had to read
+    the flag.
     """
+    if state_dict is None:
+        state_dict = {}
     trajectory_steps = 0
-    _schema = target_schema()
+    _schema = state_dict.get("target_schema") or target_schema()
     tables_result = await schema_list_tables(session, _schema)
     table_names = [t["name"] for t in tables_result.get("tables", [])]
     trajectory_steps += 1
@@ -373,7 +377,9 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
         else:
             sql_subtask = doc_subtask = query_text
 
-        executed_sql, rows, columns, sql_error, s_ti, s_to, s_calls, s_steps = await _run_sql_subtask(session, sql_subtask)
+        executed_sql, rows, columns, sql_error, s_ti, s_to, s_calls, s_steps = await _run_sql_subtask(
+            session, sql_subtask, state_dict,
+        )
         tokens_in_total += s_ti
         tokens_out_total += s_to
         llm_calls_total += s_calls

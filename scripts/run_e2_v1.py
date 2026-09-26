@@ -37,6 +37,7 @@ from pathlib import Path
 
 from shipped_flags import (require_shipped_flags, add_flag_guard_argument,
                            FlagStateError)
+from api_auth import auth_headers
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -54,7 +55,7 @@ def run_query(base_url: str, text: str, timeout_s: float) -> dict[str, Any]:
     req = urllib.request.Request(
         f"{base_url}/query",
         data=json.dumps({"query": text}).encode(),
-        headers={"Content-Type": "application/json"},
+        headers=auth_headers({"Content-Type": "application/json"}),
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=timeout_s) as resp:
@@ -66,6 +67,11 @@ def main() -> int:
     ap.add_argument("--url", default=DEFAULT_URL)
     ap.add_argument("--out", type=Path, required=True,
                     help="Where to write {query_id: chart}. Refuses to overwrite.")
+    # Read below by the append-only check, which tells the user to "pass
+    # --force" -- but was never registered, so doing what the message said
+    # crashed with an argparse error (audit 007 F-007-6; docs/V3_PLAN.md 0.9).
+    ap.add_argument("--force", action="store_true",
+                    help="Deliberately replace an existing --out file.")
     # Shipped-flag guard -- see scripts/shipped_flags.py for the two incidents
     # this exists to prevent.
     add_flag_guard_argument(ap)

@@ -36,6 +36,7 @@ from pathlib import Path
 
 from shipped_flags import (require_shipped_flags, add_flag_guard_argument,
                            FlagStateError)
+from api_auth import auth_headers
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FLAGS_PATH = REPO_ROOT / "config" / "flags.toml"
@@ -70,6 +71,7 @@ def restart_orchestrator() -> None:
     )
     for _ in range(HEALTH_POLL_ATTEMPTS):
         try:
+            # /health remains unauthenticated by design (open route)
             with urllib.request.urlopen(f"{ORCH_URL}/health", timeout=3) as resp:
                 if resp.status == 200:
                     print("    orchestrator healthy.")
@@ -107,7 +109,7 @@ def run_query(text: str, debug_candidate_sql: str | None = None) -> dict:
     payload = json.dumps(body).encode()
     req = urllib.request.Request(
         f"{ORCH_URL}/query", data=payload,
-        headers={"Content-Type": "application/json"}, method="POST",
+        headers=auth_headers({"Content-Type": "application/json"}), method="POST",
     )
     with urllib.request.urlopen(req, timeout=QUERY_TIMEOUT_S) as resp:
         return json.loads(resp.read())

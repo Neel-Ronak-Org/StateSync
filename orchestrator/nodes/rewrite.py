@@ -158,6 +158,7 @@ def _parse_rewrite(text: str, original: str) -> tuple[bool, str, bool]:
 async def rewrite_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     query_id: str = state_dict.get("query_id", "")
     tenant_id: str = state_dict["tenant_id"]
+    principal_id: str = state_dict["principal_id"]
     session_id: str = state_dict.get("session_id", "")
     normalized_query: str = state_dict.get("normalized_query") or state_dict.get("raw_query", "")
 
@@ -172,10 +173,11 @@ async def rewrite_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     # for a question the SQL/docs route could have answered fine on its own
     # is a much worse outcome, and there is nothing else broken in that
     # scenario that would make failing loud the right call.
+    history_result: dict = {}
     try:
         async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id) as session:
             history_result = await history_get_recent_turns(
-                session, session_id, limit=cfg.sql.rewrite_history_turns,
+                session, session_id, principal_id=principal_id, limit=cfg.sql.rewrite_history_turns,
             )
         turns = history_result.get("turns", [])
     except Exception as exc:
@@ -185,7 +187,12 @@ async def rewrite_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             query_id, session_id, exc,
         )
         turns = []
-    turn_index = len(turns) + 1
+    # The next turn number comes from MCP, which reads the newest stored turn.
+    # Counting `turns` was wrong from the 5th question on: it is a window of
+    # rewrite_history_turns (3), so the count stuck at 3 and every later turn
+    # re-used number 4 (docs/V3_PLAN.md 0.1). This value is only the expected
+    # number for logs and state; history.append_turn assigns the stored one.
+    turn_index = history_result.get("next_turn_index", len(turns) + 1) if turns else 1
 
     if not turns:
         # Turn 1 for this session, OR a history-read failure degraded to the

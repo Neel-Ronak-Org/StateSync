@@ -241,7 +241,7 @@ async def memory_put_trajectory(
 async def history_append_turn(
     session: MCPSession,
     session_id: str,
-    turn_index: int,
+    principal_id: str,
     raw_query: str,
     rewritten_query: str,
     rewrite_applied: bool,
@@ -253,11 +253,12 @@ async def history_append_turn(
     sql_columns: list[str] | None = None,
     sql_rows_preview: list[dict[str, Any]] | None = None,
     sql_rows_count: int | None = None,
+    sql_rows_full: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """history.append_turn"""
+    """history.append_turn -- MCP assigns the turn number and returns it."""
     params: dict[str, Any] = {
         "session_id": session_id,
-        "turn_index": turn_index,
+        "principal_id": principal_id,
         "raw_query": raw_query,
         "rewritten_query": rewritten_query,
         "rewrite_applied": rewrite_applied,
@@ -276,24 +277,76 @@ async def history_append_turn(
         params["sql_rows_preview"] = sql_rows_preview
     if sql_rows_count is not None:
         params["sql_rows_count"] = sql_rows_count
+    if sql_rows_full is not None:
+        params["sql_rows_full"] = sql_rows_full
     return await session.call("history.append_turn", params)
 
 
 async def history_get_recent_turns(
-    session: MCPSession, session_id: str, limit: int | None = None,
+    session: MCPSession, session_id: str, principal_id: str, limit: int | None = None,
 ) -> dict[str, Any]:
     """history.get_recent_turns"""
-    params: dict[str, Any] = {"session_id": session_id}
+    params: dict[str, Any] = {"session_id": session_id, "principal_id": principal_id}
     if limit is not None:
         params["limit"] = limit
     return await session.call("history.get_recent_turns", params)
 
 
+async def history_check_session(
+    session: MCPSession, session_id: str, principal_id: str,
+) -> dict[str, Any]:
+    """history.check_session -- {"exists": bool, "usable": bool} for this principal."""
+    return await session.call(
+        "history.check_session", {"session_id": session_id, "principal_id": principal_id},
+    )
+
+
+async def history_get_turn_rows(
+    session: MCPSession, session_id: str, principal_id: str, turn_index: int,
+) -> dict[str, Any]:
+    """history.get_turn_rows"""
+    params: dict[str, Any] = {
+        "session_id": session_id,
+        "principal_id": principal_id,
+        "turn_index": turn_index,
+    }
+    return await session.call("history.get_turn_rows", params)
+
+
 async def history_list_sessions(
-    session: MCPSession, limit: int | None = None,
+    session: MCPSession, principal_id: str, limit: int | None = None,
 ) -> dict[str, Any]:
     """history.list_sessions"""
-    params: dict[str, Any] = {}
+    params: dict[str, Any] = {"principal_id": principal_id}
     if limit is not None:
         params["limit"] = limit
     return await session.call("history.list_sessions", params)
+
+
+# ── audit.* (cycle 008, Workstream C1) ──────────────────────────────────────
+async def audit_record(
+    session: MCPSession,
+    principal_id: str,
+    route: str,
+    outcome: str,
+    query_id: str | None = None,
+    session_id: str | None = None,
+    client_ip: str | None = None,
+    detail: str | None = None,
+) -> dict[str, Any]:
+    """audit.record"""
+    params: dict[str, Any] = {
+        "principal_id": principal_id,
+        "route": route,
+        "outcome": outcome,
+    }
+    if query_id is not None:
+        params["query_id"] = query_id
+    if session_id is not None:
+        params["session_id"] = session_id
+    if client_ip is not None:
+        params["client_ip"] = client_ip
+    if detail is not None:
+        params["detail"] = detail
+    return await session.call("audit.record", params)
+
