@@ -190,26 +190,31 @@ export function TileCard({
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
         {tile.state === 'needs_review' && (
-          <div className="flex shrink-0 flex-col gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
-            <p>The data this tile reads has changed. The numbers shown are from before the change.</p>
-            <div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 border-amber-500/40 text-xs hover:bg-amber-500/20"
-                onClick={() => void run(onConfirm)}
-                disabled={busy}
-              >
-                Review and accept
-              </Button>
-            </div>
+          <div className="flex shrink-0 items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-800 dark:text-amber-300">
+            <span
+              className="line-clamp-2 min-w-0 flex-1"
+              title="The data this tile reads has changed. The numbers shown are from before the change."
+            >
+              The data this tile reads has changed. The numbers shown are from before the change.
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 shrink-0 border-amber-500/40 text-xs hover:bg-amber-500/20"
+              onClick={() => void run(onConfirm)}
+              disabled={busy}
+            >
+              Review and accept
+            </Button>
           </div>
         )}
         {tile.state === 'error' && (
-          <div className="flex shrink-0 flex-col items-start justify-between gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive sm:flex-row sm:items-center">
-            <span>Last refresh failed: {tile.last_error || 'Unknown error'}</span>
+          <div className="flex shrink-0 items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-xs text-destructive">
+            <span className="line-clamp-2 min-w-0 flex-1" title={`Last refresh failed: ${tile.last_error || 'Unknown error'}`}>
+              Last refresh failed: {tile.last_error || 'Unknown error'}
+            </span>
             <Button variant="outline" size="sm" className="h-7 shrink-0 text-xs" onClick={() => void run(onRefresh)} disabled={busy || isRefreshing}>
               Retry
             </Button>

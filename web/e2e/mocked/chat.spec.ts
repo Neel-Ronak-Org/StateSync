@@ -11,7 +11,7 @@ import { TOKEN } from './mock-api'
 
 test.describe('sign-in', () => {
   test('a valid token signs in and a bad one is refused with a message', async ({ page }) => {
-    await openApp(page, { signedIn: false })
+    await openApp(page, { signedIn: false, hash: '#/ask' })
     await expect(page.getByRole('heading', { name: 'Sign in to StateSync' })).toBeVisible()
 
     await page.getByLabel('API token').fill('wrong-token')
@@ -32,7 +32,7 @@ test.describe('sign-in', () => {
   })
 
   test('a 401 mid-session returns to sign-in and says why', async ({ page }) => {
-    const api = await openApp(page)
+    const api = await openApp(page, { hash: '#/ask' })
     api.failNext('/query', 401, 'Missing or invalid bearer token.')
     await ask(page, 'How many orders are there in total?')
     await expect(page.getByRole('heading', { name: 'Sign in to StateSync' })).toBeVisible()
@@ -42,7 +42,7 @@ test.describe('sign-in', () => {
 
 test.describe('asking', () => {
   test('an answer shows its text and its result table', async ({ page }) => {
-    const api = await openApp(page)
+    const api = await openApp(page, { hash: '#/ask' })
     await ask(page, 'How many orders are there in total?')
     const turn = page.getByTestId('turn').last()
     await expect(turn.getByTestId('answer-text')).toHaveText('There are 550 orders in total.')
@@ -53,7 +53,7 @@ test.describe('asking', () => {
   })
 
   test('Enter sends, Shift+Enter makes a new line', async ({ page }) => {
-    const api = await openApp(page)
+    const api = await openApp(page, { hash: '#/ask' })
     const box = page.getByLabel('Ask a question')
     await box.fill('first line')
     await box.press('Shift+Enter')
@@ -66,7 +66,7 @@ test.describe('asking', () => {
   })
 
   test('follow-ups stay in the same conversation', async ({ page }) => {
-    const api = await openApp(page)
+    const api = await openApp(page, { hash: '#/ask' })
     await ask(page, 'How many orders are there in total?')
     await expect(page.getByTestId('answer-text')).toHaveCount(1)
     await ask(page, 'Show orders by status as a chart')
@@ -75,7 +75,7 @@ test.describe('asking', () => {
   })
 
   test('a chart answer draws a chart', async ({ page }) => {
-    await openApp(page)
+    await openApp(page, { hash: '#/ask' })
     await ask(page, 'Show orders by status as a chart')
     const turn = page.getByTestId('turn').last()
     const host = turn.getByTestId('vega-chart')
@@ -90,7 +90,7 @@ test.describe('asking', () => {
   })
 
   test('a chart that fails the safety check is withheld, and the answer still shows', async ({ page }) => {
-    await openApp(page)
+    await openApp(page, { hash: '#/ask' })
     await ask(page, 'Show the unsafe chart')
     const turn = page.getByTestId('turn').last()
     await expect(turn.getByTestId('answer-text')).toHaveText('Here are orders by status.')
@@ -99,15 +99,15 @@ test.describe('asking', () => {
   })
 
   test('a document answer lists its sources and has no table', async ({ page }) => {
-    await openApp(page)
+    await openApp(page, { hash: '#/ask' })
     await ask(page, 'What does the SLA policy say for LP003?')
     const turn = page.getByTestId('turn').last()
-    await expect(turn.getByTestId('citations')).toContainText('doc_sla_annexure_LP003_c001')
+    await expect(turn.getByTestId('citations')).toContainText('SLA annexure LP003')
     await expect(turn.getByRole('table')).toHaveCount(0)
   })
 
   test('the details panel shows the SQL behind an answer', async ({ page }) => {
-    await openApp(page)
+    await openApp(page, { hash: '#/ask' })
     await ask(page, 'How many orders are there in total?')
     await page.getByTestId('turn').last().getByRole('button', { name: 'Details' }).click()
     const panel = page.getByRole('dialog', { name: 'Answer details' })
@@ -115,7 +115,7 @@ test.describe('asking', () => {
   })
 
   test('the result downloads as CSV', async ({ page }) => {
-    await openApp(page)
+    await openApp(page, { hash: '#/ask' })
     await ask(page, 'Show orders by status as a chart')
     const download = page.waitForEvent('download')
     await page.getByTestId('turn').last().getByRole('button', { name: 'Download CSV' }).click()
@@ -128,21 +128,21 @@ test.describe('asking', () => {
   })
 
   test('a rate limit says when to try again', async ({ page }) => {
-    const api = await openApp(page)
+    const api = await openApp(page, { hash: '#/ask' })
     api.failNext('/query', 429, 'Rate limit exceeded.', { 'Retry-After': '17' })
     await ask(page, 'How many orders are there in total?')
     await expect(page.getByText('Try again in 17 seconds')).toBeVisible()
   })
 
   test('a rate limit without Retry-After does not invent a wait time', async ({ page }) => {
-    const api = await openApp(page)
+    const api = await openApp(page, { hash: '#/ask' })
     api.failNext('/query', 429, 'Rate limit exceeded.')
     await ask(page, 'How many orders are there in total?')
     await expect(page.getByText('Rate limit reached. Try again shortly.')).toBeVisible()
   })
 
   test('the conversation survives a reload', async ({ page }) => {
-    await openApp(page)
+    await openApp(page, { hash: '#/ask' })
     await ask(page, 'How many orders are there in total?')
     await expect(page.getByTestId('answer-text')).toHaveText('There are 550 orders in total.')
     await page.reload()
@@ -152,7 +152,7 @@ test.describe('asking', () => {
 
 test.describe('conversations and datasets', () => {
   test('switching dataset starts a new conversation on that dataset', async ({ page }) => {
-    const api = await openApp(page)
+    const api = await openApp(page, { hash: '#/ask' })
     await ask(page, 'How many orders are there in total?')
     await expect(page.getByTestId('turn')).toHaveCount(1)
     await page.getByLabel('Dataset').click()
@@ -166,7 +166,7 @@ test.describe('conversations and datasets', () => {
   })
 
   test('New chat clears the thread and starts a new session', async ({ page }) => {
-    const api = await openApp(page)
+    const api = await openApp(page, { hash: '#/ask' })
     await ask(page, 'How many orders are there in total?')
     await expect(page.getByTestId('turn')).toHaveCount(1)
     await page.getByRole('button', { name: 'New chat' }).click()
@@ -177,9 +177,9 @@ test.describe('conversations and datasets', () => {
   })
 
   test('a past conversation opens from the sidebar and follow-ups continue it', async ({ page }) => {
-    const api = await openApp(page)
+    const api = await openApp(page, { hash: '#/ask' })
     await page
-      .getByRole('navigation', { name: 'Recent conversations' })
+      .getByRole('navigation', { name: 'Conversations' })
       .getByRole('button', { name: 'How many orders are there in total?' })
       .click()
     await expect(page.getByTestId('turn')).toHaveCount(2)
@@ -190,9 +190,9 @@ test.describe('conversations and datasets', () => {
   })
 
   test('opening a conversation from the other dataset switches to that dataset', async ({ page }) => {
-    const api = await openApp(page)
+    const api = await openApp(page, { hash: '#/ask' })
     await page
-      .getByRole('navigation', { name: 'Recent conversations' })
+      .getByRole('navigation', { name: 'Conversations' })
       .getByRole('button', { name: 'How many orders were delivered on olist?' })
       .click()
     await expect(page.getByTestId('turn')).toHaveCount(1)
@@ -204,10 +204,10 @@ test.describe('conversations and datasets', () => {
   })
 
   test('a result the store kept only part of says so after loading', async ({ page }) => {
-    const api = await openApp(page)
+    const api = await openApp(page, { hash: '#/ask' })
     api.storedRowsLimit = 50
     await page
-      .getByRole('navigation', { name: 'Recent conversations' })
+      .getByRole('navigation', { name: 'Conversations' })
       .getByRole('button', { name: 'How many orders are there in total?' })
       .click()
     const turn = page.getByTestId('turn').nth(1)
@@ -217,9 +217,9 @@ test.describe('conversations and datasets', () => {
   })
 
   test('a truncated stored result can load in full', async ({ page }) => {
-    await openApp(page)
+    await openApp(page, { hash: '#/ask' })
     await page
-      .getByRole('navigation', { name: 'Recent conversations' })
+      .getByRole('navigation', { name: 'Conversations' })
       .getByRole('button', { name: 'How many orders are there in total?' })
       .click()
     const turn = page.getByTestId('turn').nth(1)
@@ -242,7 +242,7 @@ test.describe('appearance', () => {
   })
 
   test('developer mode reveals the raw trace in the details panel', async ({ page }) => {
-    await openApp(page)
+    await openApp(page, { hash: '#/ask' })
     await ask(page, 'How many orders are there in total?')
     await page.getByRole('switch', { name: 'Developer mode' }).click()
     await page.getByTestId('turn').last().getByRole('button', { name: 'Details' }).click()

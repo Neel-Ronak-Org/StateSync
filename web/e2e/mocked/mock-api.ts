@@ -17,6 +17,26 @@ const SCHEMA_URL = 'https://vega.github.io/schema/vega-lite/v5.json'
 
 type Row = Record<string, unknown>
 
+export type VizKindName =
+  | 'kpi'
+  | 'kpi_trend'
+  | 'line'
+  | 'area'
+  | 'bar'
+  | 'hbar'
+  | 'donut'
+  | 'breakdown'
+  | 'heatmap'
+  | 'scatter'
+  | 'table'
+
+export interface TileLayout {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
 interface StoredTurn {
   turn_index: number
   raw_query: string
@@ -34,8 +54,12 @@ interface StoredTurn {
   target_schema: string | null
 }
 
-interface Tile {
+export interface Tile {
   tile_id: string
+  dashboard_id: string
+  target_schema: string
+  viz: VizKindName | null
+  layout: TileLayout | null
   title: string
   state: 'ok' | 'needs_review' | 'error'
   version: number
@@ -52,6 +76,44 @@ interface Tile {
   last_error: string | null
   error_at: string | null
   versions: { version: number; created_at: string; source: { session_id: string; turn_index: number } }[]
+}
+
+export interface Dashboard {
+  dashboard_id: string
+  name: string
+  target_schema: string
+  position: number
+  tile_count: number
+  created_at: string
+  updated_at: string
+}
+
+export type BuildItemState = 'queued' | 'running' | 'added' | 'skipped'
+
+export interface BuildItem {
+  title: string
+  question: string
+  viz: VizKindName | null
+  state: BuildItemState
+  reason: string | null
+  tile_id: string | null
+}
+
+export interface BuildJob {
+  job_id: string
+  dashboard_id: string
+  state: 'planning' | 'running' | 'done' | 'failed'
+  goal: string | null
+  items: BuildItem[]
+  error: string | null
+  started_at: string
+  finished_at: string | null
+}
+
+export interface BuildPlanItem {
+  title: string
+  question: string
+  viz: VizKindName | null
 }
 
 interface Canned {
@@ -89,7 +151,7 @@ export function cannedAnswer(question: string): Canned {
   const q = question.toLowerCase()
   if (q.includes('unsafe')) {
     const chart = barChart(STATUS_ROWS)
-    chart.transform = [{ calculate: "datum.n * 2", as: 'double' }]
+    chart.transform = [{ calculate: 'datum.n * 2', as: 'double' }]
     return {
       answer: 'Here are orders by status.',
       route: 'sql',
@@ -154,52 +216,106 @@ export class MockApi {
   readonly queries: Record<string, unknown>[] = []
   readonly sessions = new Map<string, StoredTurn[]>()
   readonly tiles = new Map<string, Tile>()
+  readonly dashboards = new Map<string, Dashboard>()
+  readonly jobs = new Map<string, BuildJob>()
   private failures = new Map<string, { status: number; detail: string; headers?: Record<string, string> }>()
-  /** When set, the full-rows endpoint returns only this many rows (the history store's caps). */
   storedRowsLimit: number | null = null
-  /**
-   * When set, the next /query answer carries this chart instead of the canned
-   * one: a server whose own validator let a hostile spec through, which is the
-   * case the browser's independent validator exists for.
-   */
   nextChart: Record<string, unknown> | null = null
+  liveSchemas: string[] = []
+  readonly tileCalls: string[] = []
+  readonly buildCalls: string[] = []
+  buildPlan: BuildPlanItem[] = [
+    { title: 'Total orders', question: 'How many orders are there in total?', viz: 'kpi' },
+    { title: 'Orders by status', question: 'Show orders by status as a chart', viz: 'bar' },
+    { title: 'SLA policy LP003', question: 'What does the SLA policy say for LP003?', viz: 'table' },
+  ]
   private clock = Date.parse('2026-09-27T10:00:00Z')
   private tileSeq = 0
+  private dashSeq = 0
+  private jobSeq = 0
 
-  constructor() {
-    // A past conversation for the history sidebar, whose second turn has a
-    // truncated preview (20 of 60 rows) so "Load full result" can be tested.
+  constructor(options: { buildPlan?: BuildPlanItem[] } = {}) {
+    if (options.buildPlan) {
+      this.buildPlan = options.buildPlan
+    }
     const at = new Date(this.clock - 3_600_000).toISOString()
     this.sessions.set('seed-session-1', [
       {
-        turn_index: 1, raw_query: 'How many orders are there in total?', rewritten_query: 'How many orders are there in total?',
-        rewrite_applied: false, context_guessed: false, route: 'sql',
-        executed_sql: 'SELECT COUNT(*) AS total_orders FROM orders LIMIT 1000', answer_text: 'There are 550 orders in total.',
-        computed_at: at, chart: null, sql_columns: ['total_orders'], sql_rows_preview: [{ total_orders: 550 }], sql_rows_count: 1,
+        turn_index: 1,
+        raw_query: 'How many orders are there in total?',
+        rewritten_query: 'How many orders are there in total?',
+        rewrite_applied: false,
+        context_guessed: false,
+        route: 'sql',
+        executed_sql: 'SELECT COUNT(*) AS total_orders FROM orders LIMIT 1000',
+        answer_text: 'There are 550 orders in total.',
+        computed_at: at,
+        chart: null,
+        sql_columns: ['total_orders'],
+        sql_rows_preview: [{ total_orders: 550 }],
+        sql_rows_count: 1,
         target_schema: 'public',
       },
       {
-        turn_index: 2, raw_query: 'Which cities have the most sellers?', rewritten_query: 'Which cities have the most sellers?',
-        rewrite_applied: false, context_guessed: false, route: 'sql',
+        turn_index: 2,
+        raw_query: 'Which cities have the most sellers?',
+        rewritten_query: 'Which cities have the most sellers?',
+        rewrite_applied: false,
+        context_guessed: false,
+        route: 'sql',
         executed_sql: 'SELECT city, count(*) AS sellers FROM sellers GROUP BY 1 ORDER BY 2 DESC',
-        answer_text: 'There are 60 cities with at least one seller.', computed_at: at, chart: null,
-        sql_columns: ['city', 'sellers'], sql_rows_preview: MANY_ROWS.slice(0, 20), sql_rows_count: 60,
+        answer_text: 'There are 60 cities with at least one seller.',
+        computed_at: at,
+        chart: null,
+        sql_columns: ['city', 'sellers'],
+        sql_rows_preview: MANY_ROWS.slice(0, 20),
+        sql_rows_count: 60,
         target_schema: 'public',
       },
     ])
-    // A conversation on the OTHER dataset, to test that opening it switches dataset.
     this.sessions.set('seed-session-olist', [
       {
-        turn_index: 1, raw_query: 'How many orders were delivered on olist?', rewritten_query: 'How many orders were delivered on olist?',
-        rewrite_applied: false, context_guessed: false, route: 'sql',
+        turn_index: 1,
+        raw_query: 'How many orders were delivered on olist?',
+        rewritten_query: 'How many orders were delivered on olist?',
+        rewrite_applied: false,
+        context_guessed: false,
+        route: 'sql',
         executed_sql: "SELECT count(*) AS delivered FROM olist.orders WHERE order_status = 'delivered'",
-        answer_text: 'There were 96,478 orders delivered.', computed_at: at, chart: null,
-        sql_columns: ['delivered'], sql_rows_preview: [{ delivered: 96478 }], sql_rows_count: 1, target_schema: 'olist',
+        answer_text: 'There were 96,478 orders delivered.',
+        computed_at: at,
+        chart: null,
+        sql_columns: ['delivered'],
+        sql_rows_preview: [{ delivered: 96478 }],
+        sql_rows_count: 1,
+        target_schema: 'olist',
       },
     ])
   }
 
-  /** The next request to `path` (e.g. '/query') fails once with this status. */
+  createDashboard(name: string, targetSchema = 'public'): Dashboard {
+    this.dashSeq += 1
+    const id = `dash-${this.dashSeq}`
+    const at = this.now()
+    const existing = [...this.dashboards.values()].filter((d) => d.target_schema === targetSchema)
+    const dashboard: Dashboard = {
+      dashboard_id: id,
+      name,
+      target_schema: targetSchema,
+      position: existing.length,
+      tile_count: 0,
+      created_at: at,
+      updated_at: at,
+    }
+    this.dashboards.set(id, dashboard)
+    return dashboard
+  }
+
+  private toDashboardDto(d: Dashboard): Dashboard {
+    const count = [...this.tiles.values()].filter((t) => t.dashboard_id === d.dashboard_id).length
+    return { ...d, tile_count: count }
+  }
+
   failNext(path: string, status: number, detail: string, headers?: Record<string, string>): void {
     this.failures.set(path, { status, detail, headers })
   }
@@ -212,7 +328,6 @@ export class MockApi {
     tile.error_at = lastError ? this.now() : null
   }
 
-  /** Replace a stored tile's chart, e.g. with a spec the server should never have let through. */
   setTileChart(tileId: string, chart: Record<string, unknown> | null): void {
     const tile = this.tiles.get(tileId)
     if (!tile) throw new Error(`no tile ${tileId}`)
@@ -232,8 +347,6 @@ export class MockApi {
     return route.fulfill({
       status,
       contentType: 'application/json',
-      // Mirrors the orchestrator's CORS: Retry-After is only readable cross-origin
-      // because the server lists it in Access-Control-Expose-Headers.
       headers: { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'Retry-After', ...headers },
       body: JSON.stringify(body),
     })
@@ -250,7 +363,7 @@ export class MockApi {
         status: 204,
         headers: {
           'access-control-allow-origin': '*',
-          'access-control-allow-methods': 'GET, POST, PATCH, DELETE',
+          'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE',
           'access-control-allow-headers': 'authorization, content-type',
         },
       })
@@ -258,8 +371,14 @@ export class MockApi {
 
     if (path === '/health') {
       return this.json(route, 200, {
-        status: 'ok', service: 'orchestrator', llm_provider: 'groq', llm_ready: true, llm_detail: null,
-        default_schema: 'public', available_schemas: ['olist', 'public'],
+        status: 'ok',
+        service: 'orchestrator',
+        llm_provider: 'groq',
+        llm_ready: true,
+        llm_detail: null,
+        default_schema: 'public',
+        available_schemas: ['olist', 'public'],
+        live_schemas: this.liveSchemas,
       })
     }
 
@@ -278,8 +397,11 @@ export class MockApi {
     if (path === '/query' && method === 'POST') return this.query(route, body)
     if (path === '/sessions' && method === 'GET') {
       const sessions = [...this.sessions.entries()].map(([session_id, turns]) => ({
-        session_id, turn_count: turns.length, started_at: turns[0].computed_at,
-        last_activity: turns[turns.length - 1].computed_at, first_query: turns[0].raw_query,
+        session_id,
+        turn_count: turns.length,
+        started_at: turns[0].computed_at,
+        last_activity: turns[turns.length - 1].computed_at,
+        first_query: turns[0].raw_query,
         target_schema: turns[0].target_schema,
       }))
       return this.json(route, 200, { sessions, count: sessions.length })
@@ -293,11 +415,22 @@ export class MockApi {
       return this.json(route, 200, { rows: full, stored_row_count: full.length, byte_size: 1024, available: true })
     }
     m = path.match(/^\/sessions\/([^/]+)$/)
-    if (m && method === 'GET') {
-      const turns = this.sessions.get(decodeURIComponent(m[1])) ?? []
-      return this.json(route, 200, { turns, count: turns.length, next_turn_index: turns.length + 1 })
+    if (m) {
+      const sessionId = decodeURIComponent(m[1])
+      if (method === 'GET') {
+        const turns = this.sessions.get(sessionId) ?? []
+        return this.json(route, 200, { turns, count: turns.length, next_turn_index: turns.length + 1 })
+      }
+      if (method === 'DELETE') {
+        const turns = this.sessions.get(sessionId)
+        if (!turns) return this.json(route, 404, { detail: 'No such conversation.' })
+        const deleted_turns = turns.length
+        this.sessions.delete(sessionId)
+        return this.json(route, 200, { deleted: sessionId, deleted_turns })
+      }
     }
-    if (path.startsWith('/tiles')) return this.tilesRoute(route, method, path, body)
+    if (path.startsWith('/dashboards')) return this.dashboardsRoute(route, method, path, url, body)
+    if (path.startsWith('/tiles')) return this.tilesRoute(route, method, path, url, body)
     return this.json(route, 404, { detail: 'Not Found' })
   }
 
@@ -308,7 +441,6 @@ export class MockApi {
     const canned = cannedAnswer(question)
     const turns = this.sessions.get(sessionId) ?? []
     const schema = String(body.schema ?? 'public')
-    // The server refuses a follow-up on a different dataset (migration 018).
     const startedOn = turns[0]?.target_schema
     if (startedOn && startedOn !== schema) {
       return this.json(route, 409, {
@@ -322,10 +454,20 @@ export class MockApi {
     const turnIndex = turns.length + 1
     const at = this.now()
     turns.push({
-      turn_index: turnIndex, raw_query: question, rewritten_query: question, rewrite_applied: false, context_guessed: false,
-      route: canned.route, executed_sql: canned.sql, answer_text: canned.answer, computed_at: at, chart: canned.chart,
-      sql_columns: canned.columns.length ? canned.columns : null, sql_rows_preview: canned.rows.slice(0, 100),
-      sql_rows_count: canned.rows.length, target_schema: schema,
+      turn_index: turnIndex,
+      raw_query: question,
+      rewritten_query: question,
+      rewrite_applied: false,
+      context_guessed: false,
+      route: canned.route,
+      executed_sql: canned.sql,
+      answer_text: canned.answer,
+      computed_at: at,
+      chart: canned.chart,
+      sql_columns: canned.columns.length ? canned.columns : null,
+      sql_rows_preview: canned.rows.slice(0, 100),
+      sql_rows_count: canned.rows.length,
+      target_schema: schema,
     })
     this.sessions.set(sessionId, turns)
     return this.json(route, 200, {
@@ -335,41 +477,271 @@ export class MockApi {
       citations: canned.citations,
       latency_ms: 1234,
       state_trace: {
-        query_id: `q-${this.queries.length}`, target_schema: schema, route: canned.route,
-        executed_sql: canned.sql, candidate_sql: canned.sql, sql_rows_count: canned.rows.length, sql_rows: canned.rows,
-        sql_columns: canned.columns, attempt: 1, errors: [], metrics: { tokens_in: 5164, tokens_out: 298, llm_calls: 5 },
-        memory_hit: false, detected_language: 'en', normalized_query: question, preserved_entities: {},
-        turn_index: turnIndex, rewrite_applied: false, context_guessed: false, subtasks: [], retrievals: [],
+        query_id: `q-${this.queries.length}`,
+        target_schema: schema,
+        route: canned.route,
+        executed_sql: canned.sql,
+        candidate_sql: canned.sql,
+        sql_rows_count: canned.rows.length,
+        sql_rows: canned.rows,
+        sql_columns: canned.columns,
+        attempt: 1,
+        errors: [],
+        metrics: { tokens_in: 5164, tokens_out: 298, llm_calls: 5 },
+        memory_hit: false,
+        detected_language: 'en',
+        normalized_query: question,
+        preserved_entities: {},
+        turn_index: turnIndex,
+        rewrite_applied: false,
+        context_guessed: false,
+        subtasks: [],
+        retrievals: [],
       },
     })
   }
 
-  private makeTile(turn: StoredTurn, sessionId: string, title?: string, interval?: number): Tile {
+  private makeTile(
+    turn: StoredTurn,
+    sessionId: string,
+    dashboardId: string,
+    targetSchema: string,
+    title?: string,
+    interval?: number,
+    viz?: VizKindName | null,
+    layout?: TileLayout | null,
+  ): Tile {
     const at = this.now()
     this.tileSeq += 1
     const rows = turn.sql_rows_preview ?? []
     const chart = turn.chart ? { ...turn.chart, data: { values: rows } } : null
     return {
-      tile_id: `tile-${this.tileSeq}`, title: title || turn.raw_query, state: 'ok', version: 1,
-      refresh_interval_s: interval ?? 3600, created_at: at, updated_at: at, sql: turn.executed_sql ?? '', chart,
-      columns: turn.sql_columns, schemas: ['public'], source: { session_id: sessionId, turn_index: turn.turn_index },
-      result: { rows, row_count: rows.length, truncated: false, computed_at: at, version: 1 }, stale: false,
-      last_error: null, error_at: null, versions: [{ version: 1, created_at: at, source: { session_id: sessionId, turn_index: turn.turn_index } }],
+      tile_id: `tile-${this.tileSeq}`,
+      dashboard_id: dashboardId,
+      target_schema: targetSchema,
+      viz: viz ?? null,
+      layout: layout ?? null,
+      title: title || turn.raw_query,
+      state: 'ok',
+      version: 1,
+      refresh_interval_s: interval ?? 3600,
+      created_at: at,
+      updated_at: at,
+      sql: turn.executed_sql ?? '',
+      chart,
+      columns: turn.sql_columns,
+      schemas: [targetSchema],
+      source: { session_id: sessionId, turn_index: turn.turn_index },
+      result: { rows, row_count: rows.length, truncated: false, computed_at: at, version: 1 },
+      stale: false,
+      last_error: null,
+      error_at: null,
+      versions: [{ version: 1, created_at: at, source: { session_id: sessionId, turn_index: turn.turn_index } }],
     }
   }
 
-  /** Every /tiles request as "METHOD /path", so tests can assert what the UI asked for. */
-  readonly tileCalls: string[] = []
+  private makeTileFromBuild(dashboardId: string, item: BuildItem, canned: Canned): Tile {
+    const at = this.now()
+    this.tileSeq += 1
+    const targetDash = this.dashboards.get(dashboardId)
+    const schema = targetDash?.target_schema ?? 'public'
+    const rows = canned.rows
+    const chart = canned.chart ? { ...canned.chart, data: { values: rows } } : null
+    return {
+      tile_id: `tile-${this.tileSeq}`,
+      dashboard_id: dashboardId,
+      target_schema: schema,
+      viz: item.viz ?? null,
+      layout: { x: 0, y: 0, w: 6, h: 4 },
+      title: item.title,
+      state: 'ok',
+      version: 1,
+      refresh_interval_s: 3600,
+      created_at: at,
+      updated_at: at,
+      sql: canned.sql ?? '',
+      chart,
+      columns: canned.columns,
+      schemas: [schema],
+      source: { session_id: 'build', turn_index: 1 },
+      result: { rows, row_count: rows.length, truncated: false, computed_at: at, version: 1 },
+      stale: false,
+      last_error: null,
+      error_at: null,
+      versions: [{ version: 1, created_at: at, source: { session_id: 'build', turn_index: 1 } }],
+    }
+  }
 
-  private tilesRoute(route: Route, method: string, path: string, body: Record<string, unknown>) {
+  private dashboardsRoute(route: Route, method: string, path: string, url: URL, body: Record<string, unknown>) {
     this.tileCalls.push(`${method} ${path}`)
-    if (path === '/tiles' && method === 'GET') return this.json(route, 200, { tiles: [...this.tiles.values()] })
+
+    let m = path.match(/^\/dashboards\/([^/]+)\/build$/)
+    if (m) {
+      this.buildCalls.push(`${method} ${path}`)
+      const id = decodeURIComponent(m[1])
+      const dashboard = this.dashboards.get(id)
+      if (!dashboard) return this.json(route, 404, { detail: 'No such dashboard.' })
+
+      if (method === 'POST') {
+        this.jobSeq += 1
+        const jobId = `job-${this.jobSeq}`
+        const items: BuildItem[] = this.buildPlan.map((p) => ({
+          title: p.title,
+          question: p.question,
+          viz: p.viz,
+          state: 'queued',
+          reason: null,
+          tile_id: null,
+        }))
+        const job: BuildJob = {
+          job_id: jobId,
+          dashboard_id: id,
+          state: 'running',
+          goal: typeof body.goal === 'string' ? body.goal : null,
+          items,
+          error: null,
+          started_at: this.now(),
+          finished_at: null,
+        }
+        this.jobs.set(id, job)
+        return this.json(route, 202, { job })
+      }
+
+      if (method === 'GET') {
+        const job = this.jobs.get(id)
+        if (!job) return this.json(route, 200, { job: null })
+        if (job.state === 'running') {
+          const nextItem = job.items.find((i) => i.state === 'queued')
+          if (nextItem) {
+            const canned = cannedAnswer(nextItem.question)
+            if (canned.route === 'docs') {
+              nextItem.state = 'skipped'
+              nextItem.reason = 'Answered from documents, not the database.'
+            } else {
+              nextItem.state = 'added'
+              const tile = this.makeTileFromBuild(id, nextItem, canned)
+              this.tiles.set(tile.tile_id, tile)
+              nextItem.tile_id = tile.tile_id
+            }
+            if (!job.items.some((i) => i.state === 'queued')) {
+              job.state = 'done'
+              job.finished_at = this.now()
+            }
+          }
+        }
+        return this.json(route, 200, { job })
+      }
+      return this.json(route, 404, { detail: 'Not Found' })
+    }
+
+    m = path.match(/^\/dashboards\/([^/]+)\/layout$/)
+    if (m && method === 'PUT') {
+      const id = decodeURIComponent(m[1])
+      const dashboard = this.dashboards.get(id)
+      if (!dashboard) return this.json(route, 404, { detail: 'No such dashboard.' })
+      const items = (body.items as { tile_id: string; x: number; y: number; w: number; h: number }[]) ?? []
+      for (const item of items) {
+        const tile = this.tiles.get(item.tile_id)
+        if (!tile || tile.dashboard_id !== id) {
+          return this.json(route, 404, { detail: 'Tile not found on this dashboard.' })
+        }
+      }
+      for (const item of items) {
+        const tile = this.tiles.get(item.tile_id)!
+        tile.layout = { x: item.x, y: item.y, w: item.w, h: item.h }
+        tile.updated_at = this.now()
+      }
+      return this.json(route, 200, { dashboard_id: id, updated: items.length })
+    }
+
+    if (path === '/dashboards') {
+      if (method === 'GET') {
+        const schema = url.searchParams.get('schema')
+        let list = [...this.dashboards.values()]
+        if (schema) list = list.filter((d) => d.target_schema === schema)
+        list.sort((a, b) => a.position - b.position)
+        return this.json(route, 200, { dashboards: list.map((d) => this.toDashboardDto(d)) })
+      }
+      if (method === 'POST') {
+        if (typeof body.name !== 'string' || !body.name.trim()) {
+          return this.json(route, 422, { detail: 'name must not be blank.' })
+        }
+        const targetSchema = String(body.target_schema ?? 'public')
+        const dashboard = this.createDashboard(body.name.trim(), targetSchema)
+        return this.json(route, 201, { dashboard: this.toDashboardDto(dashboard) })
+      }
+    }
+
+    m = path.match(/^\/dashboards\/([^/]+)$/)
+    if (m) {
+      const id = decodeURIComponent(m[1])
+      const dashboard = this.dashboards.get(id)
+      if (!dashboard) return this.json(route, 404, { detail: 'No such dashboard.' })
+
+      if (method === 'PATCH') {
+        if (typeof body.name === 'string') {
+          if (!body.name.trim()) return this.json(route, 422, { detail: 'name must not be blank.' })
+          dashboard.name = body.name.trim()
+        }
+        dashboard.updated_at = this.now()
+        return this.json(route, 200, { dashboard: this.toDashboardDto(dashboard) })
+      }
+
+      if (method === 'DELETE') {
+        this.dashboards.delete(id)
+        for (const [tileId, tile] of this.tiles.entries()) {
+          if (tile.dashboard_id === id) {
+            this.tiles.delete(tileId)
+          }
+        }
+        return this.json(route, 200, { deleted: id })
+      }
+    }
+
+    return this.json(route, 404, { detail: 'Not Found' })
+  }
+
+  private tilesRoute(route: Route, method: string, path: string, url: URL, body: Record<string, unknown>) {
+    this.tileCalls.push(`${method} ${path}`)
+    if (path === '/tiles' && method === 'GET') {
+      const dashboardId = url.searchParams.get('dashboard_id')
+      if (dashboardId) {
+        if (!this.dashboards.has(dashboardId)) {
+          return this.json(route, 404, { detail: 'No such dashboard.' })
+        }
+        const tiles = [...this.tiles.values()].filter((t) => t.dashboard_id === dashboardId)
+        return this.json(route, 200, { tiles })
+      }
+      return this.json(route, 200, { tiles: [...this.tiles.values()] })
+    }
     if (path === '/tiles' && method === 'POST') {
       const sessionId = String(body.session_id ?? '')
       const turn = (this.sessions.get(sessionId) ?? []).find((t) => t.turn_index === Number(body.turn_index))
       if (!turn) return this.json(route, 404, { detail: 'No such conversation turn.' })
       if (!turn.executed_sql) return this.json(route, 422, { detail: 'Only answers computed from the database can be pinned.' })
-      const tile = this.makeTile(turn, sessionId, body.title as string | undefined, body.refresh_interval_s as number | undefined)
+      const targetSchema = turn.target_schema ?? 'public'
+      let dashboardId = body.dashboard_id as string | undefined
+      if (dashboardId) {
+        const d = this.dashboards.get(dashboardId)
+        if (!d) return this.json(route, 404, { detail: 'No such dashboard.' })
+        if (d.target_schema !== targetSchema) return this.json(route, 422, { detail: 'Dashboard schema differs.' })
+      } else {
+        let d = [...this.dashboards.values()].find((x) => x.target_schema === targetSchema)
+        if (!d) {
+          d = this.createDashboard('Overview', targetSchema)
+        }
+        dashboardId = d.dashboard_id
+      }
+      const tile = this.makeTile(
+        turn,
+        sessionId,
+        dashboardId,
+        targetSchema,
+        body.title as string | undefined,
+        body.refresh_interval_s as number | undefined,
+        (body.viz as VizKindName) ?? null,
+        (body.layout as TileLayout) ?? null,
+      )
       this.tiles.set(tile.tile_id, tile)
       return this.json(route, 201, { tile })
     }
@@ -384,14 +756,26 @@ export class MockApi {
     }
     if (method === 'PATCH' && !action) {
       const interval = body.refresh_interval_s
-      if (interval !== undefined && (typeof interval !== 'number' || interval < 60 || interval > 604800)) {
-        return this.json(route, 422, { detail: 'refresh_interval_s must be a whole number of seconds between 60 and 604800.' })
+      if (interval !== undefined && (typeof interval !== 'number' || interval < 30 || interval > 604800)) {
+        return this.json(route, 422, { detail: 'refresh_interval_s must be a whole number of seconds between 30 and 604800.' })
       }
       if (typeof body.title === 'string') {
         if (!body.title.trim()) return this.json(route, 422, { detail: 'title must not be blank.' })
         tile.title = body.title.trim()
       }
       if (typeof interval === 'number') tile.refresh_interval_s = interval
+      if (body.viz !== undefined) {
+        tile.viz = body.viz === 'auto' ? null : (body.viz as VizKindName)
+      }
+      if (body.dashboard_id !== undefined) {
+        const targetDash = this.dashboards.get(String(body.dashboard_id))
+        if (!targetDash) return this.json(route, 404, { detail: 'No such dashboard.' })
+        if (targetDash.target_schema !== tile.target_schema) {
+          return this.json(route, 422, { detail: 'Cannot move tile to dashboard with different target_schema.' })
+        }
+        tile.dashboard_id = targetDash.dashboard_id
+        tile.layout = null
+      }
       tile.updated_at = this.now()
       return this.json(route, 200, { tile })
     }
@@ -401,6 +785,22 @@ export class MockApi {
         tile.state = 'ok'
         tile.last_error = null
       }
+      return this.json(route, 200, { tile })
+    }
+    if (method === 'POST' && action === 'replace') {
+      const sessionId = String(body.session_id ?? '')
+      const turn = (this.sessions.get(sessionId) ?? []).find((t) => t.turn_index === Number(body.turn_index))
+      if (!turn) return this.json(route, 404, { detail: 'No such conversation turn.' })
+      tile.version += 1
+      tile.source = { session_id: sessionId, turn_index: turn.turn_index }
+      tile.sql = turn.executed_sql ?? ''
+      const rows = turn.sql_rows_preview ?? []
+      tile.chart = turn.chart ? { ...turn.chart, data: { values: rows } } : null
+      tile.columns = turn.sql_columns
+      tile.state = 'ok'
+      tile.versions.push({ version: tile.version, created_at: this.now(), source: tile.source })
+      tile.result = { rows, row_count: rows.length, truncated: false, computed_at: this.now(), version: tile.version }
+      tile.updated_at = this.now()
       return this.json(route, 200, { tile })
     }
     if (method === 'POST' && action === 'confirm') {

@@ -15,7 +15,7 @@ import { readFileSync } from 'node:fs'
 
 import { expect, test, type Page } from '@playwright/test'
 
-import { ask, openApp } from './helpers'
+import { ask, openApp, openDashboards } from './helpers'
 import type { MockApi } from './mock-api'
 
 interface MaliciousSpec {
@@ -73,7 +73,7 @@ test('the fixture holds the 10 frozen specs', () => {
 for (const entry of SPECS) {
   test(`${entry.id} (${entry.violation}) is withheld before render`, async ({ page }) => {
     const external = watchExternalRequests(page)
-    const api = await openApp(page)
+    const api = await openApp(page, { hash: '#/ask' })
     await page.getByRole('switch', { name: 'Developer mode' }).click()
     api.nextChart = entry.spec
     await ask(page, CHART_QUESTION)
@@ -89,7 +89,7 @@ for (const entry of SPECS) {
 }
 
 async function pinChartTile(page: Page): Promise<MockApi> {
-  const api = await openApp(page)
+  const api = await openApp(page, { hash: '#/ask' })
   await ask(page, CHART_QUESTION)
   await expect(page.getByTestId('answer-text')).toHaveCount(1)
   await page.getByTestId('turn').last().getByRole('button', { name: 'Pin to dashboard' }).click()
@@ -103,22 +103,30 @@ function remoteDataSpec(): MaliciousSpec['spec'] {
   return entry.spec
 }
 
-test('a hostile chart stored on a tile is withheld on the dashboard too', async ({ page }) => {
+// Since Phase 2b a tile draws a spec the browser builds from its ROWS
+// (src/viz/spec.ts, itself A7-checked); a stored server spec lends only its mark
+// as a hint. So a hostile stored spec is never handed to Vega at all. These two
+// pin that: the tile still draws, from its own spec, and the hostile spec's
+// remote data URL (ms_02, evil.example.com) is never fetched.
+test('a hostile chart stored on a tile never reaches Vega: the tile draws its own spec', async ({ page }) => {
   const external = watchExternalRequests(page)
   const api = await pinChartTile(page)
   api.setTileChart('tile-1', remoteDataSpec())
-  await page.goto('/#/dashboard')
+  await openDashboards(page)
   await page.reload() // a fresh load: nothing cached from before the chart changed
 
+  await expect(page.getByRole('tablist', { name: 'Dashboards' }).getByRole('tab', { name: 'Overview' })).toBeVisible()
   const tile = page.getByTestId('tile').first()
-  await expect(tile.getByText('Chart withheld')).toBeVisible()
-  await expect(tile.locator('canvas')).toHaveCount(0)
+  await expect(tile.locator('canvas')).toBeVisible()
+  await expect(tile.getByText('Chart withheld')).toHaveCount(0)
   expect(external).toEqual([])
 })
 
-test('a drawn chart that turns hostile leaves no drawing behind', async ({ page }) => {
+test('a drawn tile whose stored chart turns hostile keeps drawing from its rows and fetches nothing', async ({ page }) => {
+  const external = watchExternalRequests(page)
   const api = await pinChartTile(page)
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
+  await openDashboards(page)
+  await expect(page.getByRole('tablist', { name: 'Dashboards' }).getByRole('tab', { name: 'Overview' })).toBeVisible()
   const tile = page.getByTestId('tile').first()
   await expect(tile.locator('canvas')).toBeVisible()
 
@@ -126,13 +134,13 @@ test('a drawn chart that turns hostile leaves no drawing behind', async ({ page 
   await tile.getByRole('button', { name: 'Tile actions' }).click()
   await page.getByRole('menuitem', { name: 'Refresh now' }).click()
 
-  await expect(tile.getByText('Chart withheld')).toBeVisible()
-  // Not merely hidden: the old view's canvas must be gone from the page.
-  await expect(tile.locator('canvas')).toHaveCount(0)
+  await expect(tile.locator('canvas')).toHaveCount(1)
+  await expect(tile.getByText('Chart withheld')).toHaveCount(0)
+  expect(external).toEqual([])
 })
 
 test('a chart that passes the check but cannot be drawn says so, without blaming the check', async ({ page }) => {
-  const api = await openApp(page)
+  const api = await openApp(page, { hash: '#/ask' })
   await page.getByRole('switch', { name: 'Developer mode' }).click()
   // A7 allows expression-free transforms; this one makes Vega-Lite's compiler throw.
   api.nextChart = {
@@ -160,7 +168,7 @@ test('charts never install the vega-tooltip handler, even when a spec asks for t
   // only stops automatic tooltips; an explicit tooltip channel passes A7 (it
   // checks each channel's properties, not channel names), so the renderer
   // itself must never install the handler. Its constructor always adds this style.
-  const api = await openApp(page)
+  const api = await openApp(page, { hash: '#/ask' })
   api.nextChart = {
     $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
     mark: 'bar',

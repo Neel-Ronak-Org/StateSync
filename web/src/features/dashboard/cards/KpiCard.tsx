@@ -18,8 +18,10 @@ export function KpiCard({ shape, kind }: KpiCardProps) {
   const up = (kpi.change?.pct ?? 0) > 0
   const down = (kpi.change?.pct ?? 0) < 0
   return (
-    <div className="flex h-full min-h-0 flex-col justify-end gap-1">
-      <div className="flex items-end justify-between gap-3">
+    // mt-auto, not justify-end: with no room (a banner above it) justify-end
+    // overflows UPWARD over the banner; mt-auto collapses and flows down.
+    <div className="flex h-full min-h-0 flex-col gap-1">
+      <div className="mt-auto flex items-end justify-between gap-3">
         <div className="min-w-0">
           <AnimatedNumber
             data-testid="tile-kpi"

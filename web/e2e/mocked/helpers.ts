@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 
 import { MockApi, TOKEN } from './mock-api'
 
@@ -30,4 +30,11 @@ export async function ask(page: Page, question: string): Promise<void> {
   const box = page.getByLabel('Ask a question')
   await box.fill(question)
   await box.press('Enter')
+}
+
+export async function openDashboards(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Dashboards', exact: true }).click()
+  const tablist = page.getByRole('tablist', { name: 'Dashboards' })
+  const emptyHeading = page.getByRole('heading', { name: /No dashboards for|This dashboard is empty/ })
+  await expect(tablist.or(emptyHeading)).toBeVisible()
 }

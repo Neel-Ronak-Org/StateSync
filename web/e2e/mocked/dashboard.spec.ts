@@ -6,7 +6,7 @@
 
 import { expect, test, type Page } from '@playwright/test'
 
-import { ask, openApp } from './helpers'
+import { ask, openApp, openDashboards } from './helpers'
 import type { MockApi } from './mock-api'
 
 async function pinLast(page: Page) {
@@ -15,9 +15,8 @@ async function pinLast(page: Page) {
 }
 
 async function openDashboard(page: Page) {
-  // exact: every 'Pin to dashboard' button would also match 'Dashboard'
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+  await openDashboards(page)
+  await expect(page.getByRole('tablist', { name: 'Dashboards' })).toBeVisible()
 }
 
 async function tileActions(page: Page, item: string) {
@@ -26,7 +25,7 @@ async function tileActions(page: Page, item: string) {
 }
 
 async function withOnePinnedTile(page: Page): Promise<MockApi> {
-  const api = await openApp(page)
+  const api = await openApp(page, { hash: '#/ask' })
   await ask(page, 'How many orders are there in total?')
   await expect(page.getByTestId('answer-text')).toHaveCount(1)
   await pinLast(page)
@@ -46,7 +45,7 @@ test.describe('pinning', () => {
   })
 
   test('a chart answer pins as a chart tile', async ({ page }) => {
-    await openApp(page)
+    await openApp(page, { hash: '#/ask' })
     await ask(page, 'Show orders by status as a chart')
     await expect(page.getByTestId('answer-text')).toHaveCount(1)
     await pinLast(page)
@@ -55,14 +54,14 @@ test.describe('pinning', () => {
   })
 
   test('a document-only answer offers no pin', async ({ page }) => {
-    await openApp(page)
+    await openApp(page, { hash: '#/ask' })
     await ask(page, 'What does the SLA policy say for LP003?')
     await expect(page.getByTestId('answer-text')).toHaveCount(1)
     await expect(page.getByTestId('turn').last().getByRole('button', { name: 'Pin to dashboard' })).toHaveCount(0)
   })
 
   test("a refused pin shows the server's reason", async ({ page }) => {
-    const api = await openApp(page)
+    const api = await openApp(page, { hash: '#/ask' })
     await ask(page, 'How many orders are there in total?')
     await expect(page.getByTestId('answer-text')).toHaveCount(1)
     api.failNext('/tiles', 409, 'You already have 30 tiles; the limit is 30.')
@@ -73,9 +72,11 @@ test.describe('pinning', () => {
 
 test.describe('dashboard', () => {
   test('an empty dashboard says so and leads back to the chat', async ({ page }) => {
-    await openApp(page, { hash: '#/dashboard' })
-    await expect(page.getByText('No tiles yet')).toBeVisible()
-    await page.getByRole('button', { name: 'Go to chat' }).click()
+    await openApp(page, { hash: '#/dashboards' })
+    await expect(page.getByRole('heading', { name: 'No dashboards for public yet' })).toBeVisible()
+    await page.getByRole('button', { name: 'Start empty' }).click()
+    await expect(page.getByRole('heading', { name: 'This dashboard is empty' })).toBeVisible()
+    await page.getByRole('button', { name: 'Ask a question' }).click()
     await expect(page.getByLabel('Ask a question')).toBeVisible()
   })
 
@@ -114,7 +115,7 @@ test.describe('dashboard', () => {
     await tileActions(page, 'Unpin')
     await page.getByRole('dialog', { name: 'Unpin this tile?' }).getByRole('button', { name: 'Unpin' }).click()
     await expect(page.getByTestId('tile')).toHaveCount(0)
-    await expect(page.getByText('No tiles yet')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'This dashboard is empty' })).toBeVisible()
   })
 
   test('a tile whose data changed asks for review, and accepting clears it', async ({ page }) => {
