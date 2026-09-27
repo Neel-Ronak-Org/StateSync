@@ -9,11 +9,13 @@
 #
 # WHAT THIS DELIBERATELY DOES NOT DO, stated here so a green badge never
 # implies more than it means. The model-sensitive metrics (M2-M7), the
-# adversarial suite (M8), the routing experiment (M9) and the browser half of
-# E2 are NOT run here, and cannot be: they need the full seven-service stack
-# including a local Ollama with qwen2.5:7b (~4.7GB), and take 25-40 minutes
-# each. A hosted runner cannot do that, and adding a job that never runs would
-# be the same decoration this project keeps deleting.
+# adversarial suite (M8), the routing experiment (M9) and the LIVE browser
+# suite (web/e2e/live: the served CSP, real answers) are NOT run here, and
+# cannot be: they need the full seven-service stack and a model provider, and
+# the metrics take 25-40 minutes each. A hosted runner cannot do that, and
+# adding a job that never runs would be the same decoration this project keeps
+# deleting. The browser suite with the API mocked needs no stack, so it runs
+# (the `web` job), including the browser half of E2-V3/V6.
 #
 # So this job runs everything genuinely deterministic and stack-free, and the
 # final step prints what it could NOT cover -- into the run log, every time, so
@@ -119,9 +121,54 @@ jobs:
             docker compose exec -T mcp python3 - < scripts/verify_tenancy.py
             python3 scripts/verify_seams.py        # incl. flag liveness
             bash scripts/verify_security.sh        # M8, ~15-25 min
+            cd web && STATESYNC_LIVE=1 npx playwright test   # served CSP, real answers
             python3 scripts/diagnose_m4.py --out docs/m4_<label>.json
 
           Model-sensitive metrics (M2-M7) are provisional on the local 7B and
           are never run in CI. See docs/rebaseline_runbook.md.
           ============================================================
           EOF
+
+  web:
+    name: Web app (lint, types, build, mocked browser suite)
+    # The UI acceptance bar. web/e2e/mocked runs the built app with the API
+    # stubbed, so it needs no stack; without this job a frontend-only change
+    # would re-check nothing (audit 004 F-004-2). The build step inside it runs
+    # tsc, and lint carries the HTML-sink and eval bans.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint (includes the HTML-sink and eval bans)
+        run: npm run lint
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Mocked browser suite (builds and previews the app first)
+        run: npx playwright test
+
+      - name: Keep traces of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: web/test-results
+          if-no-files-found: ignore
+          retention-days: 7
