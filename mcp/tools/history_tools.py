@@ -36,9 +36,11 @@ from session import get_tenant_id
 logger = logging.getLogger(__name__)
 
 # Sessions the dashboard builder asks its planned questions in
-# (orchestrator/dashboard_builder.py). They are not conversations a person had,
-# so list_sessions leaves them out; tiles pinned from them still work.
+# (orchestrator/dashboard_builder.py), and those a workspace's setup test asks
+# in (orchestrator/workspace_setup.py). They are not conversations a person
+# had, so list_sessions leaves them out; tiles pinned from them still work.
 BUILD_SESSION_PREFIX = "build-"
+SETUP_SESSION_PREFIX = "setup-"
 
 # Algorithmic convergence parameters for byte-budget fitting (not configuration constants under A0.2).
 _BYTE_FIT_DROP_FRACTION: float = 0.10  # noqa: literals - algorithmic convergence step, not configuration
@@ -496,12 +498,12 @@ async def list_sessions(principal_id: str, limit: int | None = None) -> dict[str
                    (array_agg(target_schema ORDER BY turn_index))[1] AS target_schema
             FROM session_state.conversation_turns
             WHERE tenant_id = %s AND principal_id = %s
-              AND session_id NOT LIKE %s
+              AND session_id NOT LIKE %s AND session_id NOT LIKE %s
             GROUP BY session_id
             ORDER BY max(computed_at) DESC
             LIMIT %s
             """,
-            (tenant_id, principal_id, f"{BUILD_SESSION_PREFIX}%", effective_limit),
+            (tenant_id, principal_id, f"{BUILD_SESSION_PREFIX}%", f"{SETUP_SESSION_PREFIX}%", effective_limit),
         )
         rows = await cur.fetchall()
 

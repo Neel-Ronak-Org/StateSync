@@ -92,6 +92,8 @@ _LAST_WRITE_WINS_FIELDS: frozenset[str] = frozenset({
     "vega_spec",
     "flags_snapshot",
     "debug_candidate_sql",
+    "allow_fast_path",
+    "verified_example",
 })
 
 # Fields whose reducer is "append" (list concatenation)
@@ -116,6 +118,7 @@ _IMMUTABLE_FIELDS: frozenset[str] = frozenset({
     "session_id",
     "raw_query",
     "target_schema",
+    "workspace_id",
 })
 
 
@@ -131,6 +134,10 @@ class StateSyncState(BaseModel):
     # Chosen once at entry and must never change mid-query — a query that switched
     # corpus halfway would produce an answer whose provenance is unknowable.
     target_schema: str
+    # The workspace the question was asked in (docs/V3_PLAN.md Phase 3), or None.
+    # With one, the SQL agent adds the workspace's approved knowledge to its
+    # prompt, and an exact match of an approved example runs its SQL directly.
+    workspace_id: str | None = None
 
     # --- input & normalization (Part D) ---
     raw_query:    str
@@ -184,6 +191,12 @@ class StateSyncState(BaseModel):
     # deterministically testable. Never set by production request paths.
     # Consumed once by sql_agent_node at attempt 0; ignored on any retry.
     debug_candidate_sql: str | None = None
+
+    # --- workspace fast path (Phase 3) ---
+    # allow_fast_path is False for the setup test, which must measure the
+    # pipeline rather than replay answers it approved earlier.
+    allow_fast_path:  bool = True
+    verified_example: bool = False   # the SQL is an approved example, run as-is
 
     # --- output (Part E2) ---
     answer_text: str | None = None

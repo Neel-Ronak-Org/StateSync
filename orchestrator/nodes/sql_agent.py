@@ -78,10 +78,11 @@ from typing import Any
 from config_loader import cfg
 from classifiers.error_classifier import classify_error
 from llm.provider import get_agent_llm
-from mcp_client import MCPSession, data_run_select, data_sample_rows, schema_list_tables
+from mcp_client import MCPSession, data_run_select, data_sample_rows, schema_list_tables, workspaces_manage
 from memory_store import get_trajectory_store
 from schema_retriever import get_schema_retriever, target_schema
 from spatial_resolver import get_spatial_resolver
+from workspace_context import format_context, system_suffix
 
 logger = logging.getLogger(__name__)
 
@@ -556,7 +557,29 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         new_interrogation_samples: list[dict] = []
         table_descriptions: list[dict] = []
 
-        if attempt == 0:
+        # Phase 3: a question asked in a workspace gets that workspace's
+        # APPROVED knowledge (workspace_context.py), and an exact match of an
+        # approved example runs its SQL directly -- the fast path, attempt 0
+        # only and never during the setup test (allow_fast_path=False).
+        workspace_id = state_dict.get("workspace_id")
+        ws_ctx: dict[str, Any] = {}
+        if workspace_id:
+            ws_ctx = await workspaces_manage(session, principal_id=state_dict["principal_id"], action="context",
+                                             workspace_id=workspace_id, question=raw_query)
+            if not ws_ctx.get("ok"):
+                logger.warning("SQL Agent: workspace context unavailable for query_id=%s: %s",
+                               query_id, ws_ctx.get("message"))
+                ws_ctx = {}
+        ws_block = format_context(ws_ctx, None, int(cfg.workspaces.context_max_chars)) if ws_ctx else ""
+        ws_suffix = system_suffix(ws_ctx.get("business_context")) if ws_ctx else ""
+        exact_sql: str | None = None
+        if attempt == 0 and state_dict.get("allow_fast_path", True) and not state_dict.get("debug_candidate_sql"):
+            exact_sql = (ws_ctx.get("exact") or {}).get("sql")
+
+        if attempt == 0 and exact_sql:
+            # Fast path: no memory, no draft, no interrogation, no model call.
+            context_block = ""
+        elif attempt == 0:
             # Step 1: consult memory (attempt 0 only -- C2-V6).
             if memory_enabled:
                 store = get_trajectory_store()
@@ -576,11 +599,15 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 context_block = _format_memory_context(
                     mem_insight, mem_tables, mem_join_path, mem_dialect_notes,
                 )
+                if ws_block:
+                    context_block += "\n\n" + ws_block
             else:
                 retriever = get_schema_retriever()
                 schema_context, table_descriptions = await retriever.retrieve(session, table_names, _schema)
                 trajectory_steps += len(table_names)
                 context_block = f"Schema:\n{schema_context}"
+                if ws_block:
+                    context_block += "\n\n" + ws_block
 
                 # Step 2: draft the query BEFORE interrogating, so interrogation
                 # can target the tables this question actually touches rather
@@ -596,7 +623,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 draft_sql: str = state_dict.get("debug_candidate_sql") or ""
                 if not draft_sql:
                     draft_result = await get_agent_llm("sql").complete(
-                        system=_SYSTEM_PROMPT.format(max_rows=cfg.mcp.max_rows_default),
+                        system=_SYSTEM_PROMPT.format(max_rows=cfg.mcp.max_rows_default) + ws_suffix,
                         messages=[{"role": "user", "content": (
                             f"{context_block}\n\nQuestion: {raw_query}\n\n"
                             f"Write a single PostgreSQL SELECT query to answer this question."
@@ -643,6 +670,8 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             schema_context, table_descriptions = await retriever.retrieve(session, table_names, _schema)
             trajectory_steps += len(table_names)
             context_block = f"Schema:\n{schema_context}"
+            if ws_block:
+                context_block += "\n\n" + ws_block
 
         # Phase D: entity-preservation + spatial predicate hints, appended
         # regardless of which branch above built context_block (memory hit,
@@ -663,7 +692,13 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         # Step 4: generate SQL -- debug override (attempt 0, test harness
         # only) or the provider seam.
         debug_sql = state_dict.get("debug_candidate_sql")
-        if attempt == 0 and debug_sql:
+        verified_example = False
+        if attempt == 0 and exact_sql:
+            candidate_sql = exact_sql
+            verified_example = True
+            logger.info("SQL Agent fast path for query_id=%s: approved example in workspace %s",
+                        query_id, workspace_id)
+        elif attempt == 0 and debug_sql:
             candidate_sql = debug_sql
             logger.warning(
                 "SQL Agent using debug_candidate_sql override for query_id=%s "
@@ -673,13 +708,13 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         else:
             llm = get_agent_llm("sql")
             if attempt == 0:
-                system_prompt = _SYSTEM_PROMPT.format(max_rows=max_rows)
+                system_prompt = _SYSTEM_PROMPT.format(max_rows=max_rows) + ws_suffix
                 user_message = (
                     f"{context_block}\n\nQuestion: {raw_query}\n\n"
                     f"Write a single PostgreSQL SELECT query to answer this question."
                 )
             else:
-                system_prompt = _CORRECTION_SYSTEM_PROMPT.format(max_rows=max_rows)
+                system_prompt = _CORRECTION_SYSTEM_PROMPT.format(max_rows=max_rows) + ws_suffix
                 error_history_text = _format_error_history(existing_errors)
                 # Error history first, schema second: the fix is the most
                 # important, actionable content, and leading with it reads
@@ -725,6 +760,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             "schema_fingerprint": schema_fingerprint,
             "candidate_sql": candidate_sql,
             "attempt": attempt,
+            "verified_example": verified_example,
         }
         if new_interrogation_samples:
             update["interrogation_samples"] = new_interrogation_samples

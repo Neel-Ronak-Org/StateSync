@@ -23,7 +23,12 @@ Needs: the stack running, migration 021 applied, secrets/api_token_dev and
 secrets/api_token_second (two different principals). Everything it creates is
 deleted at the end.
 
-Usage: python3 scripts/verify_workspaces.py
+Usage: python3 scripts/verify_workspaces.py [--setup SCHEMA ...]
+  --setup also walks the setup wizard on each named dataset (olist, public, live):
+  AI drafts, an owner edit that a re-draft keeps, approval and the 10-question
+  setup test, and reports its score (spends model quota: about 60 model calls
+  per dataset). The workspace is kept so its answers can be read; it is named
+  "Verify setup <schema>" and replaced on the next run.
 """
 
 from __future__ import annotations
@@ -31,6 +36,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -53,6 +59,9 @@ def check(ok: bool, label: str, detail: str = "") -> bool:
     return ok
 
 
+QUERY_TIMEOUT_S = 600      # the model adapter retries a rate limit for several minutes
+
+
 def call(method: str, path: str, token: str | None = TOKEN_A, body: dict | None = None):
     headers = {"Content-Type": "application/json"}
     if token:
@@ -60,7 +69,7 @@ def call(method: str, path: str, token: str | None = TOKEN_A, body: dict | None 
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(f"{BASE}{path}", data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(req, timeout=120) as r:
+        with urllib.request.urlopen(req, timeout=QUERY_TIMEOUT_S if path == "/query" else 120) as r:
             return r.status, json.loads(r.read() or b"{}")
     except urllib.error.HTTPError as e:
         raw = e.read()
@@ -110,6 +119,20 @@ def mcp(tenant: str, method: str, params: dict) -> dict:
 
 def section(title: str) -> None:
     print(f"\n── {title} " + "─" * max(4, 60 - len(title)))
+
+
+def verify_preflight() -> None:
+    section("The browser may call the workspace routes")
+    req = urllib.request.Request(f"{BASE}/workspaces/x/descriptions", method="OPTIONS", headers={
+        "Origin": "http://localhost:3000", "Access-Control-Request-Method": "PUT",
+        "Access-Control-Request-Headers": "authorization,content-type"})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            allowed = r.headers.get("access-control-allow-methods", "")
+            ok = r.status == 200 and "PUT" in allowed
+    except urllib.error.HTTPError as e:
+        ok, allowed = False, f"{e.code}"
+    check(ok, "a PUT from the web app's origin passes the CORS preflight", allowed)
 
 
 def verify_rls_catalog() -> None:
@@ -163,12 +186,99 @@ def verify_existing_app_still_sees_its_data(tenant_a: str) -> None:
     check(status == 200, "GET /tiles still works", str(status))
 
 
+SETUP_EXIT_MIN = 8          # docs/V3_PLAN.md Phase 3 exit: at least 8 of 10
+DRAFT_TIMEOUT_S = 600
+TEST_TIMEOUT_S = 1800
+
+
+def wait_for(path: str, key: str, timeout_s: int) -> dict:
+    deadline = time.time() + timeout_s
+    body: dict = {}
+    while time.time() < deadline:
+        body = call("GET", path)[1]
+        job = body.get("job") or {}
+        if job.get("state") in ("done", "failed"):
+            return body
+        time.sleep(5)
+    return body
+
+
+def verify_setup(schema: str) -> None:
+    section(f"Setup wizard on {schema}")
+    psql(f"DELETE FROM session_state.workspaces WHERE name = 'Verify setup {schema}';")
+    status, body = call("POST", "/workspaces", body={"name": f"Verify setup {schema}", "target_schema": schema})
+    if not check(status == 201, "create the workspace", f"{status} {body}"):
+        return
+    wid = body["workspace"]["workspace_id"]
+    check(call("POST", f"/workspaces/{wid}/setup")[0] == 409, "the test before approval is refused (409)")
+    check(call("POST", f"/workspaces/{wid}/draft", token=TOKEN_B)[0] == 404, "another principal cannot draft it")
+
+    status, body = call("POST", f"/workspaces/{wid}/draft")
+    check(status == 202, "drafting starts (202)", f"{status} {body}")
+    check(call("POST", f"/workspaces/{wid}/draft")[0] == 409, "a second setup step while one runs is refused (409)")
+    job = wait_for(f"/workspaces/{wid}/draft", "job", DRAFT_TIMEOUT_S).get("job") or {}
+    check(job.get("state") == "done", "drafting finishes", f"{job.get('state')} {job.get('error')}")
+    cols = call("GET", f"/workspaces/{wid}/catalog")[1].get("columns", [])
+    drafted = [c for c in cols if c["description"] and c["description_source"] == "ai"]
+    check(len(drafted) >= 0.9 * len(cols), "at least 90% of tables and columns have a draft", f"{len(drafted)}/{len(cols)}")
+    check(not any(c["approved"] for c in cols), "no draft is approved")
+    real = set(psql(f"SELECT table_name || '.' || column_name FROM information_schema.columns "
+                    f"WHERE table_schema = '{schema}';").splitlines())
+    stray = [f"{c['table_name']}.{c['column_name']}" for c in cols
+             if c["column_name"] and f"{c['table_name']}.{c['column_name']}" not in real]
+    check(not stray, "every drafted column exists in the database", ", ".join(stray[:5]))
+    defs = call("GET", f"/workspaces/{wid}/definitions")[1].get("definitions", [])
+    check(len(defs) > 0 and all(d["source"] == "ai" for d in defs), "business definitions are drafted", str(len(defs)))
+    for c in drafted[:3]:
+        print(f"      e.g. {c['table_name']}.{c['column_name'] or '(table)'}: {c['description']}")
+
+    target = drafted[0]
+    call("PUT", f"/workspaces/{wid}/descriptions", body={"items": [
+        {"table_name": target["table_name"], "column_name": target["column_name"], "description": "Owner wording."}]})
+    call("POST", f"/workspaces/{wid}/draft")
+    wait_for(f"/workspaces/{wid}/draft", "job", DRAFT_TIMEOUT_S)
+    again = call("GET", f"/workspaces/{wid}/catalog")[1].get("columns", [])
+    kept = next(c for c in again if c["table_name"] == target["table_name"] and c["column_name"] == target["column_name"])
+    check(kept["description"] == "Owner wording." and kept["description_source"] == "owner",
+          "a re-draft keeps what the owner wrote", str(kept))
+
+    status, body = call("POST", f"/workspaces/{wid}/approve")
+    check(status == 200 and body["workspace"]["setup_state"] == "approved", "the owner approves", f"{status}")
+    status, body = call("POST", f"/workspaces/{wid}/setup")
+    check(status == 202, "the setup test starts (202)", f"{status} {body}")
+    graded_by = body.get("graded_by")
+    body = wait_for(f"/workspaces/{wid}/setup", "job", TEST_TIMEOUT_S)
+    run = body.get("run") or {}
+    job = body.get("job") or {}
+    check(job.get("state") == "done" and run.get("state") == "done", "the test finishes",
+          f"{job.get('state')} {job.get('error')}")
+    for r in run.get("results", []):
+        print(f"      {r['position']:>2}. {r['verdict']:<7} {r['question'][:70]}  {r.get('detail') or ''}")
+    _, sessions = call("GET", "/sessions")
+    check(not any(x["session_id"].startswith("setup-") for x in sessions.get("sessions", [])),
+          "the test's conversations are hidden from the chat list")
+    if graded_by == "reference":
+        score = run.get("score") or 0
+        ws_now = call("GET", f"/workspaces/{wid}")[1]["workspace"]
+        check(ws_now["counts"]["examples"] == score, "every right answer became an example",
+              f"{ws_now['counts']['examples']} vs {score}")
+        print(f"      SCORE on {schema}: {score}/{run.get('total')} (exit bar {SETUP_EXIT_MIN})")
+        results.append((score >= SETUP_EXIT_MIN, f"{schema} scores at least {SETUP_EXIT_MIN}/10"))
+        print(f"  {'✓ PASS' if score >= SETUP_EXIT_MIN else '✗ FAIL'}: {schema} scores at least {SETUP_EXIT_MIN}/10")
+    else:
+        check(all(r["verdict"] in ("pending", "error") for r in run.get("results", [])),
+              "an owner-graded run waits for the owner")
+
+
 def main() -> int:
+    args = sys.argv[1:]
+    setup_schemas = args[args.index("--setup") + 1:] if "--setup" in args else []
     try:
         call("GET", "/health", token=None)
     except Exception as exc:  # noqa: BLE001
         raise SystemExit(f"FATAL: the stack is not up ({exc})") from None
 
+    verify_preflight()
     verify_rls_catalog()
 
     section("Create, read, isolate")
@@ -293,6 +403,26 @@ def main() -> int:
         ctx = mcp(tenant_a, "workspaces.manage", {**context_args, "question": "how many orders are there"})
         check((ctx.get("exact") or {}).get("sql") == "SELECT count(*) FROM olist.orders",
               "the right answer is now an exact match for the fast path", str(ctx.get("exact")))
+        section("Questions asked in the workspace")
+        status, body = call("POST", "/query", body={"query": "How many orders are there?", "workspace_id": wid})
+        trace = body.get("state_trace", {}) if status == 200 else {}
+        check(status == 200 and trace.get("verified_example") is True
+              and trace.get("executed_sql") == "SELECT count(*) FROM olist.orders",
+              "an exact match of an approved example runs its SQL (fast path, verified)",
+              f"{status} {trace.get('verified_example')} {trace.get('executed_sql')}")
+        check(trace.get("target_schema") == "olist" and trace.get("workspace_id") == wid,
+              "on the workspace's dataset, recorded in the trace")
+        check(call("POST", "/query", token=TOKEN_B, body={"query": "How many orders are there?",
+                                                         "workspace_id": wid})[0] == 404,
+              "another principal cannot ask in my workspace")
+        check(call("POST", "/query", body={"query": "How many orders are there?", "workspace_id": wid,
+                                           "schema": "public"})[0] == 409,
+              "a question cannot name another dataset than its workspace's")
+        status, body = call("POST", "/query", body={"query": "How many sellers are in each state?", "workspace_id": wid})
+        check(status == 200 and body["state_trace"].get("verified_example") is False
+              and body["state_trace"].get("executed_sql"),
+              "a question without an exact match goes through the pipeline", f"{status}")
+
         _, latest = call("GET", f"/workspaces/{wid}/setup")
         check(latest.get("run", {}).get("run_id") == run_id, "GET /setup returns the latest run")
         check(call("PUT", f"/workspaces/{wid}/setup/{run_id}/results/1", body={"verdict": "wrong"})[0] == 422,
@@ -329,6 +459,9 @@ def main() -> int:
                     % ((wid,) * 5))
         check(left == "0", "its knowledge, runs and context versions go with it", left)
         psql("DELETE FROM session_state.workspaces WHERE name LIKE 'Verify %';")
+
+    for schema in setup_schemas:
+        verify_setup(schema)
 
     failed = [label for ok, label in results if not ok]
     print(f"\n{len(results) - len(failed)}/{len(results)} passed")

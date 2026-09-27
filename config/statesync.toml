@@ -165,12 +165,28 @@ examples_max                = 500
 scan_max_tables             = 60
 scan_sample_rows            = 50
 scan_sample_values          = 5
-# The setup test.
+# The setup test (D-v3-12). Sample datasets with a curated reference set are
+# graded by execution accuracy against it; any other dataset is graded by the owner.
 setup_questions             = 10
+answer_max_chars            = 2000
+questions_max_tokens        = 1200
+# AI drafts of descriptions and definitions (the `decomposer` role).
+draft_batch_chars           = 6000    # the catalog summary per model call
+draft_max_tokens            = 4000
+draft_attempts              = 2
+draft_definitions_per_batch = 6
+job_keep_s                  = 3600    # finished jobs stay readable this long
 # What a question in a workspace gets (context assembly, slice 3).
 context_max_examples        = 3
 context_max_definitions     = 12
 example_min_similarity      = 0.3
+context_max_chars           = 6000    # the knowledge block added to the SQL agent's context
+
+[workspaces.setup_sets]
+# Reference questions per sample dataset, under fixtures/ (read-only). The test
+# takes the first `setup_questions` English SQL questions of the set.
+olist  = "golden/olist.json"
+public = "golden/phase_c2.json"
 
 [simulator]
 # The live demo dataset (docs/V3_PLAN.md Phase 2b, migration 020, simulator/).

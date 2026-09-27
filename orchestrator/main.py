@@ -38,7 +38,7 @@ from state import StateSyncState
 from tiles_api import register_tile_routes
 from builder_api import register_build_routes
 from dashboards_api import register_dashboard_routes
-from workspaces_api import register_workspace_routes
+from workspaces_api import call_workspaces, register_workspace_routes
 
 logging.basicConfig(
     level=logging.INFO,
@@ -81,10 +81,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=list(cfg.api.cors_allowed_origins),
     allow_credentials=False,
-    # PATCH and DELETE for the /tiles routes (rename, unpin). Without them the
-    # browser preflight refuses those calls from the web UI's origin, which no
+    # PATCH and DELETE for the /tiles routes (rename, unpin); PUT for the
+    # /workspaces knowledge routes (Phase 3). Without them the browser
+    # preflight refuses those calls from the web UI's origin, which no
     # server-side test can see (found auditing Phase 1).
-    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
     # Browsers hide every non-safelisted response header from cross-origin
     # JavaScript unless it is exposed. Without this the web UI could never read
@@ -209,6 +210,9 @@ class QueryRequest(BaseModel):
     # None means "use the configured default", which keeps existing callers
     # and every measurement script byte-identical in behaviour.
     schema: str | None = None
+    # A workspace of the caller's (docs/V3_PLAN.md Phase 3): the question is
+    # answered on its dataset with its approved knowledge.
+    workspace_id: str | None = None
     # Test harness only (C2-V1/V2): seeds the attempt-0 candidate SQL,
     # bypassing LLM generation. Never sent by the frontend.
     debug_candidate_sql: str | None = None
@@ -384,6 +388,8 @@ async def answer_question(
     client_ip: str | None,
     route_path: str = "/query",
     debug_candidate_sql: str | None = None,
+    workspace_id: str | None = None,
+    allow_fast_path: bool = True,
 ) -> QueryResponse:
     """
     Run one question through the pipeline and record the turn: the body of
@@ -417,6 +423,8 @@ async def answer_question(
                 session_id=initial_input["session_id"],
                 raw_query=initial_input["raw_query"],
                 target_schema=requested,
+                workspace_id=workspace_id,
+                allow_fast_path=allow_fast_path,
                 flags_snapshot=initial_input["flags_snapshot"],
                 debug_candidate_sql=debug_candidate_sql,
             )
@@ -448,6 +456,8 @@ async def answer_question(
         "tenant_id":   final_state.tenant_id,
         "principal_id": final_state.principal_id,
         "target_schema": final_state.target_schema,
+        "workspace_id": final_state.workspace_id,
+        "verified_example": final_state.verified_example,
         "route":       final_state.route,
         "executed_sql": final_state.executed_sql,
         # executed_sql is null when a statement was rejected before execution,
@@ -611,6 +621,19 @@ async def run_query(
         raise HTTPException(status_code=422, detail="query must not be empty")
 
     requested = body.schema or target_schema()
+    if body.workspace_id:
+        # The workspace decides the dataset; it must be the caller's own.
+        try:
+            workspace = (await call_workspaces(principal, "get", workspace_id=body.workspace_id)).get("workspace")
+        except Exception as exc:
+            logger.error("Workspace lookup failed for %s: %s", body.workspace_id, exc)
+            raise HTTPException(status_code=503, detail="Workspace service unavailable. Try again shortly.")
+        if workspace is None:
+            raise HTTPException(status_code=404, detail="No such workspace.")
+        if body.schema and body.schema != workspace["target_schema"]:
+            raise HTTPException(status_code=409, detail=(
+                f"This workspace uses the {workspace['target_schema']} dataset, not {body.schema}."))
+        requested = workspace["target_schema"]
     if requested not in cfg.api.allowed_schemas:
         raise HTTPException(
             status_code=422,
@@ -674,12 +697,15 @@ async def run_query(
         requested,
         client_ip,
         debug_candidate_sql=body.debug_candidate_sql,
+        workspace_id=body.workspace_id,
     )
 
 
 register_tile_routes(app, require_principal=require_principal, audit=_audit)
 register_dashboard_routes(app, require_principal=require_principal, audit=_audit)
-register_workspace_routes(app, require_principal=require_principal, audit=_audit)
+register_workspace_routes(app, require_principal=require_principal, audit=_audit,
+                          require_principal_for_model=require_principal_for_model,
+                          answer_question=answer_question)
 register_build_routes(app, require_principal=require_principal,
                       require_principal_for_model=require_principal_for_model,
                       audit=_audit, answer_question=answer_question)

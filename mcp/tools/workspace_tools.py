@@ -346,7 +346,7 @@ async def _save_descriptions(tenant_id, principal_id, workspace_id=None, items=N
         async with get_history_connection() as conn:
             if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
                 raise _Abort(_fail("not_found", "No such workspace."))
-            updated = 0
+            updated = skipped = 0
             for item in items:
                 if not isinstance(item, dict):
                     raise _Abort(_fail("invalid", "Every item must be an object."))
@@ -356,18 +356,22 @@ async def _save_descriptions(tenant_id, principal_id, workspace_id=None, items=N
                 text = clean_text(item.get("description"), max_chars, allow_empty=True)
                 if text is None:
                     raise _Abort(_fail("invalid", "description must be text."))
-                row = await (await conn.execute(
+                key = (workspace_id, item.get("table_name"), item.get("column_name") or "")
+                current = await (await conn.execute(
+                    "SELECT description_source FROM session_state.kb_columns "
+                    "WHERE workspace_id = %s AND table_name = %s AND column_name = %s", key)).fetchone()
+                if current is None:
+                    raise _Abort(_fail("not_found", f"{key[1]}.{key[2]} is not in this workspace's catalog. Scan again."))
+                if source == "ai" and current[0] == "owner":
+                    skipped += 1        # an AI draft never replaces the owner's words
+                    continue
+                await conn.execute(
                     """
                     UPDATE session_state.kb_columns
                     SET description = %s, description_source = %s, approved = FALSE, updated_at = now()
                     WHERE workspace_id = %s AND table_name = %s AND column_name = %s
-                    RETURNING table_name
                     """,
-                    (text or None, source, workspace_id, item.get("table_name"), item.get("column_name") or ""),
-                )).fetchone()
-                if row is None:
-                    raise _Abort(_fail("not_found", f"{item.get('table_name')}.{item.get('column_name') or ''} "
-                                                    "is not in this workspace's catalog. Scan again."))
+                    (text or None, source, *key))
                 updated += 1
             if any(i.get("source", "owner") == "ai" for i in items):
                 await conn.execute(
@@ -375,7 +379,7 @@ async def _save_descriptions(tenant_id, principal_id, workspace_id=None, items=N
                     "WHERE workspace_id = %s AND setup_state IN ('created', 'scanned')", (workspace_id,))
     except _Abort as abort:
         return abort.failure
-    return {"ok": True, "updated": updated}
+    return {"ok": True, "updated": updated, "skipped": skipped}
 
 
 async def _definitions(tenant_id, principal_id, workspace_id=None, **_):
@@ -419,6 +423,8 @@ async def _save_definitions(tenant_id, principal_id, workspace_id=None, items=No
                     ON CONFLICT (workspace_id, lower(term)) DO UPDATE SET
                         term = EXCLUDED.term, definition = EXCLUDED.definition, source = EXCLUDED.source,
                         approved = FALSE, updated_at = now()
+                    -- an AI draft never replaces the owner's definition
+                    WHERE EXCLUDED.source = 'owner' OR session_state.kb_definitions.source = 'ai'
                     """,
                     (str(uuid.uuid4()), workspace_id, tenant_id, term, text, source))
     except _Abort as abort:
@@ -591,9 +597,10 @@ async def _finish_run(tenant_id, principal_id, run_id=None, failed=False, worksp
         await conn.execute(
             "UPDATE session_state.setup_runs SET state = %s, score = %s, finished_at = now() WHERE run_id = %s",
             ("failed" if failed else "done", score, run_id))
-        await conn.execute(
-            "UPDATE session_state.workspaces SET setup_score = %s, setup_total = %s, setup_state = 'tested', "
-            "updated_at = now() WHERE workspace_id = %s", (score, len(results), workspace_id))
+        if not failed:   # a run that stopped early does not stand for the workspace
+            await conn.execute(
+                "UPDATE session_state.workspaces SET setup_score = %s, setup_total = %s, setup_state = 'tested', "
+                "updated_at = now() WHERE workspace_id = %s", (score, len(results), workspace_id))
         # An answer the owner has since marked wrong stops being an example.
         for question, _sql, verdict in results:
             if verdict == "wrong":
