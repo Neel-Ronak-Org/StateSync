@@ -253,6 +253,38 @@ services:
       retries: 5
       start_period: 20s
 
+  # ── 8. simulator ───────────────────────────────────────────────────────────
+  # Keeps the `live` demo dataset moving (docs/V3_PLAN.md Phase 2b, migration
+  # 020): backfills 30 days on first start, then appends orders, deliveries,
+  # reviews and web traffic every few seconds. Connects as statesync_simulator,
+  # which can write to the live and live_sim schemas and nothing else.
+  # db_net only: it talks to postgres and nothing talks to it.
+  simulator:
+    build:
+      context: ./simulator
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - db_net
+    environment:
+      - CONFIG_DIR=/app/config
+      - POSTGRES_HOST=postgres
+      - PG_SIMULATOR_PASSWORD_FILE=/run/secrets/pg_simulator_password
+    volumes:
+      - ./config:/app/config:ro
+    secrets:
+      - pg_simulator_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # main.py rewrites the heartbeat every tick; a stale one means it stopped.
+      test: ["CMD-SHELL", "test -n \"$(find /tmp/heartbeat -mmin -1 2>/dev/null)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 180s
+
 # ─── Secrets ─────────────────────────────────────────────────────────────────
 # In production replace with Docker Swarm / Vault secrets.
 # For local dev, create these files before running:
@@ -265,6 +297,10 @@ secrets:
     file: ./secrets/pg_migrator_password
   pg_reader_password:
     file: ./secrets/pg_reader_password
+  pg_simulator_password:
+    # Phase 2b: statesync_simulator (migration 020), writes only to the live and
+    # live_sim schemas. Mounted only into the simulator.
+    file: ./secrets/pg_simulator_password
   pg_history_password:
     # Cycle 007: statesync_history, table-scoped to
     # session_state.conversation_turns only (migrations/011). Mounted only

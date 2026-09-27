@@ -55,6 +55,7 @@ PY_SERVICES = {
     "orchestrator": ("orchestrator", "/app", 10),
     "mcp":          ("mcp",          "/app", 5),
     "evaluator":    ("evaluator",    "/app", 3),
+    "simulator":    ("simulator",    "/app", 2),    # Phase 2b: the live demo data
 }
 
 # The web app (web/, docs/V3_PLAN.md Phase 2) is a compiled bundle with hashed

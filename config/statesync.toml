@@ -139,6 +139,26 @@ grid_max_row              = 1000
 tile_min_h                = 2
 tile_max_h                = 40
 
+[simulator]
+# The live demo dataset (docs/V3_PLAN.md Phase 2b, migration 020, simulator/).
+# Read by the simulator service only. The shop's fixed traits (cities,
+# categories, channels, carriers, the hour-of-day curve) are in simulator/model.py.
+tick_s                    = 5       # how often new data lands
+backfill_days             = 30      # history created on the first start
+retention_days            = 35      # older rows are deleted, so the schema stays small
+prune_every_s             = 600
+seed                      = 20260927
+orders_per_minute_peak    = 5.0     # at the busiest hour (IST)
+orders_per_minute_trough  = 0.6     # in the middle of the night
+weekend_uplift            = 1.15
+daily_growth              = 0.002   # a slow upward trend in the history
+cancel_share              = 0.04
+return_share              = 0.05
+review_share              = 0.35
+converting_session_s      = 420     # mean length of a visit that orders
+browsing_session_s        = 240     # mean length of one that does not
+customers                 = 40000
+
 [retrieval]
 chunk_target_tokens       = 512
 chunk_overlap_tokens      = 64
@@ -245,7 +265,7 @@ cors_allowed_origins      = ["http://localhost:3000", "http://127.0.0.1:3000"]
 # validates server-side and cannot be bypassed by the orchestrator. If the two
 # lists ever drift, MCP wins and the caller gets an error — never a silent
 # fallback to another corpus.
-allowed_schemas           = ["public", "olist"]
+allowed_schemas           = ["public", "olist", "live"]
 
 [experiment]
 # F-V2 over-exposure experiment (M9). Surface sizes reuse mcp.tool_ceiling's
