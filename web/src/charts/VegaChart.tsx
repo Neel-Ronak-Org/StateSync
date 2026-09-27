@@ -42,6 +42,16 @@ interface VegaChartProps {
   showViolations?: boolean
 }
 
+/**
+ * Why no chart is shown. 'unsafe': the A7 check refused the spec, so Vega never
+ * saw it. 'failed': the spec passed, but Vega could not draw it. The two read
+ * differently, because blaming the safety check for a rendering bug is wrong.
+ */
+interface Problem {
+  kind: 'unsafe' | 'failed'
+  details: string[]
+}
+
 const MIN_FRAME_PX = 40
 const FRAME_GUTTER_PX = 8
 
@@ -50,7 +60,7 @@ export function VegaChart({ spec, className, height, onView, showViolations = fa
   const hostRef = useRef<HTMLDivElement>(null)
   const { resolvedTheme } = useTheme()
   const [width, setWidth] = useState(0)
-  const [problems, setProblems] = useState<string[]>([])
+  const [problem, setProblem] = useState<Problem | null>(null)
   // Held in a ref so a parent passing an inline callback does not re-embed the
   // chart on every render.
   const onViewRef = useRef(onView)
@@ -82,7 +92,10 @@ export function VegaChart({ spec, className, height, onView, showViolations = fa
     const violations = validateA7Chart(spec)
     if (violations.length > 0) {
       console.error('[A7] chart withheld before render, not repaired:', violations)
-      setProblems(violations)
+      // A finalized view leaves its canvas in the host; a withheld chart must
+      // leave nothing drawn, not an earlier chart merely hidden.
+      host.replaceChildren()
+      setProblem({ kind: 'unsafe', details: violations })
       onViewRef.current?.(null)
       return
     }
@@ -113,13 +126,14 @@ export function VegaChart({ spec, className, height, onView, showViolations = fa
           return
         }
         result = r
-        setProblems([])
+        setProblem(null)
         onViewRef.current?.(r.view)
       })
       .catch((err: unknown) => {
         if (cancelled) return
         console.error('[chart] render failed:', err)
-        setProblems([err instanceof Error ? err.message : String(err)])
+        host.replaceChildren()
+        setProblem({ kind: 'failed', details: [err instanceof Error ? err.message : String(err)] })
         onViewRef.current?.(null)
       })
 
@@ -133,19 +147,21 @@ export function VegaChart({ spec, className, height, onView, showViolations = fa
 
   return (
     <div ref={frameRef} className={cn('w-full', className)}>
-      {problems.length > 0 ? (
+      {problem ? (
         <div role="note" className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-          Chart withheld: it did not pass the chart safety check. The answer above is unaffected.
+          {problem.kind === 'unsafe'
+            ? 'Chart withheld: it did not pass the chart safety check. The answer above is unaffected.'
+            : 'The chart could not be drawn. The answer above is unaffected.'}
           {showViolations && (
             <ul className="mt-1 list-disc pl-4 font-mono">
-              {problems.map((p) => (
+              {problem.details.map((p) => (
                 <li key={p}>{p}</li>
               ))}
             </ul>
           )}
         </div>
       ) : null}
-      <div ref={hostRef} className={cn(problems.length > 0 && 'hidden')} data-testid="vega-chart" />
+      <div ref={hostRef} className={cn(problem && 'hidden')} data-testid="vega-chart" />
     </div>
   )
 }

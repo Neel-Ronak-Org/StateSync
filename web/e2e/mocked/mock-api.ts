@@ -157,6 +157,12 @@ export class MockApi {
   private failures = new Map<string, { status: number; detail: string; headers?: Record<string, string> }>()
   /** When set, the full-rows endpoint returns only this many rows (the history store's caps). */
   storedRowsLimit: number | null = null
+  /**
+   * When set, the next /query answer carries this chart instead of the canned
+   * one: a server whose own validator let a hostile spec through, which is the
+   * case the browser's independent validator exists for.
+   */
+  nextChart: Record<string, unknown> | null = null
   private clock = Date.parse('2026-09-27T10:00:00Z')
   private tileSeq = 0
 
@@ -204,6 +210,13 @@ export class MockApi {
     tile.state = state
     tile.last_error = lastError
     tile.error_at = lastError ? this.now() : null
+  }
+
+  /** Replace a stored tile's chart, e.g. with a spec the server should never have let through. */
+  setTileChart(tileId: string, chart: Record<string, unknown> | null): void {
+    const tile = this.tiles.get(tileId)
+    if (!tile) throw new Error(`no tile ${tileId}`)
+    tile.chart = chart
   }
 
   async install(page: Page): Promise<void> {
@@ -301,6 +314,10 @@ export class MockApi {
       return this.json(route, 409, {
         detail: `This conversation uses the ${startedOn} dataset. Start a new conversation to ask about ${schema}.`,
       })
+    }
+    if (this.nextChart) {
+      canned.chart = this.nextChart
+      this.nextChart = null
     }
     const turnIndex = turns.length + 1
     const at = this.now()

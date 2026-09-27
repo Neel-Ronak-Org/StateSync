@@ -29,10 +29,14 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
 from nginx_header_checks import (      # noqa: E402
     REQUIRED_SECURITY_HEADERS,
+    locations_declaring_add_header,
     locations_missing_security_headers,
 )
 
-NGINX_CONF = REPO_ROOT / "frontend" / "nginx.conf"
+# The web app's config (docs/V3_PLAN.md Phase 2). The fixtures below are the
+# PREVIOUS frontend's confs, kept verbatim: they pin the mechanism, which does
+# not depend on which app is served.
+NGINX_CONF = REPO_ROOT / "web" / "nginx.conf"
 
 # The exact `frontend/nginx.conf` committed at 56a23bf -- the commit that
 # introduced `location = /index.html` / `location = /app.js` with only
@@ -146,9 +150,37 @@ server {
 
 
 def test_real_committed_nginx_conf_passes():
-    """The actual shipped file, post audit-005 fix."""
+    """The actual shipped file."""
     violations = locations_missing_security_headers(NGINX_CONF.read_text())
     assert violations == {}, violations
+
+
+def test_web_conf_keeps_every_add_header_at_server_level():
+    """The web app's design rule: no location declares add_header (caching uses
+    `expires`), so a new location cannot re-enter the inheritance trap."""
+    assert locations_declaring_add_header(NGINX_CONF.read_text()) == []
+
+
+def test_web_conf_csp_is_strict():
+    conf = NGINX_CONF.read_text()
+    csp_lines = [ln.strip() for ln in conf.splitlines()
+                 if ln.strip().startswith("add_header Content-Security-Policy")]
+    assert len(csp_lines) == 1, csp_lines
+    csp = csp_lines[0]
+    directives = {
+        part.strip().split()[0]: part.strip().split()[1:]
+        for part in csp.split('"')[1].split(";") if part.strip()
+    }
+    assert "unsafe-eval" not in csp
+    assert directives["script-src"] == ["'self'"]          # no CDN, no inline, no eval
+    assert directives["object-src"] == ["'none'"]
+    assert directives["base-uri"] == ["'none'"]
+    assert directives["frame-ancestors"] == ["'none'"]
+    assert directives["font-src"] == ["'self'"]            # fonts are self-hosted
+    # entrypoint.sh fills this in from ORCHESTRATOR_URL at start-up
+    assert directives["connect-src"] == ["'self'", "__ORCHESTRATOR_ORIGIN__"]
+    for name in REQUIRED_SECURITY_HEADERS[1:]:
+        assert f"add_header {name}" in conf
 
 
 def test_header_name_matching_is_case_insensitive():

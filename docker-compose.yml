@@ -188,10 +188,12 @@ services:
       start_period: 30s
 
   # ── 6. frontend ────────────────────────────────────────────────────────────
-  # Stateless nginx server; renders Vega-Lite via vega-interpreter (A7).
+  # The web app (web/, docs/V3_PLAN.md Phase 2): a React bundle served by nginx,
+  # charts rendered via vega-interpreter (A7) under a CSP with no unsafe-eval.
+  # web/entrypoint.sh writes ORCHESTRATOR_URL into /config.js and the CSP.
   frontend:
     build:
-      context: ./frontend
+      context: ./web
       dockerfile: Dockerfile
     restart: unless-stopped
     networks:
