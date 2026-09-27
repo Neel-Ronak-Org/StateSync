@@ -16,7 +16,8 @@ Needs: the stack running, secrets/api_token_dev and secrets/api_token_second
 (two different principals). Asks two real questions. Everything it creates is
 deleted at the end.
 
-Usage: python3 scripts/verify_dashboards.py
+Usage: python3 scripts/verify_dashboards.py [--build]
+  --build also runs 'Build with AI' on live, olist and public (about 120 model calls).
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 import uuid
@@ -80,6 +82,45 @@ def ask(question: str, session_id: str, schema: str = "public") -> dict:
 
 def section(title: str) -> None:
     print(f"\n── {title} " + "─" * max(4, 60 - len(title)))
+
+
+BUILD_MIN_ADDED = 6        # docs/V3_PLAN.md Phase 2b exit: at least 6 working cards per dataset
+BUILD_TIMEOUT_S = 420
+
+
+def verify_builds() -> None:
+    """--build: 'Build with AI' on each dataset into a throwaway dashboard (spends model quota)."""
+    for schema in ("live", "olist", "public"):
+        section(f"Build with AI on {schema}")
+        status, body = call("POST", "/dashboards", body={"name": f"Verify build {schema}", "target_schema": schema})
+        if not check(status == 201, f"a dashboard for the {schema} build", str(body)):
+            continue
+        board = body["dashboard"]["dashboard_id"]
+        try:
+            status, body = call("POST", f"/dashboards/{board}/build", body={})
+            check(status == 202, "the build starts (202)", f"{status} {body}")
+            check(call("POST", f"/dashboards/{board}/build", body={})[0] == 409,
+                  "a second build while one runs is refused (409)")
+            check(call("GET", f"/dashboards/{board}/build", token=TOKEN_B)[1].get("job") is None,
+                  "another principal sees no build on it")
+            deadline = time.time() + BUILD_TIMEOUT_S
+            job = body.get("job") or {}
+            while job.get("state") in ("planning", "running") and time.time() < deadline:
+                time.sleep(5)
+                job = call("GET", f"/dashboards/{board}/build")[1].get("job") or {}
+            added = [i for i in job.get("items", []) if i["state"] == "added"]
+            skipped = [f"{i['title']}: {i['reason']}" for i in job.get("items", []) if i["state"] == "skipped"]
+            check(job.get("state") == "done", "the build finishes", f"{job.get('state')} {job.get('error')}")
+            check(len(added) >= BUILD_MIN_ADDED, f"at least {BUILD_MIN_ADDED} cards added",
+                  f"{len(added)} added; skipped: {skipped}")
+            _, tiles = call("GET", f"/tiles?dashboard_id={board}")
+            ok_tiles = [t for t in tiles.get("tiles", []) if t["state"] == "ok" and (t.get("result") or {}).get("row_count")]
+            check(len(ok_tiles) == len(added), "every added card has rows", f"{len(ok_tiles)}/{len(added)}")
+            _, sessions = call("GET", "/sessions")
+            check(not any(s["session_id"].startswith("build-") for s in sessions.get("sessions", [])),
+                  "the builder's own sessions are not listed as conversations")
+        finally:
+            call("DELETE", f"/dashboards/{board}")
 
 
 def main() -> int:
@@ -229,6 +270,9 @@ def main() -> int:
         for dashboard_id in created:
             call("DELETE", f"/dashboards/{dashboard_id}")
         call("DELETE", f"/sessions/{session_id}")
+
+    if "--build" in sys.argv:
+        verify_builds()
 
     passed = sum(1 for ok, _ in results if ok)
     failed = len(results) - passed
