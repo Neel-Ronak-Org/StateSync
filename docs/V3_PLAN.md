@@ -239,7 +239,7 @@ out of the centre. Revisit if definitions or caching outgrow a few tables.
 more) · connecting your own Postgres in self-hosted mode · text PDFs · a hosted model as
 the demo default, with the local model optional.
 
-**Out:** MySQL and other databases · scanned PDFs · scheduled refresh and alerts ·
+**Out:** MySQL and other databases · scanned PDFs · alerts sent outside the app (email, Slack) ·
 billing · single sign-on · value matching and multilingual expansion beyond what exists
 (low priority) · the local 7B as default · Paper A.
 
@@ -253,6 +253,8 @@ billing · single sign-on · value matching and multilingual expansion beyond wh
 4. CI is green: unit tests, the RLS-coverage test, and an eval smoke test.
 5. The README tells the story in 60 seconds: live link, 2-minute video, architecture
    diagram, key numbers with caveats, design decisions, known issues.
+6. The app opens on a live dashboard: an AI-built Overview whose numbers visibly update
+   within a minute (Phase 2b).
 
 ## 8. Phases
 
@@ -347,6 +349,81 @@ shadcn/ui.
 | No vega-tooltip | Was only half kept: the theme turned off automatic tooltips, but vega-embed still installed vega-tooltip (an `innerHTML` writer), and a spec's tooltip channel could switch it on. Now `tooltip: false` is set on `embed()`, pinned by `verify_e2` and a browser test |
 | The 10 malicious specs, run by hand in the browser (E2-V3/V6, browser half) | `web/e2e/mocked/chart-safety.spec.ts`: each spec goes through the real render path, must name its violation, draw nothing and fetch nothing |
 
+### Phase 2b — Dashboard first (owner decision, 2026-09-27)
+
+The owner's review of Phase 2: the app reads as a chat log with a pin button. It lands
+on chat, draws only bar charts, has no motion, and its dashboard is a plain list of
+pinned answers. Decided (D-v3-4): the dashboard becomes the product, and chat becomes
+how you ask for new insights. This phase comes before Phase 3.
+
+**What changes:**
+
+- **Look and motion.** The owner's reference style is the default: dark navy with
+  cyan/teal and purple accents, with light mode kept. There are page transitions, cards
+  that animate in and lift on hover, numbers that count up, and animated layout changes.
+  All motion is off under `prefers-reduced-motion`.
+  - The home page is the dashboard.
+  - A slim navigation rail holds Dashboards and Ask. Chat history moves inside Ask.
+  - The dataset picker sits in the top bar, next to a connection/model status light.
+- **Dashboards, several per dataset** (migration 019). They are stored server-side with
+  their layout, so a dashboard the AI builds arrives already arranged.
+  - An edit mode shows the handles, and each card offers size presets.
+  - A tile can move between dashboards.
+  - The MCP gains `dashboards.manage` (method 17 of 20, D-v3-5).
+- **More visualizations, chosen from the data.** A client-side presentation layer picks
+  the default from the result's shape:
+  - one number → KPI;
+  - a time series → trend (area), or a KPI with % change and a sparkline;
+  - a few shares → donut or breakdown bars;
+  - a ranking → bars sorted by value (horizontal when labels are long);
+  - two categories → heatmap; two measures → scatter; anything else → table.
+
+  Every tile and answer has "Show as". The server's chart proposal (what E2-V1
+  measures) is unchanged, and it is used as a hint (D-v3-8). Every Vega spec the client
+  builds still passes the A7 check before render. KPI, breakdown and sparkline cards are
+  plain React, with no HTML sinks.
+- **Live data** (migration 020, D-v3-6). A `live` schema (orders, deliveries, reviews,
+  web sessions) is fed by a new `simulator` service. The service backfills 90 days, then
+  appends events every few seconds under its own role, which can write only to `live`.
+  Olist and the synthetic `public` set stay frozen for the accuracy tests.
+  - Dashboards poll, and tiles on `live` refresh every 30 s (the refresh floor drops to
+    15 s, D-v3-7). A changed number animates.
+  - A refresh re-runs the saved SQL: no model call.
+- **AI-built dashboards.** "Build with AI" asks the planner for 6–8 insights for the
+  dataset (optionally for a stated goal), using the `decomposer` role (D-v3-9).
+  - Each insight runs through the normal pipeline as a turn in a builder session, then
+    is pinned with a title, a visualization and a layout slot.
+  - There is no new SQL path: every tile still comes from a stored turn that passed the
+    SQL gate.
+  - The job reports progress, and cards appear as they finish. An insight that fails is
+    skipped, and the reason is reported.
+- **Insights strip.** Short sentences computed from the tiles' own rows, such as "Orders
+  today: 1,284, up 12% on yesterday", and the largest shares. The model never writes a
+  number.
+- **Polish carried over from the Phase 2 review:**
+  - "1 row" plurals;
+  - lists in answers render as lists;
+  - sources show document titles;
+  - no backdrop blur;
+  - conversations can be deleted (`history.delete_session`, method 18);
+  - the status light;
+  - developer mode shows the chart spec;
+  - the details panel no longer repeats the SQL;
+  - follow-up questions pin under their rewritten wording ("Bottom 5 states by
+    customers", not "And bottom?");
+  - readable axis and KPI labels;
+  - the README's quick start and shutdown.
+
+**Exit:**
+- The app opens on the `live` Overview dashboard, and at least one number visibly changes
+  within a minute.
+- "Build with AI" produces at least 6 working cards on each of `live`, `olist` and
+  `public`.
+- Every visualization kind renders in the mocked suite, and each passes A7.
+- Ownership holds on dashboards and deleted conversations: the live verify script
+  checks this with a second principal.
+- CI is green, and PR #4 merges.
+
 ### Phase 3 — Workspaces: setup, knowledge store, uploads
 
 - Workspaces with row-level security, plus the RLS-coverage test.
@@ -397,6 +474,12 @@ header requires a record for any change there).
 | D-v3-1 | 2026-09-26 | `mcp.tool_ceiling` 15 → 20; `mcp/main.py` reads it from config, and `mcp/Dockerfile` no longer bakes `ENV TOOL_CEILING=15` (which had silently overridden the config) | The ceiling came from the M9 over-exposure experiment, but the supervisor never sees MCP methods (D1 decoupled routing from MCP; `scripts/experiment_tool_ceiling.py`), so it guards API sprawl, not model accuracy. Tiles add one method (16 in use); Phase 3 needs room |
 | D-v3-2 | 2026-09-26 | Retrieval is exact (`retrieval.exact_vector_search = true`) | 0.12: the HNSW index missed the right document outright; exact search costs 71 ms at this size |
 | D-v3-3 | 2026-09-26 | Groq is the provider | 0.4: the shipped local model was missing; v3 demos on a hosted model |
+| D-v3-4 | 2026-09-27 | A dashboard-first phase (2b) comes before Phase 3 | Owner's review: the product read as a chat log; for a portfolio, the first screen must be a live, designed dashboard |
+| D-v3-5 | 2026-09-27 | MCP methods 17 and 18: `dashboards.manage`, `history.delete_session` (ceiling stays 20) | Dashboards are their own resource; deleting a conversation is a separate, destructive action worth its own audited method. Two slots remain for Phase 3; revisit the ceiling there |
+| D-v3-6 | 2026-09-27 | A `live` demo schema fed by a `simulator` service with its own write-only-to-`live` role | Refreshing tiles only mean something if the data moves; the datasets the accuracy tests use must not |
+| D-v3-7 | 2026-09-27 | `tiles.min_refresh_s` 60 → 15; tiles on `live` default to 30 s | A refresh is one indexed SELECT on a small schema, no model call; 30 s is what makes the dashboard feel live |
+| D-v3-8 | 2026-09-27 | Presentation (chart kind, sort, labels) is decided in the browser from the rows; the server's chart proposal is unchanged | Changing the server's spec would move E2-V1's measured chart score; presentation is not what that metric grades |
+| D-v3-9 | 2026-09-27 | The dashboard planner uses the `decomposer` role | Planning a dashboard is decomposing a goal into questions; a new role would add a config entry per provider for no gain |
 
 ## 9. Issue register
 

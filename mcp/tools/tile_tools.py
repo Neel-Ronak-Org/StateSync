@@ -8,6 +8,11 @@ replace, update, confirm, unpin. One method rather than eight because the MCP
 tool ceiling is a guard against API sprawl (mcp.tool_ceiling, raised for this
 in docs/V3_PLAN.md's decision log), and Phase 3 needs room of its own.
 
+Since migration 019 every tile sits on a dashboard (dashboard_tools.py) of the
+same owner and dataset, and carries its presentation choice (viz) and grid slot
+(layout). A pin without a dashboard goes to the dataset's first dashboard,
+created as "Overview" if the owner has none.
+
 THE SECURITY PROPERTIES, each enforced here rather than trusted from a caller:
 
 1. A tile's SQL comes only from a conversation turn its owner already has.
@@ -49,6 +54,7 @@ from psycopg.types.json import Jsonb
 from config_loader import cfg
 from db import get_history_connection
 from session import get_tenant_id
+from tools.dashboard_tools import default_dashboard, owned_dashboard, resolve_layout
 from tools.data_tools import _check_layer1, run_select
 from tools.schema_tools import DEFAULT_SCHEMA, describe_table
 
@@ -67,6 +73,13 @@ _BYTE_FIT_DROP_FRACTION: float = 0.10  # noqa: literals - algorithmic convergenc
 
 _ACTIONS = frozenset({"pin", "list", "get", "refresh", "replace", "update", "confirm", "unpin"})
 _NEEDS_TILE_ID = _ACTIONS - {"pin", "list"}
+
+# How a tile may be shown (migration 019's tiles_viz_ck repeats this list).
+# NULL means "decided from the data" by the web app; "auto" in a request clears
+# a stored choice back to NULL.
+VIZ_KINDS = frozenset({"kpi", "kpi_trend", "line", "area", "bar", "hbar",
+                       "donut", "breakdown", "heatmap", "scatter", "table"})
+VIZ_AUTO = "auto"
 
 
 # ── Pure helpers (no database; unit-tested directly) ─────────────────────────
@@ -153,10 +166,10 @@ def is_stale(last_attempt: dt.datetime | None, interval_s: int, now: dt.datetime
     return last_attempt is None or (now - last_attempt).total_seconds() >= interval_s
 
 
-def resolve_interval(value: Any) -> int | None:
+def resolve_interval(value: Any, target_schema: str | None = None) -> int | None:
     """The refresh interval to store, or None when out of bounds or not a whole number."""
     if value is None:
-        return int(cfg.tiles.default_refresh_s)
+        return default_interval(target_schema)
     if isinstance(value, bool) or not isinstance(value, int):
         return None
     if int(cfg.tiles.min_refresh_s) <= value <= int(cfg.tiles.max_refresh_s):
@@ -173,6 +186,34 @@ def resolve_title(title: Any, fallback: str | None) -> str | None:
     else:
         text = (fallback or "").strip() or "Untitled tile"
     return text[: int(cfg.tiles.title_max_chars)]
+
+
+def resolve_viz(value: Any) -> tuple[bool, str | None]:
+    """(valid, stored value) for a viz request: a kind, or "auto" (stored as NULL)."""
+    if value == VIZ_AUTO:
+        return True, None
+    if isinstance(value, str) and value in VIZ_KINDS:
+        return True, value
+    return False, None
+
+
+def title_fallback(raw_query: str | None, rewritten_query: str | None, rewrite_applied: bool | None) -> str | None:
+    """The default title for a pinned turn.
+
+    A follow-up ("And bottom?") only makes sense inside its conversation; the
+    pipeline's rewrite of it ("Bottom 5 states by number of customers") stands
+    on its own, so a pin uses that when a rewrite was applied.
+    """
+    if rewrite_applied and isinstance(rewritten_query, str) and rewritten_query.strip():
+        return rewritten_query
+    return raw_query
+
+
+def default_interval(target_schema: str | None) -> int:
+    """The refresh interval a pin gets when none is asked for: per dataset, else the global default."""
+    per_schema = cfg.tiles.get("schema_default_refresh_s")
+    value = per_schema.get(target_schema) if per_schema is not None and target_schema else None
+    return int(value) if value is not None else int(cfg.tiles.default_refresh_s)
 
 
 def _fail(code: str, message: str) -> dict[str, Any]:
@@ -205,11 +246,13 @@ async def _fingerprint(sql: str) -> str | None:
 
 
 async def _load_turn(tenant_id: str, principal_id: str, session_id: str, turn_index: int):
-    """The owner's stored turn: (executed_sql, chart, sql_columns, raw_query), or None."""
+    """The owner's stored turn, or None: (executed_sql, chart, sql_columns, raw_query,
+    rewritten_query, rewrite_applied, target_schema)."""
     async with get_history_connection() as conn:
         cur = await conn.execute(
             """
-            SELECT executed_sql, chart, sql_columns, raw_query
+            SELECT executed_sql, chart, sql_columns, raw_query,
+                   rewritten_query, rewrite_applied, target_schema
             FROM session_state.conversation_turns
             WHERE tenant_id = %s AND principal_id = %s AND session_id = %s AND turn_index = %s
             """,
@@ -219,7 +262,7 @@ async def _load_turn(tenant_id: str, principal_id: str, session_id: str, turn_in
 
 
 async def _pinnable_sql(tenant_id: str, principal_id: str, session_id: Any, turn_index: Any):
-    """Resolve a turn to (sql, chart, columns, raw_query, fingerprint), or a failure dict."""
+    """Resolve a turn to (sql, chart, columns, title, fingerprint, target_schema), or a failure dict."""
     if not isinstance(session_id, str) or not session_id:
         return _fail("invalid", "session_id is required.")
     if isinstance(turn_index, bool) or not isinstance(turn_index, int):
@@ -227,7 +270,7 @@ async def _pinnable_sql(tenant_id: str, principal_id: str, session_id: Any, turn
     turn = await _load_turn(tenant_id, principal_id, session_id, turn_index)
     if turn is None:
         return _fail("not_found", "No such conversation turn.")
-    sql, chart, columns, raw_query = turn
+    sql, chart, columns, raw_query, rewritten_query, rewrite_applied, target_schema = turn
     if not sql:
         return _fail("not_pinnable", "Only answers computed from the database can be pinned.")
     rejection = _check_layer1(sql)
@@ -236,14 +279,16 @@ async def _pinnable_sql(tenant_id: str, principal_id: str, session_id: Any, turn
     fingerprint = await _fingerprint(sql)
     if fingerprint is None:
         return _fail("not_pinnable", "A table this answer reads no longer exists.")
-    return sql, chart, columns, raw_query, fingerprint
+    return (sql, chart, columns, title_fallback(raw_query, rewritten_query, rewrite_applied),
+            fingerprint, target_schema or DEFAULT_SCHEMA)
 
 
 _VIEW_COLUMNS = """
     t.tile_id, t.title, t.state, t.current_version, t.refresh_interval_s,
     t.created_at, t.updated_at, t.last_error, t.error_at,
     v.sql_text, v.chart, v.sql_columns, v.source_session_id, v.source_turn_index,
-    r.rows, r.row_count, r.truncated, r.computed_at, r.version
+    r.rows, r.row_count, r.truncated, r.computed_at, r.version,
+    t.dashboard_id, t.target_schema, t.viz, t.layout_x, t.layout_y, t.layout_w, t.layout_h
 """
 _VIEW_FROM = """
     FROM session_state.tiles t
@@ -252,6 +297,8 @@ _VIEW_FROM = """
 """
 _SELECT_ONE = f"SELECT {_VIEW_COLUMNS} {_VIEW_FROM} WHERE t.tenant_id = %s AND t.principal_id = %s AND t.tile_id = %s"
 _SELECT_ALL = f"SELECT {_VIEW_COLUMNS} {_VIEW_FROM} WHERE t.tenant_id = %s AND t.principal_id = %s ORDER BY t.created_at"
+_SELECT_DASHBOARD = (f"SELECT {_VIEW_COLUMNS} {_VIEW_FROM} WHERE t.tenant_id = %s AND t.principal_id = %s "
+                     "AND t.dashboard_id = %s ORDER BY t.created_at")
 
 
 def _last_attempt(computed_at: dt.datetime | None, error_at: dt.datetime | None) -> dt.datetime | None:
@@ -262,9 +309,14 @@ def _last_attempt(computed_at: dt.datetime | None, error_at: dt.datetime | None)
 def _to_view(row: tuple, now: dt.datetime) -> dict[str, Any]:
     (tile_id, title, state, version, interval, created_at, updated_at, last_error, error_at,
      sql_text, chart, sql_columns, source_session, source_turn,
-     rows, row_count, truncated, computed_at, result_version) = row
+     rows, row_count, truncated, computed_at, result_version,
+     dashboard_id, target_schema, viz, layout_x, layout_y, layout_w, layout_h) = row
     return {
         "tile_id": tile_id,
+        "dashboard_id": dashboard_id,
+        "target_schema": target_schema,
+        "viz": viz,
+        "layout": None if layout_x is None else {"x": layout_x, "y": layout_y, "w": layout_w, "h": layout_h},
         "title": title,
         "state": state,
         "version": version,
@@ -393,48 +445,95 @@ async def _refresh(tenant_id: str, principal_id: str, tile_id: str, force: bool)
 
 # ── Actions ───────────────────────────────────────────────────────────────────
 
-async def _pin(tenant_id, principal_id, session_id, turn_index, title, refresh_interval_s):
-    interval = resolve_interval(refresh_interval_s)
-    if interval is None:
-        return _fail("invalid", _interval_message())
+class _Abort(Exception):
+    """Raised inside a history transaction to roll it back and report a failure."""
+
+    def __init__(self, failure: dict[str, Any]) -> None:
+        super().__init__(failure.get("message"))
+        self.failure = failure
+
+
+async def _target_dashboard(conn, tenant_id, principal_id, dashboard_id, target_schema) -> str:
+    """The dashboard a tile goes on: the one asked for (same owner, same dataset) or the default."""
+    if dashboard_id is None:
+        return await default_dashboard(conn, tenant_id, principal_id, target_schema)
+    if not isinstance(dashboard_id, str) or not dashboard_id:
+        raise _Abort(_fail("invalid", "dashboard_id must be a dashboard id."))
+    owned = await owned_dashboard(conn, tenant_id, principal_id, dashboard_id)
+    if owned is None:
+        raise _Abort(_fail("not_found", "No such dashboard."))
+    if owned[1] != target_schema:
+        raise _Abort(_fail("invalid", f"This answer is from the {target_schema} dataset; "
+                                      f"that dashboard is for {owned[1]}."))
+    return dashboard_id
+
+
+async def _pin(tenant_id, principal_id, session_id, turn_index, title, refresh_interval_s,
+               dashboard_id=None, viz=None, layout=None):
+    ok_viz, stored_viz = resolve_viz(viz) if viz is not None else (True, None)
+    if not ok_viz:
+        return _fail("invalid", f"viz must be one of {sorted(VIZ_KINDS)} or {VIZ_AUTO!r}.")
+    slot = None
+    if layout is not None:
+        slot = resolve_layout(layout)
+        if slot is None:
+            return _fail("invalid", "layout must be {x, y, w, h} inside the dashboard grid.")
     resolved = await _pinnable_sql(tenant_id, principal_id, session_id, turn_index)
     if isinstance(resolved, dict):
         return resolved
-    sql, chart, columns, raw_query, fingerprint = resolved
-    tile_title = resolve_title(title, raw_query)
+    sql, chart, columns, fallback_title, fingerprint, target_schema = resolved
+    interval = resolve_interval(refresh_interval_s, target_schema)
+    if interval is None:
+        return _fail("invalid", _interval_message())
+    tile_title = resolve_title(title, fallback_title)
     if tile_title is None:
         return _fail("invalid", "title must not be blank.")
 
     tile_id = str(uuid.uuid4())
-    async with get_history_connection() as conn:
-        count = (await (await conn.execute(
-            "SELECT count(*) FROM session_state.tiles WHERE tenant_id = %s AND principal_id = %s",
-            (tenant_id, principal_id),
-        )).fetchone())[0]
-        if count >= int(cfg.tiles.max_per_principal):
-            return _fail("limit_reached",
-                         f"You already have {count} tiles; the limit is {cfg.tiles.max_per_principal}.")
-        await conn.execute(
-            """
-            INSERT INTO session_state.tiles
-                (tile_id, tenant_id, principal_id, title, current_version, refresh_interval_s)
-            VALUES (%s, %s, %s, %s, 1, %s)
-            """,
-            (tile_id, tenant_id, principal_id, tile_title, interval),
-        )
-        await conn.execute(
-            """
-            INSERT INTO session_state.tile_versions
-                (tile_id, version, sql_text, chart, sql_columns, fingerprint,
-                 source_session_id, source_turn_index)
-            VALUES (%s, 1, %s, %s, %s, %s, %s, %s)
-            """,
-            (tile_id, sql, Jsonb(chart_template(chart)) if chart else None,
-             Jsonb(columns) if columns is not None else None, fingerprint,
-             session_id, turn_index),
-        )
-    logger.info("tiles: pinned %s from session=%s turn=%s (tenant=%s principal=%s)",
-                tile_id, session_id, turn_index, tenant_id, principal_id)
+    try:
+        async with get_history_connection() as conn:
+            count = (await (await conn.execute(
+                "SELECT count(*) FROM session_state.tiles WHERE tenant_id = %s AND principal_id = %s",
+                (tenant_id, principal_id),
+            )).fetchone())[0]
+            if count >= int(cfg.tiles.max_per_principal):
+                raise _Abort(_fail("limit_reached",
+                                   f"You already have {count} tiles; the limit is {cfg.tiles.max_per_principal}."))
+            board = await _target_dashboard(conn, tenant_id, principal_id, dashboard_id, target_schema)
+            on_board = (await (await conn.execute(
+                "SELECT count(*) FROM session_state.tiles "
+                "WHERE tenant_id = %s AND principal_id = %s AND dashboard_id = %s",
+                (tenant_id, principal_id, board),
+            )).fetchone())[0]
+            if on_board >= int(cfg.dashboards.max_tiles_per_dashboard):
+                raise _Abort(_fail("limit_reached",
+                                   f"That dashboard already has {on_board} tiles; "
+                                   f"the limit is {cfg.dashboards.max_tiles_per_dashboard}."))
+            await conn.execute(
+                """
+                INSERT INTO session_state.tiles
+                    (tile_id, tenant_id, principal_id, title, current_version, refresh_interval_s,
+                     dashboard_id, target_schema, viz, layout_x, layout_y, layout_w, layout_h)
+                VALUES (%s, %s, %s, %s, 1, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (tile_id, tenant_id, principal_id, tile_title, interval, board, target_schema, stored_viz,
+                 *(slot[k] if slot else None for k in ("x", "y", "w", "h"))),
+            )
+            await conn.execute(
+                """
+                INSERT INTO session_state.tile_versions
+                    (tile_id, version, sql_text, chart, sql_columns, fingerprint,
+                     source_session_id, source_turn_index)
+                VALUES (%s, 1, %s, %s, %s, %s, %s, %s)
+                """,
+                (tile_id, sql, Jsonb(chart_template(chart)) if chart else None,
+                 Jsonb(columns) if columns is not None else None, fingerprint,
+                 session_id, turn_index),
+            )
+    except _Abort as abort:
+        return abort.failure
+    logger.info("tiles: pinned %s from session=%s turn=%s to dashboard %s (tenant=%s principal=%s)",
+                tile_id, session_id, turn_index, board, tenant_id, principal_id)
     await _refresh(tenant_id, principal_id, tile_id, force=True)
     return {"ok": True, "tile": await _view(tenant_id, principal_id, tile_id, with_versions=True)}
 
@@ -481,7 +580,7 @@ async def _replace(tenant_id, principal_id, tile_id, session_id, turn_index):
     resolved = await _pinnable_sql(tenant_id, principal_id, session_id, turn_index)
     if isinstance(resolved, dict):
         return resolved
-    sql, chart, columns, _raw_query, fingerprint = resolved
+    sql, chart, columns, _title, fingerprint, _schema = resolved
     version = await _new_version(tenant_id, principal_id, tile_id, sql, chart_template(chart),
                                  columns, fingerprint, session_id, turn_index)
     if version is None:
@@ -517,9 +616,11 @@ async def _confirm(tenant_id, principal_id, tile_id):
     return {"ok": True, "tile": await _view(tenant_id, principal_id, tile_id, with_versions=True)}
 
 
-async def _update(tenant_id, principal_id, tile_id, title, refresh_interval_s):
-    if title is None and refresh_interval_s is None:
-        return _fail("invalid", "Nothing to update: pass title and/or refresh_interval_s.")
+async def _update(tenant_id, principal_id, tile_id, title, refresh_interval_s,
+                  viz=None, dashboard_id=None):
+    if title is None and refresh_interval_s is None and viz is None and dashboard_id is None:
+        return _fail("invalid",
+                     "Nothing to update: pass title, refresh_interval_s, viz and/or dashboard_id.")
     new_title = resolve_title(title, None) if title is not None else None
     if title is not None and new_title is None:
         return _fail("invalid", "title must not be blank.")
@@ -528,20 +629,50 @@ async def _update(tenant_id, principal_id, tile_id, title, refresh_interval_s):
         interval = resolve_interval(refresh_interval_s)
         if interval is None:
             return _fail("invalid", _interval_message())
-    async with get_history_connection() as conn:
-        row = await (await conn.execute(
-            """
-            UPDATE session_state.tiles
-            SET title = COALESCE(%s, title),
-                refresh_interval_s = COALESCE(%s, refresh_interval_s),
-                updated_at = now()
-            WHERE tenant_id = %s AND principal_id = %s AND tile_id = %s
-            RETURNING tile_id
-            """,
-            (new_title, interval, tenant_id, principal_id, tile_id),
-        )).fetchone()
-    if row is None:
-        return _fail("not_found", "No such tile.")
+    ok_viz, stored_viz = resolve_viz(viz) if viz is not None else (True, None)
+    if not ok_viz:
+        return _fail("invalid", f"viz must be one of {sorted(VIZ_KINDS)} or {VIZ_AUTO!r}.")
+    try:
+        async with get_history_connection() as conn:
+            current = await (await conn.execute(
+                """
+                SELECT target_schema, dashboard_id FROM session_state.tiles
+                WHERE tenant_id = %s AND principal_id = %s AND tile_id = %s
+                FOR UPDATE
+                """,
+                (tenant_id, principal_id, tile_id),
+            )).fetchone()
+            if current is None:
+                raise _Abort(_fail("not_found", "No such tile."))
+            target_schema, current_board = current
+            await conn.execute(
+                """
+                UPDATE session_state.tiles
+                SET title = COALESCE(%s, title),
+                    refresh_interval_s = COALESCE(%s, refresh_interval_s),
+                    updated_at = now()
+                WHERE tenant_id = %s AND principal_id = %s AND tile_id = %s
+                """,
+                (new_title, interval, tenant_id, principal_id, tile_id),
+            )
+            if viz is not None:
+                await conn.execute(
+                    "UPDATE session_state.tiles SET viz = %s WHERE tenant_id = %s AND principal_id = %s AND tile_id = %s",
+                    (stored_viz, tenant_id, principal_id, tile_id),
+                )
+            if dashboard_id is not None and dashboard_id != current_board:
+                board = await _target_dashboard(conn, tenant_id, principal_id, dashboard_id, target_schema)
+                # A moved tile is placed afresh at the bottom of its new dashboard.
+                await conn.execute(
+                    """
+                    UPDATE session_state.tiles
+                    SET dashboard_id = %s, layout_x = NULL, layout_y = NULL, layout_w = NULL, layout_h = NULL
+                    WHERE tenant_id = %s AND principal_id = %s AND tile_id = %s
+                    """,
+                    (board, tenant_id, principal_id, tile_id),
+                )
+    except _Abort as abort:
+        return abort.failure
     return {"ok": True, "tile": await _view(tenant_id, principal_id, tile_id)}
 
 
@@ -561,19 +692,33 @@ async def _unpin(tenant_id, principal_id, tile_id):
     return {"ok": True, "tile_id": tile_id}
 
 
-async def _list(tenant_id, principal_id):
-    """Every tile the principal owns, each refreshed first if it is due."""
+async def _list(tenant_id, principal_id, dashboard_id=None):
+    """The principal's tiles (on one dashboard, if given), each refreshed first if it is due."""
     async with get_history_connection() as conn:
-        ids = [r[0] for r in await (await conn.execute(
-            "SELECT tile_id FROM session_state.tiles WHERE tenant_id = %s AND principal_id = %s "
-            "ORDER BY created_at",
-            (tenant_id, principal_id),
-        )).fetchall()]
+        if dashboard_id is not None:
+            if not isinstance(dashboard_id, str) or not dashboard_id:
+                return _fail("invalid", "dashboard_id must be a dashboard id.")
+            if await owned_dashboard(conn, tenant_id, principal_id, dashboard_id) is None:
+                return _fail("not_found", "No such dashboard.")
+            ids = [r[0] for r in await (await conn.execute(
+                "SELECT tile_id FROM session_state.tiles "
+                "WHERE tenant_id = %s AND principal_id = %s AND dashboard_id = %s ORDER BY created_at",
+                (tenant_id, principal_id, dashboard_id),
+            )).fetchall()]
+        else:
+            ids = [r[0] for r in await (await conn.execute(
+                "SELECT tile_id FROM session_state.tiles WHERE tenant_id = %s AND principal_id = %s "
+                "ORDER BY created_at",
+                (tenant_id, principal_id),
+            )).fetchall()]
     for tile_id in ids:                  # bounded by tiles.max_per_principal
         await _refresh(tenant_id, principal_id, tile_id, force=False)
     now = dt.datetime.now(dt.timezone.utc)
     async with get_history_connection() as conn:
-        rows = await (await conn.execute(_SELECT_ALL, (tenant_id, principal_id))).fetchall()
+        if dashboard_id is not None:
+            rows = await (await conn.execute(_SELECT_DASHBOARD, (tenant_id, principal_id, dashboard_id))).fetchall()
+        else:
+            rows = await (await conn.execute(_SELECT_ALL, (tenant_id, principal_id))).fetchall()
     return {"ok": True, "tiles": [_to_view(r, now) for r in rows]}
 
 
@@ -585,6 +730,9 @@ async def manage(
     turn_index: int | None = None,
     title: str | None = None,
     refresh_interval_s: int | None = None,
+    dashboard_id: str | None = None,
+    viz: str | None = None,
+    layout: dict | None = None,
 ) -> dict[str, Any]:
     """tiles.manage -- see the module docstring for the actions and guarantees."""
     tenant_id = get_tenant_id()
@@ -596,13 +744,15 @@ async def manage(
         return _fail("invalid", f"tile_id is required for {action!r}.")
 
     if action == "pin":
-        return await _pin(tenant_id, principal_id, session_id, turn_index, title, refresh_interval_s)
+        return await _pin(tenant_id, principal_id, session_id, turn_index, title, refresh_interval_s,
+                          dashboard_id=dashboard_id, viz=viz, layout=layout)
     if action == "list":
-        return await _list(tenant_id, principal_id)
+        return await _list(tenant_id, principal_id, dashboard_id)
     if action == "replace":
         return await _replace(tenant_id, principal_id, tile_id, session_id, turn_index)
     if action == "update":
-        return await _update(tenant_id, principal_id, tile_id, title, refresh_interval_s)
+        return await _update(tenant_id, principal_id, tile_id, title, refresh_interval_s,
+                             viz=viz, dashboard_id=dashboard_id)
     if action == "confirm":
         return await _confirm(tenant_id, principal_id, tile_id)
     if action == "unpin":

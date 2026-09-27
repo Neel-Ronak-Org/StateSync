@@ -316,6 +316,15 @@ async def history_get_turn_rows(
     return await session.call("history.get_turn_rows", params)
 
 
+async def history_delete_session(
+    session: MCPSession, session_id: str, principal_id: str,
+) -> dict[str, Any]:
+    """history.delete_session -- erase one of the principal's conversations (Phase 2b)."""
+    return await session.call(
+        "history.delete_session", {"session_id": session_id, "principal_id": principal_id},
+    )
+
+
 async def history_list_sessions(
     session: MCPSession, principal_id: str, limit: int | None = None,
 ) -> dict[str, Any]:
@@ -364,6 +373,19 @@ async def tiles_manage(
     """Forward a dashboard tile management action to the MCP tiles.manage tool."""
     return await session.call(
         "tiles.manage",
+        {"action": action, "principal_id": principal_id, **{k: v for k, v in params.items() if v is not None}},
+    )
+
+
+async def dashboards_manage(
+    session: MCPSession,
+    principal_id: str,
+    action: str,
+    **params: Any,
+) -> dict[str, Any]:
+    """Forward a dashboard action to the MCP dashboards.manage tool (Phase 2b)."""
+    return await session.call(
+        "dashboards.manage",
         {"action": action, "principal_id": principal_id, **{k: v for k, v in params.items() if v is not None}},
     )
 

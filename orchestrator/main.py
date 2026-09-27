@@ -22,20 +22,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from auth import (AuthError, Principal, RateLimited, authenticate, init_auth,
-                  rate_limiter)
+from auth import (AuthError, Principal, RateLimited, RateLimiter, authenticate, init_auth,
+                  rate_limiter, read_rate_limiter)
 from config_loader import cfg, flags, snapshot_flags
 from graph import graph
 from llm.provider import LLM_READINESS, validate_llm_config
 from failures import user_facing_failure
 from mcp_client import (MCPSession, audit_record, history_append_turn,
                         history_check_session, history_get_recent_turns,
-                        history_get_turn_rows, history_list_sessions)
+                        history_get_turn_rows, history_list_sessions, history_delete_session)
 from nodes.synthesizer import build_citations
 from schema_retriever import target_schema
 from schemas.synthesizer_output import safe_synthesizer_output
 from state import StateSyncState
 from tiles_api import register_tile_routes
+from dashboards_api import register_dashboard_routes
 
 logging.basicConfig(
     level=logging.INFO,
@@ -137,11 +138,27 @@ async def _audit(
 
 async def require_principal(request: Request) -> Principal:
     """
-    FastAPI dependency authenticating the caller and enforcing principal rate limits.
+    FastAPI dependency: authenticate the caller and charge the READ budget
+    (every route that does not run the model; see auth.RateLimiter).
+    """
+    return await _authenticate_and_limit(request, read_rate_limiter)
 
+
+async def require_principal_for_model(request: Request) -> Principal:
+    """
+    FastAPI dependency for routes that run the model (/query): authenticate the
+    caller and charge the tight budget (api.rate_limit_max_requests), which
+    bounds token spend and denial-of-wallet loops.
+    """
+    return await _authenticate_and_limit(request, rate_limiter)
+
+
+async def _authenticate_and_limit(request: Request, limiter: RateLimiter) -> Principal:
+    """
     Extracts bearer token from the Authorization header and verifies it against
-    known principals. Enforces in-process fixed-window rate limits. Records audit
-    events on auth or rate limit failures before raising corresponding HTTP exceptions.
+    known principals. Enforces the given in-process fixed-window rate limit.
+    Records audit events on auth or rate limit failures before raising
+    corresponding HTTP exceptions.
     """
     client_ip = request.client.host if request.client else None
     route = request.url.path
@@ -164,7 +181,7 @@ async def require_principal(request: Request) -> Principal:
         )
 
     try:
-        rate_limiter.check(principal.principal_id)
+        limiter.check(principal.principal_id)
     except RateLimited as exc:
         await _audit(
             principal.principal_id,
@@ -284,6 +301,37 @@ async def get_session_route(
     return result
 
 
+@app.delete("/sessions/{session_id}", tags=["history"])
+async def delete_session_route(
+    session_id: str,
+    request: Request,
+    principal: Principal = Depends(require_principal),
+) -> dict:
+    """Erase one of my conversations (Phase 2b). Someone else's is a 404, like a missing one."""
+    try:
+        async with MCPSession(
+            tenant_id=principal.tenant_id,
+            base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
+        ) as session:
+            result = await history_delete_session(
+                session, session_id=session_id, principal_id=principal.principal_id
+            )
+    except Exception as exc:
+        logger.error("Deleting session %s failed: %s", session_id, exc, exc_info=True)
+        raise HTTPException(status_code=503, detail="History service unavailable. Try again shortly.") from None
+    client_ip = request.client.host if request.client else None
+    if not result.get("ok"):
+        await _audit(principal.principal_id, principal.tenant_id, f"/sessions/{session_id}", "error",
+                     session_id=session_id, client_ip=client_ip,
+                     detail=f"history:delete {result.get('error')}")
+        raise HTTPException(status_code=404 if result.get("error") == "not_found" else 422,
+                            detail=result.get("message") or "Request failed.")
+    await _audit(principal.principal_id, principal.tenant_id, f"/sessions/{session_id}", "allowed",
+                 session_id=session_id, client_ip=client_ip,
+                 detail=f"history:delete turns={result.get('deleted_turns')}")
+    return {"deleted": session_id, "deleted_turns": result.get("deleted_turns")}
+
+
 @app.get("/sessions/{session_id}/turns/{turn_index}/rows", tags=["history"])
 async def get_turn_rows_route(
     session_id: str,
@@ -327,7 +375,7 @@ async def get_turn_rows_route(
 async def run_query(
     body: QueryRequest,
     request: Request,
-    principal: Principal = Depends(require_principal),
+    principal: Principal = Depends(require_principal_for_model),
 ) -> QueryResponse:
     if not body.query or not body.query.strip():
         raise HTTPException(status_code=422, detail="query must not be empty")
@@ -596,6 +644,7 @@ async def run_query(
 
 
 register_tile_routes(app, require_principal=require_principal, audit=_audit)
+register_dashboard_routes(app, require_principal=require_principal, audit=_audit)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

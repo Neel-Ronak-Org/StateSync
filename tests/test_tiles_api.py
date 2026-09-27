@@ -336,3 +336,52 @@ def test_confirm_tile_route(harness_and_client):
     assert res.status_code == 200
     assert harness.calls[-1]["action"] == "confirm"
     assert harness.calls[-1]["params"]["tile_id"] == "tile-123"
+
+
+# ── Phase 2b: dashboards, viz and layout pass through to the MCP ──────────────
+
+def test_list_forwards_the_dashboard_filter_and_audits_it(harness_and_client):
+    harness, client = harness_and_client
+    harness.scripted_result = {"ok": True, "tiles": [SAMPLE_VIEW]}
+    response = client.get("/tiles", params={"dashboard_id": "dash-1"})
+    assert response.status_code == 200
+    assert harness.calls[-1]["action"] == "list"
+    assert harness.calls[-1]["params"]["dashboard_id"] == "dash-1"
+    assert harness.audit_log[-1]["detail"] == "tiles:list dashboard=dash-1"
+
+
+def test_list_without_a_filter_sends_none(harness_and_client):
+    harness, client = harness_and_client
+    harness.scripted_result = {"ok": True, "tiles": []}
+    assert client.get("/tiles").status_code == 200
+    assert harness.calls[-1]["params"].get("dashboard_id") is None
+    assert harness.audit_log[-1]["detail"] == "tiles:list"
+
+
+def test_pin_forwards_dashboard_viz_and_layout(harness_and_client):
+    harness, client = harness_and_client
+    harness.scripted_result = {"ok": True, "tile": SAMPLE_VIEW}
+    response = client.post("/tiles", json={
+        "session_id": "sess-1", "turn_index": 2, "dashboard_id": "dash-1", "viz": "donut",
+        "layout": {"x": 0, "y": 0, "w": 4, "h": 8},
+    })
+    assert response.status_code == 201
+    params = harness.calls[-1]["params"]
+    assert params["dashboard_id"] == "dash-1" and params["viz"] == "donut"
+    assert params["layout"] == {"x": 0, "y": 0, "w": 4, "h": 8}
+
+
+def test_pin_without_layout_sends_none(harness_and_client):
+    harness, client = harness_and_client
+    harness.scripted_result = {"ok": True, "tile": SAMPLE_VIEW}
+    assert client.post("/tiles", json={"session_id": "sess-1", "turn_index": 2}).status_code == 201
+    assert harness.calls[-1]["params"]["layout"] is None
+
+
+def test_update_forwards_viz_and_move(harness_and_client):
+    harness, client = harness_and_client
+    harness.scripted_result = {"ok": True, "tile": SAMPLE_VIEW}
+    response = client.patch("/tiles/tile-123", json={"viz": "auto", "dashboard_id": "dash-2"})
+    assert response.status_code == 200
+    params = harness.calls[-1]["params"]
+    assert params["viz"] == "auto" and params["dashboard_id"] == "dash-2"

@@ -50,8 +50,9 @@ from tools.data_tools import sample_rows, run_select
 from tools.vector_tools import semantic_search, hybrid_select, get_passage
 from tools.memory_tools import get_trajectory, put_trajectory
 from tools.tile_tools import manage as tiles_manage
-from tools.history_tools import (append_turn, check_session, get_recent_turns, get_turn_rows,
-                                 list_sessions, record_audit)
+from tools.dashboard_tools import manage as dashboards_manage
+from tools.history_tools import (append_turn, check_session, delete_session, get_recent_turns,
+                                 get_turn_rows, list_sessions, record_audit)
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
@@ -111,6 +112,8 @@ _REGISTERED_TOOLS: dict[str, Any] = {
     "history.get_turn_rows":    get_turn_rows,
     "history.list_sessions":    list_sessions,
     "tiles.manage":             tiles_manage,
+    "dashboards.manage":        dashboards_manage,
+    "history.delete_session":   delete_session,
     "audit.record": record_audit,
 }
 

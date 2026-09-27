@@ -34,6 +34,15 @@ from tile_render import error_status, render_tile
 logger = logging.getLogger(__name__)
 
 
+class LayoutSlot(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    x: int
+    y: int
+    w: int
+    h: int
+
+
 class PinTileRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -41,6 +50,11 @@ class PinTileRequest(BaseModel):
     turn_index: int
     title: str | None = None
     refresh_interval_s: int | None = None
+    # Phase 2b: which dashboard (default: the dataset's first), how to show it,
+    # and where. The MCP validates all three.
+    dashboard_id: str | None = None
+    viz: str | None = None
+    layout: LayoutSlot | None = None
 
 
 class ReplaceTileRequest(BaseModel):
@@ -55,6 +69,8 @@ class UpdateTileRequest(BaseModel):
 
     title: str | None = None
     refresh_interval_s: int | None = None
+    viz: str | None = None            # a kind, or "auto" to decide from the data again
+    dashboard_id: str | None = None   # move to another dashboard of the same dataset
 
 
 def register_tile_routes(app: Any, require_principal: Any, audit: Any) -> None:
@@ -109,7 +125,7 @@ def register_tile_routes(app: Any, require_principal: Any, audit: Any) -> None:
             )
 
         if action == "list":
-            detail = "tiles:list"
+            detail = "tiles:list" + (f" dashboard={params['dashboard_id']}" if params.get("dashboard_id") else "")
         else:
             effective_tile_id = tile_id or (result.get("tile") or {}).get("tile_id")
             detail = f"tiles:{action} tile={effective_tile_id}"
@@ -140,6 +156,9 @@ def register_tile_routes(app: Any, require_principal: Any, audit: Any) -> None:
             turn_index=body.turn_index,
             title=body.title,
             refresh_interval_s=body.refresh_interval_s,
+            dashboard_id=body.dashboard_id,
+            viz=body.viz,
+            layout=body.layout.model_dump() if body.layout else None,
         )
         rendered = render_tile(result["tile"], cfg.sql.chart_max_data_rows)
         return {"tile": rendered}
@@ -147,6 +166,7 @@ def register_tile_routes(app: Any, require_principal: Any, audit: Any) -> None:
     @app.get("/tiles", tags=["tiles"])
     async def list_tiles(
         request: Request,
+        dashboard_id: str | None = None,
         principal: Principal = Depends(require_principal),
     ) -> dict[str, Any]:
         result = await _execute_tile_action(
@@ -154,6 +174,7 @@ def register_tile_routes(app: Any, require_principal: Any, audit: Any) -> None:
             request,
             action="list",
             route_path="/tiles",
+            dashboard_id=dashboard_id,
         )
         rendered_tiles = [
             render_tile(t, cfg.sql.chart_max_data_rows)
@@ -227,6 +248,8 @@ def register_tile_routes(app: Any, require_principal: Any, audit: Any) -> None:
             tile_id=tile_id,
             title=body.title,
             refresh_interval_s=body.refresh_interval_s,
+            viz=body.viz,
+            dashboard_id=body.dashboard_id,
         )
         rendered = render_tile(result["tile"], cfg.sql.chart_max_data_rows)
         return {"tile": rendered}

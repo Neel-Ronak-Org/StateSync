@@ -204,11 +204,19 @@ class RateLimiter:
 
     Thread-safe with a threading.Lock across uvicorn worker threads.
     Prunes fully expired windows on access to bound memory.
-    Reads limits from cfg.api.rate_limit_max_requests and
-    cfg.api.rate_limit_window_seconds without hardcoded numeric constants (A0.2).
+    Reads its ceiling from cfg.api.<max_requests_key> and its window from
+    cfg.api.rate_limit_window_seconds, at every check, without hardcoded
+    numeric constants (A0.2).
+
+    Two instances, two budgets (docs/V3_PLAN.md Phase 2b): routes that run the
+    model share the tight one; everything else (reads, tile and dashboard
+    edits, polling) has its own, larger one, so a live dashboard refreshing
+    itself cannot lock its owner out of asking a question, and a burst of
+    questions cannot lock them out of their dashboard.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, max_requests_key: str = "rate_limit_max_requests") -> None:
+        self._max_requests_key = max_requests_key
         self._windows: dict[str, tuple[float, int]] = {}
         self._lock = threading.Lock()
 
@@ -219,7 +227,7 @@ class RateLimiter:
         Raises RateLimited(retry_after) if request ceiling is exceeded in the
         current window, otherwise records the hit and returns None.
         """
-        max_requests: int = cfg.api.rate_limit_max_requests
+        max_requests: int = int(cfg.api.get(self._max_requests_key))
         window_seconds: int = cfg.api.rate_limit_window_seconds
 
         with self._lock:
@@ -246,4 +254,7 @@ class RateLimiter:
             self._windows[principal_id] = (window_start, count + 1)
 
 
-rate_limiter = RateLimiter()
+# Routes that run the model (/query; the dashboard builder).
+rate_limiter = RateLimiter("rate_limit_max_requests")
+# Every other authenticated route.
+read_rate_limiter = RateLimiter("read_rate_limit_max_requests")

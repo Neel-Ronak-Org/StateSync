@@ -417,6 +417,40 @@ async def get_turn_rows(session_id: str, principal_id: str, turn_index: int) -> 
     }
 
 
+async def delete_session(session_id: str, principal_id: str) -> dict[str, Any]:
+    """
+    Erase a conversation its owner no longer wants (docs/V3_PLAN.md Phase 2b,
+    migration 019 granted the DELETE).
+
+    Deletes every turn of the session and, by ON DELETE CASCADE, its stored
+    result rows (turn_rows). Scoped by tenant AND principal: a session someone
+    else owns is reported exactly like one that does not exist, and none of its
+    turns are touched. The audit log is not touched (insert-only), and tiles
+    pinned from this conversation keep their own copy of the SQL, so they keep
+    working.
+    Returns {"ok": True, "deleted_turns": n} or {"ok": False, "error": code, "message": text}.
+    """
+    tenant_id = get_tenant_id()
+    if not isinstance(session_id, str) or not session_id:
+        return {"ok": False, "error": "invalid", "message": "session_id is required."}
+    if not isinstance(principal_id, str) or not principal_id:
+        return {"ok": False, "error": "invalid", "message": "principal_id is required."}
+    async with get_history_connection() as conn:
+        cur = await conn.execute(
+            """
+            DELETE FROM session_state.conversation_turns
+            WHERE tenant_id = %s AND principal_id = %s AND session_id = %s
+            """,
+            (tenant_id, principal_id, session_id),
+        )
+        deleted = cur.rowcount
+    if not deleted:
+        return {"ok": False, "error": "not_found", "message": "No such conversation."}
+    logger.info("history: deleted session %s (%d turns; tenant=%s principal=%s)",
+                session_id, deleted, tenant_id, principal_id)
+    return {"ok": True, "deleted_turns": deleted}
+
+
 async def list_sessions(principal_id: str, limit: int | None = None) -> dict[str, Any]:
     """
     Every conversation this principal has within the tenant, most recently
