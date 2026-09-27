@@ -36,6 +36,7 @@ from schema_retriever import target_schema
 from schemas.synthesizer_output import safe_synthesizer_output
 from state import StateSyncState
 from tiles_api import register_tile_routes
+from builder_api import register_build_routes
 from dashboards_api import register_dashboard_routes
 
 logging.basicConfig(
@@ -234,6 +235,9 @@ async def health() -> dict:
         "llm_detail": LLM_READINESS["detail"],
         "default_schema": target_schema(),
         "available_schemas": sorted(cfg.api.allowed_schemas),
+        # Datasets whose data keeps changing (Phase 2b): the web app polls their
+        # dashboards and starts a new browser on the first one.
+        "live_schemas": [s for s in cfg.dashboards.live_schemas if s in cfg.api.allowed_schemas],
     }
 
 
@@ -371,72 +375,25 @@ async def get_turn_rows_route(
     return result
 
 
-@app.post("/query", response_model=QueryResponse, tags=["query"])
-async def run_query(
-    body: QueryRequest,
-    request: Request,
-    principal: Principal = Depends(require_principal_for_model),
+async def answer_question(
+    principal: Principal,
+    query: str,
+    session_id: str,
+    requested: str,
+    client_ip: str | None,
+    route_path: str = "/query",
+    debug_candidate_sql: str | None = None,
 ) -> QueryResponse:
-    if not body.query or not body.query.strip():
-        raise HTTPException(status_code=422, detail="query must not be empty")
-
-    requested = body.schema or target_schema()
-    if requested not in cfg.api.allowed_schemas:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Schema {requested!r} is not allowed. Allowed schemas: {sorted(cfg.api.allowed_schemas)}",
-        )
-
-    session_id = body.session_id or str(uuid.uuid4())
+    """
+    Run one question through the pipeline and record the turn: the body of
+    /query after its request checks (schema allowlist, session ownership,
+    dataset match). Also used by the dashboard builder (dashboard_builder.py),
+    which asks its planned questions through exactly this path, so a tile it
+    creates came from the same SQL gate and validators as any answer.
+    Raises HTTPException with a user-facing message when the graph fails.
+    """
     tenant_id = principal.tenant_id
-    client_ip = request.client.host if request.client else None
     query_id = str(uuid.uuid4())
-
-    # A session belongs to the principal who wrote its first turn (docs/V3_PLAN.md
-    # 0.2). The web client generates session ids, so one owned by someone else is
-    # refused here, before any model call -- rather than answered and then not
-    # recorded. history.append_turn enforces the same rule at the write.
-    if body.session_id:
-        try:
-            async with MCPSession(
-                tenant_id=tenant_id,
-                base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
-                session_id=session_id,
-            ) as check_session:
-                access = await history_check_session(check_session, session_id, principal.principal_id)
-        except Exception as exc:
-            logger.error("Session ownership check failed for session_id=%s: %s", session_id, exc)
-            raise HTTPException(status_code=503, detail="History service unavailable. Try again shortly.")
-        if not access.get("usable", False):
-            await _audit(
-                principal.principal_id,
-                tenant_id,
-                "/query",
-                "denied_session",
-                session_id=session_id,
-                client_ip=client_ip,
-                detail="session belongs to another principal",
-            )
-            raise HTTPException(status_code=404, detail="Conversation not found. Start a new conversation.")
-        # A conversation stays on the dataset it started on (migration 018). A
-        # follow-up aimed elsewhere would be answered from the other corpus while
-        # its context came from the first -- refuse it rather than mix them.
-        started_on = access.get("target_schema")
-        if started_on and started_on != requested:
-            await _audit(
-                principal.principal_id,
-                tenant_id,
-                "/query",
-                "error",
-                session_id=session_id,
-                client_ip=client_ip,
-                detail=f"dataset mismatch: conversation={started_on} requested={requested}",
-            )
-            raise HTTPException(
-                status_code=409,
-                detail=(f"This conversation uses the {started_on} dataset. "
-                        f"Start a new conversation to ask about {requested}."),
-            )
 
     # Build the initial state input for the entry node
     initial_input = {
@@ -444,7 +401,7 @@ async def run_query(
         "tenant_id": tenant_id,
         "principal_id": principal.principal_id,
         "session_id": session_id,
-        "raw_query": body.query,
+        "raw_query": query,
         "target_schema": requested,
         "flags_snapshot": snapshot_flags(),
     }
@@ -460,7 +417,7 @@ async def run_query(
                 raw_query=initial_input["raw_query"],
                 target_schema=requested,
                 flags_snapshot=initial_input["flags_snapshot"],
-                debug_candidate_sql=body.debug_candidate_sql,
+                debug_candidate_sql=debug_candidate_sql,
             )
         )
         final_state: StateSyncState = StateSyncState(**raw_final) if isinstance(raw_final, dict) else raw_final
@@ -469,7 +426,7 @@ async def run_query(
         await _audit(
             principal.principal_id,
             principal.tenant_id,
-            "/query",
+            route_path,
             "error",
             query_id=query_id,
             session_id=session_id,
@@ -632,7 +589,7 @@ async def run_query(
     await _audit(
         principal.principal_id,
         principal.tenant_id,
-        "/query",
+        route_path,
         "allowed",
         query_id=final_state.query_id,
         session_id=session_id,
@@ -643,8 +600,87 @@ async def run_query(
     return response
 
 
+@app.post("/query", response_model=QueryResponse, tags=["query"])
+async def run_query(
+    body: QueryRequest,
+    request: Request,
+    principal: Principal = Depends(require_principal_for_model),
+) -> QueryResponse:
+    if not body.query or not body.query.strip():
+        raise HTTPException(status_code=422, detail="query must not be empty")
+
+    requested = body.schema or target_schema()
+    if requested not in cfg.api.allowed_schemas:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Schema {requested!r} is not allowed. Allowed schemas: {sorted(cfg.api.allowed_schemas)}",
+        )
+
+    session_id = body.session_id or str(uuid.uuid4())
+    tenant_id = principal.tenant_id
+    client_ip = request.client.host if request.client else None
+
+    # A session belongs to the principal who wrote its first turn (docs/V3_PLAN.md
+    # 0.2). The web client generates session ids, so one owned by someone else is
+    # refused here, before any model call -- rather than answered and then not
+    # recorded. history.append_turn enforces the same rule at the write.
+    if body.session_id:
+        try:
+            async with MCPSession(
+                tenant_id=tenant_id,
+                base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
+                session_id=session_id,
+            ) as check_session:
+                access = await history_check_session(check_session, session_id, principal.principal_id)
+        except Exception as exc:
+            logger.error("Session ownership check failed for session_id=%s: %s", session_id, exc)
+            raise HTTPException(status_code=503, detail="History service unavailable. Try again shortly.")
+        if not access.get("usable", False):
+            await _audit(
+                principal.principal_id,
+                tenant_id,
+                "/query",
+                "denied_session",
+                session_id=session_id,
+                client_ip=client_ip,
+                detail="session belongs to another principal",
+            )
+            raise HTTPException(status_code=404, detail="Conversation not found. Start a new conversation.")
+        # A conversation stays on the dataset it started on (migration 018). A
+        # follow-up aimed elsewhere would be answered from the other corpus while
+        # its context came from the first -- refuse it rather than mix them.
+        started_on = access.get("target_schema")
+        if started_on and started_on != requested:
+            await _audit(
+                principal.principal_id,
+                tenant_id,
+                "/query",
+                "error",
+                session_id=session_id,
+                client_ip=client_ip,
+                detail=f"dataset mismatch: conversation={started_on} requested={requested}",
+            )
+            raise HTTPException(
+                status_code=409,
+                detail=(f"This conversation uses the {started_on} dataset. "
+                        f"Start a new conversation to ask about {requested}."),
+            )
+
+    return await answer_question(
+        principal,
+        body.query,
+        session_id,
+        requested,
+        client_ip,
+        debug_candidate_sql=body.debug_candidate_sql,
+    )
+
+
 register_tile_routes(app, require_principal=require_principal, audit=_audit)
 register_dashboard_routes(app, require_principal=require_principal, audit=_audit)
+register_build_routes(app, require_principal=require_principal,
+                      require_principal_for_model=require_principal_for_model,
+                      audit=_audit, answer_question=answer_question)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

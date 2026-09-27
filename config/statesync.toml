@@ -138,6 +138,18 @@ grid_columns              = 12
 grid_max_row              = 1000
 tile_min_h                = 2
 tile_max_h                = 40
+# Datasets whose data keeps changing (the simulator's). Their dashboards poll,
+# their tiles default to fast refresh, and the planner may use "now".
+live_schemas              = ["live"]
+# "Build with AI" (orchestrator/dashboard_builder.py, D-v3-9).
+min_insights              = 4       # a plan with fewer usable insights fails
+max_insights              = 8       # each is one full pipeline run (~5 model calls)
+planner_max_tokens        = 1600
+planner_max_tables        = 20
+planner_schema_max_chars  = 6000    # the schema summary the planner reads
+goal_max_chars            = 200
+question_max_chars        = 300
+build_keep_s              = 3600    # finished builds stay readable this long
 
 [simulator]
 # The live demo dataset (docs/V3_PLAN.md Phase 2b, migration 020, simulator/).

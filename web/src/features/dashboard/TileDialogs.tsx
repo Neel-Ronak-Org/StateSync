@@ -85,6 +85,8 @@ export function RenameTileDialog({
 }
 
 const INTERVAL_OPTIONS = [
+  { label: 'Every 30 seconds', seconds: 30 },
+  { label: 'Every minute', seconds: 60 },
   { label: 'Every 15 minutes', seconds: 900 },
   { label: 'Every hour', seconds: 3600 },
   { label: 'Every 6 hours', seconds: 21600 },

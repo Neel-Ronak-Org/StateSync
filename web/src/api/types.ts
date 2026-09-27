@@ -20,6 +20,8 @@ export interface Health {
   llm_detail: string | null
   default_schema: string
   available_schemas: string[]
+  /** Datasets whose data keeps changing (Phase 2b): dashboards on them poll and default to fast refresh. */
+  live_schemas?: string[]
 }
 
 export type Route = 'sql' | 'docs' | 'hybrid'
@@ -29,6 +31,8 @@ export interface Citation {
   kind: 'sql' | 'chunk'
   ref: string
   page?: number | null
+  /** The document's title, when the server knows it (Phase 2b). */
+  title?: string | null
 }
 
 export interface Retrieval {
@@ -153,8 +157,25 @@ export interface TileVersion {
   source: { session_id: string; turn_index: number }
 }
 
+/** How a tile is drawn (migration 019's tiles_viz_ck); null = decided from the rows. */
+export type VizKindName =
+  | 'kpi' | 'kpi_trend' | 'line' | 'area' | 'bar' | 'hbar'
+  | 'donut' | 'breakdown' | 'heatmap' | 'scatter' | 'table'
+
+export interface TileLayout {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
 export interface Tile {
   tile_id: string
+  dashboard_id: string
+  /** The dataset of the turn it was pinned from. */
+  target_schema: string
+  viz: VizKindName | null
+  layout: TileLayout | null
   title: string
   state: TileState
   version: number
@@ -179,9 +200,54 @@ export interface PinTileRequest {
   turn_index: number
   title?: string
   refresh_interval_s?: number
+  dashboard_id?: string
+  viz?: VizKindName
+  layout?: TileLayout
 }
 
 export interface UpdateTileRequest {
   title?: string
   refresh_interval_s?: number
+  /** A kind, or 'auto' to decide from the rows again. */
+  viz?: VizKindName | 'auto'
+  /** Move to another dashboard of the same dataset. */
+  dashboard_id?: string
+}
+
+export interface Dashboard {
+  dashboard_id: string
+  name: string
+  target_schema: string
+  position: number
+  tile_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface LayoutItem extends TileLayout {
+  tile_id: string
+}
+
+export type BuildItemState = 'queued' | 'running' | 'added' | 'skipped'
+
+export interface BuildItem {
+  title: string
+  question: string
+  viz: VizKindName | null
+  state: BuildItemState
+  /** Why it was skipped, in words a person can act on. */
+  reason: string | null
+  tile_id: string | null
+}
+
+export interface BuildJob {
+  job_id: string
+  dashboard_id: string
+  state: 'planning' | 'running' | 'done' | 'failed'
+  goal: string | null
+  items: BuildItem[]
+  /** Why the whole build failed (planning could not produce insights). */
+  error: string | null
+  started_at: string
+  finished_at: string | null
 }

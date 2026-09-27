@@ -32,7 +32,7 @@ function systemTheme(): ResolvedTheme {
 
 function storedChoice(): ThemeChoice {
   const value = readStored(KEYS.theme)
-  return value === 'light' || value === 'dark' || value === 'system' ? value : 'system'
+  return value === 'light' || value === 'dark' || value === 'system' ? value : 'dark'
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

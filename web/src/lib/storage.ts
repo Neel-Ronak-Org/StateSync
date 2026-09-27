@@ -65,5 +65,9 @@ export const KEYS = {
   thread: 'statesync.thread',
   theme: 'statesync.theme',
   devMode: 'statesync.devMode',
-  layout: 'statesync.dashboardLayout',
 } as const
+
+/** The dashboard last opened on a dataset, so returning to it opens the same tab. */
+export function dashboardKey(dataset: string): string {
+  return `statesync.dashboard.${dataset}`
+}

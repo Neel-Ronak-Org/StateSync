@@ -1,204 +1,209 @@
 # StateSync web — design spec
 
-The UI for docs/V3_PLAN.md Phase 2. The owner delegated the visual direction; this
-file is that direction, written down so every screen follows one system. When a
-choice is not covered here, pick the quieter option.
+The UI contract for docs/V3_PLAN.md Phase 2b ("dashboard first"). The owner chose
+the direction from a reference analytics dashboard: dark navy, cyan and purple
+accents, KPI cards with trends, smooth motion. Every screen follows this file; when
+a choice is not covered here, pick the quieter option.
 
 ## 1. Direction
 
-**Calm, dense, trustworthy — a tool for reading numbers, not a marketing page.**
-Reference points: Linear's restraint, Vercel's dashboard typography. The product's
-claim is "numbers you can trust", so the UI makes provenance (which dataset, which
-query, which source) visible without shouting.
+**A live analytics product: the dashboard is the home, chat is how you ask for more.**
+It should feel alive (numbers move, cards respond to the pointer, pages glide) and
+stay trustworthy (every number shows when it was computed and from which dataset).
+Reference points: the owner's reference mockup for palette and card anatomy;
+Linear/Vercel for restraint in type and spacing.
 
-Never: gradients, glassmorphism/blur, emoji, drop shadows on cards, all-caps labels,
-more than one accent colour, animated attention-seekers, centred body text, "AI
-sparkle" iconography, exclamation marks in copy.
+Never: glassmorphism or backdrop blur, emoji, all-caps labels, bouncing or looping
+attention-seekers, gradients on text or buttons, centred body text, exclamation
+marks in copy. Gradients are allowed only as chart fills (area under a line), in
+the sparkline, and as the faint glow behind the sign-in card.
 
-## 2. Tokens (already in src/index.css — use them, never raw colours)
+## 2. Tokens (src/index.css — use them, never raw colours)
 
-- **Colour:** neutral shadcn palette (`bg-background`, `bg-card`, `bg-muted`,
-  `text-foreground`, `text-muted-foreground`, `border-border`). ONE accent:
-  `text-brand` / `bg-brand` — only for the active nav item marker, links, focus, and the
-  small "live" dot. Destructive red only for errors. Amber (`text-amber-600
-  dark:text-amber-400`, `bg-amber-500/10`) only for "needs review".
-- **Type:** Geist (sans) and Geist Mono (`font-mono`) for SQL, ids, numbers in tables.
-  Scale: `text-xs` (12) captions/meta · `text-sm` (14) body and controls — the
-  default · `text-base` (16) section titles · `text-lg` (18) page titles ·
-  `text-3xl` KPI values. Weights: 400 body, 500 labels/nav, 600 titles/KPIs. Numbers in
-  tables and KPIs use `tabular-nums`.
-- **Spacing:** 4px grid. Controls `h-8`/`h-9`; page gutters `px-6`; gaps between turns
-  `gap-8`; inside cards `p-4`.
-- **Radius:** `rounded-md` controls, `rounded-lg` cards and panels, `rounded-full`
-  only for avatars/dots.
-- **Borders over shadows:** 1px `border` separates surfaces. Shadows only on floating
-  layers (menus, dialogs — shadcn defaults).
-- **Icons:** lucide-react, `size-4` (16px), stroke default. Icon-only buttons always
-  have `aria-label` AND a Tooltip with the same text.
+Dark is the default theme; light is kept and equally finished.
 
-## 3. App shell
+| Token | Dark | Light | Use |
+|---|---|---|---|
+| `background` | `#0b1220` navy | `#f5f7fb` | page |
+| `card` | `#121b2d` | `#ffffff` | cards, panels, rail |
+| `muted` | `#1a2438` | `#eef2f8` | inputs, table headers, chips |
+| `border` | `#223049` | `#e2e8f0` | 1px separators |
+| `foreground` | `#e6edf7` | `#0f172a` | text |
+| `muted-foreground` | `#8b97ad` | `#64748b` | captions, axes |
+| `primary` | `#5cc8e8` cyan | `#0891b2` | primary buttons, active nav, focus, live dot |
+| `accent-2` | `#8b7cf6` purple | `#7c3aed` | second series, secondary highlights |
+| `success` | `#34d399` | `#059669` | positive deltas |
+| `destructive` | `#fb7185` | `#e11d48` | negative deltas, errors |
+| amber (`text-amber-400`/`600`) | | | "needs review" only |
+
+- Chart palette (charts/theme.ts reads `--chart-*`): cyan, purple, teal, amber, pink,
+  lime, sky, orange. Area fills are a vertical gradient of the series colour, 35% → 0%.
+- **Type:** Geist and Geist Mono. `text-xs` captions · `text-sm` body and controls ·
+  `text-base` section titles · `text-lg` page titles · `text-3xl` KPI values, weight 600,
+  `tabular-nums`. Numbers everywhere use `tabular-nums`.
+- **Spacing:** 4px grid. Controls `h-8`/`h-9`; page gutters `px-6`; card padding `p-4`.
+- **Radius:** `rounded-md` controls, `rounded-xl` cards, `rounded-full` dots and chips.
+- **Elevation:** 1px borders separate surfaces. A hovered card lifts 2px and gains a
+  soft `primary`-tinted shadow; menus and dialogs use shadcn's shadows. No blur.
+- **Icons:** lucide-react, `size-4`. Icon-only buttons have an `aria-label` and a
+  Tooltip with the same text.
+
+## 3. Motion (the `motion` library, plus CSS transitions)
+
+- Page switch (Dashboards ↔ Ask): fade + 8px rise, 200ms, `ease-out`.
+- Cards enter with fade + 6px rise, staggered 30ms, on first appearance only.
+- Hover on cards and list rows: 150ms transitions of transform, border and shadow.
+- Numbers: KPI values count from their previous value to the new one over 600ms.
+- A tile whose value changed on refresh flashes a `primary` ring for 1.2s.
+- Tab indicator and nav marker slide between items (shared layout animation).
+- Layout changes in edit mode animate (react-grid-layout's CSS transforms).
+- `prefers-reduced-motion: reduce` turns all of it into instant changes
+  (`MotionConfig reducedMotion="user"` plus a CSS media query).
+
+## 4. App shell
 
 ```
-┌──────────────┬───────────────────────────────────────────────┐
-│ ▣ StateSync  │  <View title>                 <view actions>  │  h-14, border-b
-│ [+ New chat] ├───────────────────────────────────────────────┤
-│ ◉ Chat       │                                               │
-│ ○ Dashboard  │               view content                    │
-│              │                                               │
-│ Recent       │                                               │
-│  · question… │                                               │
-│  · question… │                                               │
-│ ──────────── │                                               │
-│ Dataset [▾]  │                                               │
-│ Developer ◯  │                                               │
-│ ◐ Theme  ⎋   │                                               │
-└──────────────┴───────────────────────────────────────────────┘
+┌────┬──────────────────────────────────────────────────────────────┐
+│ ▣  │ <page header: tabs / title · dataset picker · actions>   h-14 │
+│    ├──────────────────────────────────────────────────────────────┤
+│ ▦  │                                                              │
+│ ✦  │                     page content                              │
+│    │                                                              │
+│    │                                                              │
+│ ●  │                                                              │
+│ </>│                                                              │
+│ ◐  │                                                              │
+│ ⎋  │                                                              │
+└────┴──────────────────────────────────────────────────────────────┘
 ```
-- Sidebar `w-64`, `bg-sidebar`, `border-r`, full height. Below `md` it becomes a Sheet
-  opened by a menu button (aria-label "Open menu") in the top bar.
-- Brand row: the favicon mark (inline SVG component, 20px) + "StateSync" `text-sm
-  font-semibold`.
-- "New chat": full-width outline button with `Plus` icon.
-- Nav: "Chat" (`MessageSquare`) and "Dashboard" (`LayoutDashboard`), `h-8` rows; active
-  row `bg-sidebar-accent font-medium` with a 2px `bg-brand` bar on its left edge, and
-  `aria-current="page"`.
-- "Recent": caption `text-xs font-medium text-muted-foreground`, then a scrollable list
-  inside `<nav aria-label="Recent conversations">`. Each item is a button whose
-  accessible name is the conversation's first question (truncate with ellipsis; the
-  full text in `title`), with the relative time under it in `text-xs muted`. The open
-  conversation is highlighted like the active nav row.
-- Footer (border-t, `p-3`, `gap-2`): "Dataset" Select (label "Dataset", options = the
-  API's available_schemas); "Developer mode" Switch with its label; a row with the theme
-  menu button (aria-label "Theme"; `DropdownMenuRadioGroup` with items Light / Dark /
-  System) and a "Sign out" button (`LogOut` icon + text, ghost).
-- Routing: hash-based — `#/chat` (default) and `#/dashboard`. No router library.
 
-## 4. Sign-in
+- **Rail** `w-16`, `bg-card border-r`, full height. Top: the mark (links to Dashboards).
+  Nav icon buttons with tooltips and `aria-current="page"` when active: **"Dashboards"**
+  (`LayoutDashboard`) and **"Ask"** (`MessageSquare`). The active item has a `primary`
+  pill behind it that slides between items.
+- Rail bottom, top to bottom: the connection status dot (`data-testid="connection-status"`,
+  tooltip + sr-only text: "Connected" / "Model unavailable: <detail>" / "Server
+  unreachable"; polls `/health` every 30 s); **"Developer mode"** (`Code2`, a
+  `role="switch"` button with `aria-checked`); **"Theme"** (menu with radio items
+  Light / Dark / System); **"Sign out"** (`LogOut`).
+- Below `md` the rail stays (it is already narrow).
+- Routing: hash — `#/dashboards` (default) and `#/ask`. Old links `#/dashboard` and
+  `#/chat` map to them. No router library.
+- **Dataset picker**: a Select labelled **"Dataset"** in each page header. Options are the
+  API's `available_schemas`; a new browser starts on `live` when it exists.
 
-Centred card `w-full max-w-sm`: the mark, heading **"Sign in to StateSync"** (`text-lg
-font-semibold`), one line of muted help ("Paste the API token your administrator gave
-you."), an input labelled **"API token"** (`type="password"`, `autocomplete="off"`),
-and a full-width **"Sign in"** button. Submitting validates the token by calling
-`api.sessions()` with it stored: success enters the app; a 401 shows an inline
-`role="alert"`: "That token was not accepted. Check it and try again." If the app
-returned here because a request got a 401 (AUTH_EXPIRED_EVENT), show the alert "Your
-session expired or the token is invalid. Sign in again." on arrival.
+## 5. Sign-in
 
-## 5. Chat
+Centred card `max-w-sm` on the navy background with a faint cyan glow behind it: the
+mark, **"Sign in to StateSync"**, muted help ("Paste the API token your administrator
+gave you."), input **"API token"** (`type="password"`), full-width **"Sign in"**.
+Errors as before: "That token was not accepted. Check it and try again." and, after a
+401, "Your session expired or the token is invalid. Sign in again."
 
-- Column `mx-auto w-full max-w-3xl px-6`; the thread scrolls; the composer is docked at
-  the bottom (`border-t bg-background`, same column width).
-- **Empty state** (no turns): heading "Ask about your data" (`text-lg font-semibold`),
-  one muted line naming the dataset ("Questions are answered from the **olist**
-  dataset."), then 4 suggestion buttons in a 2×2 grid (outline, `text-left`, `h-auto
-  py-2`), from a per-dataset list:
-  - public: "How many orders are there in total?", "Which sellers breached their
-    contracted SLA last quarter?", "Show orders by city as a bar chart", "What does the
-    returns policy say about refunds?"
-  - olist: "How many orders were delivered?", "Show orders by status as a chart", "What
-    are the top 5 states by number of customers?", "What is the average review score?"
-- **Composer:** Textarea (aria-label **"Ask a question"**, placeholder "Ask about your
-  data…", autosize 1–8 rows, `resize-none`), Send icon button (aria-label **"Send"**,
-  `ArrowUp`) inside its right edge. Enter sends; Shift+Enter inserts a newline; `/`
-  anywhere outside an input focuses it. While a question is in flight the button shows a
-  spinner and is disabled.
-- **Turn** (`data-testid="turn"`, `gap-3`):
-  - Question: right-aligned, `bg-muted rounded-lg px-3 py-2 text-sm max-w-[85%]`.
-  - While waiting: a `role="status"` line "Thinking…" with two muted skeleton bars.
-  - Answer text (`data-testid="answer-text"`): `text-sm leading-6`, plain text with
-    paragraphs split on blank lines. NEVER rendered as HTML or Markdown-to-HTML.
-  - Artifact card (only when there is a chart or rows): `rounded-lg border bg-card`:
-    chart first (`<VegaChart>`, height 260), then the results table.
-  - Results table: shadcn Table, sticky header, numeric columns right-aligned with
-    `font-mono tabular-nums`, first 10 rows then a "Show all N rows" toggle. A 1×1 result
-    also shows the value large (`text-3xl font-semibold tabular-nums`) above the table.
-    Caption row in `text-xs muted`: "N rows" — or, for a replayed turn whose preview is
-    shorter than its row count, "Showing P of N rows" plus a **"Load full result"**
-    button that fetches `api.turnRows` and replaces the preview (then shows "N rows").
-  - Sources (`data-testid="citations"`), when citations exist: caption "Sources", then
-    small outline badges: SQL citations as "SQL query" (opens Details); chunk citations
-    as the document/chunk id in `font-mono`, with "p. N" when a page is given.
-  - Meta + actions row (`text-xs muted`, `justify-between`): left — dataset badge
-    (`data-testid="turn-dataset"`, outline, text = the dataset the turn used), then
-    route ("Database", "Documents", "Database + documents") and latency ("1.2 s");
-    right — icon buttons with tooltips: **"Details"** (`PanelRight`), **"Download
-    CSV"** (`Download`, only when rows), and a **"More actions"** menu: Download JSON,
-    Download PNG (only when a chart rendered), Copy SQL, Copy answer.
-  - Failed question: an inline destructive Alert inside the turn with the ApiError
-    message (e.g. "Rate limit reached. Try again in 17 seconds.") and a "Retry" button.
-- **Header actions** (top bar, right): "Copy conversation" (copies the thread as
-  Markdown: `## question`, answer, SQL in a fenced block).
-- **Details panel:** Sheet from the right, `sm:max-w-lg`, title **"Answer details"**.
-  Sections: Summary (dataset, route, turn number, latency, LLM calls, tokens in/out),
-  SQL (`pre` in `font-mono text-xs bg-muted rounded-md p-3 overflow-auto` + Copy
-  button; "No SQL was run for this answer." when none), Sources. In developer mode add
-  "Trace": every `state_trace` key as a row, key in `font-mono`, value JSON-stringified
-  and truncated to 300 characters — text nodes only.
-- **Persistence:** the current thread and session id live in sessionStorage (reload
-  keeps them); the chosen dataset, theme and developer mode in localStorage. All via
-  `src/lib/storage.ts`.
+## 6. Dashboards (home)
 
-## 6. Dashboard (Phase 2, second slice)
+**Header:** dashboard tabs (`role="tablist"` labelled **"Dashboards"**, one `role="tab"`
+per dashboard, named by its name; the active tab has a sliding `primary` underline),
+**"New dashboard"** (`Plus` icon button), **"Dashboard actions"** menu (**"Rename
+dashboard"**, **"Delete dashboard"**). Right side: the Dataset picker, the live indicator
+(`data-testid="live-indicator"`: pulsing dot + "Live" + "Updated 12 s ago"),
+**"Edit layout"** (toggle button, `aria-pressed`), **"Refresh all"** (icon button),
+**"Build with AI"** (primary, `Wand2`).
 
-- Top bar: title "Dashboard", muted "N tiles", right: **"Refresh all"** (outline,
-  `RefreshCw`).
-- Grid: react-grid-layout, 12 columns, row height 40px, margin 16px; default tile size
-  4×6 (KPI-shaped results 3×4). Layout persisted per browser in localStorage
-  (`KEYS.layout`). Drag by the tile header only.
-- Tile (`data-testid="tile"`, `rounded-lg border bg-card flex flex-col`):
-  - Header `h-10 px-4 border-b`: title (`text-sm font-medium truncate`), a status badge
-    when not ok, and a **"Tile actions"** menu (`MoreHorizontal`): Refresh now, Rename,
-    Refresh interval, View SQL (developer mode), Unpin.
-  - Body: a 1×1 result as a KPI (`text-3xl font-semibold tabular-nums` + the column
-    name as a muted caption); otherwise the chart (`<VegaChart>` filling the body);
-    otherwise a compact table (first 20 rows).
-  - Footer `px-4 py-2 text-xs muted`: "Updated 5 min ago · every 1 h" (absolute time in
-    `title`); "Refreshing…" while a refresh is in flight.
-  - `needs_review`: an amber banner at the top of the body: "The data this tile reads
-    has changed. The numbers shown are from before the change." + **"Review and
-    accept"** (calls confirm).
-  - `error`: a destructive line "Last refresh failed: <last_error>" + "Retry".
-- Empty state: "No tiles yet" + "Pin an answer from the chat to keep it here." + a
-  "Go to chat" button.
-- Pinning (chat): SQL-backed turns get a **"Pin to dashboard"** icon button (`Pin`) in
-  the actions row; success toasts "Pinned to dashboard" with a "View" action; any
-  refusal (404/409/422) toasts the server's message. Document-only turns show no pin
-  button.
-- Exact names the tests use (e2e/mocked/dashboard.spec.ts):
-  - KPI value element: `data-testid="tile-kpi"` (text = the formatted value, e.g. "550").
-  - Footer interval label: 60 → "1 min", 900 → "15 min", 3600 → "1 h", 21600 → "6 h",
-    86400 → "1 d" (else minutes/hours), rendered as "every 1 h".
-  - "Rename": a Dialog titled **"Rename tile"** with an Input labelled **"Tile title"**
-    (prefilled) and a **"Save"** button (Enter submits).
-  - "Refresh interval": a Dialog titled **"Refresh interval"** with a RadioGroup (role
-    radio) of **"Every 15 minutes"** (900), **"Every hour"** (3600), **"Every 6 hours"**
-    (21600), **"Every day"** (86400), preselecting the tile's current value, and
-    **"Save"**.
-  - "Unpin": a confirmation Dialog titled **"Unpin this tile?"** ("It stops refreshing
-    and is removed from the dashboard. The conversation it came from is kept.") with
-    **"Cancel"** and a destructive **"Unpin"**.
-  - "View SQL" (developer mode only): a Dialog titled **"Tile SQL"** showing the SQL in
-    `font-mono`, with Copy.
-  - Menu items are `DropdownMenuItem`s (role menuitem) with these exact names.
-- Data: `useQuery(['tiles'], api.tiles)`; mutations (pin, refresh, update, confirm,
-  delete) update the cached list from the returned tile (setQueryData) instead of
-  refetching everything. Opening the dashboard lists tiles (the server refreshes any
-  that are due); "Refresh all" calls refresh for each tile, at most 3 at a time.
+**Insights strip** (`<section aria-label="Insights">`): up to 4 one-line insights
+(`data-testid="insight"`) computed from the tiles' own rows (src/viz/insights.ts), e.g.
+"Orders, last hour: 312 · ▲ 4.2% vs the hour before", "Mumbai leads Orders by city with
+18% of the total". Hidden when there are none.
 
-## 7. States and copy
+**Grid:** react-grid-layout, 12 columns, row height 32px, margin 16px, layout from the
+server (`tile.layout`); tiles without one are placed at the bottom by kind (KPI 3×4,
+trend and charts 6×9, breakdown and donut 4×9, table 6×9). In **edit mode** the grid
+shows dotted guides, every tile shows a grip in its header and a resize handle, and
+changes are saved (debounced 600ms) with `PUT /dashboards/{id}/layout`. Outside edit
+mode tiles do not move.
 
-- Every async surface has four states designed: loading (skeleton, not spinners, for
-  content; spinner only inside buttons), empty, error (message + retry), success.
-- Copy: sentence case, short, specific ("Rate limit reached. Try again in 17
-  seconds."), no emoji, no exclamation marks, never blame the user.
-- Numbers: `Intl.NumberFormat` (grouping); times: relative ("5 min ago") with the
-  absolute time in `title`.
+**Tile** (`data-testid="tile"`, `data-tile-id`, `data-viz` = the kind being shown):
+- Header: title (`text-sm font-medium`, truncated, full text in `title`), status badge
+  when not ok ("Needs review", "Refresh failed"), **"Tile actions"** menu:
+  **"Show as"** (radio submenu: Automatic, KPI, KPI with trend, Line, Area, Bar,
+  Horizontal bar, Donut, Breakdown, Heatmap, Scatter, Table — only the kinds the rows
+  can be drawn as), **"Size"** (Small, Medium, Large, Wide), **"Refresh now"**,
+  **"Rename"**, **"Refresh interval"**, **"Move to"** (other dashboards of the dataset),
+  **"View SQL"** (developer mode), **"Unpin"**.
+- Body by kind (src/viz):
+  - KPI: the value (`data-testid="tile-kpi"`, counts up), the humanised column name as
+    caption; with two numbers (current, previous) a delta chip (`data-testid="tile-delta"`,
+    "▲ 4.2%" in success / "▼ 3.1%" in destructive, `aria-label` "up 4.2% vs <label>").
+  - KPI with trend: value = the last complete point, delta vs the point before, and a
+    sparkline (`data-testid="sparkline"`) of the whole series.
+  - Line / Area / Bar / Horizontal bar / Donut / Heatmap / Scatter: `<VegaChart>` with a
+    spec built in the browser from the rows (src/viz/spec.ts), A7-checked like every chart.
+    Bars are sorted by value unless the axis is time; axis titles are humanised.
+  - Breakdown: up to 6 rows of label, value, share and a `primary` bar
+    (`data-testid="breakdown-row"`), the rest summed as "Other".
+  - Table: the compact table.
+- Footer: "Updated 12 s ago · every 30 s" (absolute time in `title`), "Refreshing…"
+  while in flight. Interval labels: 30 → "30 s", 60 → "1 min", 900 → "15 min",
+  3600 → "1 h", 21600 → "6 h", 86400 → "1 d".
+- `needs_review` and `error` banners, and the Rename, Refresh interval, Unpin and
+  View SQL dialogs, keep the Phase 2 names: **"Rename tile"** / **"Tile title"** /
+  **"Save"**; **"Refresh interval"** with radios **"Every 30 seconds"** (30), **"Every
+  minute"** (60), **"Every 15 minutes"**, **"Every hour"**, **"Every 6 hours"**, **"Every
+  day"**; **"Unpin this tile?"** / **"Unpin"**; **"Tile SQL"**; **"Review and accept"**;
+  **"Retry"**.
 
-## 8. Security rules for UI code (lint-enforced where possible)
+**Refresh:** the page polls `GET /tiles?dashboard_id=` every 15 s while visible; the
+server re-runs tiles that are due. A changed primary value animates and flashes the
+tile (§3).
+
+**Empty states:** no dashboard for the dataset — "No dashboards for **live** yet", one
+muted line, **"Build with AI"** (primary) and **"Start empty"**. An empty dashboard —
+"This dashboard is empty" with **"Build with AI"** and **"Ask a question"**.
+
+**Build with AI:** a Dialog **"Build a dashboard with AI"** with inputs **"Focus
+(optional)"** (placeholder "e.g. delivery performance") and **"Dashboard name"**, and
+**"Cancel"** / **"Build"**. Building runs on the server; the dashboard shows a progress
+panel (`data-testid="build-progress"`, `role="status"`): "Building 3 of 8", one row per
+planned insight with its state (queued, running, added, skipped with the reason), and
+cards appear as they are added. It ends with a toast: "Added 7 of 8 insights."
+
+## 7. Ask (chat)
+
+- Two panes. Left (`w-72`, `border-r`, collapsible below `lg`): **"New chat"** and
+  `<nav aria-label="Conversations">`, one row per conversation (accessible name = its
+  first question; time and dataset under it). Hover or focus shows **"Delete
+  conversation"** (`Trash2`), which asks in a Dialog **"Delete this conversation?"**
+  ("Its questions and answers are removed. Tiles pinned from it keep working.") with
+  **"Cancel"** / **"Delete"**.
+- Right: the chat column (`max-w-3xl`), unchanged in anatomy from Phase 2: composer
+  **"Ask a question"** / **"Send"**; turns (`data-testid="turn"`), answer text
+  (`data-testid="answer-text"`), artifact card, sources (`data-testid="citations"`),
+  meta row with **"Details"**, **"Download CSV"**, **"More actions"**, **"Pin to
+  dashboard"**; header **"Copy conversation"**.
+- Answer text: paragraphs split on blank lines; lines starting "- ", "* " or "1. " are
+  rendered as a list — React elements, never HTML.
+- Sources: document chunks show the document title when the API gives one (else the
+  chunk id), with "p. N".
+- Result caption: "1 row" / "N rows".
+- Details panel sections: Summary, SQL (once), Sources (a SQL source reads "SQL query —
+  shown above"), and in developer mode the chart spec and the Trace.
+- Empty state suggestions per dataset, now including live: "What was revenue in the
+  last hour?", "Show orders per hour over the last 24 hours", "Which channel converts
+  best this week?", "What share of orders is delivered on time?"
+
+## 8. States and copy
+
+- Every async surface has loading (skeletons with a slow shimmer), empty, error
+  (message + retry) and success states.
+- Copy: sentence case, short, specific, no emoji, no exclamation marks.
+- Numbers: `Intl.NumberFormat`, compact above 100,000 in KPIs ("1.2M"); times relative
+  with the absolute time in `title`.
+
+## 9. Security rules for UI code (lint-enforced where possible)
 
 - No `dangerouslySetInnerHTML`, `innerHTML`, `insertAdjacentHTML`, `eval`,
   `new Function` — ESLint fails the build on them.
-- Charts only through `src/charts/VegaChart.tsx` (validates, then renders without
-  eval). Never call vega/vega-embed anywhere else. No tooltips.
-- All requests through `src/api/client.ts`. The token only via `src/lib/auth.ts`.
-- External links (none expected) would need `rel="noopener noreferrer"`.
+- Charts only through `src/charts/VegaChart.tsx` (A7 check, then the interpreter; never
+  tooltips). Specs built in the browser (src/viz/spec.ts) go through the same check.
+- Sparklines and breakdown bars are SVG/DOM built by React from numbers only.
+- All requests through `src/api/client.ts`; the token only via `src/lib/auth.ts`.

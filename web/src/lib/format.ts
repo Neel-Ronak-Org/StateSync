@@ -10,18 +10,22 @@ export function formatNumber(val: number): string {
 
 export function formatRelativeTime(dateInput: string | number | Date): { relative: string; absolute: string } {
   const date = typeof dateInput === 'string' || typeof dateInput === 'number' ? new Date(dateInput) : dateInput
-  const absolute = date.toISOString()
+  // Checked before toISOString(), which throws on an invalid date.
   if (isNaN(date.getTime())) {
     return { relative: '', absolute: '' }
   }
+  const absolute = date.toISOString()
   const diffMs = Date.now() - date.getTime()
-  const diffSec = Math.floor(diffMs / 1000)
+  const diffSec = Math.max(0, Math.floor(diffMs / 1000))
   const diffMin = Math.floor(diffSec / 60)
   const diffHour = Math.floor(diffMin / 60)
   const diffDay = Math.floor(diffHour / 24)
 
-  if (diffSec < 60) {
+  if (diffSec < 10) {
     return { relative: 'just now', absolute }
+  }
+  if (diffSec < 60) {
+    return { relative: `${diffSec} s ago`, absolute }
   }
   if (diffMin < 60) {
     return { relative: `${diffMin} min ago`, absolute }
@@ -39,6 +43,9 @@ export function formatRelativeTime(dateInput: string | number | Date): { relativ
 }
 
 export function formatInterval(seconds: number): string {
+  if (seconds < 60) {
+    return `${Math.round(seconds)} s`
+  }
   if (seconds < 3600) {
     const mins = Math.round(seconds / 60)
     return `${mins} min`

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { Download, MoreHorizontal, PanelRight, Pin } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { VegaChart, type ChartView } from '@/charts/VegaChart'
 import { ResultTable } from '@/features/chat/ResultTable'
+import { useAllTiles } from '@/features/dashboard/useTiles'
 import { copyToClipboard } from '@/lib/clipboard'
 import { downloadCsv } from '@/lib/csv'
 import type { ChatTurn } from '@/types/chat'
@@ -51,10 +52,7 @@ export function TurnItem({
   const [isPinning, setIsPinning] = useState(false)
   const queryClient = useQueryClient()
 
-  const { data: tilesData } = useQuery({
-    queryKey: ['tiles'],
-    queryFn: api.tiles,
-  })
+  const { data: tilesData } = useAllTiles()
 
   const isPinned = Boolean(
     tilesData?.tiles?.some(
@@ -75,28 +73,17 @@ export function TurnItem({
         action: {
           label: 'View',
           onClick: () => {
-            window.location.hash = '#/dashboard'
+            window.location.hash = '#/dashboards'
           },
         },
       })
-      queryClient.setQueryData<{ tiles: Tile[] }>(['tiles'], (old) => {
-        if (!old) return { tiles: [res.tile] }
-        const existingIndex = old.tiles.findIndex((t) => t.tile_id === res.tile.tile_id)
-        if (existingIndex >= 0) {
-          const next = [...old.tiles]
-          next[existingIndex] = res.tile
-          return { tiles: next }
-        }
-        return { tiles: [res.tile, ...old.tiles] }
-      })
+      queryClient.setQueryData<{ tiles: Tile[] }>(['tiles', 'all'], (old) =>
+        old ? { tiles: [...old.tiles.filter((t) => t.tile_id !== res.tile.tile_id), res.tile] } : { tiles: [res.tile] })
+      void queryClient.invalidateQueries({ queryKey: ['tiles', res.tile.dashboard_id] })
+      // The pin may have created the dataset's first dashboard, and it changes a tile count.
+      void queryClient.invalidateQueries({ queryKey: ['dashboards'] })
     } catch (err) {
-      if (err instanceof ApiError) {
-        toast.error(err.message)
-      } else if (err instanceof Error) {
-        toast.error(err.message)
-      } else {
-        toast.error('Failed to pin to dashboard.')
-      }
+      toast.error(err instanceof ApiError ? err.message : 'Failed to pin to dashboard.')
     } finally {
       setIsPinning(false)
     }

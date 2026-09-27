@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Copy } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -19,6 +19,8 @@ interface ChatViewProps {
   dataset: string
   devMode: boolean
   sessionId: string
+  /** Rendered in the header before "Copy conversation" (the dataset picker). */
+  headerExtra?: ReactNode
 }
 
 export function ChatView({
@@ -30,6 +32,7 @@ export function ChatView({
   dataset,
   devMode,
   sessionId,
+  headerExtra,
 }: ChatViewProps) {
   const [activeDetailsTurn, setActiveDetailsTurn] = useState<ChatTurn | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
@@ -72,17 +75,20 @@ export function ChatView({
   return (
     <div className="flex flex-1 flex-col h-full overflow-hidden bg-background">
       {/* Top bar */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b px-6">
-        <h1 className="text-sm font-semibold">Chat</h1>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleCopyConversation}
-          className="gap-1.5 text-xs h-8"
-        >
-          <Copy className="size-3.5" />
-          <span>Copy conversation</span>
-        </Button>
+      <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b px-6">
+        <h1 className="text-base font-semibold">Ask</h1>
+        <div className="flex items-center gap-2">
+          {headerExtra}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyConversation}
+            className="h-8 gap-1.5 text-xs"
+          >
+            <Copy className="size-3.5" />
+            <span>Copy conversation</span>
+          </Button>
+        </div>
       </header>
 
       {/* Main thread */}

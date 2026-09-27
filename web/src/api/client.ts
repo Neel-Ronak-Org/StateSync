@@ -10,7 +10,10 @@
  */
 
 import type {
+  BuildJob,
+  Dashboard,
   Health,
+  LayoutItem,
   PinTileRequest,
   QueryRequest,
   QueryResponse,
@@ -35,7 +38,7 @@ export class ApiError extends Error {
   }
 }
 
-type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE'
+type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 function detailText(body: unknown): string | null {
   if (!body || typeof body !== 'object') return null
@@ -115,7 +118,8 @@ export const api = {
   turnRows: (sessionId: string, turnIndex: number) =>
     apiFetch<TurnRows>(`/sessions/${enc(sessionId)}/turns/${enc(String(turnIndex))}/rows`),
 
-  tiles: () => apiFetch<{ tiles: Tile[] }>('/tiles'),
+  tiles: (dashboardId?: string) =>
+    apiFetch<{ tiles: Tile[] }>(dashboardId ? `/tiles?dashboard_id=${enc(dashboardId)}` : '/tiles'),
   tile: (tileId: string) => apiFetch<{ tile: Tile }>(`/tiles/${enc(tileId)}`),
   pinTile: (request: PinTileRequest) => apiFetch<{ tile: Tile }>('/tiles', { method: 'POST', body: request }),
   refreshTile: (tileId: string) => apiFetch<{ tile: Tile }>(`/tiles/${enc(tileId)}/refresh`, { method: 'POST' }),
@@ -128,4 +132,28 @@ export const api = {
     apiFetch<{ tile: Tile }>(`/tiles/${enc(tileId)}`, { method: 'PATCH', body: request }),
   confirmTile: (tileId: string) => apiFetch<{ tile: Tile }>(`/tiles/${enc(tileId)}/confirm`, { method: 'POST' }),
   deleteTile: (tileId: string) => apiFetch<{ deleted: string }>(`/tiles/${enc(tileId)}`, { method: 'DELETE' }),
+
+  deleteSession: (sessionId: string) =>
+    apiFetch<{ deleted: string; deleted_turns: number }>(`/sessions/${enc(sessionId)}`, { method: 'DELETE' }),
+
+  dashboards: (schema?: string) =>
+    apiFetch<{ dashboards: Dashboard[] }>(schema ? `/dashboards?schema=${enc(schema)}` : '/dashboards'),
+  createDashboard: (name: string, targetSchema: string) =>
+    apiFetch<{ dashboard: Dashboard }>('/dashboards', { method: 'POST', body: { name, target_schema: targetSchema } }),
+  renameDashboard: (dashboardId: string, name: string) =>
+    apiFetch<{ dashboard: Dashboard }>(`/dashboards/${enc(dashboardId)}`, { method: 'PATCH', body: { name } }),
+  deleteDashboard: (dashboardId: string) =>
+    apiFetch<{ deleted: string }>(`/dashboards/${enc(dashboardId)}`, { method: 'DELETE' }),
+  saveLayout: (dashboardId: string, items: LayoutItem[]) =>
+    apiFetch<{ dashboard_id: string; updated: number }>(`/dashboards/${enc(dashboardId)}/layout`, {
+      method: 'PUT',
+      body: { items },
+    }),
+  buildDashboard: (dashboardId: string, goal?: string) =>
+    apiFetch<{ job: BuildJob }>(`/dashboards/${enc(dashboardId)}/build`, {
+      method: 'POST',
+      body: goal ? { goal } : {},
+    }),
+  buildStatus: (dashboardId: string) =>
+    apiFetch<{ job: BuildJob | null }>(`/dashboards/${enc(dashboardId)}/build`),
 }

@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { MotionConfig } from 'motion/react'
 import { toast } from 'sonner'
 
-import { api } from '@/api/client'
-import { AppShell } from '@/features/shell/AppShell'
+import { api, ApiError } from '@/api/client'
+import { AskView } from '@/features/ask/AskView'
 import { SignInCard } from '@/features/auth/SignInCard'
-import { ChatView } from '@/features/chat/ChatView'
-import { DashboardView } from '@/features/dashboard/DashboardView'
 import { useConversation } from '@/features/chat/useConversation'
+import { DashboardsView } from '@/features/dashboard/DashboardsView'
+import { AppShell } from '@/features/shell/AppShell'
+import { DatasetPicker } from '@/features/shell/DatasetPicker'
+import { useHealth } from '@/hooks/useHealth'
 import { AUTH_EXPIRED_EVENT, clearToken, getToken } from '@/lib/auth'
+import { hashFor, routeFromHash, type AppRoute } from '@/lib/route'
 import { KEYS, readStored, writeStored } from '@/lib/storage'
-
-function getInitialRoute(): 'chat' | 'dashboard' {
-  return window.location.hash === '#/dashboard' ? 'dashboard' : 'chat'
-}
 
 function getStoredDevMode(): boolean {
   return readStored(KEYS.devMode) === 'true'
@@ -25,94 +25,67 @@ export default function App() {
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null)
   const isSubmittingSignInRef = useRef(false)
 
-  const [route, setRoute] = useState<'chat' | 'dashboard'>(getInitialRoute)
+  const [route, setRoute] = useState<AppRoute>(() => routeFromHash(window.location.hash))
   const [devMode, setDevModeState] = useState<boolean>(getStoredDevMode)
 
-  // Listen to hash changes
   useEffect(() => {
-    const onHashChange = () => {
-      setRoute(getInitialRoute())
-    }
+    const onHashChange = () => setRoute(routeFromHash(window.location.hash))
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
-  const handleNavigate = (nextRoute: 'chat' | 'dashboard') => {
-    window.location.hash = `#/${nextRoute}`
-    setRoute(nextRoute)
-  }
+  const navigate = useCallback((next: AppRoute) => {
+    window.location.hash = hashFor(next)
+    setRoute(next)
+  }, [])
 
-  // Listen for AUTH_EXPIRED_EVENT
   useEffect(() => {
     const handleAuthExpired = () => {
-      // If the user is currently submitting the sign-in form, do not overwrite the 401 error.
+      // While the sign-in form is submitting, its own 401 message wins.
       if (isSubmittingSignInRef.current) return
       clearToken()
       setTokenState(null)
       setSessionExpiredMessage('Your session expired or the token is invalid. Sign in again.')
     }
-
     window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired)
     return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired)
   }, [])
 
-  // Health query for schemas
-  const { data: health } = useQuery({
-    queryKey: ['health'],
-    queryFn: api.health,
-    staleTime: 60_000,
-  })
-
+  const { data: health } = useHealth()
   const availableSchemas = useMemo(() => health?.available_schemas ?? ['public'], [health])
-  const defaultSchema = health?.default_schema ?? 'public'
+  const liveSchemas = useMemo(() => health?.live_schemas ?? [], [health])
 
-  // Current dataset selection
-  const [dataset, setDatasetState] = useState<string>(() => {
-    const stored = readStored(KEYS.corpus)
-    return stored || 'public'
-  })
-
-  // Reconcile dataset once health query resolves
+  // The dataset: the stored choice if it still exists; a new browser starts on
+  // the live demo data when there is one (web/DESIGN.md §4).
+  const [dataset, setDatasetState] = useState<string>(() => readStored(KEYS.corpus) || 'public')
   useEffect(() => {
     if (!health) return
     const stored = readStored(KEYS.corpus)
     if (stored && availableSchemas.includes(stored)) {
       setDatasetState(stored)
-    } else {
-      const fallback = defaultSchema || availableSchemas[0] || 'public'
-      setDatasetState(fallback)
-      writeStored(KEYS.corpus, fallback)
+      return
     }
-  }, [health, availableSchemas, defaultSchema])
+    const preferred = liveSchemas.find((s) => availableSchemas.includes(s)) ?? health.default_schema ?? availableSchemas[0]
+    setDatasetState(preferred)
+    writeStored(KEYS.corpus, preferred)
+  }, [health, availableSchemas, liveSchemas])
 
-  const conversation = useConversation({
-    dataset,
-    onDatasetChange: (newDataset) => {
-      setDatasetState(newDataset)
-    },
-  })
+  const conversation = useConversation({ dataset, onDatasetChange: setDatasetState })
 
-  // Sessions list query
-  const { data: sessionListData } = useQuery({
+  const sessionsQuery = useQuery({
     queryKey: ['sessions', token],
-    queryFn: api.sessions,
+    queryFn: () => api.sessions(),
     enabled: Boolean(token),
   })
+  const sessions = sessionsQuery.data?.sessions ?? []
 
-  const sessions = sessionListData?.sessions ?? []
-
-  const handleNewChat = useCallback(() => {
+  const handleSelectDataset = (next: string) => {
+    if (next === dataset) return
+    writeStored(KEYS.corpus, next)
+    setDatasetState(next)
+    // A conversation stays on the dataset it started on (migration 018).
     conversation.newChat()
-    if (route !== 'chat') handleNavigate('chat')
-  }, [conversation, route])
-
-  const handleSelectDataset = (newDataset: string) => {
-    if (newDataset === dataset) return
-    writeStored(KEYS.corpus, newDataset)
-    setDatasetState(newDataset)
-    conversation.newChat()
-    if (route !== 'chat') handleNavigate('chat')
-    toast.info(`Switched to ${newDataset}. Started a new conversation.`)
+    if (route === 'ask') toast.info(`Switched to ${next}. Started a new conversation.`)
   }
 
   const handleToggleDevMode = (enabled: boolean) => {
@@ -128,10 +101,21 @@ export default function App() {
 
   const handleSelectSession = async (selectedId: string) => {
     await conversation.openSession(selectedId)
-    if (route !== 'chat') handleNavigate('chat')
+    if (route !== 'ask') navigate('ask')
   }
 
-  // Not signed in
+  const handleDeleteSession = async (sessionId: string) => {
+    try {
+      await api.deleteSession(sessionId)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to delete the conversation.')
+      throw err
+    }
+    if (sessionId === conversation.sessionId) conversation.newChat()
+    await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+    toast.success('Conversation deleted')
+  }
+
   if (!token) {
     return (
       <SignInCard
@@ -151,35 +135,41 @@ export default function App() {
     )
   }
 
+  const picker = (
+    <DatasetPicker dataset={dataset} available={availableSchemas} live={liveSchemas} onChange={handleSelectDataset} />
+  )
+
   return (
-    <AppShell
-      currentRoute={route}
-      onNavigate={handleNavigate}
-      onNewChat={handleNewChat}
-      sessions={sessions}
-      activeSessionId={conversation.sessionId}
-      onSelectSession={handleSelectSession}
-      dataset={dataset}
-      availableSchemas={availableSchemas}
-      onSelectDataset={handleSelectDataset}
-      devMode={devMode}
-      onToggleDevMode={handleToggleDevMode}
-      onSignOut={handleSignOut}
-    >
-      {route === 'chat' ? (
-        <ChatView
-          turns={conversation.turns}
-          onSend={conversation.send}
-          onRetry={conversation.retry}
-          onUpdateTurn={conversation.updateTurn}
-          isPending={conversation.isPending}
-          dataset={dataset}
-          devMode={devMode}
-          sessionId={conversation.sessionId}
-        />
-      ) : (
-        <DashboardView devMode={devMode} />
-      )}
-    </AppShell>
+    <MotionConfig reducedMotion="user">
+      <AppShell
+        route={route}
+        onNavigate={navigate}
+        devMode={devMode}
+        onToggleDevMode={handleToggleDevMode}
+        onSignOut={handleSignOut}
+      >
+        {route === 'dashboards' ? (
+          <DashboardsView
+            dataset={dataset}
+            availableSchemas={availableSchemas}
+            liveSchemas={liveSchemas}
+            onChangeDataset={handleSelectDataset}
+            devMode={devMode}
+            onAsk={() => navigate('ask')}
+          />
+        ) : (
+          <AskView
+            conversation={conversation}
+            sessions={sessions}
+            sessionsLoading={sessionsQuery.isLoading}
+            onSelectSession={(id) => void handleSelectSession(id)}
+            onDeleteSession={handleDeleteSession}
+            dataset={dataset}
+            devMode={devMode}
+            datasetPicker={picker}
+          />
+        )}
+      </AppShell>
+    </MotionConfig>
   )
 }

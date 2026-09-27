@@ -11,19 +11,27 @@
  */
 
 const FALLBACK: Record<string, string> = {
-  '--chart-surface': '#ffffff',
-  '--chart-grid': '#e5e7eb',
-  '--chart-domain': '#d1d5db',
-  '--chart-label': '#6b7280',
-  '--chart-title': '#111827',
-  '--chart-c1': '#4f46e5',
-  '--chart-c2': '#0891b2',
-  '--chart-c3': '#16a34a',
-  '--chart-c4': '#d97706',
-  '--chart-c5': '#db2777',
-  '--chart-c6': '#7c3aed',
-  '--chart-c7': '#475569',
-  '--chart-c8': '#dc2626',
+  '--chart-surface': '#121b2d',
+  '--chart-grid': '#1e2a40',
+  '--chart-domain': '#2a3852',
+  '--chart-label': '#8b97ad',
+  '--chart-title': '#e6edf7',
+  '--chart-c1': '#5cc8e8',
+  '--chart-c2': '#8b7cf6',
+  '--chart-c3': '#2dd4bf',
+  '--chart-c4': '#fbbf24',
+  '--chart-c5': '#f472b6',
+  '--chart-c6': '#a3e635',
+  '--chart-c7': '#38bdf8',
+  '--chart-c8': '#fb923c',
+}
+
+/** A `#rrggbb` colour with alpha, for gradient stops. Anything else is returned as is. */
+export function withAlpha(hex: string, alpha: number): string {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim())
+  if (!m) return hex
+  const [r, g, b] = m.slice(1).map((h) => parseInt(h, 16))
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
 const FONT = "'Geist Variable', ui-sans-serif, system-ui, sans-serif"
@@ -63,6 +71,7 @@ export function vegaConfig(): Record<string, unknown> {
       labelFontSize: 11,
       labelPadding: 6,
       labelOverlap: 'greedy',
+      labelSeparation: 8,
       labelLimit: 160,
       titleColor: label,
       titleFont: FONT,
@@ -92,11 +101,25 @@ export function vegaConfig(): Record<string, unknown> {
     title: { color: title, font: FONT, fontSize: 13, fontWeight: 600, anchor: 'start', offset: 10 },
     range: { category: categorical },
     mark: { tooltip: false },
-    bar: { fill: primary, cornerRadiusEnd: 3 },
-    line: { stroke: primary, strokeWidth: 2 },
+    bar: { fill: primary, cornerRadiusEnd: 4 },
+    line: { stroke: primary, strokeWidth: 2.5, interpolate: 'monotone' },
     point: { fill: primary, filled: true, size: 48 },
-    area: { fill: primary, fillOpacity: 0.18, line: { stroke: primary, strokeWidth: 2 } },
-    arc: { stroke: surface, strokeWidth: 1 },
+    // The reference's filled trend: the series colour fading to nothing.
+    area: {
+      interpolate: 'monotone',
+      fill: {
+        gradient: 'linear',
+        x1: 0, y1: 1, x2: 0, y2: 0,
+        stops: [
+          { offset: 0, color: withAlpha(primary, 0) },
+          { offset: 1, color: withAlpha(primary, 0.35) },
+        ],
+      },
+      line: { stroke: primary, strokeWidth: 2.5 },
+    },
+    // A donut: the hole is config, because A7 keeps the mark a plain string.
+    arc: { innerRadius: 48, padAngle: 0.012, cornerRadius: 3, stroke: surface, strokeWidth: 2 },
+    rect: { cornerRadius: 2 },
     tick: { color: primary, thickness: 2 },
     text: { color: label, font: FONT, fontSize: 11 },
     style: {
