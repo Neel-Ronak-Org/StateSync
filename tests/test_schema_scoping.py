@@ -98,8 +98,12 @@ def test_reconnaissance_schemas_are_not_discoverable():
     allow = re.search(r"ALLOWED_SCHEMAS\s*=\s*frozenset\(\{([^}]*)\}\)", SCHEMA_TOOLS_SRC)
     assert allow, "ALLOWED_SCHEMAS not found"
     names = {n.strip().strip('"\'') for n in allow.group(1).split(",") if n.strip()}
-    assert names == {"public", "olist"}, f"unexpected discoverable schemas: {names}"
+    # `live` joined in Phase 2b (migration 020, D-v3-6): the simulator-fed demo data.
+    assert names == {"public", "olist", "live"}, f"unexpected discoverable schemas: {names}"
     assert "pg_catalog" not in names and "information_schema" not in names
+    # The simulator's plan of what each order WILL do. Discoverable, it would
+    # let the model read the future.
+    assert "live_sim" not in names
 
 
 def test_schema_is_never_string_formatted_into_a_query():

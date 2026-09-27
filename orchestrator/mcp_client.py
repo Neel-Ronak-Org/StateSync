@@ -254,6 +254,7 @@ async def history_append_turn(
     sql_rows_preview: list[dict[str, Any]] | None = None,
     sql_rows_count: int | None = None,
     sql_rows_full: list[dict[str, Any]] | None = None,
+    target_schema: str | None = None,
 ) -> dict[str, Any]:
     """history.append_turn -- MCP assigns the turn number and returns it."""
     params: dict[str, Any] = {
@@ -279,6 +280,8 @@ async def history_append_turn(
         params["sql_rows_count"] = sql_rows_count
     if sql_rows_full is not None:
         params["sql_rows_full"] = sql_rows_full
+    if target_schema is not None:
+        params["target_schema"] = target_schema
     return await session.call("history.append_turn", params)
 
 
@@ -311,6 +314,15 @@ async def history_get_turn_rows(
         "turn_index": turn_index,
     }
     return await session.call("history.get_turn_rows", params)
+
+
+async def history_delete_session(
+    session: MCPSession, session_id: str, principal_id: str,
+) -> dict[str, Any]:
+    """history.delete_session -- erase one of the principal's conversations (Phase 2b)."""
+    return await session.call(
+        "history.delete_session", {"session_id": session_id, "principal_id": principal_id},
+    )
 
 
 async def history_list_sessions(
@@ -361,6 +373,19 @@ async def tiles_manage(
     """Forward a dashboard tile management action to the MCP tiles.manage tool."""
     return await session.call(
         "tiles.manage",
+        {"action": action, "principal_id": principal_id, **{k: v for k, v in params.items() if v is not None}},
+    )
+
+
+async def dashboards_manage(
+    session: MCPSession,
+    principal_id: str,
+    action: str,
+    **params: Any,
+) -> dict[str, Any]:
+    """Forward a dashboard action to the MCP dashboards.manage tool (Phase 2b)."""
+    return await session.call(
+        "dashboards.manage",
         {"action": action, "principal_id": principal_id, **{k: v for k, v in params.items() if v is not None}},
     )
 

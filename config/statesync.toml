@@ -112,12 +112,64 @@ roundtrip_rng_seed        = 20260807
 # Dashboard tiles (docs/V3_PLAN.md Phase 1, migration 017). A tile re-runs its
 # SAVED SQL; these bound how often, how much it stores, and how many exist.
 default_refresh_s         = 3600    # a pinned tile refreshes hourly unless told otherwise
-min_refresh_s             = 60      # floor, so a tile cannot hammer the database
+# Floor, so a tile cannot hammer the database. 60 -> 15 for the live demo data
+# (D-v3-7): a refresh is one SELECT, no model call.
+min_refresh_s             = 15
 max_refresh_s             = 604800  # one week
-max_per_principal         = 30      # also bounds how many refreshes one list call can trigger
+# Across all of a principal's dashboards. A list call refreshes at most one
+# dashboard's tiles (dashboards.max_tiles_per_dashboard) when given one.
+max_per_principal         = 60
 result_max_rows           = 1000    # rows kept per tile result (run_select caps first)
 result_max_bytes          = 1048576 # 1 MiB of JSON per tile result
 title_max_chars           = 120
+
+[tiles.schema_default_refresh_s]
+# The refresh interval a pin gets on a dataset when none is asked for; datasets
+# not listed use default_refresh_s. `live` changes every few seconds (D-v3-6).
+live                      = 30
+
+[dashboards]
+# Named dashboards per dataset (docs/V3_PLAN.md Phase 2b, migration 019).
+max_per_principal         = 24
+max_tiles_per_dashboard   = 24
+name_max_chars            = 60
+# The layout grid. migration 019's tiles_layout_ck repeats these bounds.
+grid_columns              = 12
+grid_max_row              = 1000
+tile_min_h                = 2
+tile_max_h                = 40
+# Datasets whose data keeps changing (the simulator's). Their dashboards poll,
+# their tiles default to fast refresh, and the planner may use "now".
+live_schemas              = ["live"]
+# "Build with AI" (orchestrator/dashboard_builder.py, D-v3-9).
+min_insights              = 4       # a plan with fewer usable insights fails
+max_insights              = 8       # each is one full pipeline run (~5 model calls)
+planner_max_tokens        = 1600
+planner_max_tables        = 20
+planner_schema_max_chars  = 6000    # the schema summary the planner reads
+goal_max_chars            = 200
+question_max_chars        = 300
+build_keep_s              = 3600    # finished builds stay readable this long
+
+[simulator]
+# The live demo dataset (docs/V3_PLAN.md Phase 2b, migration 020, simulator/).
+# Read by the simulator service only. The shop's fixed traits (cities,
+# categories, channels, carriers, the hour-of-day curve) are in simulator/model.py.
+tick_s                    = 5       # how often new data lands
+backfill_days             = 30      # history created on the first start
+retention_days            = 35      # older rows are deleted, so the schema stays small
+prune_every_s             = 600
+seed                      = 20260927
+orders_per_minute_peak    = 5.0     # at the busiest hour (IST)
+orders_per_minute_trough  = 0.6     # in the middle of the night
+weekend_uplift            = 1.15
+daily_growth              = 0.002   # a slow upward trend in the history
+cancel_share              = 0.04
+return_share              = 0.05
+review_share              = 0.35
+converting_session_s      = 420     # mean length of a visit that orders
+browsing_session_s        = 240     # mean length of one that does not
+customers                 = 40000
 
 [retrieval]
 chunk_target_tokens       = 512
@@ -206,6 +258,11 @@ relational_plane_shared_ack = false
 # Bounds token expenditure and prevents denial-of-wallet loops on expensive
 # graph executions while preserving high headroom for interactive query bursts.
 rate_limit_max_requests   = 30
+# The separate budget for every route that does NOT run the model: reads, tile
+# and dashboard edits, a live dashboard polling itself (Phase 2b). Sized for a
+# dashboard refreshing every 15 s with a build in progress, with headroom; it
+# still bounds how hard one principal can drive the database.
+read_rate_limit_max_requests = 300
 # Duration of the fixed rate-limiting window in seconds. Balances rapid window
 # rollover for bursty exploration with effective throttling against sustained
 # high-throughput automated abuse.
@@ -220,7 +277,7 @@ cors_allowed_origins      = ["http://localhost:3000", "http://127.0.0.1:3000"]
 # validates server-side and cannot be bypassed by the orchestrator. If the two
 # lists ever drift, MCP wins and the caller gets an error — never a silent
 # fallback to another corpus.
-allowed_schemas           = ["public", "olist"]
+allowed_schemas           = ["public", "olist", "live"]
 
 [experiment]
 # F-V2 over-exposure experiment (M9). Surface sizes reuse mcp.tool_ceiling's

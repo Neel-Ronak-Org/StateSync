@@ -33,6 +33,7 @@ Read-only. Touches no container state.
 from __future__ import annotations
 
 import hashlib
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -54,22 +55,40 @@ PY_SERVICES = {
     "orchestrator": ("orchestrator", "/app", 10),
     "mcp":          ("mcp",          "/app", 5),
     "evaluator":    ("evaluator",    "/app", 3),
+    "simulator":    ("simulator",    "/app", 2),    # Phase 2b: the live demo data
 }
 
-# service -> (repo dir, in-container dir, explicit file list)
-ASSET_SERVICES = {
-    "frontend": ("frontend", "/usr/share/nginx/html", ["index.html", "app.js"]),
-}
+# The web app (web/, docs/V3_PLAN.md Phase 2) is a compiled bundle with hashed
+# file names, so its served files cannot be compared to repo files one by one.
+# Instead the image build writes a fingerprint of every SOURCE input
+# (web/scripts/build-info.mjs -> /build-info.json), and this script computes
+# the same fingerprint from the repo. The rule below mirrors build-info.mjs
+# exactly: these inputs, dot-files and dot-directories skipped, paths sorted,
+# each file contributing "path\0sha256(content)\n". If either side changes
+# alone, the check fails loudly rather than passing a stale image.
+WEB_DIR = REPO_ROOT / "web"
+WEB_INPUTS = ["index.html", "package-lock.json", "vite.config.ts",
+              "tsconfig.json", "tsconfig.app.json", "tsconfig.node.json", "src", "public"]
+WEB_HTML_DIR = "/usr/share/nginx/html"
 
-# `frontend/entrypoint.sh` rewrites app.js at container start to inject the
-# orchestrator URL, so the served bytes are SUPPOSED to differ from the repo.
-# Rather than exempting the file (which would blind the check to a genuinely
-# stale app.js), the same substitution is applied to the repo copy before
-# comparing. Kept in lockstep with entrypoint.sh by construction: if that sed
-# changes and this does not, the check fails loudly instead of silently
-# passing.
-FRONTEND_URL_PLACEHOLDER = "window.__ORCHESTRATOR_URL__ || 'http://localhost:8090'"
-FRONTEND_URL_SUBSTITUTED = "window.__ORCHESTRATOR_URL__ = '{url}'"
+
+def web_source_fingerprint(root: Path = WEB_DIR) -> tuple[str, int]:
+    files: list[Path] = []
+    for name in WEB_INPUTS:
+        path = root / name
+        if path.is_dir():
+            files.extend(f for f in path.rglob("*") if f.is_file())
+        elif path.is_file():
+            files.append(path)
+    rels = sorted(
+        f.relative_to(root).as_posix() for f in files
+        if not any(part.startswith(".") for part in f.relative_to(root).parts)
+    )
+    digest = hashlib.sha256()
+    for rel in rels:
+        file_hash = hashlib.sha256((root / rel).read_bytes()).hexdigest()
+        digest.update(f"{rel}\0{file_hash}\n".encode())
+    return digest.hexdigest(), len(rels)
 
 
 def check(label: str, ok: bool, detail: str = "") -> None:
@@ -150,40 +169,35 @@ def check_py_service(service: str, repo_dir: str, app_dir: str, minimum: int) ->
           f"STALE IMAGE — rebuild required; differing: {mismatched}")
 
 
-def check_asset_service(service: str, repo_dir: str, app_dir: str, names: list[str]) -> None:
-    section(f"{service} — served asset parity with the repo")
+def check_web_service(service: str = "frontend") -> None:
+    section(f"{service} — web bundle built from the repo's current source")
 
     if not service_running(service):
         check(f"{service} container is running", False, "not running; cannot verify parity")
         return
     check(f"{service} container is running", True)
 
-    # The URL the entrypoint actually injected, read from the container's own
-    # environment rather than assumed, so a compose change cannot desync this.
+    out = sh(["docker", "compose", "exec", "-T", service, "cat", f"{WEB_HTML_DIR}/build-info.json"])
+    try:
+        info = json.loads(out.stdout)
+    except (json.JSONDecodeError, TypeError):
+        check(f"{service}: image carries build-info.json", False, out.stderr.strip()[-160:])
+        return
+    check(f"{service}: image carries build-info.json", True)
+
+    expected, count = web_source_fingerprint()
+    check(f"{service}: bundle was built from the repo's current web source ({count} files)",
+          info.get("source_sha256") == expected,
+          f"STALE IMAGE — rebuild required: image {str(info.get('source_sha256'))[:12]}… "
+          f"({info.get('files')} files) vs repo {expected[:12]}… ({count} files)")
+
+    # entrypoint.sh writes the runtime config from the container's own
+    # ORCHESTRATOR_URL; read both rather than assuming either.
     env = sh(["docker", "compose", "exec", "-T", service, "sh", "-c", "echo \"$ORCHESTRATOR_URL\""])
     orch_url = env.stdout.strip() or "http://localhost:8090"
-
-    mismatched, missing = [], []
-    for name in names:
-        p = REPO_ROOT / repo_dir / name
-        if not p.exists():
-            missing.append(f"{name} (absent from repo)")
-            continue
-        expected = p.read_bytes()
-        if name == "app.js":
-            expected = expected.replace(
-                FRONTEND_URL_PLACEHOLDER.encode(),
-                FRONTEND_URL_SUBSTITUTED.format(url=orch_url).encode(),
-            )
-        img = container_sha256(service, f"{app_dir}/{name}")
-        if img is None:
-            missing.append(f"{name} (absent from image)")
-        elif img != hashlib.sha256(expected).hexdigest():
-            mismatched.append(name)
-
-    check(f"{service}: all served assets present ({names})", not missing, str(missing))
-    check(f"{service}: no served asset differs from the repo", not mismatched,
-          f"STALE IMAGE — rebuild required; differing: {mismatched}")
+    cfg = sh(["docker", "compose", "exec", "-T", service, "cat", f"{WEB_HTML_DIR}/config.js"])
+    check(f"{service}: /config.js carries the container's ORCHESTRATOR_URL",
+          f'orchestratorUrl: "{orch_url}"' in cfg.stdout, cfg.stdout.strip()[:160])
 
 
 def check_scorer_registries() -> None:
@@ -231,8 +245,7 @@ def main() -> int:
     for service, (repo_dir, app_dir, minimum) in PY_SERVICES.items():
         check_py_service(service, repo_dir, app_dir, minimum)
 
-    for service, (repo_dir, app_dir, names) in ASSET_SERVICES.items():
-        check_asset_service(service, repo_dir, app_dir, names)
+    check_web_service("frontend")
 
     check_scorer_registries()
 

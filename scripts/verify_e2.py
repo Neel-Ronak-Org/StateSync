@@ -6,13 +6,13 @@ Executes the MODEL-INDEPENDENT Phase E2 verification steps.
 Covered here (deterministic, no model call, no generation quality involved):
   E2-V2  recall weighting is real            -> delegated to score_specs.py --self-test
   E2-V3  malicious specs rejected            -> orchestrator-side validator, all 10
-  E2-V4  CSP forbids unsafe-eval             -> header inspection (the in-browser
-                                                render half is run separately; see
-                                                docs/phase_e2_log.md)
+  E2-V4  CSP forbids unsafe-eval             -> header inspection (the render half,
+                                                a real chart drawn under the served
+                                                CSP, is web/e2e/live)
   E2-V5  no silent repair                    -> unsupported mark yields chart:null,
                                                 answer_text preserved, no substitute
-  E2-V6  dual validation is independent      -> orchestrator half (frontend half is
-                                                driven through window.validateA7Chart)
+  E2-V6  dual validation is independent      -> orchestrator half (the browser half
+                                                is web/e2e/mocked/chart-safety.spec.ts)
 
 NOT covered, by design: E2-V1's M7 quality number, which depends on generation
 quality. It is now runnable (scripts/run_e2_v1.py, once Task 10 made the
@@ -21,10 +21,11 @@ model-independent suite -- mixing a model-sensitive number in would make a
 deterministic pass/fail suite non-deterministic. The local M7 is provisional;
 the graded one comes from the re-baseline (docs/rebaseline_runbook.md).
 
-The frontend validator is deliberately NOT re-implemented here. Checking it
-from Python would test a Python copy of it, which is exactly the thing A7's
-"two independent validations" rule exists to prevent. It is exercised in the
-browser against window.validateA7Chart, recorded in the phase log.
+The browser validator (web/src/charts/a7.ts) is deliberately NOT re-implemented
+here. Checking it from Python would test a Python copy of it, which is exactly
+the thing A7's "two independent validations" rule exists to prevent. It is
+exercised in a real browser by web/e2e/mocked/chart-safety.spec.ts, which feeds
+it the same fixtures/malicious_specs.json through the app's render path.
 """
 
 from __future__ import annotations
@@ -46,13 +47,16 @@ from schemas.synthesizer_output import (                      # noqa: E402
     validate_synthesizer_output,
     safe_synthesizer_output,
 )
-from frontend_asset_checks import app_js_is_same_origin       # noqa: E402
+from frontend_asset_checks import scripts_are_same_origin     # noqa: E402
 
 MALICIOUS = REPO_ROOT / "fixtures" / "malicious_specs.json"
 E2_FIXTURE = REPO_ROOT / "fixtures" / "golden" / "phase_e2.json"
-NGINX_CONF = REPO_ROOT / "frontend" / "nginx.conf"
-INDEX_HTML = REPO_ROOT / "frontend" / "index.html"
-APP_JS = REPO_ROOT / "frontend" / "app.js"
+# The web app (docs/V3_PLAN.md Phase 2) replaced frontend/; the E2-V4
+# properties are unchanged and are checked against its files.
+NGINX_CONF = REPO_ROOT / "web" / "nginx.conf"
+INDEX_HTML = REPO_ROOT / "web" / "index.html"
+CHART_RENDERER = REPO_ROOT / "web" / "src" / "charts" / "VegaChart.tsx"
+WEB_SRC = REPO_ROOT / "web" / "src"
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
@@ -66,6 +70,7 @@ LIVE_SECURITY_HEADERS = [
     "x-frame-options",
     "x-content-type-options",
     "referrer-policy",
+    "permissions-policy",
 ]
 
 passed = 0
@@ -84,6 +89,12 @@ def check(label: str, ok: bool, detail: str = "") -> None:
 
 def section(title: str) -> None:
     print(f"\n── {title} " + "─" * max(4, 60 - len(title)))
+
+
+def strip_ts_comments(source: str) -> str:
+    """Drops /* */ and // comments (not the // in a URL), so prose cannot satisfy a check."""
+    source = re.sub(r"/\*.*?\*/", "", source, flags=re.S)
+    return re.sub(r"(?<![:'\"])//[^\n]*", "", source)
 
 
 def load_malicious() -> list[dict]:
@@ -144,7 +155,7 @@ def e2_v3() -> None:
 
 # ── E2-V4 (header half) ───────────────────────────────────────────────────────
 def e2_v4_csp() -> None:
-    # Audit 005 F-005-1: everything in this function reads frontend/nginx.conf
+    # Audit 005 F-005-1: everything in this function reads the nginx config
     # as TEXT. It asserts what the config file SAYS, not what a browser
     # RECEIVES -- those diverged silently from 56a23bf until this cycle,
     # because nginx does not inherit add_header into a location block that
@@ -172,36 +183,35 @@ def e2_v4_csp() -> None:
     check("CSP directive text sets object-src 'none'", "object-src 'none'" in csp)
     check("CSP directive text sets frame-ancestors 'none'", "frame-ancestors 'none'" in csp)
 
-    # The app moved out of index.html into app.js so the CSP could drop
-    # 'unsafe-inline' from script-src. These checks follow the code: the
-    # property being verified (the render path never reaches the eval-based
-    # compiler) is unchanged, only its file changed.
-    html = INDEX_HTML.read_text()
-    app = APP_JS.read_text()
-    both = html + "\n" + app
+    # The render path. The web app has exactly one chart renderer, and it
+    # imports vega-interpreter statically -- there is no runtime probing, so
+    # there is no path on which the eval-based compiler could be reached.
+    # Comments are stripped and the options are read from the embed() call
+    # itself: the renderer's docblock names these same options, so a plain grep
+    # of the file would pass with the code deleted.
+    renderer = strip_ts_comments(CHART_RENDERER.read_text())
+    check("renderer imports the expression interpreter statically",
+          re.search(r"import\s*\{\s*expressionInterpreter\s*\}\s*from\s*'vega-interpreter'", renderer) is not None)
+    calls = re.findall(r"\bembed\(\s*host\s*,[^{}]*?\{([^{}]*)\}\s*\)", renderer)
+    check("renderer makes exactly one embed() call", len(calls) == 1, f"{len(calls)} found")
+    options = calls[0] if calls else ""
+    check("embed() requests the AST parser (ast: true)", re.search(r"\bast:\s*true\b", options) is not None)
+    check("embed() passes the expression interpreter",
+          re.search(r"\bexpr:\s*expressionInterpreter\b", options) is not None)
+    check("embed() turns vega-tooltip off (tooltip: false; it writes innerHTML)",
+          re.search(r"\btooltip:\s*false\b", options) is not None)
+    others = sorted(
+        str(f.relative_to(REPO_ROOT)) for f in WEB_SRC.rglob("*.ts*")
+        if f != CHART_RENDERER and re.search(r"from\s*'vega(-embed|-lite)?'", f.read_text())
+    )
+    check("no other module imports vega / vega-embed / vega-lite", not others, str(others))
 
-    check("frontend loads vega-interpreter", "vega-interpreter" in both)
-    check("render path requests the AST parser", re.search(r"\bast:\s*true", both) is not None)
-    check("render path passes an expression interpreter",
-          re.search(r"\bexpr:\s*interp\b", both) is not None)
-    check("render refuses to fall back to the eval compiler",
-          "refusing to render via the eval-based compiler" in both)
-
-    # Hardening added after the trace-renderer XSS sink was found: script-src
-    # no longer permits inline script, so a future DOM-injection bug cannot
+    # script-src permits no inline script, so a future DOM-injection bug cannot
     # reach script execution even if a sink is reintroduced.
     check("CSP directive text contains no script-src 'unsafe-inline'",
           "unsafe-inline" not in csp.split("script-src")[1].split(";")[0])
-    check("index.html carries no inline <script> body",
-          re.search(r"<script(?![^>]*\bsrc=)[^>]*>\s*\S", html) is None)
-
-    # Audit 004 F-004-2: the previous version of this check, a literal
-    # substring match, FAILED on a same-origin app.js carrying a
-    # cache-busting query string (56a23bf) and could never have caught an
-    # actually CDN-hosted app.js. app_js_is_same_origin asserts the named
-    # property in both directions -- see scripts/frontend_asset_checks.py.
-    ok, detail = app_js_is_same_origin(html)
-    check("app.js is served same-origin, not from a CDN (config assertion)", ok, detail)
+    ok, detail = scripts_are_same_origin(INDEX_HTML.read_text())
+    check("every script the page loads is same-origin, none inline (config assertion)", ok, detail)
 
 
 def _fetch_response_headers(url: str, timeout: float = 5.0) -> dict[str, str] | None:
@@ -217,7 +227,7 @@ def e2_v4_csp_live() -> None:
     """
     Audit 005 F-005-1. This is the check e2_v4_csp() is not: it issues a real
     HTTP request to the running frontend and reads the actual response headers,
-    rather than reading frontend/nginx.conf as text. The config-text checks
+    rather than reading the nginx config as text. The config-text checks
     above passed throughout the period this would have failed, because nginx
     silently drops server-level add_header directives inside any location
     block that declares an add_header of its own -- 56a23bf added
@@ -227,8 +237,20 @@ def e2_v4_csp_live() -> None:
     (http://localhost:3000, the documented dev/compose address).
     """
     section("E2-V4 — CSP forbids unsafe-eval (LIVE response headers — the actual check)")
-    for path in ("/", "/index.html", "/app.js"):
-        url = FRONTEND_URL.rstrip("/") + path
+    base = FRONTEND_URL.rstrip("/")
+    paths = ["/", "/index.html", "/config.js"]
+    try:
+        with urllib.request.urlopen(base + "/", timeout=5.0) as resp:
+            shell = resp.read().decode("utf-8", "replace")
+        asset = re.search(r'/assets/[A-Za-z0-9_.-]+\.js', shell)
+        if asset:
+            paths.append(asset.group(0))
+        ok, detail = scripts_are_same_origin(shell)
+        check("served shell: every script same-origin, none inline", ok, detail)
+    except (urllib.error.URLError, OSError):
+        pass
+    for path in paths:
+        url = base + path
         headers = _fetch_response_headers(url)
         if headers is None:
             check(f"frontend reachable at {path}", False,
@@ -241,8 +263,12 @@ def e2_v4_csp_live() -> None:
         # DIRECTIVE the file declares is what the browser actually got, once
         # we already know a header of that name arrived at all.
         if "content-security-policy" in headers:
-            check(f"{path}: live CSP contains no 'unsafe-eval'",
-                  "unsafe-eval" not in headers["content-security-policy"])
+            csp_live = headers["content-security-policy"]
+            check(f"{path}: live CSP contains no 'unsafe-eval'", "unsafe-eval" not in csp_live)
+            check(f"{path}: live CSP script-src is 'self' only",
+                  "script-src 'self';" in csp_live, csp_live[:120])
+            check(f"{path}: live CSP connect-src was filled in at start-up",
+                  "__ORCHESTRATOR_ORIGIN__" not in csp_live)
 
 
 # ── E2-V5 ─────────────────────────────────────────────────────────────────────
@@ -335,8 +361,10 @@ def main() -> int:
           "python3 scripts/score_specs.py --score <path>")
     print("    The local number is provisional; the graded one comes from the")
     print("    re-baseline (docs/rebaseline_runbook.md).")
-    print("    E2-V3/V6 frontend half and E2-V4 render half — run in-browser against")
-    print("      window.validateA7Chart; results recorded in docs/phase_e2_log.md.")
+    print("    E2-V3/V6 browser half — the same 10 specs through the web app's validator:")
+    print("      cd web && npx playwright test e2e/mocked/chart-safety.spec.ts")
+    print("    E2-V4 render half — a real chart drawn under the served CSP:")
+    print("      cd web && STATESYNC_LIVE=1 npx playwright test")
     return 1 if failed else 0
 
 

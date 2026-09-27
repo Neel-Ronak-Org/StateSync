@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 scripts/frontend_asset_checks.py
-Pure, dependency-free checks on frontend/index.html's script tags.
+Pure, dependency-free checks on the web app's index.html script tags
+(web/index.html in the repo; the built shell as served).
 
 Split out of verify_e2.py (audit 004 F-004-2) so the property can be pinned by
 tests/ -- which CI runs without the stack -- rather than living only inside a
@@ -31,12 +32,6 @@ def script_srcs(html: str) -> list[str]:
     return _SCRIPT_SRC_RE.findall(html)
 
 
-def is_app_js_src(src: str) -> bool:
-    """True if this src names app.js, ignoring any query string or fragment."""
-    path = src.split("?", 1)[0].split("#", 1)[0]
-    return path.rsplit("/", 1)[-1] == "app.js"
-
-
 def is_same_origin(src: str) -> bool:
     """
     True for a relative reference. False for an absolute URL (a scheme, e.g.
@@ -46,19 +41,26 @@ def is_same_origin(src: str) -> bool:
     return _SCHEME_OR_PROTOCOL_RELATIVE_RE.match(src) is None
 
 
-def app_js_is_same_origin(html: str) -> tuple[bool, str]:
+# A <script> with no src whose body has any non-space character; an empty
+# <script></script> is not a body (the lookahead stops "</script>" counting).
+_INLINE_SCRIPT_RE = re.compile(r"<script(?![^>]*\bsrc=)[^>]*>\s*(?!</script>)\S", re.IGNORECASE)
+
+
+def scripts_are_same_origin(html: str) -> tuple[bool, str]:
     """
-    The property E2-V4 names: exactly one app.js is loaded, and it is loaded
-    same-origin, not from a CDN. Returns (ok, detail). A query string
-    (cache-buster) is tolerated; a scheme or protocol-relative src is not,
-    regardless of host -- including cdn.jsdelivr.net, which this page's own
-    CSP permits for OTHER scripts (vega/vega-lite/vega-embed/vega-interpreter)
-    but never for app.js itself.
+    The property E2-V4 names, for the web app (docs/V3_PLAN.md Phase 2): the page
+    loads at least one script, EVERY script is loaded same-origin (no CDN, no
+    protocol-relative URL), and there is no inline script body. The previous
+    frontend's CSP permitted cdn.jsdelivr.net for its chart libraries; the web
+    app bundles them, so no external script host is acceptable at all.
+    Returns (ok, detail).
     """
-    app_js_tags = [s for s in script_srcs(html) if is_app_js_src(s)]
-    if len(app_js_tags) != 1:
-        return False, f"expected exactly one app.js script tag, found {len(app_js_tags)}: {app_js_tags}"
-    src = app_js_tags[0]
-    if not is_same_origin(src):
-        return False, f"app.js loaded from a non-same-origin src: {src!r}"
-    return True, src
+    srcs = script_srcs(html)
+    if not srcs:
+        return False, "no <script src> tags found"
+    remote = [src for src in srcs if not is_same_origin(src)]
+    if remote:
+        return False, f"scripts loaded from another origin: {remote}"
+    if _INLINE_SCRIPT_RE.search(html):
+        return False, "an inline <script> body is present"
+    return True, ", ".join(srcs)

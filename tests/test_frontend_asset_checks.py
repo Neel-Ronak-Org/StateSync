@@ -1,20 +1,18 @@
 """
 tests/test_frontend_asset_checks.py
-Pins app_js_is_same_origin (scripts/frontend_asset_checks.py) so the E2-V4
-"app.js is served same-origin, not from a CDN" property is asserted by
-something CI runs, not only by verify_e2.py -- which needs the full stack and
-was not re-run for seven-plus commits after cycle 003's B1 (audit 004 F-004-1,
-F-004-2).
+Pins the property E2-V4 names -- the page's scripts come only from its own
+origin, with no inline script -- against the web app's index.html
+(docs/V3_PLAN.md Phase 2).
 
-WHY THIS EXISTS. The predecessor check, `'<script src="app.js"' in html`,
-FAILED on the real, correct file the moment 56a23bf added a cache-busting
-query string (`app.js?v=20260820`), and would have PASSED a page carrying an
-injected, CDN-hosted second script also named app.js -- it only ever checked
-for the literal substring's PRESENCE, never for the real property: exactly one
-app.js, and it same-origin. Both directions are pinned below directly against
-the real, committed frontend/index.html, so a future edit to that file is
-caught here -- by a test with no LLM/MCP/container dependency -- rather than
-only by a script nothing runs on a frontend-only commit.
+WHY THIS EXISTS. The CSP's script-src is 'self' only, which is what makes an
+HTML-injection bug unable to reach script execution. That guarantee is only as
+good as the page itself: a CDN <script> tag, a protocol-relative URL or an
+inline <script> body would either break under the CSP or, worse, be "fixed" by
+loosening it. The previous frontend loaded its chart libraries from
+cdn.jsdelivr.net and kept that host in its CSP; the web app bundles them, so
+no external script host is acceptable at all. These checks run in CI with no
+stack (audit 004 F-004-2: a property only a live script checks is a property
+nothing re-checks on a frontend-only change).
 
 Run from the repo root: pytest tests/test_frontend_asset_checks.py
 """
@@ -29,106 +27,55 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from frontend_asset_checks import (        # noqa: E402
-    app_js_is_same_origin,
-    is_app_js_src,
-    is_same_origin,
-    script_srcs,
-)
+from frontend_asset_checks import is_same_origin, script_srcs, scripts_are_same_origin  # noqa: E402
 
-INDEX_HTML = REPO_ROOT / "frontend" / "index.html"
+INDEX_HTML = REPO_ROOT / "web" / "index.html"
 
 
 def test_real_committed_index_html_passes():
-    """The actual shipped file, cache-buster query string and all."""
-    ok, detail = app_js_is_same_origin(INDEX_HTML.read_text())
+    ok, detail = scripts_are_same_origin(INDEX_HTML.read_text())
     assert ok, detail
-    assert detail == "app.js?v=20260820"
+    assert "/config.js" in detail           # runtime config: a same-origin file, not inline
 
 
-def test_cache_busting_query_string_is_tolerated():
-    html = '<script src="app.js?v=20260820" defer></script>'
-    ok, detail = app_js_is_same_origin(html)
-    assert ok
-    assert detail == "app.js?v=20260820"
+def test_a_cdn_script_fails():
+    html = '<script src="/config.js"></script><script src="https://cdn.jsdelivr.net/npm/vega@5"></script>'
+    ok, detail = scripts_are_same_origin(html)
+    assert not ok and "cdn.jsdelivr.net" in detail
 
 
-def test_bare_relative_app_js_passes():
-    html = '<script src="app.js" defer></script>'
-    ok, _ = app_js_is_same_origin(html)
-    assert ok
-
-
-def test_cdn_hosted_app_js_fails():
-    """The case the predecessor check could never have caught."""
-    html = '<script src="https://cdn.jsdelivr.net/npm/statesync-app@1/app.js" defer></script>'
-    ok, detail = app_js_is_same_origin(html)
-    assert not ok
-    assert "cdn.jsdelivr.net" in detail
-
-
-def test_protocol_relative_app_js_fails():
-    """No scheme, but still a remote origin -- the same-origin check must
-    not be fooled by the absence of an explicit https:// prefix."""
-    html = '<script src="//cdn.jsdelivr.net/app.js" defer></script>'
-    ok, _ = app_js_is_same_origin(html)
+def test_a_protocol_relative_script_fails():
+    ok, _ = scripts_are_same_origin('<script src="//evil.example/app.js"></script>')
     assert not ok
 
 
-def test_injected_second_app_js_fails_even_with_a_legit_tag_present():
-    """
-    The predecessor check's real blind spot: it asserted PRESENCE of a
-    substring, never EXCLUSIVITY. A page with the legitimate same-origin tag
-    AND an injected CDN-hosted second script also named app.js passed the
-    old check outright -- it never looked past the first match.
-    """
-    html = (
-        '<script src="app.js" defer></script>\n'
-        '<script src="https://evil.cdn.example/app.js"></script>'
-    )
-    old_check_would_pass = '<script src="app.js"' in html
-    assert old_check_would_pass, "sanity: the predecessor substring is indeed present"
-
-    ok, detail = app_js_is_same_origin(html)
-    assert not ok, "the new check must reject the injected copy the old one missed"
-    assert "found 2" in detail
+def test_an_inline_script_body_fails():
+    html = '<script src="/config.js"></script><script>window.x = 1</script>'
+    ok, detail = scripts_are_same_origin(html)
+    assert not ok and "inline" in detail
 
 
-def test_missing_app_js_fails():
-    html = '<script src="vega.min.js"></script>'
-    ok, detail = app_js_is_same_origin(html)
-    assert not ok
-    assert "found 0" in detail
+def test_an_empty_inline_script_tag_is_not_a_body():
+    html = '<script src="/config.js"></script><script></script>'
+    assert scripts_are_same_origin(html)[0]
 
 
-@pytest.mark.parametrize("src,expected", [
-    ("app.js", True),
-    ("app.js?v=20260820", True),
-    ("app.js#frag", True),
-    ("/static/app.js", True),
-    ("vega.min.js", False),
-    ("app.js.map", False),
-])
-def test_is_app_js_src(src, expected):
-    assert is_app_js_src(src) is expected
+def test_a_page_with_no_scripts_fails():
+    assert not scripts_are_same_origin("<html><body></body></html>")[0]
 
 
-@pytest.mark.parametrize("src,expected", [
-    ("app.js", True),
-    ("app.js?v=1", True),
-    ("/static/app.js", True),
-    ("https://cdn.jsdelivr.net/app.js", False),
-    ("//cdn.jsdelivr.net/app.js", False),
-    ("http://cdn.jsdelivr.net/app.js", False),
+@pytest.mark.parametrize("src, expected", [
+    ("/config.js", True),
+    ("/assets/index-BLCelgPL.js", True),
+    ("config.js?v=2", True),
+    ("https://cdn.example.com/x.js", False),
+    ("//cdn.example.com/x.js", False),
+    ("HTTP://cdn.example.com/x.js", False),
 ])
 def test_is_same_origin(src, expected):
     assert is_same_origin(src) is expected
 
 
 def test_script_srcs_extracts_all_tags_in_order():
-    html = (
-        '<script src="a.js"></script>\n'
-        '<script defer src="b.js" type="module"></script>\n'
-        "<script>inline()</script>\n"
-    )
-    assert script_srcs(html) == ["a.js", "b.js"]
+    html = '<script type="module" src="/a.js"></script><SCRIPT SRC=\'/b.js\'></SCRIPT>'
+    assert script_srcs(html) == ["/a.js", "/b.js"]

@@ -67,9 +67,10 @@ class _Cursor:
 class _Conn:
     """Answers each statement by its shape; records every INSERT into conversation_turns."""
 
-    def __init__(self, insert_results, owner=None, recent_rows=None):
+    def __init__(self, insert_results, owner=None, recent_rows=None, schema=None):
         self.insert_results = list(insert_results)
         self.owner = owner
+        self.schema = schema
         self.recent_rows = recent_rows or []
         self.turn_inserts: list[tuple[str, object]] = []
 
@@ -77,8 +78,8 @@ class _Conn:
         if "INSERT INTO session_state.conversation_turns" in sql:
             self.turn_inserts.append((sql, params))
             return _Cursor(one=self.insert_results.pop(0))
-        if "SELECT principal_id FROM session_state.conversation_turns" in sql:
-            return _Cursor(one=(self.owner,) if self.owner else None)
+        if "SELECT principal_id, target_schema FROM session_state.conversation_turns" in sql:
+            return _Cursor(one=(self.owner, self.schema) if self.owner else None)
         if "FROM session_state.conversation_turns" in sql and "ORDER BY turn_index DESC" in sql:
             return _Cursor(many=self.recent_rows)
         return _Cursor()        # turn_rows insert / prune
@@ -96,10 +97,10 @@ def _use(conn, monkeypatch):
     monkeypatch.setattr(ht, "get_tenant_id", lambda: "t_test")
 
 
-def _append(principal=OWNER):
+def _append(principal=OWNER, target_schema="olist"):
     return asyncio.run(ht.append_turn(
         session_id="s1", principal_id=principal, raw_query="q", rewritten_query="q",
-        rewrite_applied=False, context_guessed=False, answer_text="a",
+        rewrite_applied=False, context_guessed=False, answer_text="a", target_schema=target_schema,
     ))
 
 
@@ -120,6 +121,7 @@ def test_turn_number_is_assigned_by_the_insert(monkeypatch):
     assert "COALESCE(MAX(t.turn_index), 0) + 1" in sql
     assert "HAVING COALESCE(BOOL_AND(t.principal_id = %(principal)s), TRUE)" in sql
     assert params["principal"] == OWNER and params["session"] == "s1"
+    assert params["target_schema"] == "olist" and "%(target_schema)s::text" in sql
 
 
 def test_write_into_another_principals_session_is_refused_not_dropped(monkeypatch):
@@ -154,29 +156,32 @@ def test_gives_up_loudly_after_the_configured_attempts(monkeypatch):
     assert len(conn.turn_inserts) == attempts
 
 
-@pytest.mark.parametrize("owner, exists, usable", [
-    (None, False, True),        # new session id: the first write claims it
-    (OWNER, True, True),
-    (OTHER, True, False),
+@pytest.mark.parametrize("owner, schema, expected", [
+    (None, None, {"exists": False, "usable": True, "target_schema": None}),     # new id: first write claims it
+    (OWNER, "olist", {"exists": True, "usable": True, "target_schema": "olist"}),
+    (OWNER, None, {"exists": True, "usable": True, "target_schema": None}),     # pre-018 turns
+    # someone else's conversation: refused, and its dataset is not disclosed
+    (OTHER, "olist", {"exists": True, "usable": False, "target_schema": None}),
 ])
-def test_check_session(monkeypatch, owner, exists, usable):
-    _use(_Conn(insert_results=[], owner=owner), monkeypatch)
+def test_check_session(monkeypatch, owner, schema, expected):
+    _use(_Conn(insert_results=[], owner=owner, schema=schema), monkeypatch)
 
     result = asyncio.run(ht.check_session(session_id="s1", principal_id=OWNER))
 
-    assert result == {"exists": exists, "usable": usable}
+    assert result == expected
 
 
 def test_next_turn_number_comes_from_the_newest_row_not_the_window_size(monkeypatch):
     """Seven turns stored, a 3-turn window read: the next number is 8, not 4."""
     def row(n):
-        return (n, "q", "q", False, False, "sql", None, "a", NOW, None, None, None, None)
+        return (n, "q", "q", False, False, "sql", None, "a", NOW, None, None, None, None, "olist")
     _use(_Conn(insert_results=[], recent_rows=[row(7), row(6), row(5)]), monkeypatch)
 
     result = asyncio.run(ht.get_recent_turns(session_id="s1", principal_id=OWNER, limit=3))
 
     assert result["next_turn_index"] == 8
     assert [t["turn_index"] for t in result["turns"]] == [5, 6, 7]
+    assert all(t["target_schema"] == "olist" for t in result["turns"])
 
 
 def test_empty_session_starts_at_one(monkeypatch):

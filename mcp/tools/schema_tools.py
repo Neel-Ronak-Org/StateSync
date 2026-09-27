@@ -37,7 +37,9 @@ DEFAULT_SCHEMA = "public"
 # Trajectory memory over a non-A5 schema is NOT meaningful (the memory key is
 # the A5 fingerprint, which does not describe olist), so runs against olist
 # must keep memory.enabled=false. Stated here because nothing enforces it.
-ALLOWED_SCHEMAS = frozenset({"public", "olist"})
+# `live` (migration 020, Phase 2b): the simulator-fed demo data. Its sibling
+# `live_sim` holds the simulator's future plans and is deliberately absent.
+ALLOWED_SCHEMAS = frozenset({"public", "olist", "live"})
 
 
 def _validate_schema(schema: str) -> None:

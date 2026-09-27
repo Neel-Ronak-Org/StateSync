@@ -1,0 +1,222 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --color-brand: var(--brand);
+    --color-accent-2: var(--accent-2);
+    --color-success: var(--success);
+    --color-glow: var(--glow);
+    --font-heading: var(--font-sans);
+    --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, monospace;
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+    /* Light theme (docs: web/DESIGN.md §2). Hex, so charts and CSS agree. */
+    --background: #f5f7fb;
+    --foreground: #0f172a;
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+    --popover: #ffffff;
+    --popover-foreground: #0f172a;
+    --primary: #0891b2;
+    --primary-foreground: #ffffff;
+    --secondary: #eef2f8;
+    --secondary-foreground: #0f172a;
+    --muted: #eef2f8;
+    --muted-foreground: #64748b;
+    --accent: #e3f3f8;
+    --accent-foreground: #0f172a;
+    --accent-2: #7c3aed;
+    --success: #059669;
+    --destructive: #e11d48;
+    --border: #e2e8f0;
+    --input: #dfe5ef;
+    --ring: #0891b2;
+    --chart-1: #0891b2;
+    --chart-2: #7c3aed;
+    --chart-3: #0d9488;
+    --chart-4: #d97706;
+    --chart-5: #db2777;
+    --radius: 0.625rem;
+    /* Chart palette (charts/theme.ts). Categorical colours are distinguishable
+       for common colour-vision deficiencies and sit at similar lightness. */
+    --chart-surface: #ffffff;
+    --chart-grid: #edf1f7;
+    --chart-domain: #d5dce8;
+    --chart-label: #64748b;
+    --chart-title: #0f172a;
+    --chart-c1: #0891b2;
+    --chart-c2: #7c3aed;
+    --chart-c3: #0d9488;
+    --chart-c4: #d97706;
+    --chart-c5: #db2777;
+    --chart-c6: #65a30d;
+    --chart-c7: #0284c7;
+    --chart-c8: #ea580c;
+    --brand: var(--primary);
+    --sidebar: #ffffff;
+    --sidebar-foreground: #0f172a;
+    --sidebar-primary: #0891b2;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #e3f3f8;
+    --sidebar-accent-foreground: #0f172a;
+    --sidebar-border: #e2e8f0;
+    --sidebar-ring: #0891b2;
+    --glow: rgba(8, 145, 178, 0.12);
+}
+
+.dark {
+    /* Dark theme, the default: the owner's reference navy with cyan and purple. */
+    --background: #0b1220;
+    --foreground: #e6edf7;
+    --card: #121b2d;
+    --card-foreground: #e6edf7;
+    --popover: #141f34;
+    --popover-foreground: #e6edf7;
+    --primary: #5cc8e8;
+    --primary-foreground: #04212b;
+    --secondary: #1a2438;
+    --secondary-foreground: #e6edf7;
+    --muted: #1a2438;
+    --muted-foreground: #8b97ad;
+    --accent: #1b2a42;
+    --accent-foreground: #e6edf7;
+    --accent-2: #8b7cf6;
+    --success: #34d399;
+    --destructive: #fb7185;
+    --border: #223049;
+    --input: #26344f;
+    --ring: #5cc8e8;
+    --chart-1: #5cc8e8;
+    --chart-2: #8b7cf6;
+    --chart-3: #2dd4bf;
+    --chart-4: #fbbf24;
+    --chart-5: #f472b6;
+    --chart-surface: #121b2d;
+    --chart-grid: #1e2a40;
+    --chart-domain: #2a3852;
+    --chart-label: #8b97ad;
+    --chart-title: #e6edf7;
+    --chart-c1: #5cc8e8;
+    --chart-c2: #8b7cf6;
+    --chart-c3: #2dd4bf;
+    --chart-c4: #fbbf24;
+    --chart-c5: #f472b6;
+    --chart-c6: #a3e635;
+    --chart-c7: #38bdf8;
+    --chart-c8: #fb923c;
+    --sidebar: #0e1626;
+    --sidebar-foreground: #e6edf7;
+    --sidebar-primary: #5cc8e8;
+    --sidebar-primary-foreground: #04212b;
+    --sidebar-accent: #1b2a42;
+    --sidebar-accent-foreground: #e6edf7;
+    --sidebar-border: #1c2840;
+    --sidebar-ring: #5cc8e8;
+    --glow: rgba(92, 200, 232, 0.14);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* ── Motion (web/DESIGN.md §3) ─────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+
+/* A tile whose value changed on refresh: one soft primary ring, then gone. */
+@keyframes tile-flash {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 55%, transparent); }
+  100% { box-shadow: 0 0 0 10px transparent; }
+}
+.tile-flash {
+  animation: tile-flash 1.2s ease-out 1;
+}
+
+/* Dotted guides behind the grid in edit mode: a pattern, not decoration. */
+.grid-guides {
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--muted-foreground) 35%, transparent) 1px, transparent 1.5px);
+  background-size: 24px 24px;
+}
+
+/* react-grid-layout, themed: the drop placeholder and resize handles. */
+.react-grid-item.react-grid-placeholder {
+  background: color-mix(in srgb, var(--primary) 18%, transparent) !important;
+  border: 1px dashed var(--primary);
+  border-radius: calc(var(--radius) * 1.4);
+  opacity: 1 !important;
+}
+.react-grid-item > .react-resizable-handle {
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+.dashboard-editing .react-grid-item > .react-resizable-handle {
+  opacity: 1;
+}
+.dark .react-grid-item > .react-resizable-handle::after {
+  border-color: var(--muted-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

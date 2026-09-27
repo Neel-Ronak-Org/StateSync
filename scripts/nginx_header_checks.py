@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 scripts/nginx_header_checks.py
-Pure, dependency-free check on frontend/nginx.conf's TEXT: the inheritance
+Pure, dependency-free check on an nginx config's TEXT (web/nginx.conf): the inheritance
 invariant that 56a23bf broke and that no check in this project noticed
 (docs/audits/005.md F-005-1).
 
@@ -50,6 +50,10 @@ def _extract_location_blocks(conf_text: str) -> list[tuple[str, str]]:
     matched by brace-depth counting (no nested location blocks exist in this
     file, so a simple counter is sufficient -- not a general nginx parser)."""
     blocks: list[tuple[str, str]] = []
+    # Strip comments first: prose mentioning "location ... {" in a comment
+    # (web/nginx.conf explains its location rules at length) was being parsed
+    # as a block. No directive in these files contains a literal '#'.
+    conf_text = re.sub(r"#[^\n]*", "", conf_text)
     for m in _LOCATION_RE.finditer(conf_text):
         pattern = m.group(1).strip()
         start = m.end()
@@ -82,3 +86,13 @@ def locations_missing_security_headers(conf_text: str) -> dict[str, list[str]]:
         if missing:
             violations[pattern] = missing
     return violations
+
+
+def locations_declaring_add_header(conf_text: str) -> list[str]:
+    """
+    Location patterns that declare any add_header of their own. The web app's
+    nginx.conf (web/nginx.conf) keeps this list EMPTY by design -- security
+    headers only at server level, caching via `expires` -- so the inheritance
+    trap above cannot be re-entered by adding a location.
+    """
+    return [pattern for pattern, body in _extract_location_blocks(conf_text) if _ADD_HEADER_RE.search(body)]
