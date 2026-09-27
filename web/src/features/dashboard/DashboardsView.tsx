@@ -90,7 +90,6 @@ export function DashboardsView({
   const active = boards.active
   const tiles = useTiles(active?.dashboard_id ?? null)
   const build = useBuild(active?.dashboard_id ?? null)
-  const { width, containerRef, mounted } = useContainerWidth()
 
   const [editing, setEditing] = useState(false)
   const [newOpen, setNewOpen] = useState(false)
@@ -269,41 +268,26 @@ export function DashboardsView({
             secondary={{ label: 'Ask a question', onClick: onAsk, icon: MessageSquare }}
           />
         ) : (
-          <div className="p-6 pt-5">
-            <div ref={containerRef} className={cn('rounded-xl', editing && 'grid-guides dashboard-editing')}>
-              {mounted && (
-                <ReactGridLayout
-                  width={width}
-                  layout={slots}
-                  gridConfig={{ cols: GRID_COLS, rowHeight: ROW_HEIGHT, margin: [GRID_MARGIN, GRID_MARGIN], containerPadding: [0, 0] }}
-                  dragConfig={{ enabled: editing, handle: '.tile-drag-handle' }}
-                  resizeConfig={{ enabled: editing, handles: ['se'] }}
-                  compactor={verticalCompactor}
-                  onDragStop={onGridStop}
-                  onResizeStop={onGridStop}
-                >
-                  {view.map(({ tile }, index) => (
-                    <div key={tile.tile_id} className="h-full">
-                      <TileCard
-                        tile={tile}
-                        otherDashboards={otherDashboards}
-                        devMode={devMode}
-                        editing={editing}
-                        isRefreshing={tiles.refreshingTileIds.has(tile.tile_id)}
-                        changeCount={tiles.changed[tile.tile_id] ?? 0}
-                        index={index}
-                        onRefresh={() => tiles.refreshTile(tile.tile_id)}
-                        onConfirm={() => tiles.confirmTile(tile.tile_id)}
-                        onUpdate={(req) => tiles.updateTile(tile.tile_id, req)}
-                        onDelete={() => tiles.deleteTile(tile.tile_id)}
-                        onResize={(preset) => onResizePreset(tile.tile_id, preset)}
-                      />
-                    </div>
-                  ))}
-                </ReactGridLayout>
-              )}
-            </div>
-          </div>
+          <DashboardGrid slots={slots} editing={editing} onStop={onGridStop}>
+            {view.map(({ tile }, index) => (
+              <div key={tile.tile_id} className="h-full">
+                <TileCard
+                  tile={tile}
+                  otherDashboards={otherDashboards}
+                  devMode={devMode}
+                  editing={editing}
+                  isRefreshing={tiles.refreshingTileIds.has(tile.tile_id)}
+                  changeCount={tiles.changed[tile.tile_id] ?? 0}
+                  index={index}
+                  onRefresh={() => tiles.refreshTile(tile.tile_id)}
+                  onConfirm={() => tiles.confirmTile(tile.tile_id)}
+                  onUpdate={(req) => tiles.updateTile(tile.tile_id, req)}
+                  onDelete={() => tiles.deleteTile(tile.tile_id)}
+                  onResize={(preset) => onResizePreset(tile.tile_id, preset)}
+                />
+              </div>
+            ))}
+          </DashboardGrid>
         )}
       </div>
 
@@ -380,3 +364,41 @@ function EmptyState({ title, text, onBuild, secondary }: EmptyStateProps) {
     </motion.main>
   )
 }
+
+interface DashboardGridProps {
+  slots: Slot[]
+  editing: boolean
+  onStop: EventCallback
+  children: ReactNode
+}
+
+/**
+ * The grid in its own component so it measures its width when IT mounts: the
+ * page renders skeletons first, and a width hook in the page never saw the
+ * container, which left the grid at the library's 1280px default (not filling
+ * wide screens, overflowing narrow ones).
+ */
+function DashboardGrid({ slots, editing, onStop, children }: DashboardGridProps) {
+  const { width, containerRef, mounted } = useContainerWidth()
+  return (
+    <div className="p-6 pt-5">
+      <div ref={containerRef} className={cn('rounded-xl', editing && 'grid-guides dashboard-editing')}>
+        {mounted && (
+          <ReactGridLayout
+            width={width}
+            layout={slots}
+            gridConfig={{ cols: GRID_COLS, rowHeight: ROW_HEIGHT, margin: [GRID_MARGIN, GRID_MARGIN], containerPadding: [0, 0] }}
+            dragConfig={{ enabled: editing, handle: '.tile-drag-handle' }}
+            resizeConfig={{ enabled: editing, handles: ['se'] }}
+            compactor={verticalCompactor}
+            onDragStop={onStop}
+            onResizeStop={onStop}
+          >
+            {children}
+          </ReactGridLayout>
+        )}
+      </div>
+    </div>
+  )
+}
+

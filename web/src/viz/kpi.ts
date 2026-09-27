@@ -9,9 +9,9 @@
  * number and the change, and only drawn in the sparkline.
  */
 
-import type { Column } from '@/viz/columns'
+import { humanize, type Column } from '@/viz/columns'
 import { percentChange } from '@/viz/format'
-import type { Shape } from '@/viz/infer'
+import { comparisonPreviousIndex, type Shape } from '@/viz/infer'
 
 export interface KpiData {
   value: number
@@ -24,6 +24,8 @@ export interface KpiData {
   /** Sparkline points, oldest first (time series only). */
   series: number[] | null
 }
+
+const RATE_NAME = /(?:rate|ratio|share|pct|percent|percentage|_per_)/i
 
 const PERIODS: [seconds: number, name: string][] = [
   [60, 'minute'], [300, '5 minutes'], [900, '15 minutes'], [1800, '30 minutes'], [3600, 'hour'],
@@ -51,6 +53,35 @@ function median(values: number[]): number {
 export function kpiOf(shape: Shape, now: number = Date.now()): KpiData | null {
   const [first, second] = shape.measures
   if (!first || shape.rows.length === 0) return null
+
+  const previousIndex = comparisonPreviousIndex(shape)
+  if (previousIndex !== null) {
+    const category = shape.categories[0]
+    const current = shape.rows[1 - previousIndex]
+    const previous = shape.rows[previousIndex]
+    const value = current[first.name]
+    const before = previous[first.name]
+    if (typeof value !== 'number') return null
+    const change = typeof before === 'number' ? percentChange(value, before) : null
+    return {
+      value,
+      column: first,
+      label: first.label,
+      change,
+      changeLabel: change ? `vs ${humanize(String(previous[category.name])).toLowerCase()}` : null,
+      series: null,
+    }
+  }
+
+  if (shape.rows.length === 1 && shape.measures.length > 2) {
+    // Several numbers in one row ("disputes, orders, disputes per order"): the
+    // headline is the rate if there is one, else the first. No change is shown:
+    // the others are parts of it, not a previous period.
+    const headline = shape.measures.find((m) => RATE_NAME.test(m.name)) ?? first
+    const value = shape.rows[0][headline.name]
+    if (typeof value !== 'number') return null
+    return { value, column: headline, label: headline.label, change: null, changeLabel: null, series: null }
+  }
 
   if (shape.rows.length === 1 || !shape.time) {
     const row = shape.rows[0]

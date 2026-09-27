@@ -82,6 +82,7 @@ describe('format', () => {
 describe('kinds', () => {
   it('offers only what the rows can support', () => {
     expect(availableKinds(shapeOf([{ n: 550 }]))).toEqual(['kpi', 'table'])
+    expect(availableKinds(shapeOf([{ a: 1, b: 2, c: 3 }]))).toEqual(['kpi', 'table'])
     expect(availableKinds(shapeOf(hourly(24, NOW)))).toEqual(['kpi_trend', 'area', 'line', 'bar', 'table'])
     expect(availableKinds(shapeOf(byCity))).toEqual(['bar', 'hbar', 'breakdown', 'donut', 'table'])
     expect(availableKinds(shapeOf([{ city: 'a' }, { city: 'b' }]))).toEqual(['table'])
@@ -195,3 +196,33 @@ describe('insights', () => {
     expect(insightsFor([{ tileId: 'x', title: 'Even', shape: shapeOf(even), kind: 'bar' }], NOW)).toEqual([])
   })
 })
+
+describe('two-row comparisons', () => {
+  const rows = [{ period: 'last_24h', total_revenue: 110 }, { period: 'prev_24h', total_revenue: 100 }]
+
+  it('are recognised and shown as a KPI whichever row comes first', () => {
+    expect(availableKinds(shapeOf(rows))[0]).toBe('kpi')
+    expect(defaultKind(shapeOf(rows))).toBe('kpi')
+    const kpi = kpiOf(shapeOf([...rows].reverse()), NOW)
+    expect(kpi?.value).toBe(110)
+    expect(kpi?.change?.text).toBe('▲ 10%')
+    expect(kpi?.changeLabel).toBe('vs prev 24h')
+  })
+
+  it('need exactly one row labelled as the previous period', () => {
+    expect(defaultKind(shapeOf([{ c: 'north', v: 1 }, { c: 'south', v: 2 }]))).toBe('bar')
+    expect(defaultKind(shapeOf([{ c: 'previous_7_days', v: 1 }, { c: 'prior_7_days', v: 2 }]))).not.toBe('kpi')
+    expect(kpiOf(shapeOf([{ period: 'last_7_days', r: 0.89 }, { period: 'previous_7_days', r: 0.9 }]))?.changeLabel)
+      .toBe('vs previous 7 days')
+  })
+})
+
+describe('one row, several numbers', () => {
+  it('shows the rate as the headline, without a change', () => {
+    const kpi = kpiOf(shapeOf([{ orders_count: 550, disputes_count: 80, disputes_per_order: 0.1454 }]))
+    expect(kpi?.column.name).toBe('disputes_per_order')
+    expect(kpi?.change).toBeNull()
+    expect(kpiOf(shapeOf([{ a: 5, b: 6, c: 7 }]))?.value).toBe(5)
+  })
+})
+

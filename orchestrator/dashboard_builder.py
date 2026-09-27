@@ -65,9 +65,11 @@ Rules:
 - A KPI question returns ONE row. To show a change, ask for the current value
   and the previous period's value in that same row, e.g. "What was revenue in
   the last hour, and in the hour before it?" Use viz "kpi".
-- A trend question asks for one value per time period over a window, e.g.
-  "How many orders were placed per hour over the last 24 hours?" Use viz
-  "area" or "line", or "kpi_trend" for a small card with a sparkline.
+- A trend question asks for one value per COMPLETE time period, leaving out
+  the period still in progress (a half-finished day would look like a collapse),
+  e.g. "What was revenue per day for the 7 days before today?" or "How many
+  orders were placed in each of the last 24 complete hours?" Use viz "area" or
+  "line", or "kpi_trend" for a small card with a sparkline.
 - A breakdown question asks for one value per category, e.g. "What is revenue
   by product category over the last 7 days?" Use viz "bar"; "hbar" when there
   are more than 8 categories or long names; "donut" only for shares of a

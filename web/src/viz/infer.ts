@@ -60,6 +60,23 @@ export function shapeOf(rows: Row[], names?: string[] | null): Shape {
   }
 }
 
+const PREVIOUS_LABEL = /(?:^|[_\s-])(?:prev|previous|prior|before|earlier|yesterday)(?:$|[_\s-])/i
+
+/**
+ * A two-row comparison: one category column whose values name a previous and a
+ * current period ("prev_24h" / "last_24h", "previous_7_days" / "last_7_days"),
+ * and a measure. The SQL agent often answers "this period and the one before" in
+ * this shape instead of two columns; it is shown as a KPI with its change.
+ * Returns the index of the PREVIOUS row, or null if the rows are not that shape.
+ */
+export function comparisonPreviousIndex(shape: Shape): number | null {
+  if (shape.rows.length !== 2 || shape.categories.length !== 1 || shape.measures.length < 1 || shape.time) return null
+  const labels = shape.rows.map((r) => String(r[shape.categories[0].name] ?? ''))
+  const previous = labels.map((l) => PREVIOUS_LABEL.test(l))
+  if (previous[0] === previous[1]) return null
+  return previous[0] ? 0 : 1
+}
+
 function nonNegative(shape: Shape, column: Column): boolean {
   return shape.rows.every((r) => typeof r[column.name] !== 'number' || (r[column.name] as number) >= 0)
 }
@@ -73,7 +90,8 @@ export function availableKinds(shape: Shape): VizKind[] {
   const n = shape.rows.length
   const [measure] = shape.measures
   if (n === 0 || !measure) return ['table']
-  if (n === 1) return shape.measures.length <= 2 ? ['kpi', 'table'] : ['table']
+  if (n === 1) return ['kpi', 'table']
+  if (comparisonPreviousIndex(shape) !== null) return ['kpi', 'bar', 'hbar', 'table']
 
   const kinds: VizKind[] = []
   if (shape.time) {

@@ -83,7 +83,10 @@ export function vegaConfig(): Record<string, unknown> {
     // Horizontal labels; Vega-Lite otherwise turns short category names
     // vertical. labelOverlap 'greedy' drops colliding labels instead.
     axisX: { grid: false, labelAngle: 0 },
-    axisY: { domain: false, format: '~s' },
+    axisY: { domain: false },
+    // SI-compact numbers ("12M") on number axes only: on a category axis the
+    // same format turned every label into "NaN".
+    axisQuantitative: { format: '~s' },
     legend: {
       orient: 'top',
       direction: 'horizontal',

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
@@ -37,15 +37,21 @@ export function useBuild(dashboardId: string | null) {
     seen.current = added
   }, [added, dashboardId, queryClient])
 
-  // The end of a build is announced once.
+  // Builds this page watched running. Only those show their result panel and
+  // are announced; a build that finished before the page opened stays quiet.
+  const [watched, setWatched] = useState<ReadonlySet<string>>(() => new Set())
+  useEffect(() => {
+    if (job && isActive(job) && !watched.has(job.job_id)) setWatched((w) => new Set(w).add(job.job_id))
+  }, [job, watched])
+
   const announced = useRef<string | null>(null)
   useEffect(() => {
-    if (!job || isActive(job) || announced.current === job.job_id || !job.finished_at) return
-    if (seen.current === null) return
+    if (!job || isActive(job) || !job.finished_at || !watched.has(job.job_id)) return
+    if (announced.current === job.job_id) return
     announced.current = job.job_id
     if (job.state === 'failed') toast.error(job.error ?? 'The build failed.')
     else toast.success(`Added ${added} of ${job.items.length} insights.`)
-  }, [job, added])
+  }, [job, added, watched])
 
   /**
    * Start a build on `targetId`. Explicit, not the hook's own dashboard: a build
@@ -55,11 +61,14 @@ export function useBuild(dashboardId: string | null) {
     try {
       const res = await api.buildDashboard(targetId, goal)
       announced.current = null
+      setWatched((w) => new Set(w).add(res.job.job_id))
       queryClient.setQueryData(['build', targetId], res)
     } catch (err) {
       notifyFailure(err, 'Could not start the build.')
     }
   }, [queryClient])
 
-  return { job, active: isActive(job), start }
+  /** The job to show: running, or finished while this page watched it. */
+  const visible = job && (isActive(job) || watched.has(job.job_id)) ? job : null
+  return { job: visible, active: isActive(job), start }
 }
