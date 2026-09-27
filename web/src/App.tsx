@@ -6,7 +6,7 @@ import { api } from '@/api/client'
 import { AppShell } from '@/features/shell/AppShell'
 import { SignInCard } from '@/features/auth/SignInCard'
 import { ChatView } from '@/features/chat/ChatView'
-import { DashboardPlaceholder } from '@/features/dashboard/DashboardPlaceholder'
+import { DashboardView } from '@/features/dashboard/DashboardView'
 import { useConversation } from '@/features/chat/useConversation'
 import { AUTH_EXPIRED_EVENT, clearToken, getToken } from '@/lib/auth'
 import { KEYS, readStored, writeStored } from '@/lib/storage'
@@ -178,7 +178,7 @@ export default function App() {
           sessionId={conversation.sessionId}
         />
       ) : (
-        <DashboardPlaceholder />
+        <DashboardView devMode={devMode} />
       )}
     </AppShell>
   )

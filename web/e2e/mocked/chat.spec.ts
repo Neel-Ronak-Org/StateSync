@@ -217,7 +217,8 @@ test.describe('conversations and datasets', () => {
     const turn = page.getByTestId('turn').nth(1)
     await expect(turn.getByText('Showing 20 of 60 rows')).toBeVisible()
     await turn.getByRole('button', { name: 'Load full result' }).click()
-    await expect(turn.getByText('60 rows')).toBeVisible()
+    // exact: 'Show all 60 rows' (the toggle) also contains the phrase
+    await expect(turn.getByText('60 rows', { exact: true })).toBeVisible()
     await expect(turn.getByRole('button', { name: 'Load full result' })).toHaveCount(0)
   })
 })

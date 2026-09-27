@@ -37,3 +37,17 @@ export function formatRelativeTime(dateInput: string | number | Date): { relativ
   }
   return { relative: date.toLocaleDateString(), absolute }
 }
+
+export function formatInterval(seconds: number): string {
+  if (seconds < 3600) {
+    const mins = Math.round(seconds / 60)
+    return `${mins} min`
+  }
+  if (seconds < 86400) {
+    const hours = Math.round(seconds / 3600)
+    return `${hours} h`
+  }
+  const days = Math.round(seconds / 86400)
+  return `${days} d`
+}
+

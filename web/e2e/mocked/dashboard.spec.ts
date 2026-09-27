@@ -15,7 +15,8 @@ async function pinLast(page: Page) {
 }
 
 async function openDashboard(page: Page) {
-  await page.getByRole('button', { name: 'Dashboard' }).click()
+  // exact: every 'Pin to dashboard' button would also match 'Dashboard'
+  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
 }
 

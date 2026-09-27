@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react'
-import { Download, MoreHorizontal, PanelRight } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Download, MoreHorizontal, PanelRight, Pin } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
+import type { Tile } from '@/api/types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -46,8 +48,59 @@ export function TurnItem({
 }: TurnItemProps) {
   const chartViewRef = useRef<ChartView | null>(null)
   const [isLoadingFull, setIsLoadingFull] = useState(false)
+  const [isPinning, setIsPinning] = useState(false)
+  const queryClient = useQueryClient()
+
+  const { data: tilesData } = useQuery({
+    queryKey: ['tiles'],
+    queryFn: api.tiles,
+  })
+
+  const isPinned = Boolean(
+    tilesData?.tiles?.some(
+      (t) => t.source?.session_id === sessionId && t.source?.turn_index === turn.turnIndex
+    )
+  )
 
   const paragraphs = turn.answer ? turn.answer.split(/\n\n+/) : []
+
+  const handlePin = async () => {
+    setIsPinning(true)
+    try {
+      const res = await api.pinTile({
+        session_id: sessionId,
+        turn_index: turn.turnIndex,
+      })
+      toast.success('Pinned to dashboard', {
+        action: {
+          label: 'View',
+          onClick: () => {
+            window.location.hash = '#/dashboard'
+          },
+        },
+      })
+      queryClient.setQueryData<{ tiles: Tile[] }>(['tiles'], (old) => {
+        if (!old) return { tiles: [res.tile] }
+        const existingIndex = old.tiles.findIndex((t) => t.tile_id === res.tile.tile_id)
+        if (existingIndex >= 0) {
+          const next = [...old.tiles]
+          next[existingIndex] = res.tile
+          return { tiles: next }
+        }
+        return { tiles: [res.tile, ...old.tiles] }
+      })
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error(err.message)
+      } else if (err instanceof Error) {
+        toast.error(err.message)
+      } else {
+        toast.error('Failed to pin to dashboard.')
+      }
+    } finally {
+      setIsPinning(false)
+    }
+  }
 
   const handleDownloadCsv = () => {
     if (!turn.rows || !turn.rows.length) return
@@ -235,6 +288,23 @@ export function TurnItem({
             </div>
 
             <div className="flex items-center gap-1">
+              {turn.sql && !isPinned && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Pin to dashboard"
+                      disabled={isPinning}
+                      onClick={handlePin}
+                    >
+                      <Pin className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Pin to dashboard</TooltipContent>
+                </Tooltip>
+              )}
+
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button

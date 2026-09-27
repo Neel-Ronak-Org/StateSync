@@ -67,7 +67,7 @@ export function ResultTable({
       {/* Results table */}
       <div className="relative max-h-80 overflow-auto rounded-md border border-border">
         <Table>
-          <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur-xs z-10">
+          <TableHeader className="sticky top-0 bg-muted z-10">
             <TableRow>
               {columns.map((col) => {
                 const isNum = numericColumns.has(col)
