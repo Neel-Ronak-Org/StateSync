@@ -17,10 +17,12 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { VegaChart, type ChartView } from '@/charts/VegaChart'
+import { answerBlocks } from '@/features/chat/answerBlocks'
 import { ResultTable } from '@/features/chat/ResultTable'
 import { useAllTiles } from '@/features/dashboard/useTiles'
 import { copyToClipboard } from '@/lib/clipboard'
 import { downloadCsv } from '@/lib/csv'
+import { sourceLabel } from '@/lib/sources'
 import type { ChatTurn } from '@/types/chat'
 
 interface TurnItemProps {
@@ -60,7 +62,7 @@ export function TurnItem({
     )
   )
 
-  const paragraphs = turn.answer ? turn.answer.split(/\n\n+/) : []
+  const blocks = turn.answer ? answerBlocks(turn.answer) : []
 
   const handlePin = async () => {
     setIsPinning(true)
@@ -206,9 +208,27 @@ export function TurnItem({
         <div className="space-y-3">
           {/* Answer text */}
           <div data-testid="answer-text" className="text-sm leading-6 space-y-3 text-foreground">
-            {paragraphs.map((p, idx) => (
-              <p key={idx}>{p}</p>
-            ))}
+            {blocks.map((b, idx) => {
+              if (b.kind === 'p') {
+                return <p key={idx}>{b.text}</p>
+              }
+              if (b.kind === 'ul') {
+                return (
+                  <ul key={idx} className="list-disc space-y-1 pl-5">
+                    {b.items.map((item, iIdx) => (
+                      <li key={iIdx}>{item}</li>
+                    ))}
+                  </ul>
+                )
+              }
+              return (
+                <ol key={idx} className="list-decimal space-y-1 pl-5">
+                  {b.items.map((item, iIdx) => (
+                    <li key={iIdx}>{item}</li>
+                  ))}
+                </ol>
+              )
+            })}
           </div>
 
           {/* Artifact card */}
@@ -255,8 +275,13 @@ export function TurnItem({
                   )
                 }
                 return (
-                  <Badge key={idx} variant="outline" className="font-mono text-xs font-normal">
-                    {c.ref}
+                  <Badge
+                    key={idx}
+                    variant="outline"
+                    title={c.ref}
+                    className="text-xs font-normal"
+                  >
+                    {sourceLabel(c.ref)}
                     {c.page != null ? ` p. ${c.page}` : ''}
                   </Badge>
                 )

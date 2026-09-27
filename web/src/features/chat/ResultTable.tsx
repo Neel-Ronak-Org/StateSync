@@ -131,7 +131,7 @@ export function ResultTable({
               )}
             </div>
           ) : (
-            <span>{rows.length} rows</span>
+            <span>{rows.length === 1 ? '1 row' : `${rows.length} rows`}</span>
           )}
         </div>
 
@@ -142,7 +142,7 @@ export function ResultTable({
             onClick={() => setShowAll((prev) => !prev)}
             className="h-7 text-xs text-muted-foreground hover:text-foreground"
           >
-            {showAll ? 'Show fewer rows' : `Show all ${rows.length} rows`}
+            {showAll ? 'Show fewer rows' : `Show all ${rows.length} ${rows.length === 1 ? 'row' : 'rows'}`}
           </Button>
         )}
       </div>

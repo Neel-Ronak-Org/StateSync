@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/sheet'
 import { copyToClipboard } from '@/lib/clipboard'
 import { formatNumber } from '@/lib/format'
+import { sourceLabel } from '@/lib/sources'
 import type { ChatTurn } from '@/types/chat'
 
 interface DetailsSheetProps {
@@ -122,6 +123,16 @@ export function DetailsSheet({ turn, open, onOpenChange, devMode }: DetailsSheet
             )}
           </div>
 
+          {/* Section: Chart spec (Developer Mode) */}
+          {devMode && turn.chart && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-foreground">Chart spec</h3>
+              <pre className="max-h-72 overflow-auto rounded-md bg-muted p-3 font-mono text-xs">
+                {JSON.stringify(turn.chart, null, 2).slice(0, 4000)}
+              </pre>
+            </div>
+          )}
+
           {/* Section 3: Sources */}
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-foreground">Sources</h3>
@@ -132,9 +143,17 @@ export function DetailsSheet({ turn, open, onOpenChange, devMode }: DetailsSheet
                     <span className="text-muted-foreground block text-[10px] uppercase">
                       {c.kind}
                     </span>
-                    <span className="text-foreground break-all">{c.ref}</span>
-                    {c.page != null && (
-                      <span className="text-muted-foreground ml-1">p. {c.page}</span>
+                    {c.kind === 'sql' ? (
+                      <span className="text-foreground break-words">SQL query — shown above</span>
+                    ) : (
+                      <>
+                        <span className="text-foreground break-words" title={c.ref}>
+                          {sourceLabel(c.ref)}
+                        </span>
+                        {c.page != null && (
+                          <span className="text-muted-foreground ml-1">p. {c.page}</span>
+                        )}
+                      </>
                     )}
                   </div>
                 ))}
@@ -155,7 +174,7 @@ export function DetailsSheet({ turn, open, onOpenChange, devMode }: DetailsSheet
                   return (
                     <div key={key} className="rounded-md border bg-muted/40 p-2">
                       <div className="font-semibold text-foreground">{key}</div>
-                      <div className="text-muted-foreground break-all whitespace-pre-wrap mt-0.5">
+                      <div className="text-muted-foreground break-words whitespace-pre-wrap mt-0.5">
                         {truncated}
                       </div>
                     </div>
