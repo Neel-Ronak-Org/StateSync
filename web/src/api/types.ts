@@ -92,8 +92,10 @@ export interface SessionSummary {
   session_id: string
   turn_count: number
   started_at: string
-  last_active_at?: string
+  last_activity: string
   first_query: string
+  /** Dataset the conversation was started on; null for turns stored before migration 018. */
+  target_schema: string | null
 }
 
 export interface SessionList {
@@ -117,6 +119,8 @@ export interface StoredTurn {
   sql_rows_preview: Row[] | null
   /** Rows the query returned (capped at run_select's max_rows), not the preview size. */
   sql_rows_count: number | null
+  /** Dataset this turn was answered from; null before migration 018. */
+  target_schema: string | null
 }
 
 export interface SessionDetail {

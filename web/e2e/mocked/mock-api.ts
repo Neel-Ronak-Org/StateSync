@@ -31,6 +31,7 @@ interface StoredTurn {
   sql_columns: string[] | null
   sql_rows_preview: Row[] | null
   sql_rows_count: number | null
+  target_schema: string | null
 }
 
 interface Tile {
@@ -154,6 +155,8 @@ export class MockApi {
   readonly sessions = new Map<string, StoredTurn[]>()
   readonly tiles = new Map<string, Tile>()
   private failures = new Map<string, { status: number; detail: string; headers?: Record<string, string> }>()
+  /** When set, the full-rows endpoint returns only this many rows (the history store's caps). */
+  storedRowsLimit: number | null = null
   private clock = Date.parse('2026-09-27T10:00:00Z')
   private tileSeq = 0
 
@@ -167,6 +170,7 @@ export class MockApi {
         rewrite_applied: false, context_guessed: false, route: 'sql',
         executed_sql: 'SELECT COUNT(*) AS total_orders FROM orders LIMIT 1000', answer_text: 'There are 550 orders in total.',
         computed_at: at, chart: null, sql_columns: ['total_orders'], sql_rows_preview: [{ total_orders: 550 }], sql_rows_count: 1,
+        target_schema: 'public',
       },
       {
         turn_index: 2, raw_query: 'Which cities have the most sellers?', rewritten_query: 'Which cities have the most sellers?',
@@ -174,6 +178,17 @@ export class MockApi {
         executed_sql: 'SELECT city, count(*) AS sellers FROM sellers GROUP BY 1 ORDER BY 2 DESC',
         answer_text: 'There are 60 cities with at least one seller.', computed_at: at, chart: null,
         sql_columns: ['city', 'sellers'], sql_rows_preview: MANY_ROWS.slice(0, 20), sql_rows_count: 60,
+        target_schema: 'public',
+      },
+    ])
+    // A conversation on the OTHER dataset, to test that opening it switches dataset.
+    this.sessions.set('seed-session-olist', [
+      {
+        turn_index: 1, raw_query: 'How many orders were delivered on olist?', rewritten_query: 'How many orders were delivered on olist?',
+        rewrite_applied: false, context_guessed: false, route: 'sql',
+        executed_sql: "SELECT count(*) AS delivered FROM olist.orders WHERE order_status = 'delivered'",
+        answer_text: 'There were 96,478 orders delivered.', computed_at: at, chart: null,
+        sql_columns: ['delivered'], sql_rows_preview: [{ delivered: 96478 }], sql_rows_count: 1, target_schema: 'olist',
       },
     ])
   }
@@ -204,7 +219,9 @@ export class MockApi {
     return route.fulfill({
       status,
       contentType: 'application/json',
-      headers: { 'access-control-allow-origin': '*', ...headers },
+      // Mirrors the orchestrator's CORS: Retry-After is only readable cross-origin
+      // because the server lists it in Access-Control-Expose-Headers.
+      headers: { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'Retry-After', ...headers },
       body: JSON.stringify(body),
     })
   }
@@ -249,7 +266,8 @@ export class MockApi {
     if (path === '/sessions' && method === 'GET') {
       const sessions = [...this.sessions.entries()].map(([session_id, turns]) => ({
         session_id, turn_count: turns.length, started_at: turns[0].computed_at,
-        last_active_at: turns[turns.length - 1].computed_at, first_query: turns[0].raw_query,
+        last_activity: turns[turns.length - 1].computed_at, first_query: turns[0].raw_query,
+        target_schema: turns[0].target_schema,
       }))
       return this.json(route, 200, { sessions, count: sessions.length })
     }
@@ -257,7 +275,8 @@ export class MockApi {
     if (m && method === 'GET') {
       const turn = (this.sessions.get(decodeURIComponent(m[1])) ?? []).find((t) => t.turn_index === Number(m![2]))
       if (!turn) return this.json(route, 200, { rows: [], stored_row_count: 0, byte_size: 0, available: false })
-      const full = turn.sql_rows_count === 60 ? MANY_ROWS : turn.sql_rows_preview ?? []
+      const all = turn.sql_rows_count === 60 ? MANY_ROWS : turn.sql_rows_preview ?? []
+      const full = this.storedRowsLimit === null ? all : all.slice(0, this.storedRowsLimit)
       return this.json(route, 200, { rows: full, stored_row_count: full.length, byte_size: 1024, available: true })
     }
     m = path.match(/^\/sessions\/([^/]+)$/)
@@ -275,13 +294,21 @@ export class MockApi {
     const sessionId = String(body.session_id ?? `srv-${this.queries.length}`)
     const canned = cannedAnswer(question)
     const turns = this.sessions.get(sessionId) ?? []
+    const schema = String(body.schema ?? 'public')
+    // The server refuses a follow-up on a different dataset (migration 018).
+    const startedOn = turns[0]?.target_schema
+    if (startedOn && startedOn !== schema) {
+      return this.json(route, 409, {
+        detail: `This conversation uses the ${startedOn} dataset. Start a new conversation to ask about ${schema}.`,
+      })
+    }
     const turnIndex = turns.length + 1
     const at = this.now()
     turns.push({
       turn_index: turnIndex, raw_query: question, rewritten_query: question, rewrite_applied: false, context_guessed: false,
       route: canned.route, executed_sql: canned.sql, answer_text: canned.answer, computed_at: at, chart: canned.chart,
       sql_columns: canned.columns.length ? canned.columns : null, sql_rows_preview: canned.rows.slice(0, 100),
-      sql_rows_count: canned.rows.length,
+      sql_rows_count: canned.rows.length, target_schema: schema,
     })
     this.sessions.set(sessionId, turns)
     return this.json(route, 200, {
@@ -291,7 +318,7 @@ export class MockApi {
       citations: canned.citations,
       latency_ms: 1234,
       state_trace: {
-        query_id: `q-${this.queries.length}`, target_schema: String(body.schema ?? 'public'), route: canned.route,
+        query_id: `q-${this.queries.length}`, target_schema: schema, route: canned.route,
         executed_sql: canned.sql, candidate_sql: canned.sql, sql_rows_count: canned.rows.length, sql_rows: canned.rows,
         sql_columns: canned.columns, attempt: 1, errors: [], metrics: { tokens_in: 5164, tokens_out: 298, llm_calls: 5 },
         memory_hit: false, detected_language: 'en', normalized_query: question, preserved_entities: {},

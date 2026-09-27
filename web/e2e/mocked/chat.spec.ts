@@ -126,6 +126,13 @@ test.describe('asking', () => {
     await expect(page.getByText('Try again in 17 seconds')).toBeVisible()
   })
 
+  test('a rate limit without Retry-After does not invent a wait time', async ({ page }) => {
+    const api = await openApp(page)
+    api.failNext('/query', 429, 'Rate limit exceeded.')
+    await ask(page, 'How many orders are there in total?')
+    await expect(page.getByText('Rate limit reached. Try again shortly.')).toBeVisible()
+  })
+
   test('the conversation survives a reload', async ({ page }) => {
     await openApp(page)
     await ask(page, 'How many orders are there in total?')
@@ -172,6 +179,33 @@ test.describe('conversations and datasets', () => {
     await ask(page, 'And how many sellers?')
     await expect(page.getByTestId('turn')).toHaveCount(3)
     expect(api.queries[0].session_id).toBe('seed-session-1')
+  })
+
+  test('opening a conversation from the other dataset switches to that dataset', async ({ page }) => {
+    const api = await openApp(page)
+    await page
+      .getByRole('navigation', { name: 'Recent conversations' })
+      .getByRole('button', { name: 'How many orders were delivered on olist?' })
+      .click()
+    await expect(page.getByTestId('turn')).toHaveCount(1)
+    await expect(page.getByLabel('Dataset')).toContainText('olist')
+    await expect(page.getByTestId('turn-dataset').first()).toHaveText('olist')
+    await ask(page, 'And how many were canceled?')
+    await expect(page.getByTestId('answer-text')).toHaveCount(2)
+    expect(api.queries[0]).toMatchObject({ session_id: 'seed-session-olist', schema: 'olist' })
+  })
+
+  test('a result the store kept only part of says so after loading', async ({ page }) => {
+    const api = await openApp(page)
+    api.storedRowsLimit = 50
+    await page
+      .getByRole('navigation', { name: 'Recent conversations' })
+      .getByRole('button', { name: 'How many orders are there in total?' })
+      .click()
+    const turn = page.getByTestId('turn').nth(1)
+    await turn.getByRole('button', { name: 'Load full result' }).click()
+    await expect(turn.getByText('Showing 50 of 60 rows (the rest was not stored)')).toBeVisible()
+    await expect(turn.getByRole('button', { name: 'Load full result' })).toHaveCount(0)
   })
 
   test('a truncated stored result can load in full', async ({ page }) => {

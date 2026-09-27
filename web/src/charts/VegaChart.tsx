@@ -27,7 +27,9 @@ import { vegaConfig } from '@/charts/theme'
 import { useTheme } from '@/components/theme-provider'
 import { cn } from '@/lib/utils'
 
-type EmbeddedView = Result['view']
+/** The live Vega view, for PNG export. Import this type instead of vega-embed. */
+export type ChartView = Result['view']
+type EmbeddedView = ChartView
 
 interface VegaChartProps {
   spec: ChartSpec

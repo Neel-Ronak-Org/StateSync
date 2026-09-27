@@ -8,9 +8,15 @@ export async function openApp(page: Page, options: { signedIn?: boolean; hash?: 
   const api = new MockApi()
   await api.install(page)
   if (signedIn) {
+    // addInitScript runs on EVERY load, reloads included. Seeding only once per
+    // tab (marker in sessionStorage) keeps "sign out, reload, still signed out"
+    // testable without the app needing any test-only behaviour.
     await page.addInitScript((token) => {
       try {
-        window.localStorage.setItem('statesync.token', token)
+        if (!window.sessionStorage.getItem('e2e.seeded')) {
+          window.localStorage.setItem('statesync.token', token)
+          window.sessionStorage.setItem('e2e.seeded', '1')
+        }
       } catch {
         /* storage blocked: the app must still load */
       }

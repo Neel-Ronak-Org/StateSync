@@ -7,7 +7,7 @@
  * <html> from an effect and follows the OS setting while in "system".
  */
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { KEYS, readStored, writeStored } from '@/lib/storage'
 
@@ -53,7 +53,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const resolvedTheme: ResolvedTheme = theme === 'system' ? system : theme
 
-  useEffect(() => {
+  // A LAYOUT effect on purpose: React runs children's effects before their
+  // parents', so a chart re-theming in its own effect would read the CSS
+  // variables before a plain effect here had switched the class, and draw a
+  // light chart on a dark page. Layout effects all run before passive ones.
+  useLayoutEffect(() => {
     const root = document.documentElement
     root.classList.toggle('dark', resolvedTheme === 'dark')
     root.style.colorScheme = resolvedTheme

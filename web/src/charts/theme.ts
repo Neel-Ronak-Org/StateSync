@@ -71,7 +71,9 @@ export function vegaConfig(): Record<string, unknown> {
       titlePadding: 8,
       tickCount: 6,
     },
-    axisX: { grid: false },
+    // Horizontal labels; Vega-Lite otherwise turns short category names
+    // vertical. labelOverlap 'greedy' drops colliding labels instead.
+    axisX: { grid: false, labelAngle: 0 },
     axisY: { domain: false, format: '~s' },
     legend: {
       orient: 'top',
