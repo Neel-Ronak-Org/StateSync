@@ -47,6 +47,7 @@ VIZ_KINDS = frozenset({"kpi", "kpi_trend", "line", "area", "bar", "hbar",
 # Sessions the builder asks in. history.list_sessions hides them: they are not
 # conversations a person had.
 BUILD_SESSION_PREFIX = "build-"
+JOB_ID_CHARS_IN_SESSION = 8  # noqa: literals - enough of the job id to be unique per principal
 
 PLANNER_SYSTEM_PROMPT = """You plan an analytics dashboard for one dataset.
 
@@ -171,15 +172,13 @@ def parse_plan(text: str, min_items: int, max_items: int, title_max: int, questi
     return plan
 
 
+# (w, h) on the 12-column grid by kind; mirrors web/src/features/dashboard/layout.ts sizeFor.
+TILE_SIZES: dict[str, tuple[int, int]] = {"kpi": (3, 4), "kpi_trend": (3, 5), "breakdown": (4, 8), "donut": (4, 8)}  # noqa: literals - grid geometry shared with the web app
+DEFAULT_TILE_SIZE = (6, 8)  # noqa: literals - grid geometry shared with the web app
+
+
 def size_for(viz: str) -> tuple[int, int]:
-    """(w, h) on the 12-column grid; mirrors web/src/features/dashboard/layout.ts sizeFor."""
-    if viz == "kpi":
-        return 3, 4
-    if viz == "kpi_trend":
-        return 3, 5
-    if viz in ("breakdown", "donut"):
-        return 4, 8
-    return 6, 8
+    return TILE_SIZES.get(viz, DEFAULT_TILE_SIZE)
 
 
 @dataclass
@@ -275,7 +274,7 @@ async def run_build(job: BuildJob, plan: Planner, ask: Asker, pin: Pinner, colum
         packer = GridPacker(columns=columns)
         for n, (item, insight) in enumerate(zip(job.items, planned)):
             item.state = "running"
-            session_id = f"{BUILD_SESSION_PREFIX}{job.job_id[:8]}-{n + 1}"
+            session_id = f"{BUILD_SESSION_PREFIX}{job.job_id[:JOB_ID_CHARS_IN_SESSION]}-{n + 1}"
             try:
                 answer = await ask(insight.question, session_id)
             except Exception as exc:  # noqa: BLE001 - reported per item, the build goes on

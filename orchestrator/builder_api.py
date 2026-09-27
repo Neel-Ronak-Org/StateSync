@@ -34,6 +34,8 @@ from mcp_client import MCPSession, dashboards_manage, schema_describe_table, sch
 logger = logging.getLogger(__name__)
 
 PLANNER_ATTEMPTS = 2   # noqa: literals - one retry for an unparseable plan, not configuration
+LOG_EXCERPT_CHARS = 300   # noqa: literals - how much of a bad reply to log, not configuration
+HTTP_ACCEPTED = 202   # noqa: literals - HTTP status code
 
 
 class BuildRequest(BaseModel):
@@ -90,11 +92,11 @@ def register_build_routes(
                                     int(cfg.tiles.title_max_chars), int(cfg.dashboards.question_max_chars))
                 if not isinstance(result, str):
                     return result
-                logger.warning("planner reply unusable (%s); %s", result, reply.text[:300])
+                logger.warning("planner reply unusable (%s); %s", result, reply.text[:LOG_EXCERPT_CHARS])
             return result
         return plan
 
-    @app.post("/dashboards/{dashboard_id}/build", status_code=202, tags=["dashboards"])
+    @app.post("/dashboards/{dashboard_id}/build", status_code=HTTP_ACCEPTED, tags=["dashboards"])
     async def start_build(
         dashboard_id: str,
         body: BuildRequest,
