@@ -6,7 +6,7 @@ import ReactGridLayout, { useContainerWidth, verticalCompactor, type EventCallba
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 
-import type { Dashboard } from '@/api/types'
+import type { Dashboard, Workspace } from '@/api/types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -45,7 +45,10 @@ interface DashboardsViewProps {
   dataset: string
   availableSchemas: string[]
   liveSchemas: string[]
+  workspaces?: Workspace[]
+  activeWorkspaceId?: string | null
   onChangeDataset: (dataset: string) => void
+  onSelectWorkspace?: (workspaceId: string) => void
   devMode: boolean
   onAsk: () => void
 }
@@ -82,7 +85,10 @@ export function DashboardsView({
   dataset,
   availableSchemas,
   liveSchemas,
+  workspaces,
+  activeWorkspaceId,
   onChangeDataset,
+  onSelectWorkspace,
   devMode,
   onAsk,
 }: DashboardsViewProps) {
@@ -207,7 +213,15 @@ export function DashboardsView({
 
         <div className="flex shrink-0 items-center gap-2">
           {active && <LiveIndicator live={live} updatedAt={tiles.dataUpdatedAt} />}
-          <DatasetPicker dataset={dataset} available={availableSchemas} live={liveSchemas} onChange={onChangeDataset} />
+          <DatasetPicker
+            dataset={dataset}
+            available={availableSchemas}
+            live={liveSchemas}
+            workspaces={workspaces}
+            activeWorkspaceId={activeWorkspaceId}
+            onSelectDataset={onChangeDataset}
+            onSelectWorkspace={onSelectWorkspace}
+          />
           {active && view.length > 0 && (
             <>
               <Button

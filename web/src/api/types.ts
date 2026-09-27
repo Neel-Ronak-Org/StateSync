@@ -55,6 +55,8 @@ export interface TraceMetrics {
 export interface StateTrace {
   query_id: string
   target_schema: string
+  workspace_id?: string | null
+  verified_example?: boolean
   route: Route | null
   executed_sql: string | null
   candidate_sql: string | null
@@ -81,6 +83,7 @@ export interface QueryRequest {
   query: string
   session_id?: string
   schema?: string
+  workspace_id?: string
 }
 
 export interface QueryResponse {
@@ -250,4 +253,80 @@ export interface BuildJob {
   error: string | null
   started_at: string
   finished_at: string | null
+}
+
+export type SetupState = 'created' | 'scanned' | 'drafted' | 'approved' | 'tested'
+export type Verdict = 'pending' | 'running' | 'right' | 'wrong' | 'error'
+
+export interface Workspace {
+  workspace_id: string
+  name: string
+  target_schema: string
+  business_context: string
+  context_version: number
+  setup_state: SetupState
+  setup_score: number | null
+  setup_total: number | null
+  created_at: string
+  updated_at: string
+  counts: {
+    tables: number
+    approved: number
+    definitions: number
+    examples: number
+  }
+}
+
+export interface CatalogEntry {
+  table_name: string
+  column_name: string
+  data_type: string
+  row_estimate: number | null
+  sample_values: string[]
+  description: string | null
+  description_source: 'ai' | 'owner' | null
+  approved: boolean
+}
+
+export interface Definition {
+  definition_id: string
+  term: string
+  definition: string
+  source: 'ai' | 'owner'
+  approved: boolean
+}
+
+export interface SetupJob {
+  job_id: string
+  kind: 'draft' | 'test'
+  workspace_id: string
+  state: 'running' | 'done' | 'failed'
+  done: number
+  total: number
+  error: string | null
+  run_id: string | null
+  started_at: string
+  finished_at: string | null
+}
+
+export interface SetupResult {
+  position: number
+  question: string
+  has_reference: boolean
+  answer_text: string | null
+  answer_sql: string | null
+  verdict: Verdict
+  detail: string | null
+}
+
+export interface SetupRun {
+  run_id: string
+  workspace_id: string
+  state: 'running' | 'done' | 'failed'
+  graded_by: 'reference' | 'owner'
+  score: number | null
+  total: number
+  started_at: string
+  finished_at: string | null
+  results: SetupResult[]
 }

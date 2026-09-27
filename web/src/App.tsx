@@ -4,15 +4,19 @@ import { MotionConfig } from 'motion/react'
 import { toast } from 'sonner'
 
 import { api, ApiError } from '@/api/client'
+import type { Workspace } from '@/api/types'
 import { AskView } from '@/features/ask/AskView'
 import { SignInCard } from '@/features/auth/SignInCard'
 import { useConversation } from '@/features/chat/useConversation'
 import { DashboardsView } from '@/features/dashboard/DashboardsView'
 import { AppShell } from '@/features/shell/AppShell'
 import { DatasetPicker } from '@/features/shell/DatasetPicker'
+import { useWorkspaces } from '@/features/workspaces/useWorkspaces'
+import { WorkspaceDetail } from '@/features/workspaces/WorkspaceDetail'
+import { WorkspacesView } from '@/features/workspaces/WorkspacesView'
 import { useHealth } from '@/hooks/useHealth'
 import { AUTH_EXPIRED_EVENT, clearToken, getToken } from '@/lib/auth'
-import { hashFor, routeFromHash, type AppRoute } from '@/lib/route'
+import { hashFor, routeFromHash, workspaceIdFromHash, type AppRoute } from '@/lib/route'
 import { KEYS, readStored, writeStored } from '@/lib/storage'
 
 function getStoredDevMode(): boolean {
@@ -25,18 +29,28 @@ export default function App() {
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null)
   const isSubmittingSignInRef = useRef(false)
 
+  const [hash, setHash] = useState(() => window.location.hash)
   const [route, setRoute] = useState<AppRoute>(() => routeFromHash(window.location.hash))
   const [devMode, setDevModeState] = useState<boolean>(getStoredDevMode)
 
   useEffect(() => {
-    const onHashChange = () => setRoute(routeFromHash(window.location.hash))
+    const onHashChange = () => {
+      setHash(window.location.hash)
+      setRoute(routeFromHash(window.location.hash))
+    }
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
 
+  const currentWorkspaceId = useMemo(() => {
+    if (route !== 'workspaces') return null
+    return workspaceIdFromHash(hash)
+  }, [route, hash])
+
   const navigate = useCallback((next: AppRoute) => {
     window.location.hash = hashFor(next)
     setRoute(next)
+    setHash(hashFor(next))
   }, [])
 
   useEffect(() => {
@@ -55,9 +69,27 @@ export default function App() {
   const availableSchemas = useMemo(() => health?.available_schemas ?? ['public'], [health])
   const liveSchemas = useMemo(() => health?.live_schemas ?? [], [health])
 
+  const {
+    workspaces,
+    createWorkspace,
+    deleteWorkspace,
+    isLoading: workspacesLoading,
+    isLoaded: workspacesLoaded,
+  } = useWorkspaces(Boolean(token))
+
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(() =>
+    readStored(KEYS.workspace),
+  )
+
+  const activeWorkspace = useMemo(
+    () => workspaces.find((w) => w.workspace_id === activeWorkspaceId) ?? null,
+    [workspaces, activeWorkspaceId],
+  )
+
   // The dataset: the stored choice if it still exists; a new browser starts on
   // the live demo data when there is one (web/DESIGN.md §4).
   const [dataset, setDatasetState] = useState<string>(() => readStored(KEYS.corpus) || 'public')
+
   useEffect(() => {
     if (!health) return
     const stored = readStored(KEYS.corpus)
@@ -65,12 +97,49 @@ export default function App() {
       setDatasetState(stored)
       return
     }
-    const preferred = liveSchemas.find((s) => availableSchemas.includes(s)) ?? health.default_schema ?? availableSchemas[0]
+    const preferred =
+      liveSchemas.find((s) => availableSchemas.includes(s)) ??
+      health.default_schema ??
+      availableSchemas[0]
     setDatasetState(preferred)
     writeStored(KEYS.corpus, preferred)
   }, [health, availableSchemas, liveSchemas])
 
-  const conversation = useConversation({ dataset, onDatasetChange: setDatasetState })
+  // On reload the stored workspace is restored if it still exists in the list
+  // (only once the list has actually been read: a failed fetch is not a deletion).
+  useEffect(() => {
+    if (!workspacesLoaded) return
+    if (activeWorkspaceId) {
+      if (activeWorkspace) {
+        if (dataset !== activeWorkspace.target_schema) {
+          setDatasetState(activeWorkspace.target_schema)
+          writeStored(KEYS.corpus, activeWorkspace.target_schema)
+        }
+      } else {
+        setActiveWorkspaceId(null)
+        writeStored(KEYS.workspace, null)
+      }
+    }
+  }, [workspacesLoaded, activeWorkspaceId, activeWorkspace, dataset])
+
+  const effectiveDataset = activeWorkspace ? activeWorkspace.target_schema : dataset
+
+  // Opening a past conversation on another dataset leaves the workspace:
+  // a workspace answers only on its own dataset.
+  const handleConversationDataset = useCallback((next: string) => {
+    if (activeWorkspace && next !== activeWorkspace.target_schema) {
+      setActiveWorkspaceId(null)
+      writeStored(KEYS.workspace, null)
+    }
+    writeStored(KEYS.corpus, next)
+    setDatasetState(next)
+  }, [activeWorkspace])
+
+  const conversation = useConversation({
+    dataset: effectiveDataset,
+    workspaceId: activeWorkspaceId,
+    onDatasetChange: handleConversationDataset,
+  })
 
   const sessionsQuery = useQuery({
     queryKey: ['sessions', token],
@@ -80,12 +149,49 @@ export default function App() {
   const sessions = sessionsQuery.data?.sessions ?? []
 
   const handleSelectDataset = (next: string) => {
-    if (next === dataset) return
+    if (next === dataset && !activeWorkspaceId) return
+    setActiveWorkspaceId(null)
+    writeStored(KEYS.workspace, null)
     writeStored(KEYS.corpus, next)
     setDatasetState(next)
     // A conversation stays on the dataset it started on (migration 018).
     conversation.newChat()
     if (route === 'ask') toast.info(`Switched to ${next}. Started a new conversation.`)
+  }
+
+  const handleSelectWorkspace = (wsId: string) => {
+    const ws = workspaces.find((w) => w.workspace_id === wsId)
+    if (!ws) return
+    if (wsId === activeWorkspaceId) return
+    setActiveWorkspaceId(wsId)
+    writeStored(KEYS.workspace, wsId)
+    writeStored(KEYS.corpus, ws.target_schema)
+    setDatasetState(ws.target_schema)
+    conversation.newChat()
+    if (route === 'ask') toast.info(`Switched to ${ws.name}. Started a new conversation.`)
+  }
+
+  const handleAskInWorkspace = (wsId: string, targetSchema: string) => {
+    const ws = workspaces.find((w) => w.workspace_id === wsId)
+    setActiveWorkspaceId(wsId)
+    writeStored(KEYS.workspace, wsId)
+    writeStored(KEYS.corpus, targetSchema)
+    setDatasetState(targetSchema)
+    conversation.newChat()
+    if (ws) toast.info(`Switched to ${ws.name}. Started a new conversation.`)
+    navigate('ask')
+  }
+
+  const handleDeleteWorkspace = async (wsId: string) => {
+    await deleteWorkspace(wsId)
+    if (wsId === activeWorkspaceId) {
+      setActiveWorkspaceId(null)
+      writeStored(KEYS.workspace, null)
+    }
+  }
+
+  const handleWorkspaceCreated = (newWs: Workspace) => {
+    window.location.hash = `#/workspaces/${newWs.workspace_id}`
   }
 
   const handleToggleDevMode = (enabled: boolean) => {
@@ -136,7 +242,15 @@ export default function App() {
   }
 
   const picker = (
-    <DatasetPicker dataset={dataset} available={availableSchemas} live={liveSchemas} onChange={handleSelectDataset} />
+    <DatasetPicker
+      dataset={effectiveDataset}
+      available={availableSchemas}
+      live={liveSchemas}
+      workspaces={workspaces}
+      activeWorkspaceId={activeWorkspace?.workspace_id ?? null}
+      onSelectDataset={handleSelectDataset}
+      onSelectWorkspace={handleSelectWorkspace}
+    />
   )
 
   return (
@@ -148,27 +262,48 @@ export default function App() {
         onToggleDevMode={handleToggleDevMode}
         onSignOut={handleSignOut}
       >
-        {route === 'dashboards' ? (
+        {route === 'dashboards' && (
           <DashboardsView
-            dataset={dataset}
+            dataset={effectiveDataset}
             availableSchemas={availableSchemas}
             liveSchemas={liveSchemas}
+            workspaces={workspaces}
+            activeWorkspaceId={activeWorkspace?.workspace_id ?? null}
             onChangeDataset={handleSelectDataset}
+            onSelectWorkspace={handleSelectWorkspace}
             devMode={devMode}
             onAsk={() => navigate('ask')}
           />
-        ) : (
+        )}
+        {route === 'ask' && (
           <AskView
             conversation={conversation}
             sessions={sessions}
             sessionsLoading={sessionsQuery.isLoading}
             onSelectSession={(id) => void handleSelectSession(id)}
             onDeleteSession={handleDeleteSession}
-            dataset={dataset}
+            dataset={effectiveDataset}
             devMode={devMode}
             datasetPicker={picker}
           />
         )}
+        {route === 'workspaces' &&
+          (currentWorkspaceId ? (
+            <WorkspaceDetail
+              key={currentWorkspaceId}
+              workspaceId={currentWorkspaceId}
+              onAskInWorkspace={handleAskInWorkspace}
+              onDeleteWorkspace={handleDeleteWorkspace}
+            />
+          ) : (
+            <WorkspacesView
+              workspaces={workspaces}
+              isLoading={workspacesLoading}
+              availableSchemas={availableSchemas}
+              onCreateWorkspace={createWorkspace}
+              onCreated={handleWorkspaceCreated}
+            />
+          ))}
       </AppShell>
     </MotionConfig>
   )

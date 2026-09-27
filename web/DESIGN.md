@@ -79,7 +79,7 @@ Dark is the default theme; light is kept and equally finished.
 
 - **Rail** `w-16`, `bg-card border-r`, full height. Top: the mark (links to Dashboards).
   Nav icon buttons with tooltips and `aria-current="page"` when active: **"Dashboards"**
-  (`LayoutDashboard`) and **"Ask"** (`MessageSquare`). The active item has a `primary`
+  (`LayoutDashboard`), **"Workspaces"** (`Boxes`) and **"Ask"** (`MessageSquare`). The active item has a `primary`
   pill behind it that slides between items.
 - Rail bottom, top to bottom: the connection status dot (`data-testid="connection-status"`,
   tooltip + sr-only text: "Connected" / "Model unavailable: <detail>" / "Server
@@ -87,10 +87,14 @@ Dark is the default theme; light is kept and equally finished.
   `role="switch"` button with `aria-checked`); **"Theme"** (menu with radio items
   Light / Dark / System); **"Sign out"** (`LogOut`).
 - Below `md` the rail stays (it is already narrow).
-- Routing: hash — `#/dashboards` (default) and `#/ask`. Old links `#/dashboard` and
-  `#/chat` map to them. No router library.
+- Routing: hash — `#/dashboards` (default), `#/workspaces`, `#/workspaces/<id>` and
+  `#/ask`. Old links `#/dashboard` and `#/chat` map to them. No router library.
 - **Dataset picker**: a Select labelled **"Dataset"** in each page header. Options are the
-  API's `available_schemas`; a new browser starts on `live` when it exists.
+  API's `available_schemas`, then a **"Workspaces"** group with my workspaces by name
+  (values `ds:<schema>` / `ws:<id>`). A new browser starts on `live` when it exists.
+  Choosing a workspace makes it active (remembered): its dataset is used everywhere and
+  every question carries its `workspace_id`. Choosing a dataset, or opening a past
+  conversation on another dataset, leaves the workspace. Switching starts a new chat.
 
 ## 5. Sign-in
 
@@ -166,6 +170,34 @@ muted line, **"Build with AI"** (primary) and **"Start empty"**. An empty dashbo
 panel (`data-testid="build-progress"`, `role="status"`): "Building 3 of 8", one row per
 planned insight with its state (queued, running, added, skipped with the reason), and
 cards appear as they are added. It ends with a toast: "Added 7 of 8 insights."
+
+## 6a. Workspaces (docs/V3_PLAN.md Phase 3)
+
+- List (`#/workspaces`): heading **"Workspaces"**, **"New workspace"**; cards
+  (`data-testid="workspace-card"`) with name, dataset, setup state in words (New /
+  Scanned / Drafts to review / Approved, not tested / Tested) and the score "S/T".
+  Empty: **"No workspaces yet"** and one sentence on what a workspace is.
+- **New workspace** dialog: **Name**, **Dataset**, **About your business** (optional);
+  **Cancel** / **Create**; server refusals shown in the dialog. Opens the new workspace.
+- Detail (`#/workspaces/<id>`): name, **"Ask in this workspace"**, **"Workspace
+  actions"** → **"Delete workspace"** (confirm). Tabs (`aria-label="Setup steps"`):
+  - **Business**: **About your business**, "Version N", **Save** (each save is a version).
+  - **Knowledge**: **Draft with AI** (progress `data-testid="draft-progress"`, failures
+    shown); one row per table and column (`data-testid="catalog-row"`, `data-table`,
+    `data-column`, `data-approved`) with type, sample values, the editable description
+    ("Description of <table>.<column>") and its source badge (**AI draft** / **Yours**);
+    **Save changes** sends only changed rows. Definitions (`data-testid="definition-row"`)
+    with **Term** / **Definition** / **Add definition** and "Delete definition <term>".
+    **Approve** (blocked while edits are unsaved) then moves to Test. Only approved
+    knowledge is used when answering; any edit needs approving again.
+  - **Test**: "Graded against reference answers" (olist, public) or "You grade each
+    answer"; **Run the test** (needs approval); ten results (`data-testid="setup-result"`,
+    `data-verdict`) with answer and reason; owner grading via "Mark question N right /
+    wrong"; score `data-testid="setup-score"` "S/T" with **Ready to use** (≥ 8) or
+    **Needs work**; a run that stopped early says why (`role="alert"`).
+- Ask: an answer that ran an approved example shows a **Verified** badge
+  (`data-testid="verified-badge"`, tooltip "Answered with a query approved for this
+  workspace.").
 
 ## 7. Ask (chat)
 

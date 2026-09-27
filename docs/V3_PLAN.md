@@ -512,8 +512,17 @@ session_state and workspace_docs; `workspaces.manage` (19 of 20 methods) with th
 knowledge store, approval, examples, context and setup-run bookkeeping; `/workspaces`
 routes; `scripts/verify_workspaces.py` 58/58 live (including: no tenant bound sees no
 rows, a forged tenant write is refused by Postgres, existing dashboards/tiles/sessions
-unaffected). Slice 2 already has its storage side (scan, catalog, runs); what remains
-there is the AI drafting and the setup-test runner.
+unaffected). Slices 2–3 ✅ built (2026-09-28): AI drafts (decomposer role; olist 61/61
+tables and columns drafted live in 5 s), the setup-test runner (execution accuracy vs
+the first 10 English SQL questions of the curated set; owner-graded elsewhere; never
+the fast path), workspace context in the SQL agent and the fast path (verified live).
+Slice 4 ✅ (2026-09-28): the Workspaces page, wizard (Business / Knowledge / Test),
+workspace switching in the picker, the Verified badge; mocked suite 94/94 (28 for
+workspaces, written before the UI; UI implementation delegated, then audited and
+fixed), live browser walk with real AI drafts. Found on the way: CORS refused PUT, so
+saving a dashboard layout from the browser had failed since Phase 2b (fixed; static
+test added). **Open:** the exit measurement (setup test ≥ 8/10 on olist and public)
+waits for Groq's daily token quota on gpt-oss-120b, exhausted on 2026-09-27.
 
 - **Exit:** done-criterion 2 in §7 passes on two different sample databases (olist and
   public): a workspace set up through the wizard scores at least 8 of 10 on its setup

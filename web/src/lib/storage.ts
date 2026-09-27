@@ -61,6 +61,7 @@ export function writeJson(key: string, value: unknown, which: Area = 'local'): v
 export const KEYS = {
   token: 'statesync.token',
   corpus: 'statesync.corpus',
+  workspace: 'statesync.workspace',
   session: 'statesync.session',
   thread: 'statesync.thread',
   theme: 'statesync.theme',

@@ -88,6 +88,8 @@ test.describe('creating a workspace', () => {
 
   test('a server refusal is shown in the dialog', async ({ page }) => {
     const api = await openApp(page, { hash: '#/workspaces' })
+    // failNext matches the path for any method: let the list load first.
+    await expect(page.getByRole('heading', { name: 'No workspaces yet' })).toBeVisible()
     api.failNext('/workspaces', 409, 'You already have 12 workspaces; the limit is 12.')
     await page.getByRole('button', { name: 'New workspace' }).click()
     const dialog = page.getByRole('dialog', { name: 'New workspace' })
@@ -301,6 +303,55 @@ test.describe('asking in a workspace', () => {
   })
 })
 
+test.describe('found in review', () => {
+  test('a first visit asks to sign in without claiming a session expired', async ({ page }) => {
+    await openApp(page, { signedIn: false })
+    await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible()
+    await expect(page.getByText('Your session expired')).toHaveCount(0)
+  })
+
+  test('approving waits until edits are saved', async ({ page }) => {
+    await openApp(page, { hash: '#/workspaces' })
+    await createWorkspace(page, 'Shop', 'olist')
+    await page.getByRole('button', { name: 'Draft with AI' }).click()
+    await expect(row(page, 'orders', 'order_status')).toBeVisible()
+    await page.getByLabel('Description of orders.order_status').fill('Unsaved words.')
+    await expect(page.getByRole('button', { name: 'Approve' })).toBeDisabled()
+    await expect(page.getByText('Save your changes before approving')).toBeVisible()
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await expect(page.getByRole('button', { name: 'Approve' })).toBeEnabled()
+  })
+
+  test('a test that stops early says why', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/workspaces' })
+    await createWorkspace(page, 'Shop', 'olist')
+    await draftAndApprove(page)
+    api.workspaces.failNextTest = "Not asked: the model's quota ran out during the test."
+    await page.getByRole('button', { name: 'Run the test' }).click()
+    await expect(page.getByRole('alert').filter({ hasText: "the model's quota ran out" })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Run the test' })).toBeEnabled()
+  })
+
+  test('opening a past conversation on another dataset leaves the workspace', async ({ page }) => {
+    const api = await openApp(page, {
+      hash: '#/ask',
+      seed: (a) => void a.workspaces.createReady('Furniture shop', 'olist'),
+    })
+    await page.getByRole('combobox', { name: 'Dataset' }).click()
+    await page.getByRole('option', { name: 'Furniture shop' }).click()
+    await page
+      .getByRole('navigation', { name: 'Conversations' })
+      .getByRole('button', { name: 'How many orders are there in total?' })
+      .click()
+    await expect(page.getByTestId('turn')).toHaveCount(2)
+    await ask(page, 'And how many sellers?')
+    await expect(page.getByTestId('turn')).toHaveCount(3)
+    const sent = api.queries[api.queries.length - 1]
+    expect(sent.schema).toBe('public')
+    expect(sent.workspace_id ?? null).toBeNull()
+  })
+})
+
 test.describe('deleting a workspace', () => {
   test('asks first, then removes it and returns to the list', async ({ page }) => {
     const api = await openApp(page, { hash: '#/workspaces/ws-1', seed: (a) => void a.workspaces.createReady('Old shop', 'olist') })
@@ -328,5 +379,29 @@ test.describe('deleting a workspace', () => {
     const sent = api.queries[api.queries.length - 1]
     expect(sent.workspace_id ?? null).toBeNull()
     expect(sent.schema).toBe('olist')
+  })
+})
+
+test.describe('phone width', () => {
+  test('the list, the knowledge step and the test fit 375 px without sideways scrolling', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await openApp(page, { hash: '#/workspaces', seed: (a) => void a.workspaces.createReady('A rather long workspace name', 'olist') })
+    // The shell clips the page, so look inside every scroll container too.
+    const overflow = () =>
+      page.evaluate(() => {
+        const els = [document.documentElement, ...Array.from(document.querySelectorAll<HTMLElement>('*'))].filter(
+          (el) => el === document.documentElement || /(auto|scroll)/.test(getComputedStyle(el).overflowX),
+        )
+        return Math.max(...els.map((el) => el.scrollWidth - el.clientWidth))
+      })
+    await expect(page.getByTestId('workspace-card')).toBeVisible()
+    expect(await overflow()).toBeLessThanOrEqual(0)
+    await page.getByTestId('workspace-card').click()
+    await page.getByRole('tab', { name: 'Knowledge' }).click()
+    await expect(page.getByTestId('catalog-row').first()).toBeVisible()
+    expect(await overflow()).toBeLessThanOrEqual(0)
+    await page.getByRole('tab', { name: 'Test' }).click()
+    await expect(page.getByRole('button', { name: 'Run the test' })).toBeVisible()
+    expect(await overflow()).toBeLessThanOrEqual(0)
   })
 })

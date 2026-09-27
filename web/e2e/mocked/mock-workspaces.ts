@@ -131,6 +131,8 @@ export class WorkspaceMock {
   wrongPositions: number[] = [3, 7]
   /** When set, the next draft job fails with this message. */
   failNextDraft: string | null = null
+  /** When set, the next setup test stops at its first poll with this message (as when the quota runs out). */
+  failNextTest: string | null = null
   private jobs = new Map<string, SetupJob>()
   private seq = 0
 
@@ -254,6 +256,19 @@ export class WorkspaceMock {
   private advanceTest(ws: MockWorkspace, job: SetupJob): void {
     const run = ws.runs.find((r) => r.run_id === job.run_id)
     if (!run || job.state !== 'running') return
+    if (this.failNextTest) {
+      run.results.forEach((r) => {
+        r.verdict = 'error'
+        r.detail = this.failNextTest
+      })
+      run.state = 'failed'
+      run.score = 0
+      job.state = 'failed'
+      job.error = this.failNextTest
+      job.finished_at = AT
+      this.failNextTest = null
+      return
+    }
     const next = run.results.filter((r) => r.verdict === 'pending' || r.verdict === 'running')
     const step = run.graded_by === 'owner' ? run.results.filter((r) => r.answer_text === null) : next
     for (const r of step.slice(0, 4)) {

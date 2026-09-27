@@ -15,6 +15,7 @@ export interface ChatTurn {
   citations: Citation[]
   latencyMs: number
   stateTrace?: StateTrace | null
+  verifiedExample?: boolean
   status: 'pending' | 'done' | 'error'
   error?: string | null
   /** The stored full result has been loaded; rows may still be fewer than

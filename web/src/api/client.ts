@@ -11,7 +11,9 @@
 
 import type {
   BuildJob,
+  CatalogEntry,
   Dashboard,
+  Definition,
   Health,
   LayoutItem,
   PinTileRequest,
@@ -19,9 +21,12 @@ import type {
   QueryResponse,
   SessionDetail,
   SessionList,
+  SetupJob,
+  SetupRun,
   Tile,
   TurnRows,
   UpdateTileRequest,
+  Workspace,
 } from '@/api/types'
 import { ORCHESTRATOR_URL } from '@/config'
 import { announceAuthExpired, getToken } from '@/lib/auth'
@@ -156,4 +161,72 @@ export const api = {
     }),
   buildStatus: (dashboardId: string) =>
     apiFetch<{ job: BuildJob | null }>(`/dashboards/${enc(dashboardId)}/build`),
+
+  workspaces: () => apiFetch<{ workspaces: Workspace[] }>('/workspaces'),
+  createWorkspace: (body: { name: string; target_schema: string; business_context?: string }) =>
+    apiFetch<{ workspace: Workspace }>('/workspaces', { method: 'POST', body }),
+  workspace: (workspaceId: string) =>
+    apiFetch<{ workspace: Workspace }>(`/workspaces/${enc(workspaceId)}`),
+  updateWorkspace: (workspaceId: string, body: { name?: string; business_context?: string }) =>
+    apiFetch<{ workspace: Workspace }>(`/workspaces/${enc(workspaceId)}`, { method: 'PATCH', body }),
+  deleteWorkspace: (workspaceId: string) =>
+    apiFetch<{ deleted: string }>(`/workspaces/${enc(workspaceId)}`, { method: 'DELETE' }),
+
+  workspaceCatalog: (workspaceId: string) =>
+    apiFetch<{ columns: CatalogEntry[] }>(`/workspaces/${enc(workspaceId)}/catalog`),
+  updateDescriptions: (
+    workspaceId: string,
+    items: { table_name: string; column_name: string; description: string | null }[],
+  ) =>
+    apiFetch<{ updated: number }>(`/workspaces/${enc(workspaceId)}/descriptions`, {
+      method: 'PUT',
+      body: { items },
+    }),
+
+  workspaceDefinitions: (workspaceId: string) =>
+    apiFetch<{ definitions: Definition[] }>(`/workspaces/${enc(workspaceId)}/definitions`),
+  updateDefinitions: (
+    workspaceId: string,
+    items: { term: string; definition: string }[],
+  ) =>
+    apiFetch<{ definitions: Definition[] }>(`/workspaces/${enc(workspaceId)}/definitions`, {
+      method: 'PUT',
+      body: { items },
+    }),
+  deleteDefinition: (workspaceId: string, definitionId: string) =>
+    apiFetch<{ deleted: string }>(
+      `/workspaces/${enc(workspaceId)}/definitions/${enc(definitionId)}`,
+      { method: 'DELETE' },
+    ),
+
+  approveWorkspace: (workspaceId: string) =>
+    apiFetch<{ workspace: Workspace; approved_columns: number; approved_definitions: number }>(
+      `/workspaces/${enc(workspaceId)}/approve`,
+      { method: 'POST' },
+    ),
+
+  startDraft: (workspaceId: string) =>
+    apiFetch<{ job: SetupJob }>(`/workspaces/${enc(workspaceId)}/draft`, { method: 'POST' }),
+  draftStatus: (workspaceId: string) =>
+    apiFetch<{ job: SetupJob | null }>(`/workspaces/${enc(workspaceId)}/draft`),
+
+  startSetup: (workspaceId: string) =>
+    apiFetch<{ job: SetupJob; graded_by: 'reference' | 'owner' }>(
+      `/workspaces/${enc(workspaceId)}/setup`,
+      { method: 'POST' },
+    ),
+  setupStatus: (workspaceId: string) =>
+    apiFetch<{ run: SetupRun | null; job: SetupJob | null }>(
+      `/workspaces/${enc(workspaceId)}/setup`,
+    ),
+  setResultVerdict: (
+    workspaceId: string,
+    runId: string,
+    position: number,
+    verdict: 'right' | 'wrong',
+  ) =>
+    apiFetch<{ run: SetupRun }>(
+      `/workspaces/${enc(workspaceId)}/setup/${enc(runId)}/results/${enc(String(position))}`,
+      { method: 'PUT', body: { verdict } },
+    ),
 }

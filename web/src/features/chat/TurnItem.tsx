@@ -295,6 +295,22 @@ export function TurnItem({
               <Badge variant="outline" data-testid="turn-dataset" className="font-normal text-xs">
                 {turn.dataset}
               </Badge>
+              {turn.verifiedExample && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      data-testid="verified-badge"
+                      variant="outline"
+                      className="border-emerald-500/30 bg-emerald-500/10 text-emerald-500 font-normal text-xs"
+                    >
+                      Verified
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Answered with a query approved for this workspace.
+                  </TooltipContent>
+                </Tooltip>
+              )}
               {routeLabel && <span>{routeLabel}</span>}
               {latencyLabel && <span>{latencyLabel}</span>}
             </div>

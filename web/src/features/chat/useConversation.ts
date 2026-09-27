@@ -9,6 +9,7 @@ import type { ChatTurn } from '@/types/chat'
 
 interface UseConversationOptions {
   dataset: string
+  workspaceId?: string | null
   onDatasetChange: (newDataset: string) => void
 }
 
@@ -39,12 +40,13 @@ function mapResponseToTurn(
     citations: res.citations ?? [],
     latencyMs: res.latency_ms,
     stateTrace: res.state_trace,
+    verifiedExample: Boolean(res.state_trace.verified_example),
     status: 'done',
     error: null,
   }
 }
 
-export function useConversation({ dataset, onDatasetChange }: UseConversationOptions) {
+export function useConversation({ dataset, workspaceId, onDatasetChange }: UseConversationOptions) {
   const queryClient = useQueryClient()
   const [sessionId, setSessionId] = useState<string>(getOrCreateSessionId)
   const [turns, setTurns] = useState<ChatTurn[]>(() =>
@@ -89,6 +91,7 @@ export function useConversation({ dataset, onDatasetChange }: UseConversationOpt
           query: question,
           session_id: currentSessionId,
           schema: currentDataset,
+          workspace_id: workspaceId ?? undefined,
         })
 
         setTurns((prev) => {
@@ -114,7 +117,7 @@ export function useConversation({ dataset, onDatasetChange }: UseConversationOpt
         setIsPending(false)
       }
     },
-    [persistTurns, queryClient],
+    [persistTurns, queryClient, workspaceId],
   )
 
   const send = useCallback(
