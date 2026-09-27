@@ -46,7 +46,14 @@ export async function signIn(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Sign in to StateSync' })).toBeVisible()
   await page.getByLabel('API token').fill(devToken())
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page.getByLabel('Ask a question')).toBeVisible()
+  // The home is the dashboards page (Phase 2b).
+  await expect(page.getByRole('button', { name: 'Dashboards', exact: true })).toHaveAttribute('aria-current', 'page')
+}
+
+/** Go to a page through the rail. */
+export async function openPage(page: Page, name: 'Dashboards' | 'Ask'): Promise<void> {
+  await page.getByRole('button', { name, exact: true }).click()
+  await expect(page.getByRole('button', { name, exact: true })).toHaveAttribute('aria-current', 'page')
 }
 
 /**
@@ -54,6 +61,7 @@ export async function signIn(page: Page): Promise<void> {
  * turn; if the app shows an error instead, fails with the app's own message.
  */
 export async function askLive(page: Page, question: string): Promise<Locator> {
+  if (!(await page.getByLabel('Ask a question').isVisible())) await openPage(page, 'Ask')
   const turns = page.getByTestId('turn')
   const before = await turns.count()
   const box = page.getByLabel('Ask a question')

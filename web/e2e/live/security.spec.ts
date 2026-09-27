@@ -7,7 +7,7 @@
 
 import { expect, test } from '@playwright/test'
 
-import { API, signIn, watchCsp } from './helpers'
+import { API, openPage, signIn, watchCsp } from './helpers'
 
 function directives(csp: string): Map<string, string[]> {
   const out = new Map<string, string[]>()
@@ -58,11 +58,12 @@ test('the browser refuses eval and the Function constructor on the served page',
   expect(outcome).toEqual({ eval: 'EvalError', newFunction: 'EvalError' })
 })
 
-test('signing in and opening the dashboard raise no CSP violation', async ({ page }) => {
+test('signing in, the dashboards and Ask raise no CSP violation', async ({ page }) => {
   const violations = await watchCsp(page)
   await signIn(page)
-  await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+  await page.waitForTimeout(3000) // let the dashboard draw its charts
+  await openPage(page, 'Ask')
+  await openPage(page, 'Dashboards')
   expect(await violations()).toEqual([])
 })
 

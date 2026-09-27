@@ -11,7 +11,7 @@
 
 import { expect, test } from '@playwright/test'
 
-import { API, askLive, devToken, signIn, watchCsp } from './helpers'
+import { ANSWER_TIMEOUT, API, askLive, devToken, openPage, signIn, watchCsp } from './helpers'
 
 const COUNT_QUESTION = 'How many orders are there in total?'
 const CHART_QUESTION = 'Show orders by city as a bar chart'
@@ -53,10 +53,10 @@ test('an answer pins to the dashboard with its value, and unpins', async ({ page
     tileId = ((await pinned.json()) as { tile: { tile_id: string } }).tile.tile_id
     await expect(page.getByText('Pinned to dashboard')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Dashboard', exact: true }).click()
+    await openPage(page, 'Dashboards')
     const tile = page.locator(`[data-tile-id="${tileId}"]`)
     await expect(tile).toContainText(COUNT_QUESTION)
-    await expect(tile.getByTestId('tile-kpi')).toHaveText(/^\d[\d,]*$/)
+    await expect(tile.getByTestId('tile-kpi')).toHaveText(/^\d[\d,.]*[KMB]?$/) // compact above 100,000 (DESIGN.md §8)
 
     await tile.getByRole('button', { name: 'Tile actions' }).click()
     await page.getByRole('menuitem', { name: 'Unpin' }).click()
@@ -70,3 +70,43 @@ test('an answer pins to the dashboard with its value, and unpins', async ({ page
     if (tileId) await request.delete(`${API}/tiles/${tileId}`, { headers: auth })
   }
 })
+
+// The Phase 2b exit check: a live dashboard's numbers visibly move. The test
+// pins its own tile (orders in a rolling 10-minute window, refreshed every 15 s)
+// to its own dashboard, and removes both, and its conversation, afterwards.
+test('a live dashboard number changes within a minute', async ({ page, request }) => {
+  test.setTimeout(300_000)
+  const auth = { authorization: `Bearer ${devToken()}` }
+  const sessionId = `live-e2e-${Date.now()}`
+  let dashboardId: string | null = null
+  try {
+    const asked = await request.post(`${API}/query`, {
+      headers: auth,
+      data: { query: 'How many orders were placed in the last 10 minutes?', session_id: sessionId, schema: 'live' },
+      timeout: ANSWER_TIMEOUT,
+    })
+    expect(asked.ok(), await asked.text()).toBe(true)
+    const turnIndex = (await asked.json()).state_trace.turn_index as number
+    const created = await request.post(`${API}/dashboards`, { headers: auth, data: { name: `Live check ${Date.now()}`, target_schema: 'live' } })
+    dashboardId = (await created.json()).dashboard.dashboard_id as string
+    const pinned = await request.post(`${API}/tiles`, {
+      headers: auth,
+      data: { session_id: sessionId, turn_index: turnIndex, dashboard_id: dashboardId, refresh_interval_s: 15, viz: 'kpi' },
+    })
+    expect(pinned.ok(), await pinned.text()).toBe(true)
+
+    await page.addInitScript(([id]) => {
+      localStorage.setItem('statesync.corpus', 'live')
+      localStorage.setItem('statesync.dashboard.live', id)
+    }, [dashboardId])
+    await signIn(page)
+    const kpi = page.getByTestId('tile-kpi')
+    await expect(kpi).toBeVisible()
+    const first = await kpi.innerText()
+    await expect.poll(() => kpi.innerText(), { timeout: 60_000, intervals: [5_000] }).not.toBe(first)
+  } finally {
+    if (dashboardId) await request.delete(`${API}/dashboards/${dashboardId}`, { headers: auth })
+    await request.delete(`${API}/sessions/${sessionId}`, { headers: auth })
+  }
+})
+
