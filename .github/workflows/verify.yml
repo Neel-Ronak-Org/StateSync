@@ -158,6 +158,9 @@ jobs:
       - name: Type-check
         run: npm run typecheck
 
+      - name: Unit tests (the presentation layer, layout, parsers)
+        run: npm run test:unit
+
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps chromium
 

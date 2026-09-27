@@ -221,6 +221,8 @@ export class MockApi {
   private failures = new Map<string, { status: number; detail: string; headers?: Record<string, string> }>()
   storedRowsLimit: number | null = null
   nextChart: Record<string, unknown> | null = null
+  /** When set, the next /query answer text is this instead of the canned one. */
+  nextAnswer: string | null = null
   liveSchemas: string[] = []
   readonly tileCalls: string[] = []
   readonly buildCalls: string[] = []
@@ -446,6 +448,10 @@ export class MockApi {
       return this.json(route, 409, {
         detail: `This conversation uses the ${startedOn} dataset. Start a new conversation to ask about ${schema}.`,
       })
+    }
+    if (this.nextAnswer !== null) {
+      canned.answer = this.nextAnswer
+      this.nextAnswer = null
     }
     if (this.nextChart) {
       canned.chart = this.nextChart
