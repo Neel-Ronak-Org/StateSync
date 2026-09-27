@@ -42,13 +42,14 @@ from db import init_pool, close_pool, get_connection, init_history_pool, close_h
 from embeddings import close_embeddings_client
 from fingerprint import verify_fingerprint_at_startup
 from qdrant_store import init_qdrant, close_qdrant
-from session import (set_session, get_tenant_id, enforce_tenancy_policy,
+from session import (set_session, enforce_tenancy_policy,
                      TenancyPolicyNotImplemented, TenantNotAllowed,
                      TenancyAcknowledgementMissing)
 from tools.schema_tools import list_tables, describe_table
 from tools.data_tools import sample_rows, run_select
 from tools.vector_tools import semantic_search, hybrid_select, get_passage
 from tools.memory_tools import get_trajectory, put_trajectory
+from serialization import to_json_safe
 from tools.tile_tools import manage as tiles_manage
 from tools.dashboard_tools import manage as dashboards_manage
 from tools.history_tools import (append_turn, check_session, delete_session, get_recent_turns,
@@ -123,50 +124,10 @@ assert len(_REGISTERED_TOOLS) <= TOOL_CEILING, (
 )
 
 
-import datetime
-from decimal import Decimal
-from uuid import UUID
 
 
 def _serialize_json(obj: Any) -> Any:
-    if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
-        return obj.isoformat()
-    if isinstance(obj, datetime.timedelta):
-        # psycopg maps a Postgres INTERVAL (e.g. AVG(delivered_at -
-        # promised_at)) to timedelta. Previously unhandled: fell through to
-        # the raw object, which Starlette's JSON encoder cannot serialize --
-        # an uncaught TypeError deep in the response path, surfacing as a
-        # 500 transport fault. A4.4 requires a failed query to return
-        # ok:false as data, never a transport-level fault; an aggregate over
-        # a timestamp difference (delivery delay, dispute resolution time,
-        # etc.) is an ordinary, expected result shape, not a failure.
-        return obj.total_seconds()
-    if isinstance(obj, Decimal):
-        return float(obj) if obj % 1 else int(obj)
-    if isinstance(obj, UUID):
-        return str(obj)
-    if isinstance(obj, bytes):
-        return obj.hex()
-    if isinstance(obj, dict):
-        return {k: _serialize_json(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
-        return [_serialize_json(x) for x in obj]
-    if isinstance(obj, (str, int, float, bool)) or obj is None:
-        return obj
-    # Catch-all for any remaining psycopg type mapping that JSON cannot
-    # encode natively. Found the hard way twice, one type at a time:
-    # INTERVAL -> timedelta (F-V2 baseline), then INET -> IPv4Address
-    # (F-V1 Class 3). Both surfaced as an uncaught TypeError deep inside
-    # Starlette's encoder, i.e. a 500 transport fault -- exactly what A4.4
-    # forbids ("A failed query returns ok: false ... it does not raise a
-    # transport-level fault"), and worse, a SUCCESSFUL query being reported
-    # as a transport failure. Postgres has many more such types (NUMERIC
-    # ranges, arrays of custom types, JSONB edge cases, CIDR, MACADDR,
-    # tsvector...); enumerating them individually is whack-a-mole. Anything
-    # unrecognized degrades to its string form, which is lossy but honest
-    # and keeps the A4.4 contract intact.
-    logger.debug("Serializing unrecognized type %s via str().", type(obj).__name__)
-    return str(obj)
+    return to_json_safe(obj)
 
 
 def _jsonrpc_error(request_id: Any, code: int, message: str) -> dict:

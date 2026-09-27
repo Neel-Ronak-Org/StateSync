@@ -53,6 +53,7 @@ from psycopg.types.json import Jsonb
 
 from config_loader import cfg
 from db import get_history_connection
+from serialization import to_json_safe
 from session import get_tenant_id
 from tools.dashboard_tools import default_dashboard, owned_dashboard, resolve_layout
 from tools.data_tools import _check_layer1, run_select
@@ -410,7 +411,7 @@ async def _refresh(tenant_id: str, principal_id: str, tile_id: str, force: bool)
 
     async with get_history_connection() as conn:
         if result.get("ok"):
-            rows, truncated = cap_rows(result.get("rows") or [])
+            rows, truncated = cap_rows(to_json_safe(result.get("rows") or []))
             await conn.execute(
                 """
                 INSERT INTO session_state.tile_results (tile_id, version, rows, row_count, truncated, computed_at)
@@ -441,6 +442,20 @@ async def _refresh(tenant_id: str, principal_id: str, tile_id: str, force: bool)
             )
             logger.warning("tiles: refresh of %s failed (tenant=%s): %s", tile_id, tenant_id, message)
     return None
+
+
+async def _record_failure(tenant_id: str, principal_id: str, tile_id: str, exc: Exception) -> None:
+    """Mark a tile whose refresh raised as failed, instead of failing the whole list."""
+    logger.error("tiles: refresh of %s raised (tenant=%s): %s", tile_id, tenant_id, exc, exc_info=True)
+    async with get_history_connection() as conn:
+        await conn.execute(
+            """
+            UPDATE session_state.tiles
+            SET state = 'error', last_error = %s, error_at = now(), updated_at = now()
+            WHERE tenant_id = %s AND principal_id = %s AND tile_id = %s
+            """,
+            ("The refresh failed inside StateSync. It will be retried.", tenant_id, principal_id, tile_id),
+        )
 
 
 # ── Actions ───────────────────────────────────────────────────────────────────
@@ -712,7 +727,10 @@ async def _list(tenant_id, principal_id, dashboard_id=None):
                 (tenant_id, principal_id),
             )).fetchall()]
     for tile_id in ids:                  # bounded by tiles.max_per_principal
-        await _refresh(tenant_id, principal_id, tile_id, force=False)
+        try:
+            await _refresh(tenant_id, principal_id, tile_id, force=False)
+        except Exception as exc:  # noqa: BLE001 - one broken tile must not take the dashboard down
+            await _record_failure(tenant_id, principal_id, tile_id, exc)
     now = dt.datetime.now(dt.timezone.utc)
     async with get_history_connection() as conn:
         if dashboard_id is not None:

@@ -152,3 +152,24 @@ def test_resolve_title():
     assert tt.resolve_title("   ", "fallback") is None
     assert tt.resolve_title(None, None) == "Untitled tile"
     assert len(tt.resolve_title("x" * (cap + 50), None)) == cap
+
+
+# ── rows as psycopg returns them (Phase 2b regression) ────────────────────────
+
+def test_database_values_become_storable_json():
+    """A tile's refresh stores rows straight from psycopg. A NUMERIC is a Decimal,
+    a time bucket a datetime: json.dumps refused both, so every refresh of such a
+    tile crashed and took its whole dashboard's listing down with it."""
+    import datetime as _dt
+    import json as _json
+    from decimal import Decimal
+
+    from serialization import to_json_safe
+
+    rows = [{"hour": _dt.datetime(2026, 9, 27, 12, tzinfo=_dt.timezone.utc), "revenue": Decimal("1234.50"),
+             "orders": Decimal("12"), "day": _dt.date(2026, 9, 27), "gap": _dt.timedelta(hours=2)}]
+    safe = to_json_safe(rows)
+    assert _json.loads(_json.dumps(safe)) == [{"hour": "2026-09-27T12:00:00+00:00", "revenue": 1234.5,
+                                               "orders": 12, "day": "2026-09-27", "gap": 7200.0}]
+    kept, truncated = tt.cap_rows(safe)
+    assert kept == safe and not truncated
