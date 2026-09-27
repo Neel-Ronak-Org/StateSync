@@ -341,7 +341,11 @@ export class MockApi {
     }
   }
 
+  /** Every /tiles request as "METHOD /path", so tests can assert what the UI asked for. */
+  readonly tileCalls: string[] = []
+
   private tilesRoute(route: Route, method: string, path: string, body: Record<string, unknown>) {
+    this.tileCalls.push(`${method} ${path}`)
     if (path === '/tiles' && method === 'GET') return this.json(route, 200, { tiles: [...this.tiles.values()] })
     if (path === '/tiles' && method === 'POST') {
       const sessionId = String(body.session_id ?? '')

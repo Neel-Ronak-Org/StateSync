@@ -161,8 +161,29 @@ session expired or the token is invalid. Sign in again." on arrival.
 - Empty state: "No tiles yet" + "Pin an answer from the chat to keep it here." + a
   "Go to chat" button.
 - Pinning (chat): SQL-backed turns get a **"Pin to dashboard"** icon button (`Pin`) in
-  the actions row; success toasts "Pinned to dashboard" with a "View" action; a 422
-  toasts the server's message. Document-only turns show no pin button.
+  the actions row; success toasts "Pinned to dashboard" with a "View" action; any
+  refusal (404/409/422) toasts the server's message. Document-only turns show no pin
+  button.
+- Exact names the tests use (e2e/mocked/dashboard.spec.ts):
+  - KPI value element: `data-testid="tile-kpi"` (text = the formatted value, e.g. "550").
+  - Footer interval label: 60 → "1 min", 900 → "15 min", 3600 → "1 h", 21600 → "6 h",
+    86400 → "1 d" (else minutes/hours), rendered as "every 1 h".
+  - "Rename": a Dialog titled **"Rename tile"** with an Input labelled **"Tile title"**
+    (prefilled) and a **"Save"** button (Enter submits).
+  - "Refresh interval": a Dialog titled **"Refresh interval"** with a RadioGroup (role
+    radio) of **"Every 15 minutes"** (900), **"Every hour"** (3600), **"Every 6 hours"**
+    (21600), **"Every day"** (86400), preselecting the tile's current value, and
+    **"Save"**.
+  - "Unpin": a confirmation Dialog titled **"Unpin this tile?"** ("It stops refreshing
+    and is removed from the dashboard. The conversation it came from is kept.") with
+    **"Cancel"** and a destructive **"Unpin"**.
+  - "View SQL" (developer mode only): a Dialog titled **"Tile SQL"** showing the SQL in
+    `font-mono`, with Copy.
+  - Menu items are `DropdownMenuItem`s (role menuitem) with these exact names.
+- Data: `useQuery(['tiles'], api.tiles)`; mutations (pin, refresh, update, confirm,
+  delete) update the cached list from the returned tile (setQueryData) instead of
+  refetching everything. Opening the dashboard lists tiles (the server refreshes any
+  that are due); "Refresh all" calls refresh for each tile, at most 3 at a time.
 
 ## 7. States and copy
 
