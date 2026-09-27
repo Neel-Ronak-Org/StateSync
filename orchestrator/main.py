@@ -83,6 +83,11 @@ app.add_middleware(
     # server-side test can see (found auditing Phase 1).
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
+    # Browsers hide every non-safelisted response header from cross-origin
+    # JavaScript unless it is exposed. Without this the web UI could never read
+    # Retry-After on a 429 and could only say "try again shortly" (the old UI
+    # had the same blind spot).
+    expose_headers=["Retry-After"],
 )
 
 
@@ -365,6 +370,25 @@ async def run_query(
                 detail="session belongs to another principal",
             )
             raise HTTPException(status_code=404, detail="Conversation not found. Start a new conversation.")
+        # A conversation stays on the dataset it started on (migration 018). A
+        # follow-up aimed elsewhere would be answered from the other corpus while
+        # its context came from the first -- refuse it rather than mix them.
+        started_on = access.get("target_schema")
+        if started_on and started_on != requested:
+            await _audit(
+                principal.principal_id,
+                tenant_id,
+                "/query",
+                "error",
+                session_id=session_id,
+                client_ip=client_ip,
+                detail=f"dataset mismatch: conversation={started_on} requested={requested}",
+            )
+            raise HTTPException(
+                status_code=409,
+                detail=(f"This conversation uses the {started_on} dataset. "
+                        f"Start a new conversation to ask about {requested}."),
+            )
 
     # Build the initial state input for the entry node
     initial_input = {
@@ -517,6 +541,7 @@ async def run_query(
                 sql_rows_count=len(final_state.sql_rows),
                 # Do NOT slice it — MCP applies the caps and logs truncation; slicing here would hide from those logs how large the real result was.
                 sql_rows_full=(final_state.sql_rows or None),
+                target_schema=final_state.target_schema,
             )
         # MCP assigns the turn number (0.1), so the trace reports the stored one --
         # the web client uses it to fetch this turn's full rows later. A turn that

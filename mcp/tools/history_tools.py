@@ -64,6 +64,7 @@ async def append_turn(
     sql_rows_preview: list[dict[str, Any]] | None = None,
     sql_rows_count: int | None = None,
     sql_rows_full: list[dict[str, Any]] | None = None,
+    target_schema: str | None = None,
 ) -> dict[str, Any]:
     """
     Insert one completed turn scoped by tenant and principal. Called once per
@@ -126,6 +127,7 @@ async def append_turn(
         "sql_columns": Jsonb(sql_columns) if sql_columns is not None else None,
         "preview": Jsonb(preview) if preview is not None else None,
         "rows_count": sql_rows_count,
+        "target_schema": target_schema,
     }
     max_attempts = cfg.mcp.history_append_max_attempts
     async with get_history_connection() as conn:
@@ -141,14 +143,14 @@ async def append_turn(
                 INSERT INTO session_state.conversation_turns
                     (tenant_id, principal_id, session_id, turn_index, raw_query, rewritten_query,
                      rewrite_applied, context_guessed, route, executed_sql, answer_text,
-                     chart, sql_columns, sql_rows_preview, sql_rows_count)
+                     chart, sql_columns, sql_rows_preview, sql_rows_count, target_schema)
                 SELECT %(tenant)s, %(principal)s, %(session)s,
                        COALESCE(MAX(t.turn_index), 0) + 1,
                        %(raw_query)s::text, %(rewritten_query)s::text,
                        %(rewrite_applied)s::boolean, %(context_guessed)s::boolean,
                        %(route)s::text, %(executed_sql)s::text, %(answer_text)s::text,
                        %(chart)s::jsonb, %(sql_columns)s::jsonb, %(preview)s::jsonb,
-                       %(rows_count)s::integer
+                       %(rows_count)s::integer, %(target_schema)s::text
                 FROM session_state.conversation_turns t
                 WHERE t.tenant_id = %(tenant)s AND t.session_id = %(session)s
                 HAVING COALESCE(BOOL_AND(t.principal_id = %(principal)s), TRUE)
@@ -274,11 +276,11 @@ async def append_turn(
             "turn_index": turn_index}
 
 
-async def _session_owner(conn: Any, tenant_id: str, session_id: str) -> str | None:
-    """The principal that owns a session (wrote its first turn), or None if it has no turns."""
+async def _session_head(conn: Any, tenant_id: str, session_id: str) -> tuple[str, str | None] | None:
+    """(owner principal, dataset) from a session's first turn, or None if it has no turns."""
     cur = await conn.execute(
         """
-        SELECT principal_id FROM session_state.conversation_turns
+        SELECT principal_id, target_schema FROM session_state.conversation_turns
         WHERE tenant_id = %s AND session_id = %s
         ORDER BY turn_index
         LIMIT 1
@@ -286,7 +288,13 @@ async def _session_owner(conn: Any, tenant_id: str, session_id: str) -> str | No
         (tenant_id, session_id),
     )
     row = await cur.fetchone()
-    return row[0] if row else None
+    return (row[0], row[1]) if row else None
+
+
+async def _session_owner(conn: Any, tenant_id: str, session_id: str) -> str | None:
+    """The principal that owns a session (wrote its first turn), or None if it has no turns."""
+    head = await _session_head(conn, tenant_id, session_id)
+    return head[0] if head else None
 
 
 async def check_session(session_id: str, principal_id: str) -> dict[str, Any]:
@@ -296,12 +304,19 @@ async def check_session(session_id: str, principal_id: str) -> dict[str, Any]:
     than answered and then silently not recorded (docs/V3_PLAN.md 0.2).
 
     A session_id with no turns is usable: the web client generates the id, and
-    its first write claims it. Returns {"exists": bool, "usable": bool}.
+    its first write claims it. Also reports the dataset the conversation was
+    started on (migration 018; None for older turns or a new session), so /query
+    can refuse a follow-up aimed at a different dataset.
+    Returns {"exists": bool, "usable": bool, "target_schema": str | None}.
     """
     tenant_id = get_tenant_id()
     async with get_history_connection() as conn:
-        owner = await _session_owner(conn, tenant_id, session_id)
-    return {"exists": owner is not None, "usable": owner is None or owner == principal_id}
+        head = await _session_head(conn, tenant_id, session_id)
+    owner, schema = head if head else (None, None)
+    usable = owner is None or owner == principal_id
+    return {"exists": owner is not None, "usable": usable,
+            # never disclose another principal's dataset
+            "target_schema": schema if usable else None}
 
 
 async def get_recent_turns(session_id: str, principal_id: str, limit: int | None = None) -> dict[str, Any]:
@@ -321,7 +336,7 @@ async def get_recent_turns(session_id: str, principal_id: str, limit: int | None
             """
             SELECT turn_index, raw_query, rewritten_query, rewrite_applied,
                    context_guessed, route, executed_sql, answer_text, computed_at,
-                   chart, sql_columns, sql_rows_preview, sql_rows_count
+                   chart, sql_columns, sql_rows_preview, sql_rows_count, target_schema
             FROM session_state.conversation_turns
             WHERE tenant_id = %s AND principal_id = %s AND session_id = %s
             ORDER BY turn_index DESC
@@ -335,7 +350,7 @@ async def get_recent_turns(session_id: str, principal_id: str, limit: int | None
     for r in reversed(rows):  # DESC fetch, ASC (oldest-first) return
         (turn_index, raw_query, rewritten_query, rewrite_applied,
          context_guessed, route, executed_sql, answer_text, computed_at,
-         chart, sql_columns, sql_rows_preview, sql_rows_count) = r
+         chart, sql_columns, sql_rows_preview, sql_rows_count, target_schema) = r
         turns.append({
             "turn_index": turn_index,
             "raw_query": raw_query,
@@ -353,6 +368,7 @@ async def get_recent_turns(session_id: str, principal_id: str, limit: int | None
             "sql_columns": sql_columns,
             "sql_rows_preview": sql_rows_preview,
             "sql_rows_count": sql_rows_count,
+            "target_schema": target_schema,
         })
     # rows[0] is the newest turn (DESC fetch), so this is correct however
     # small `limit` is -- the bug 0.1 fixed came from counting the window.
@@ -437,7 +453,8 @@ async def list_sessions(principal_id: str, limit: int | None = None) -> dict[str
                    count(*)                                        AS turn_count,
                    min(computed_at)                                AS started_at,
                    max(computed_at)                                AS last_activity,
-                   (array_agg(raw_query ORDER BY turn_index))[1]   AS first_query
+                   (array_agg(raw_query ORDER BY turn_index))[1]   AS first_query,
+                   (array_agg(target_schema ORDER BY turn_index))[1] AS target_schema
             FROM session_state.conversation_turns
             WHERE tenant_id = %s AND principal_id = %s
             GROUP BY session_id
@@ -455,8 +472,9 @@ async def list_sessions(principal_id: str, limit: int | None = None) -> dict[str
             "started_at":    started_at.isoformat(),
             "last_activity": last_activity.isoformat(),
             "first_query":   first_query,
+            "target_schema": target_schema,
         }
-        for (session_id, turn_count, started_at, last_activity, first_query) in rows
+        for (session_id, turn_count, started_at, last_activity, first_query, target_schema) in rows
     ]
     return {"sessions": sessions, "count": len(sessions)}
 

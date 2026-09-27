@@ -254,6 +254,7 @@ async def history_append_turn(
     sql_rows_preview: list[dict[str, Any]] | None = None,
     sql_rows_count: int | None = None,
     sql_rows_full: list[dict[str, Any]] | None = None,
+    target_schema: str | None = None,
 ) -> dict[str, Any]:
     """history.append_turn -- MCP assigns the turn number and returns it."""
     params: dict[str, Any] = {
@@ -279,6 +280,8 @@ async def history_append_turn(
         params["sql_rows_count"] = sql_rows_count
     if sql_rows_full is not None:
         params["sql_rows_full"] = sql_rows_full
+    if target_schema is not None:
+        params["target_schema"] = target_schema
     return await session.call("history.append_turn", params)
 
 
