@@ -11,6 +11,8 @@
 
 import type { Page, Route } from '@playwright/test'
 
+import { WorkspaceMock } from './mock-workspaces'
+
 export const TOKEN = 'test-token-for-mocked-suite'
 export const API = 'http://localhost:8090'
 const SCHEMA_URL = 'https://vega.github.io/schema/vega-lite/v5.json'
@@ -218,6 +220,8 @@ export class MockApi {
   readonly tiles = new Map<string, Tile>()
   readonly dashboards = new Map<string, Dashboard>()
   readonly jobs = new Map<string, BuildJob>()
+  /** Workspaces (Phase 3): mock-workspaces.ts. */
+  readonly workspaces = new WorkspaceMock()
   private failures = new Map<string, { status: number; detail: string; headers?: Record<string, string> }>()
   storedRowsLimit: number | null = null
   nextChart: Record<string, unknown> | null = null
@@ -433,6 +437,9 @@ export class MockApi {
     }
     if (path.startsWith('/dashboards')) return this.dashboardsRoute(route, method, path, url, body)
     if (path.startsWith('/tiles')) return this.tilesRoute(route, method, path, url, body)
+    if (path === '/workspaces' || path.startsWith('/workspaces/')) {
+      return this.workspaces.handle(route, method, path, body, (r, status, b) => this.json(r, status, b))
+    }
     return this.json(route, 404, { detail: 'Not Found' })
   }
 
@@ -442,7 +449,25 @@ export class MockApi {
     const sessionId = String(body.session_id ?? `srv-${this.queries.length}`)
     const canned = cannedAnswer(question)
     const turns = this.sessions.get(sessionId) ?? []
-    const schema = String(body.schema ?? 'public')
+    let schema = String(body.schema ?? 'public')
+    // A workspace decides the dataset and must exist (orchestrator/main.py).
+    let verifiedExample = false
+    const workspaceId = typeof body.workspace_id === 'string' ? body.workspace_id : null
+    if (workspaceId) {
+      const ws = this.workspaces.workspaces.get(workspaceId)
+      if (!ws) return this.json(route, 404, { detail: 'No such workspace.' })
+      if (body.schema && body.schema !== ws.target_schema) {
+        return this.json(route, 409, {
+          detail: `This workspace uses the ${ws.target_schema} dataset, not ${String(body.schema)}.`,
+        })
+      }
+      schema = ws.target_schema
+      const exact = this.workspaces.exactExample(ws, question)
+      if (exact) {
+        verifiedExample = true
+        canned.sql = exact.sql
+      }
+    }
     const startedOn = turns[0]?.target_schema
     if (startedOn && startedOn !== schema) {
       return this.json(route, 409, {
@@ -485,6 +510,8 @@ export class MockApi {
       state_trace: {
         query_id: `q-${this.queries.length}`,
         target_schema: schema,
+        workspace_id: workspaceId,
+        verified_example: verifiedExample,
         route: canned.route,
         executed_sql: canned.sql,
         candidate_sql: canned.sql,

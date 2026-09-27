@@ -3,9 +3,13 @@ import { expect, type Page } from '@playwright/test'
 import { MockApi, TOKEN } from './mock-api'
 
 /** Mock the API, and optionally start signed in (token pre-seeded before the app loads). */
-export async function openApp(page: Page, options: { signedIn?: boolean; hash?: string } = {}): Promise<MockApi> {
-  const { signedIn = true, hash = '' } = options
+export async function openApp(
+  page: Page,
+  options: { signedIn?: boolean; hash?: string; seed?: (api: MockApi) => void } = {},
+): Promise<MockApi> {
+  const { signedIn = true, hash = '', seed } = options
   const api = new MockApi()
+  seed?.(api)
   await api.install(page)
   if (signedIn) {
     // addInitScript runs on EVERY load, reloads included. Seeding only once per
