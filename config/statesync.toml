@@ -151,6 +151,27 @@ goal_max_chars            = 200
 question_max_chars        = 300
 build_keep_s              = 3600    # finished builds stay readable this long
 
+[workspaces]
+# Workspaces and their knowledge store (docs/V3_PLAN.md Phase 3, migration 021).
+max_per_principal           = 12
+name_max_chars              = 60
+business_context_max_chars  = 4000
+description_max_chars       = 400
+term_max_chars              = 60
+question_max_chars          = 300
+definitions_max             = 200
+examples_max                = 500
+# The scan: at most this many tables, and sample values from the first rows.
+scan_max_tables             = 60
+scan_sample_rows            = 50
+scan_sample_values          = 5
+# The setup test.
+setup_questions             = 10
+# What a question in a workspace gets (context assembly, slice 3).
+context_max_examples        = 3
+context_max_definitions     = 12
+example_min_similarity      = 0.3
+
 [simulator]
 # The live demo dataset (docs/V3_PLAN.md Phase 2b, migration 020, simulator/).
 # Read by the simulator service only. The shop's fixed traits (cities,

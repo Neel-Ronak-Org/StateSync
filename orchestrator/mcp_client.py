@@ -30,8 +30,12 @@ class MCPSession:
     """
 
     def __init__(self, tenant_id: str, base_url: str | None = None,
-                session_id: str | None = None) -> None:
+                session_id: str | None = None, workspace_id: str | None = None) -> None:
         self.tenant_id = tenant_id
+        # Phase 3: the workspace a question is asked in, carried as
+        # X-Workspace-ID. The MCP checks it against tenant and principal; it
+        # is routing information, not a credential.
+        self.workspace_id = workspace_id
         # Cycle 007 (audit 007 F-007-1): session_id now flows in from the
         # caller -- the conversation's real StateSyncState.session_id -- so
         # X-Session-ID actually identifies the conversation, which is what
@@ -54,6 +58,7 @@ class MCPSession:
                 "X-Tenant-ID": tenant_id,
                 "X-Session-ID": self.session_id,
                 "Content-Type": "application/json",
+                **({"X-Workspace-ID": workspace_id} if workspace_id else {}),
             },
         )
 
@@ -389,3 +394,16 @@ async def dashboards_manage(
         {"action": action, "principal_id": principal_id, **{k: v for k, v in params.items() if v is not None}},
     )
 
+
+
+async def workspaces_manage(
+    session: MCPSession,
+    principal_id: str,
+    action: str,
+    **params: Any,
+) -> dict[str, Any]:
+    """Forward a workspace action to the MCP workspaces.manage tool (Phase 3)."""
+    return await session.call(
+        "workspaces.manage",
+        {"action": action, "principal_id": principal_id, **{k: v for k, v in params.items() if v is not None}},
+    )

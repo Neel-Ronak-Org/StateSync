@@ -122,6 +122,18 @@ async def close_pool() -> None:
     _pool = None
 
 
+async def _bind_tenant(conn: psycopg.AsyncConnection) -> None:
+    """Scope this transaction to the session's tenant for row-level security.
+
+    Migration 021 puts RLS on every table in session_state and workspace_docs,
+    with policies on current_setting('statesync.tenant_id'). set_config(...,
+    true) lasts until the transaction ends. Outside a request there is no
+    tenant, so the setting is empty and no row matches: fail closed.
+    """
+    from session import current_tenant_id  # local: session imports config only, but keep db import-light
+    await conn.execute("SELECT set_config('statesync.tenant_id', %s, true)", (current_tenant_id() or "",))
+
+
 @asynccontextmanager
 async def get_connection() -> AsyncIterator[psycopg.AsyncConnection]:
     """
@@ -139,6 +151,7 @@ async def get_connection() -> AsyncIterator[psycopg.AsyncConnection]:
         # Begin an explicit READ ONLY transaction for every request.
         await conn.execute("BEGIN READ ONLY")
         try:
+            await _bind_tenant(conn)
             yield conn
         finally:
             # Always rollback — Layer 2 guarantee (A4.5).
@@ -224,13 +237,15 @@ async def get_history_connection() -> AsyncIterator[psycopg.AsyncConnection]:
     docstring for why it exists and what constrains it. Never used by any
     agent-facing tool; only mcp/tools/history_tools.py, tile_tools.py
     (user-owned tiles, migration 017) and dashboard_tools.py (user-owned
-    dashboards, migration 019) call this.
+    dashboards, migration 019) and workspace_tools.py (workspaces, migration
+    021) call this.
     """
     if _history_pool is None:
         raise RuntimeError("History database pool not initialized. Call init_history_pool() first.")
 
     async with _history_pool.connection() as conn:
         try:
+            await _bind_tenant(conn)
             yield conn
             await conn.commit()
         except Exception:

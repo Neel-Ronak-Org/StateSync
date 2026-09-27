@@ -38,6 +38,7 @@ from state import StateSyncState
 from tiles_api import register_tile_routes
 from builder_api import register_build_routes
 from dashboards_api import register_dashboard_routes
+from workspaces_api import register_workspace_routes
 
 logging.basicConfig(
     level=logging.INFO,
@@ -678,6 +679,7 @@ async def run_query(
 
 register_tile_routes(app, require_principal=require_principal, audit=_audit)
 register_dashboard_routes(app, require_principal=require_principal, audit=_audit)
+register_workspace_routes(app, require_principal=require_principal, audit=_audit)
 register_build_routes(app, require_principal=require_principal,
                       require_principal_for_model=require_principal_for_model,
                       audit=_audit, answer_question=answer_question)

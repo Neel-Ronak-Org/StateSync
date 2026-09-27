@@ -439,18 +439,85 @@ how you ask for new insights. This phase comes before Phase 3.
 
 ### Phase 3 — Workspaces: setup, knowledge store, uploads
 
-- Workspaces with row-level security, plus the RLS-coverage test.
-- Setup wizard: business form → scan → AI-drafted descriptions and definitions → owner
-  approval → 10-question setup test with a score.
-- Knowledge store and context assembly (§5.1–5.2), filling the existing
-  `SchemaRetriever` slot.
-- Text PDF upload via Docling, in an isolated worker.
-- Connect your own Postgres (self-hosted mode): encrypted credentials, and a check that
-  the role really is read-only.
-- Generalise or retire code tied to the synthetic schema: seven source files (the
-  DIGIPIN spatial resolver, the `_local` script-repair convention, column-specific
-  normaliser rules, domain examples in the supervisor prompt).
-- **Exit:** done-criterion 2 in §7 passes on two different sample databases.
+**Goal:** a person can turn a database into a working, measured workspace in a few
+minutes: describe the business, let StateSync scan and draft, approve, and see a score.
+
+**Design (decided 2026-09-28):**
+
+- **Workspace** = a name, a data source (a sample dataset, or in self-hosted mode an
+  external Postgres connection), the owner's business context (versioned), a knowledge
+  store, its documents, its dashboards, and a setup score. It is owned by one principal
+  in one tenant. Demo datasets (`live`, `olist`, `public`) stay usable without one.
+  Migration 021 adds `workspaces`, `business_context_versions`, `kb_columns`,
+  `kb_definitions`, `kb_examples`, `setup_runs`/`setup_results`, and `workspace_id` on
+  dashboards.
+- **Row-level security is the backstop (§5.5).** Every table in `session_state` and
+  `workspace_docs` gets RLS, with a policy on `tenant_id =
+  current_setting('statesync.tenant_id')`; the MCP sets it at the start of every
+  transaction from the session's tenant. Child tables without their own tenant column
+  are scoped through their parent. The RLS-coverage test fails if any table in those
+  schemas lacks RLS or a policy: statically over the migrations, and live over
+  `pg_class`/`pg_policies`.
+- **Setup wizard**: describe → scan → AI drafts → approve → test.
+  - The scan stores the catalog (tables, columns, types, row counts, fingerprint).
+  - The drafts are table and column descriptions plus definitions of key terms,
+    written from names, sample values and the business context. They are stored as
+    unapproved drafts. Only approved knowledge ever enters a prompt (§5.1).
+  - **The setup test is graded objectively where it can be.** For a sample dataset, the
+    10 questions come from its curated reference set, each with ground-truth SQL, and
+    are scored by BIRD-style execution accuracy (`scorers.ExecutionAccuracyScorer`).
+    This covers `fixtures/golden/olist.json` and `phase_c2.json`, plus a new `live` set.
+  - For an external database, the questions are AI-proposed, and the owner marks each
+    answer right or wrong, with its SQL shown.
+  - Right answers become approved examples for that workspace only. Evaluations run
+    without a workspace, so the benchmark sets are not contaminated.
+- **Context assembly (§5.1)** runs only when a question carries a workspace, so
+  measured behaviour without one is unchanged:
+  - the business context goes into the SQL agent's system prompt, below the fixed rules
+    and labelled as the owner's words;
+  - approved descriptions, the definitions a question mentions, and up to three similar
+    approved examples go into the context block;
+  - **fast path**: a question matching an approved example (normalised text) runs its
+    approved SQL, and the answer is labelled "Verified".
+- **Uploads**: text PDFs are parsed by a new `parser` service on an internal-only
+  network, with no internet, no database credentials, a non-root user, size and page
+  limits, and a timeout.
+  - It uses pypdf, not Docling (D-v3-11): Docling pulls in about 2 GB of layout models
+    that text PDFs do not need.
+  - The MCP chunks and embeds the pages into a new `workspace_docs` schema, not the
+    sample corpus's tables, whose shape the A5 fingerprint pins.
+  - Retrieval searches the workspace's documents alongside the sample corpus.
+- **Own Postgres (self-hosted only, off by default):**
+  - Credentials are encrypted with a key only the MCP holds.
+  - Connecting checks that the role is really read-only (not superuser, no write
+    privilege on any table, read-only transactions work).
+  - The workspace's queries run on that connection behind the same three-layer gate.
+  - The MCP picks the connection from the session's workspace, so the orchestrator
+    still holds no credential.
+- **Synthetic-schema code** (the DIGIPIN resolver, `_local` script repair, the
+  normaliser's column rules, the supervisor's domain examples) is switched on per
+  dataset from config and stays on for `public` only, so its measured behaviour does
+  not change.
+- **MCP methods:** `workspaces.manage` and `docs.manage` bring the count to 20 of 20
+  (D-v3-10).
+
+**Slices:** (1) migration 021 and RLS with its coverage test, and `workspaces.manage`;
+(2) scan, drafts, approval and the setup test (backend, with a live verify script);
+(3) context assembly and the fast path; (4) the web wizard, workspace switching and the
+documents page; (5) the parser service, uploads and retrieval; (6) external Postgres;
+(7) the synthetic-schema switches.
+
+**Progress:** slice 1 ✅ (2026-09-28) — migration 021 applied; RLS on all 16 tables of
+session_state and workspace_docs; `workspaces.manage` (19 of 20 methods) with the
+knowledge store, approval, examples, context and setup-run bookkeeping; `/workspaces`
+routes; `scripts/verify_workspaces.py` 58/58 live (including: no tenant bound sees no
+rows, a forged tenant write is refused by Postgres, existing dashboards/tiles/sessions
+unaffected). Slice 2 already has its storage side (scan, catalog, runs); what remains
+there is the AI drafting and the setup-test runner.
+
+- **Exit:** done-criterion 2 in §7 passes on two different sample databases (olist and
+  public): a workspace set up through the wizard scores at least 8 of 10 on its setup
+  test.
 
 ### Phase 4 — Deploy
 
@@ -493,6 +560,9 @@ header requires a record for any change there).
 | D-v3-7 | 2026-09-27 | `tiles.min_refresh_s` 60 → 15; tiles on `live` default to 30 s | A refresh is one indexed SELECT on a small schema, no model call; 30 s is what makes the dashboard feel live |
 | D-v3-8 | 2026-09-27 | Presentation (chart kind, sort, labels) is decided in the browser from the rows; the server's chart proposal is unchanged | Changing the server's spec would move E2-V1's measured chart score; presentation is not what that metric grades |
 | D-v3-9 | 2026-09-27 | The dashboard planner uses the `decomposer` role | Planning a dashboard is decomposing a goal into questions; a new role would add a config entry per provider for no gain |
+| D-v3-10 | 2026-09-28 | MCP methods 19 and 20: `workspaces.manage`, `docs.manage`; the ceiling stays 20 | Workspaces, the knowledge store and connections share one method; documents another. The ceiling is now full: a further method needs a new decision |
+| D-v3-11 | 2026-09-28 | Text PDFs are parsed with pypdf, not Docling | Docling's layout models are about 2 GB and scanned PDFs are out of scope; pypdf is BSD-licensed (PyMuPDF is AGPL) |
+| D-v3-12 | 2026-09-28 | Setup tests on sample datasets are graded by execution accuracy against curated reference SQL | An objective score beats the owner grading their own demo; right answers become approved examples for that workspace only, so the benchmarks stay clean |
 
 ## 9. Issue register
 

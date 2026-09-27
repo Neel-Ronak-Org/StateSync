@@ -16,6 +16,8 @@ Tools exposed (A4):
   history.get_recent_turns  (cycle 007, Workstream A)
   history.check_session     (session ownership, docs/V3_PLAN.md 0.2)
   tiles.manage              (dashboard tiles, docs/V3_PLAN.md Phase 1)
+  dashboards.manage         (named dashboards, Phase 2b)
+  workspaces.manage         (workspaces and knowledge store, Phase 3)
   history.get_turn_rows     (full result-set storage)
   audit.record              (per-identity audit log)
 
@@ -52,6 +54,7 @@ from tools.memory_tools import get_trajectory, put_trajectory
 from serialization import to_json_safe
 from tools.tile_tools import manage as tiles_manage
 from tools.dashboard_tools import manage as dashboards_manage
+from tools.workspace_tools import manage as workspaces_manage
 from tools.history_tools import (append_turn, check_session, delete_session, get_recent_turns,
                                  get_turn_rows, list_sessions, record_audit)
 
@@ -114,6 +117,7 @@ _REGISTERED_TOOLS: dict[str, Any] = {
     "history.list_sessions":    list_sessions,
     "tiles.manage":             tiles_manage,
     "dashboards.manage":        dashboards_manage,
+    "workspaces.manage":        workspaces_manage,
     "history.delete_session":   delete_session,
     "audit.record": record_audit,
 }
@@ -166,7 +170,8 @@ async def rpc_handler(request: Request) -> JSONResponse:
             status_code=400,
         )
 
-    set_session(tenant_id=tenant_id, session_id=session_id)
+    set_session(tenant_id=tenant_id, session_id=session_id,
+                workspace_id=request.headers.get("X-Workspace-ID", "") or None)
 
     # Appendix 4 seam: MCP session policy layer for tenancy.enforced (A0.5).
     # No-op while the flag is false (the shipped default, D6); real dispatch
