@@ -74,7 +74,7 @@ frontend); 15 migrations; 169 tests; CI running the deterministic gates; 191 com
 | A reviewer checks | Today |
 |---|---|
 | Can I try it? | No. Seven services, secret files, a pasted token and a local model. No live link |
-| Does it look like a product? | No. The plain-JavaScript UI looks like an engineering tool |
+| Does it look like a product? | No. The plain-JavaScript UI looks like an engineering tool (replaced in Phase 2 by `web/`) |
 | Does it work reliably? | Improving. Phase 0 fixed history silently stopping after 4 turns, and one user being able to write into another's conversation |
 | Is the AI measured? | Yes, unusually well. This is the strongest signal |
 | Is it secure? | Yes, unusually well |
@@ -315,18 +315,37 @@ Every tile comes back with `chart.data.values` bound to its current rows, plus `
 - **Exit:** tests show a refresh returns identical SQL and a new timestamp; a changed
   fingerprint flips the state; a tile cannot be read across workspaces.
 
-### Phase 2 — New frontend
+### Phase 2 — New frontend — ✅ done (branch `v3-phase2-frontend`)
 
-- React + shadcn/ui, matching everything the current UI does (sign-in, chat, charts,
-  citations, history, corpus switch), plus the dashboard grid for Phase 1's tiles.
-- New features are built only in the new UI.
-- Retire the old UI's checks deliberately, and replace each with an equivalent where it
-  still matters: the `window.__ORCHESTRATOR_URL__` sed literal and its `verify_deployed`
-  pin; the `app.js?v=20260820` asset test; `verify_e2`'s source greps (`interp`,
-  `ast: true`, the eval-compiler refusal string); Vega width on the spec, not the option;
-  no vega-tooltip.
-- **Exit:** every J3 and J4 flow is covered by a browser test; CSP still blocks `eval`;
-  the old frontend is removed.
+**Exit met:**
+- Every J3 and J4 flow has a browser test: 50 against the built app with the API
+  mocked (`web/e2e/mocked`: chat, dashboard, chart safety), and 7 against the real
+  stack behind nginx (`web/e2e/live`: ask, chart, pin → dashboard → unpin, and the CSP).
+- The CSP still blocks `eval`: the live suite shows the browser refusing `eval` and
+  `new Function` on the page nginx serves. The same run against a server without the
+  CSP fails, so the test would catch a regression. `verify_e2` checks the header text
+  and the headers served live.
+- The old frontend is removed (`aa53370`).
+
+**Built** (design: `web/DESIGN.md`): React 19, TypeScript, Vite, Tailwind v4 and
+shadcn/ui.
+- Chat: sign-in, history, dataset switch, charts, citations, CSV and PNG export, a
+  details panel and developer mode. Conversations keep their dataset: migration 018,
+  with a 409 on a mismatch.
+- A dashboard grid for Phase 1's tiles.
+- Served by nginx with `script-src 'self'` only. The orchestrator URL is runtime
+  config.
+
+**The old UI's checks, retired or replaced:**
+
+| Old check | Now |
+|---|---|
+| `window.__ORCHESTRATOR_URL__` sed literal and its `verify_deployed` pin | `/config.js`, written by `web/entrypoint.sh` after it validates `ORCHESTRATOR_URL`. `verify_deployed` checks the file carries the container's URL |
+| `app.js?v=20260820` cache-buster test | Retired: Vite content-hashes every asset. Stale-image detection is now a source fingerprint (`/build-info.json` in the image, recomputed by `verify_deployed`) |
+| `verify_e2` source greps (`interp`, `ast: true`, the eval-compiler refusal string) | `verify_e2` reads the options of VegaChart's single `embed()` call, with comments stripped: `ast: true`, `expr: expressionInterpreter`, `tooltip: false`. No other module may import vega. Proving eval cannot run is now the live browser test's job |
+| Vega width on the spec, not the option | Kept. The mocked chart test fails if the chart does not span the answer (726 px vs 137 px measured) |
+| No vega-tooltip | Was only half kept: the theme turned off automatic tooltips, but vega-embed still installed vega-tooltip (an `innerHTML` writer), and a spec's tooltip channel could switch it on. Now `tooltip: false` is set on `embed()`, pinned by `verify_e2` and a browser test |
+| The 10 malicious specs, run by hand in the browser (E2-V3/V6, browser half) | `web/e2e/mocked/chart-safety.spec.ts`: each spec goes through the real render path, must name its violation, draw nothing and fetch nothing |
 
 ### Phase 3 — Workspaces: setup, knowledge store, uploads
 
@@ -399,6 +418,8 @@ header requires a record for any change there).
 | Approximate vector index missed the right document | Bug | **Fixed** `2ff96ff` (exact search) | 0.12 |
 | Retrieval metrics (M6, E1) measured under the approximate index | Measurement | Not re-measured | Before the README cites them |
 | D-V2 scorer asymmetry; fixture and instrument items in `open_items.md` | Measurement | Documented | Fix only if the README cites the affected number |
+| vega-tooltip installed despite the no-tooltips rule | Security (defence in depth) | **Fixed** (Phase 2) | Its escaping held and the CSP blocks inline handlers; now never installed |
+| A withheld chart left the previous chart's canvas in the page | Bug | **Fixed** `aa53370` | Hidden, never shown; the hostile spec never reached Vega |
 
 ## 10. Rules carried forward
 
@@ -412,7 +433,9 @@ header requires a record for any change there).
 - Delegate only work with a machine-checkable acceptance bar. Design, debugging and
   security-sensitive code stay in-house, and delegated work is reviewed by running it.
 - Customer content (documents, database values) enters prompts only as data.
-- The old frontend's invariants apply until Phase 2 replaces them.
+- The web app's invariants: charts only through `VegaChart` (A7 check, then the
+  interpreter, never tooltips); no HTML sinks (ESLint); security headers at nginx
+  server level only; no inline script (runtime config is `/config.js`).
 
 ## 11. Risks
 

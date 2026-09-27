@@ -154,3 +154,30 @@ test('a chart that passes the check but cannot be drawn says so, without blaming
   await expect(note).not.toContainText('Chart withheld')
   await expect(turn.locator('canvas')).toHaveCount(0)
 })
+
+test('charts never install the vega-tooltip handler, even when a spec asks for tooltips', async ({ page }) => {
+  // vega-tooltip writes its table with innerHTML. The theme's mark.tooltip:false
+  // only stops automatic tooltips; an explicit tooltip channel passes A7 (it
+  // checks each channel's properties, not channel names), so the renderer
+  // itself must never install the handler. Its constructor always adds this style.
+  const api = await openApp(page)
+  api.nextChart = {
+    $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
+    mark: 'bar',
+    data: { values: [{ order_status: '<img src=x onerror=alert(1)>', n: 96478 }] },
+    encoding: {
+      x: { field: 'order_status', type: 'nominal' },
+      y: { field: 'n', type: 'quantitative' },
+      tooltip: { field: 'order_status', type: 'nominal' },
+    },
+  }
+  await ask(page, CHART_QUESTION)
+  const canvas = page.getByTestId('turn').last().getByTestId('vega-chart').locator('canvas')
+  await expect(canvas).toBeVisible()
+
+  const box = await canvas.boundingBox()
+  if (!box) throw new Error('chart canvas has no box')
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height - 40) // over the one bar
+  await expect(page.locator('#vega-tooltip-style')).toHaveCount(0)
+  await expect(page.locator('#vg-tooltip-element')).toHaveCount(0)
+})

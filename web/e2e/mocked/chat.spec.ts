@@ -78,7 +78,15 @@ test.describe('asking', () => {
     await openApp(page)
     await ask(page, 'Show orders by status as a chart')
     const turn = page.getByTestId('turn').last()
-    await expect(turn.getByTestId('vega-chart').locator('canvas')).toBeVisible()
+    const host = turn.getByTestId('vega-chart')
+    const canvas = host.locator('canvas')
+    await expect(canvas).toBeVisible()
+    // The width goes on the spec: vega-embed's width OPTION is ignored for
+    // Vega-Lite, which drew a ~98px chart. The chart must span the answer.
+    // (Measured against the turn: vega-embed's host is inline-block and
+    // shrinks with the chart, so it cannot be the reference.)
+    const [chartBox, turnBox] = await Promise.all([canvas.boundingBox(), turn.boundingBox()])
+    expect(chartBox?.width ?? 0).toBeGreaterThan((turnBox?.width ?? Infinity) * 0.6)
   })
 
   test('a chart that fails the safety check is withheld, and the answer still shows', async ({ page }) => {

@@ -91,6 +91,12 @@ def section(title: str) -> None:
     print(f"\n── {title} " + "─" * max(4, 60 - len(title)))
 
 
+def strip_ts_comments(source: str) -> str:
+    """Drops /* */ and // comments (not the // in a URL), so prose cannot satisfy a check."""
+    source = re.sub(r"/\*.*?\*/", "", source, flags=re.S)
+    return re.sub(r"(?<![:'\"])//[^\n]*", "", source)
+
+
 def load_malicious() -> list[dict]:
     """
     Loads the 10 malicious specs, applying ms_09's synthetic_data_size — the
@@ -180,12 +186,20 @@ def e2_v4_csp() -> None:
     # The render path. The web app has exactly one chart renderer, and it
     # imports vega-interpreter statically -- there is no runtime probing, so
     # there is no path on which the eval-based compiler could be reached.
-    renderer = CHART_RENDERER.read_text()
+    # Comments are stripped and the options are read from the embed() call
+    # itself: the renderer's docblock names these same options, so a plain grep
+    # of the file would pass with the code deleted.
+    renderer = strip_ts_comments(CHART_RENDERER.read_text())
     check("renderer imports the expression interpreter statically",
           re.search(r"import\s*\{\s*expressionInterpreter\s*\}\s*from\s*'vega-interpreter'", renderer) is not None)
-    check("render path requests the AST parser", re.search(r"\bast:\s*true", renderer) is not None)
-    check("render path passes the expression interpreter",
-          re.search(r"\bexpr:\s*expressionInterpreter\b", renderer) is not None)
+    calls = re.findall(r"\bembed\(\s*host\s*,[^{}]*?\{([^{}]*)\}\s*\)", renderer)
+    check("renderer makes exactly one embed() call", len(calls) == 1, f"{len(calls)} found")
+    options = calls[0] if calls else ""
+    check("embed() requests the AST parser (ast: true)", re.search(r"\bast:\s*true\b", options) is not None)
+    check("embed() passes the expression interpreter",
+          re.search(r"\bexpr:\s*expressionInterpreter\b", options) is not None)
+    check("embed() turns vega-tooltip off (tooltip: false; it writes innerHTML)",
+          re.search(r"\btooltip:\s*false\b", options) is not None)
     others = sorted(
         str(f.relative_to(REPO_ROOT)) for f in WEB_SRC.rglob("*.ts*")
         if f != CHART_RENDERER and re.search(r"from\s*'vega(-embed|-lite)?'", f.read_text())

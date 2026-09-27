@@ -9,8 +9,10 @@
  *    functions with `Function(...)`. The CSP has no 'unsafe-eval', so the
  *    compiler path would throw -- the interpreter is what makes rendering work
  *    under that CSP rather than the CSP being loosened for it.
- * 3. No tooltips (see theme.ts), and nothing from the spec or the rows is ever
- *    written as HTML.
+ * 3. No tooltips, and nothing from the spec or the rows is ever written as
+ *    HTML. vega-embed installs vega-tooltip (an innerHTML writer) unless told
+ *    `tooltip: false`; the theme's mark.tooltip:false alone does not stop a
+ *    spec's explicit tooltip channel, which A7 does not forbid.
  *
  * Width: vega-embed's `width` OPTION is ignored for Vega-Lite specs (measured
  * earlier: 98px via the option vs the full frame via the spec), so the width
@@ -116,6 +118,7 @@ export function VegaChart({ spec, className, height, onView, showViolations = fa
     embed(host, draw as never, {
       renderer: 'canvas',
       actions: false,
+      tooltip: false,
       config: vegaConfig() as never,
       ast: true,
       expr: expressionInterpreter,

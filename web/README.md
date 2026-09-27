@@ -17,5 +17,18 @@ npm run test:e2e       # mocked-API browser suite (builds and previews the app)
 STATESYNC_LIVE=1 npm run test:e2e   # live suite against the running stack on :3000
 ```
 
+Two browser suites:
+
+- **Mocked** (`e2e/mocked`, the UI acceptance bar): the built app with the API
+  stubbed by `page.route`, so every state is reachable and runs are deterministic.
+  `chart-safety.spec.ts` feeds the 10 frozen `fixtures/malicious_specs.json` specs
+  through the real render path, as if the server's validator had missed them.
+- **Live** (`e2e/live`): the real stack behind nginx, so the production CSP is in
+  force. It checks that the browser refuses `eval` and `new Function` on the served
+  page, that a real chart draws with no CSP violation, and the ask → pin → dashboard
+  → unpin journey. It needs the running stack (see the root README) and signs in with
+  `secrets/api_token_dev`. It asks three real questions. Those conversations stay
+  in history; the one tile it pins is removed again.
+
 The orchestrator URL is runtime config: `public/config.js` in development, written
 by the container's entrypoint in production.

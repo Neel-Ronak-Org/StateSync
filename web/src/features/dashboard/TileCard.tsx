@@ -81,6 +81,7 @@ export function TileCard({
   return (
     <div
       data-testid="tile"
+      data-tile-id={tile.tile_id}
       className="rounded-lg border bg-card flex h-full flex-col overflow-hidden"
     >
       {/* Header */}
