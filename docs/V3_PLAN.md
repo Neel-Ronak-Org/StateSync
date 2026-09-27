@@ -349,7 +349,20 @@ shadcn/ui.
 | No vega-tooltip | Was only half kept: the theme turned off automatic tooltips, but vega-embed still installed vega-tooltip (an `innerHTML` writer), and a spec's tooltip channel could switch it on. Now `tooltip: false` is set on `embed()`, pinned by `verify_e2` and a browser test |
 | The 10 malicious specs, run by hand in the browser (E2-V3/V6, browser half) | `web/e2e/mocked/chart-safety.spec.ts`: each spec goes through the real render path, must name its violation, draw nothing and fetch nothing |
 
-### Phase 2b — Dashboard first (owner decision, 2026-09-27)
+### Phase 2b — Dashboard first (owner decision, 2026-09-27) — ✅ done (PR #4)
+
+**Exit met (2026-09-28):**
+- The app opens on Dashboards. On `live`, a card's number changes on screen within a
+  minute (live browser test, against the real stack).
+- "Build with AI" added at least 6 working cards on each of `live`, `olist` and
+  `public`: 8 of 8 on each, in the browser and in `verify_dashboards.py --build`
+  (66/66).
+- Every visualization kind renders in the mocked suite. Browser-built specs pass A7
+  (vitest).
+- Ownership of dashboards and conversation deletes is checked with a second principal.
+- Suites: 66 mocked browser tests (330/330 with each run five times), 48 unit tests, 8
+  live browser tests.
+
 
 The owner's review of Phase 2: the app reads as a chat log with a pin button. It lands
 on chat, draws only bar charts, has no motion, and its dashboard is a plain list of
@@ -503,6 +516,10 @@ header requires a record for any change there).
 | D-V2 scorer asymmetry; fixture and instrument items in `open_items.md` | Measurement | Documented | Fix only if the README cites the affected number |
 | vega-tooltip installed despite the no-tooltips rule | Security (defence in depth) | **Fixed** (Phase 2) | Its escaping held and the CSP blocks inline handlers; now never installed |
 | A withheld chart left the previous chart's canvas in the page | Bug | **Fixed** `aa53370` | Hidden, never shown; the hostile spec never reached Vega |
+| Tile refresh crashed on NUMERIC or timestamp results, and one such tile failed its whole dashboard's listing | Bug (Phase 1) | **Fixed** (Phase 2b) | Found by the first live AI build; rows are now normalised, and a failing tile is marked 'error' alone |
+| The dashboard grid never measured its width (stuck at 1280px) | Bug (Phase 2) | **Fixed** (Phase 2b) | The empty right side in the owner's screenshot |
+| One rate budget for every route: a polling dashboard could block asking | Design | **Fixed** (Phase 2b) | Model routes 30/min, everything else 300/min |
+| Answers write raw ratios ("0.0319") | Presentation | Present | Prompt change would move measured scores; cards format ratios as % |
 
 ## 10. Rules carried forward
 

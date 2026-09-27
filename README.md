@@ -2,80 +2,53 @@
 
 > **Picking this up cold (human or agent)?** Start with [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md) — history, settled decisions, and current direction.
 
-StateSync is a conversational analytics agent over e-commerce data. A natural-language question is routed to SQL, to documents, or to both; read-only queries run; the answer comes back as prose plus a citation and, when it helps, a Vega-Lite chart. Multi-turn: follow-ups keep context.
+StateSync is a live analytics dashboard that builds itself, with a chat for asking new questions. Ask in plain English and a question is routed to SQL, to documents, or to both; only read-only queries run; the answer comes back as prose with its source and, when it helps, a chart. Pin an answer and it becomes a dashboard card that re-runs its saved SQL on a schedule, or let "Build with AI" plan a whole dashboard for a dataset. Every card still comes through the same SQL gate and chart validators as a typed question.
 
-## Quick start
+**What you see:** a dashboard home (navy by default, light mode too) with KPI cards that show their change, trends, breakdowns, donuts and an insights strip, refreshing every 30 s on the live demo data; "Show as" to redraw any card another way; drag-and-resize layouts and several dashboards per dataset; an Ask page with conversation history.
 
-Follow these numbered steps to set up and run StateSync on a clean machine:
+**Datasets:** `live` (an online shop kept moving by a simulator: orders, deliveries, reviews, web traffic), `olist` (1.5M real Brazilian e-commerce rows, frozen) and `public` (a synthetic logistics network plus policy and SLA documents, frozen for the accuracy tests).
 
-1. **Prerequisites**
-   - Docker Desktop with Compose v2.
-   - The native Ollama app running on the host (`config/flags.toml` points generation at `http://host.docker.internal:11434`).
-   - Python 3.12+ for the operator scripts.
+## Quick start (a machine that already has the stack built)
 
-   Pull the required models:
-   ```bash
-   # Embeddings always run inside the container
-   docker compose up -d ollama
-   docker compose exec ollama ollama pull mxbai-embed-large
+```bash
+cd StateSync
+# Start the app (never the evaluator; never rebuild postgres)
+docker compose up -d --no-build postgres qdrant ollama mcp orchestrator frontend simulator
+docker compose ps                     # wait until all say (healthy), about a minute
+curl -s localhost:8090/health         # "llm_ready": true
+pbcopy < secrets/api_token_dev        # copies your sign-in token (macOS); prints nothing
+open http://localhost:3000            # paste the token, Sign in
+```
 
-   # Generation runs via native host Ollama
-   ollama pull qwen2.5:7b
-   ```
+- **Why not the evaluator:** it re-runs 55 test questions through the model provider every hour, which uses up Groq's free daily limit within hours. Start it only to measure.
+- **Budget:** each question costs about 5 model calls and "Build with AI" about 40; Groq's free tier allows 1,000 requests a day per model. Refreshing a card costs no model call.
 
-2. **Create secrets**
-   Create the four secrets the stack needs to boot (`secrets/` is gitignored):
-   ```bash
-   mkdir -p secrets
-   echo "changeme_migrator" > secrets/pg_migrator_password
-   echo "changeme_reader"   > secrets/pg_reader_password
-   echo "changeme_history"  > secrets/pg_history_password
+## Shutting down
 
-   # Provider API keys. The orchestrator ATTACHES all three, so the FILES must
-   # exist even when you only run the local provider -- `docker compose up`
-   # fails on a missing secret file, not at the point the key is used. Leave
-   # them empty unless you switch provider in config/flags.toml.
-   touch secrets/anthropic_api_key secrets/azure_openai_api_key secrets/gemini_api_key
-   ```
-   These cover database administration (`pg_migrator_password`), read-only analytics
-   queries (`pg_reader_password`), session history and audit writes
-   (`pg_history_password`), and the three hosted-provider keys. Only
-   `anthropic_api_key` needs a real value, and only when
-   `config/flags.toml` sets `provider = "anthropic"` — but all three files must be
-   present or the orchestrator will not start.
+```bash
+docker compose stop       # stops everything, keeps all data; start again with the command above
+```
 
-3. **Start the services**
-   Launch the 7 Docker Compose services:
-   ```bash
-   docker compose up -d
-   ```
+- `docker compose down` also removes the containers; the data (volumes) is kept.
+- **Never** `docker compose down -v`, `docker volume prune` or `docker system prune --volumes`: they delete the database (including the 1.5M Olist rows), the search index and the downloaded models.
+- After a code change, rebuild only that service, e.g. `docker compose build frontend && docker compose up -d --no-deps frontend`. Never rebuild postgres.
 
-4. **Run migrations**
-   Apply the database schema and compute the fingerprint:
-   ```bash
-   bash scripts/migrate.sh
-   ```
-   `migrate.sh` only runs 001, 002 and 004; there is no ledger, and migrations 005 onward are applied by hand with psql.
+## First-time setup (a clean machine)
 
-5. **Generate an API principal**
-   Generate a bearer token and configure the orchestrator:
-   ```bash
-   python3 scripts/gen_api_principal.py
-   docker compose restart orchestrator
-   ```
-   `python3 scripts/gen_api_principal.py` prints a bearer token ONCE and writes `secrets/api_principals.json` (as well as `secrets/api_token_dev`). Then `docker compose restart orchestrator`, because the principal file is read at startup.
+1. **Prerequisites:** Docker Desktop with Compose v2; Python 3.12+ for the operator scripts; a Groq API key (the model provider, `config/flags.toml`). Embeddings run in the `ollama` container: `docker compose up -d ollama && docker compose exec ollama ollama pull mxbai-embed-large`.
+2. **Secrets** (`secrets/` is gitignored): `pg_migrator_password`, `pg_reader_password`, `pg_history_password`, `pg_simulator_password` (any random strings), `groq_api_key` (your key), and empty `anthropic_api_key`, `azure_openai_api_key`, `gemini_api_key` files (the orchestrator mounts all provider keys).
+3. **Build and start:** `docker compose build` then the start command above.
+4. **Migrations:** `bash scripts/migrate.sh` runs 001, 002 and 004; apply 005 onward in order with `docker exec -i postgres psql -U statesync_migrator -d statesync < migrations/NNN.sql`. After 020, set the simulator's password: `printf "ALTER ROLE statesync_simulator PASSWORD '%s';" "$(cat secrets/pg_simulator_password)" | docker exec -i postgres psql -U statesync_migrator -d statesync`.
+5. **An API principal:** `python3 scripts/gen_api_principal.py` (writes `secrets/api_principals.json` and `secrets/api_token_dev`), then `docker compose restart orchestrator`.
+6. Open http://localhost:3000, sign in, and press **Build with AI**.
 
-6. **Open the web interface**
-   Open http://localhost:3000 and paste the token into the login gate.
-
-7. **Run the demo**
-   Run `python3 scripts/demo_olist.py` to see the 3-turn Olist conversation.
-
-**Troubleshooting:** If the orchestrator will not start, the usual cause is a missing or malformed `secrets/api_principals.json` — auth fails closed on purpose.
+**Troubleshooting:** if the orchestrator will not start, the usual cause is a missing or malformed `secrets/api_principals.json` (auth fails closed on purpose). The status light at the bottom of the left rail says whether the server and the model are reachable.
 
 ## Architecture
 
-The stack consists of 7 services in `docker-compose.yml`:
+The stack consists of 8 services in `docker-compose.yml`:
+
+- `simulator`: keeps the `live` dataset moving (Phase 2b). Writes only to the `live` and `live_sim` schemas, as `statesync_simulator`; `db_net` only.
 
 - `postgres`: PostgreSQL database with PostGIS spatial extensions and pgvector. Resides on `db_net`.
 
@@ -85,7 +58,7 @@ The stack consists of 7 services in `docker-compose.yml`:
 
 - `evaluator`: Continuous evaluation engine and metrics service on port 8095. Resides on `app_net`.
 
-- `frontend`: Nginx web interface served on port 3000. Resides on `app_net`.
+- `frontend`: the React web app (`web/`) served by nginx on port 3000 under a strict CSP (scripts from the app only, no `eval`). Resides on `app_net`.
 
 - `ollama`: Containerized Ollama instance on port 11434 serving `mxbai-embed-large` embeddings to `mcp`. Sits on both networks.
 
@@ -181,6 +154,8 @@ The demo flips target_schema to olist and restores shipped state afterwards, ver
 | Document | Purpose |
 |---|---|
 | [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md) | Project history, settled decisions, and current direction. Read this first. |
+| [`docs/V3_PLAN.md`](docs/V3_PLAN.md) | The current plan: phases, decision log, issue register. |
+| [`web/DESIGN.md`](web/DESIGN.md) | The web app's design system and UI contract. |
 | [`docs/V2_STRATEGY.md`](docs/V2_STRATEGY.md) | Strategy, workstream deliverables, completion conditions, and cut-lines. |
 | [`docs/limitations.md`](docs/limitations.md) | Full inventory of known limitations, weak metrics, and unbuilt seams. |
 | [`docs/open_items.md`](docs/open_items.md) | Active defects, audit findings, and open technical investigations. |
@@ -208,4 +183,12 @@ python3 scripts/verify_deployed.py
 
 # Adversarial security evaluation suite (reports 43/44)
 bash scripts/verify_security.sh
+
+# Tiles and dashboards against the live stack (two principals); --build also
+# runs "Build with AI" on every dataset
+python3 scripts/verify_tiles.py
+python3 scripts/verify_dashboards.py --build
+
+# The web app: unit tests, the mocked browser suite, and the live one
+cd web && npm run test:unit && npx playwright test && STATESYNC_LIVE=1 npx playwright test
 ```
