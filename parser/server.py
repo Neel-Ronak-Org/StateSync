@@ -24,7 +24,8 @@ API (HTTP, JSON out):
                     (text files have one entry with "page": null)
                 4xx {"ok": false, "error": "<code>", "message": "..."}
                     codes: too_large, unsupported_type, too_many_pages,
-                    encrypted, unreadable, timeout, no_text
+                    encrypted, unreadable, timeout, no_text,
+                    limits_unavailable (the safety limits could not be set)
 
 Only the Python standard library and pypdf are used.
 """
@@ -37,6 +38,7 @@ import multiprocessing
 import os
 import queue
 import resource
+import time
 import tomllib
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -50,6 +52,7 @@ _CONFIG_DIR = Path(os.environ.get("CONFIG_DIR", "/app/config"))
 LIMITS: dict[str, Any] = tomllib.loads((_CONFIG_DIR / "statesync.toml").read_text())["library"]
 _MB = 1024 * 1024
 _PDF = "application/pdf"
+_POLL_S = 0.2
 
 
 class ParseError(Exception):
@@ -111,10 +114,17 @@ def parse_pdf(data: bytes) -> list[dict[str, Any]]:
 
 
 def _child(data: bytes, results: multiprocessing.Queue) -> None:
-    memory = LIMITS["parse_memory_mb"] * _MB
-    resource.setrlimit(resource.RLIMIT_AS, (memory, memory))
-    cpu = LIMITS["parse_cpu_s"]
-    resource.setrlimit(resource.RLIMIT_CPU, (cpu, cpu))
+    try:
+        memory = LIMITS["parse_memory_mb"] * _MB
+        resource.setrlimit(resource.RLIMIT_AS, (memory, memory))
+        cpu = LIMITS["parse_cpu_s"]
+        resource.setrlimit(resource.RLIMIT_CPU, (cpu, cpu))
+    except (ValueError, OSError):
+        # Fail closed: never parse a PDF without the limits (macOS, for one,
+        # refuses RLIMIT_AS; the container is Linux, where it works).
+        results.put({"ok": False, "error": "limits_unavailable",
+                     "message": "The parser could not apply its safety limits, so the file was not read."})
+        return
     try:
         results.put({"ok": True, "pages": parse_pdf(data)})
     except ParseError as exc:
@@ -131,10 +141,23 @@ def parse_pdf_isolated(data: bytes) -> dict[str, Any]:
     results: multiprocessing.Queue = context.Queue()
     child = context.Process(target=_child, args=(data, results), daemon=True)
     child.start()
+    deadline = time.monotonic() + LIMITS["parse_timeout_s"]
+    outcome: dict[str, Any] | None = None
     try:
-        outcome = results.get(timeout=LIMITS["parse_timeout_s"])
-    except queue.Empty:
-        outcome = {"ok": False, "error": "timeout", "message": "Parsing took too long and was stopped."}
+        # Poll, so a child killed by its own limits (SIGKILL on memory, SIGXCPU
+        # on CPU) is noticed at once instead of after the full timeout.
+        while outcome is None and time.monotonic() < deadline:
+            try:
+                outcome = results.get(timeout=_POLL_S)
+            except queue.Empty:
+                if not child.is_alive():
+                    try:
+                        outcome = results.get(timeout=_POLL_S)
+                    except queue.Empty:
+                        outcome = {"ok": False, "error": "unreadable",
+                                   "message": "The PDF could not be read within the parser's limits."}
+        if outcome is None:
+            outcome = {"ok": False, "error": "timeout", "message": "Parsing took too long and was stopped."}
     finally:
         if child.is_alive():
             child.kill()
