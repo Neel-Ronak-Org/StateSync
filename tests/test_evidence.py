@@ -41,3 +41,10 @@ def test_new_sql_with_the_checks_off_or_absent_is_unchecked():
 def test_no_sql_means_no_tier():
     assert evidence_tier(False, None, ON, []) is None
     assert evidence_tier(False, "", ON, []) is None
+
+
+def test_a_compiled_template_is_compiled_unless_verified():
+    assert evidence_tier(False, "SELECT 1", ON, [], True) == "compiled"
+    assert evidence_tier(False, "SELECT 1", OFF, ["a caveat"], True) == "compiled"
+    assert evidence_tier(True, "SELECT 1", ON, [], True) == "verified"
+    assert evidence_tier(False, None, ON, [], True) is None

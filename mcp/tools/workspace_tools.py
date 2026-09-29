@@ -13,6 +13,7 @@ One JSON-RPC method, workspaces.manage (decision D-v3-10), takes an `action`:
   approve                                  the owner accepts the knowledge
   add_example, remove_example              an approved question -> SQL pair, and taking one back
   context                                  what a question in this workspace may use
+  templates                                approved queries as fill-in-the-values templates (Phase 3c)
   start_run, record_result, finish_run,
   get_run, set_verdict                     the 10-question setup test
 
@@ -47,13 +48,14 @@ from serialization import to_json_safe
 from session import get_tenant_id
 from tools.data_tools import _check_layer1, sample_rows
 from tools.schema_tools import ALLOWED_SCHEMAS, describe_table, list_tables
+from tools.sql_templates import derive_template
 
 logger = logging.getLogger(__name__)
 
 _ACTIONS = frozenset({
     "list", "create", "get", "update", "delete", "scan", "catalog", "save_descriptions",
     "definitions", "save_definitions", "delete_definition", "approve", "add_example", "remove_example",
-    "context",
+    "context", "templates",
     "start_run", "record_result", "finish_run", "get_run", "set_verdict",
 })
 _NO_WORKSPACE = frozenset({"list", "create"})
@@ -486,6 +488,16 @@ async def _add_example(tenant_id, principal_id, workspace_id=None, question=None
             "INSERT INTO session_state.kb_examples (example_id, workspace_id, tenant_id, question, question_norm, "
             "sql_text, source) VALUES (%s, %s, %s, %s, %s, %s, %s)",
             (example_id, workspace_id, tenant_id, q, norm, sql.strip(), source))
+        # The template is derived in the same transaction, so an example and its
+        # template appear (and, by ON DELETE CASCADE, disappear) together. An SQL
+        # with no usable literals simply gets none.
+        derived = derive_template(sql.strip())
+        if derived is not None:
+            template_sql, slots = derived
+            await conn.execute(
+                "INSERT INTO session_state.kb_templates (template_id, example_id, workspace_id, tenant_id, "
+                "question, question_norm, template_sql, slots) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                (str(uuid.uuid4()), example_id, workspace_id, tenant_id, q, norm, template_sql, Jsonb(slots)))
     return {"ok": True, "example_id": example_id}
 
 
@@ -537,6 +549,32 @@ async def _context(tenant_id, principal_id, workspace_id=None, question=None, **
         "examples": similar,
         "exact": exact,
     }
+
+
+async def _templates(tenant_id, principal_id, workspace_id=None, question=None, **_):
+    """Templates of this workspace's approved examples that resemble a question.
+
+    The exact-question case is excluded: that is the fast path's job (`context`.exact),
+    and a template of the very same question would only re-derive the same SQL.
+    """
+    if not isinstance(question, str) or not question.strip():
+        return _fail("invalid", "question is required.")
+    async with get_history_connection() as conn:
+        if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
+            return _fail("not_found", "No such workspace.")
+        rows = await (await conn.execute(
+            "SELECT t.template_id, t.question, t.question_norm, t.template_sql, t.slots "
+            "FROM session_state.kb_templates t "
+            "JOIN session_state.kb_examples e ON e.example_id = t.example_id AND e.approved "
+            "WHERE t.tenant_id = %s AND t.workspace_id = %s",
+            (tenant_id, workspace_id))).fetchall()
+    norm = normalize_question(question)
+    ranked = sorted(((similarity(question, q), tid, q, sql, slots) for tid, q, n, sql, slots in rows if n != norm),
+                    key=lambda r: r[0], reverse=True)
+    return {"ok": True, "templates": [
+        {"template_id": tid, "question": q, "template_sql": sql, "slots": slots, "score": round(score, 3)}
+        for score, tid, q, sql, slots in ranked
+        if score >= float(cfg.templates.min_similarity)][: int(cfg.templates.max_candidates)]}
 
 
 async def _start_run(tenant_id, principal_id, workspace_id=None, graded_by=None, questions=None, **_):
@@ -680,7 +718,8 @@ _HANDLERS = {
     "list": _list, "create": _create, "get": _get, "update": _update, "delete": _delete, "scan": _scan,
     "catalog": _catalog, "save_descriptions": _save_descriptions, "definitions": _definitions,
     "save_definitions": _save_definitions, "delete_definition": _delete_definition, "approve": _approve,
-    "add_example": _add_example, "remove_example": _remove_example, "context": _context, "start_run": _start_run, "record_result": _record_result,
+    "add_example": _add_example, "remove_example": _remove_example, "context": _context, "templates": _templates,
+    "start_run": _start_run, "record_result": _record_result,
     "finish_run": _finish_run, "get_run": _get_run, "set_verdict": _set_verdict,
 }
 

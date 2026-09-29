@@ -127,6 +127,15 @@ synth_short_max_sentences = 3
 fanout_retry_max          = 1       # retries after a confirmed join fan-out; then the answer ships with a caveat
 key_column_suffixes       = ["_id", "id"]   # candidate single-column keys, verified unique before use
 
+[templates]
+# pipeline.templates = "on" (docs/V3_PLAN.md Phase 3c slice 3). Templates come only
+# from approved examples; a question is matched by one short model call.
+max_slots                 = 8       # an example with more literals than this gets no template
+min_similarity            = 0.3     # word overlap needed to offer a template to the matcher
+max_candidates            = 3       # templates shown to the matcher per question
+matcher_max_tokens        = 300
+text_slot_max_chars       = 80
+
 [spatial]
 provider                  = "digipin"
 default_radius_m          = 5000

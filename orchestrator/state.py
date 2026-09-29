@@ -94,6 +94,7 @@ _LAST_WRITE_WINS_FIELDS: frozenset[str] = frozenset({
     "debug_candidate_sql",
     "allow_fast_path",
     "verified_example",
+    "compiled_template",
 })
 
 # Fields whose reducer is "append" (list concatenation)
@@ -201,6 +202,7 @@ class StateSyncState(BaseModel):
     # pipeline rather than replay answers it approved earlier.
     allow_fast_path:  bool = True
     verified_example: bool = False   # the SQL is an approved example, run as-is
+    compiled_template: bool = False  # the SQL is an approved example's template filled in code (Phase 3c)
 
     # --- output (Part E2) ---
     answer_text: str | None = None

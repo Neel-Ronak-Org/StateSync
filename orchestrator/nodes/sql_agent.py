@@ -76,6 +76,7 @@ import time
 from typing import Any
 
 import answer_checks
+import templates as sql_templates
 from column_profiles import format_profiles, get_profiles
 from config_loader import cfg
 from classifiers.error_classifier import classify_error
@@ -515,6 +516,46 @@ def _repair_script_column_mismatch(
     return rewritten_sql, collected_notes
 
 
+async def _try_template(
+    session: MCPSession, state_dict: dict[str, Any], question: str, max_rows: int,
+) -> tuple[str | None, dict[str, Any] | None, int, int, int]:
+    """Phase 3c: answer from a template of an approved query (pipeline.templates = "on").
+
+    Returns (sql, exec_result, tokens_in, tokens_out, model_calls); sql is None whenever
+    the template route did not produce rows, and the caller then runs the normal path in
+    the same attempt. Nothing here records an error: a template that does not fit is not
+    a failed attempt. One short decomposer-role call picks the template and reads the
+    values; the SQL itself is assembled in code (orchestrator/templates.py) and executed
+    through the same MCP gate as any query.
+    """
+    query_id = state_dict.get("query_id", "")
+    found = await workspaces_manage(session, principal_id=state_dict["principal_id"], action="templates",
+                                    workspace_id=state_dict["workspace_id"], question=question)
+    candidates = found.get("templates") if found.get("ok") else None
+    if not candidates:
+        return None, None, 0, 0, 0
+    result = await get_agent_llm("decomposer").complete(
+        system=sql_templates.MATCHER_PROMPT,
+        messages=[{"role": "user", "content": sql_templates.format_candidates(question, candidates)}],
+        max_tokens=cfg.templates.matcher_max_tokens,
+    )
+    spent = (result.tokens_in, result.tokens_out, 1)
+    match = sql_templates.parse_match(result.text, candidates)
+    if match is None:
+        logger.info("SQL Agent templates: no match for query_id=%s", query_id)
+        return (None, None, *spent)
+    chosen, values = match
+    filled = sql_templates.fill_template(chosen.get("template_sql"), chosen.get("slots"), values)
+    if filled is None:
+        logger.info("SQL Agent templates: template %s not fillable for query_id=%s", chosen.get("template_id"), query_id)
+        return (None, None, *spent)
+    exec_result = await data_run_select(session, filled, max_rows=max_rows)
+    if not (exec_result.get("ok") and exec_result.get("rows")):
+        logger.info("SQL Agent templates: template %s gave no rows for query_id=%s", chosen.get("template_id"), query_id)
+        return (None, None, *spent)
+    return (filled, exec_result, *spent)
+
+
 async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     """
     SQL Agent node. Attempt 0: consults memory, interrogates (miss path
@@ -578,8 +619,27 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         if attempt == 0 and state_dict.get("allow_fast_path", True) and not state_dict.get("debug_candidate_sql"):
             exact_sql = (ws_ctx.get("exact") or {}).get("sql")
 
-        if attempt == 0 and exact_sql:
-            # Fast path: no memory, no draft, no interrogation, no model call.
+        # Phase 3c: no exact example, so try a template of a near one (one short
+        # decomposer call, no SQL-model call). On any miss the normal path runs below.
+        compiled_sql: str | None = None
+        compiled_exec: dict[str, Any] | None = None
+        if (
+            attempt == 0 and workspace_id and not exact_sql
+            and flags_snapshot.get("pipeline.templates", "off") == "on"
+            and state_dict.get("allow_fast_path", True) and not state_dict.get("debug_candidate_sql")
+        ):
+            try:
+                compiled_sql, compiled_exec, t_in, t_out, t_calls = await _try_template(
+                    session, state_dict, raw_query, cfg.mcp.max_rows_default)
+                tokens_in_total += t_in
+                tokens_out_total += t_out
+                llm_calls_total += t_calls
+            except Exception as exc:  # noqa: BLE001 -- a template is an optimisation, never a failure
+                logger.warning("SQL Agent templates skipped for query_id=%s: %s", query_id, exc)
+                compiled_sql = compiled_exec = None
+
+        if attempt == 0 and (exact_sql or compiled_sql):
+            # Fast path (or compiled template): no memory, no draft, no interrogation.
             context_block = ""
         elif attempt == 0:
             # Step 1: consult memory (attempt 0 only -- C2-V6).
@@ -741,6 +801,9 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             verified_example = True
             logger.info("SQL Agent fast path for query_id=%s: approved example in workspace %s",
                         query_id, workspace_id)
+        elif attempt == 0 and compiled_sql:
+            candidate_sql = compiled_sql
+            logger.info("SQL Agent compiled template for query_id=%s in workspace %s", query_id, workspace_id)
         elif attempt == 0 and debug_sql:
             candidate_sql = debug_sql
             used_debug_sql = True
@@ -797,7 +860,10 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             )
 
         # Step 5: execute.
-        exec_result = await data_run_select(session, candidate_sql, max_rows=max_rows)
+        if compiled_exec is not None and candidate_sql == compiled_sql:
+            exec_result = compiled_exec  # already executed while deciding to use the template
+        else:
+            exec_result = await data_run_select(session, candidate_sql, max_rows=max_rows)
         elapsed_ms = int(time.monotonic() * 1000) - start_ms
 
         update: dict[str, Any] = {
@@ -805,6 +871,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             "candidate_sql": candidate_sql,
             "attempt": attempt,
             "verified_example": verified_example,
+            "compiled_template": bool(compiled_sql),
         }
         if new_interrogation_samples:
             update["interrogation_samples"] = new_interrogation_samples
@@ -910,7 +977,8 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             )
 
             # Write back unless this is a clean attempt-0 memory hit (C1 GAP-1).
-            write_back = not (attempt == 0 and memory_hit)
+            # A compiled answer adds no new insight either, and must not cost a model call.
+            write_back = not (attempt == 0 and memory_hit) and not compiled_sql
             if memory_enabled and write_back:
                 w_in, w_out, w_calls = await _write_trajectory(
                     session=session,

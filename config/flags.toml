@@ -231,6 +231,7 @@ router_mode                     = "always"   # "always" | "when_documents": skip
 sql_draft_mode                  = "llm"      # "llm": draft + live sampling | "profiles": one SQL call with column profiles
 synth_style                     = "full"     # "full" | "short": <= 3 sentences, no chart proposal, numbers formatted by rule
 answer_checks                   = "off"      # "off" | "on": deterministic checks after the SQL runs (join fan-out, date coverage, truncation, empty aggregates)
+templates                       = "off"      # "off" | "on": answer from a template of an approved query when only the values differ (the "compiled" tier)
 
 [tenancy]
 enforced                        = false  # D6; threading is mandatory even when false
