@@ -3,12 +3,13 @@
  * the Phase 2 app (#/dashboard, #/chat) still land in the right place.
  */
 
-export type AppRoute = 'dashboards' | 'ask' | 'workspaces'
+export type AppRoute = 'dashboards' | 'ask' | 'workspaces' | 'library'
 
 export function routeFromHash(hash: string): AppRoute {
   const path = hash.replace(/^#\/?/, '').split('/')[0]
   if (path === 'ask' || path === 'chat') return 'ask'
   if (path === 'workspaces') return 'workspaces'
+  if (path === 'library') return 'library'
   return 'dashboards'
 }
 

@@ -1,4 +1,4 @@
-import { Boxes, Code2, LayoutDashboard, LogOut, MessageSquare, SunMoon, type LucideIcon } from 'lucide-react'
+import { Boxes, Code2, LayoutDashboard, Library, LogOut, MessageSquare, SunMoon, type LucideIcon } from 'lucide-react'
 import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
 
@@ -28,6 +28,7 @@ interface RailProps {
 const NAV: { route: AppRoute; label: string; icon: LucideIcon }[] = [
   { route: 'dashboards', label: 'Dashboards', icon: LayoutDashboard },
   { route: 'workspaces', label: 'Workspaces', icon: Boxes },
+  { route: 'library', label: 'Library', icon: Library },
   { route: 'ask', label: 'Ask', icon: MessageSquare },
 ]
 

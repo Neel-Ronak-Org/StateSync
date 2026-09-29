@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { DocumentsTab } from '@/features/library/DocumentsTab'
 import { BusinessTab } from '@/features/workspaces/BusinessTab'
 import { KnowledgeTab } from '@/features/workspaces/KnowledgeTab'
 import { TestTab } from '@/features/workspaces/TestTab'
@@ -201,10 +202,11 @@ export function WorkspaceDetail({
       {/* Main setup tabs */}
       <main className="flex-1 p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList aria-label="Setup steps" className="grid w-full max-w-md grid-cols-3">
+          <TabsList aria-label="Setup steps" className="grid w-full max-w-lg grid-cols-4">
             <TabsTrigger value="business">Business</TabsTrigger>
             <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
             <TabsTrigger value="test">Test</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
           </TabsList>
 
           <TabsContent value="business" className="outline-none">
@@ -239,6 +241,10 @@ export function WorkspaceDetail({
               onRecheck={recheck}
               onRemoveExample={removeExample}
             />
+          </TabsContent>
+
+          <TabsContent value="documents" className="outline-none">
+            <DocumentsTab workspaceId={workspace.workspace_id} />
           </TabsContent>
         </Tabs>
       </main>

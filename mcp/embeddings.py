@@ -31,6 +31,8 @@ logger = logging.getLogger(__name__)
 _OLLAMA_URL: str = os.environ.get("OLLAMA_URL", "http://ollama:11434")
 _EMBED_ENDPOINT: str = _OLLAMA_URL.rstrip("/") + "/api/embeddings"
 
+_BATCH_ENDPOINT: str = _OLLAMA_URL.rstrip("/") + "/api/embed"
+
 _client: httpx.AsyncClient | None = None
 
 
@@ -83,6 +85,35 @@ async def embed_text(
         )
 
     return vector
+
+
+async def embed_texts(texts: list[str], *, model: str, dim: int) -> list[list[float]]:
+    """
+    Embed several texts in ONE Ollama request (/api/embed takes a list).
+
+    The document library embeds a batch of chunks per call; one request per
+    chunk would spend most of its time on round trips.
+
+    Raises:
+        RuntimeError: if the number of vectors differs from the number of
+                      texts, or any vector's length is not `dim`.
+    """
+    response = await _get_client().post(_BATCH_ENDPOINT, json={"model": model, "input": texts})
+    response.raise_for_status()
+    vectors = response.json().get("embeddings")
+    if not isinstance(vectors, list) or len(vectors) != len(texts):
+        raise RuntimeError(
+            f"Ollama returned {len(vectors) if isinstance(vectors, list) else 'no'} embeddings "
+            f"for {len(texts)} texts."
+        )
+    for vector in vectors:
+        if not isinstance(vector, list) or len(vector) != dim:
+            raise RuntimeError(
+                f"Embedding dimension mismatch: expected {dim}, got "
+                f"{len(vector) if isinstance(vector, list) else 'none'}. "
+                f"Check {model!r} matches retrieval.embedding_dim in config/statesync.toml."
+            )
+    return vectors
 
 
 async def close_embeddings_client() -> None:

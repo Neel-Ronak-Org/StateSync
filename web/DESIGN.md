@@ -79,7 +79,7 @@ Dark is the default theme; light is kept and equally finished.
 
 - **Rail** `w-16`, `bg-card border-r`, full height. Top: the mark (links to Dashboards).
   Nav icon buttons with tooltips and `aria-current="page"` when active: **"Dashboards"**
-  (`LayoutDashboard`), **"Workspaces"** (`Boxes`) and **"Ask"** (`MessageSquare`). The active item has a `primary`
+  (`LayoutDashboard`), **"Workspaces"** (`Boxes`), **"Library"** (`Library`) and **"Ask"** (`MessageSquare`). The active item has a `primary`
   pill behind it that slides between items.
 - Rail bottom, top to bottom: the connection status dot (`data-testid="connection-status"`,
   tooltip + sr-only text: "Connected" / "Model unavailable: <detail>" / "Server
@@ -87,8 +87,8 @@ Dark is the default theme; light is kept and equally finished.
   `role="switch"` button with `aria-checked`); **"Theme"** (menu with radio items
   Light / Dark / System); **"Sign out"** (`LogOut`).
 - Below `md` the rail stays (it is already narrow).
-- Routing: hash — `#/dashboards` (default), `#/workspaces`, `#/workspaces/<id>` and
-  `#/ask`. Old links `#/dashboard` and `#/chat` map to them. No router library.
+- Routing: hash — `#/dashboards` (default), `#/workspaces`, `#/workspaces/<id>`,
+  `#/library` and `#/ask`. Old links `#/dashboard` and `#/chat` map to them. No router library.
 - **Dataset picker**: a Select labelled **"Dataset"** in each page header. Options are the
   API's `available_schemas`, then a **"Workspaces"** group with my workspaces by name
   (values `ds:<schema>` / `ws:<id>`). A new browser starts on `live` when it exists.
@@ -195,9 +195,31 @@ cards appear as they are added. It ends with a toast: "Added 7 of 8 insights."
     `data-verdict`) with answer and reason; owner grading via "Mark question N right /
     wrong"; score `data-testid="setup-score"` "S/T" with **Ready to use** (≥ 8) or
     **Needs work**; a run that stopped early says why (`role="alert"`).
+  - **Documents**: one checkbox per library folder (`data-testid="workspace-folder"`, the
+    folder name and "N ready"); **Save** (disabled until changed). "Questions in this
+    workspace can search the documents in the folders you choose." **Open library** →
+    `#/library`; an empty library says "Your library is empty." with the same link.
 - Ask: an answer that ran an approved example shows a **Verified** badge
   (`data-testid="verified-badge"`, tooltip "Answered with a query approved for this
   workspace.").
+
+## 6b. Library (docs/V3_PLAN.md Phase 3c slice 5, D-v3-17)
+
+- `#/library`: heading **"Library"**, "Documents you upload once and use in any workspace."
+- Folders (`data-testid="folder-item"`, `aria-current` on the selected one) with
+  "N documents"; **New folder** (dialog **Name**, **Cancel** / **Create**, server refusals in
+  the dialog, e.g. a duplicate name). **Folder actions** → **Rename folder** and **Delete
+  folder** (confirm; says how many documents go with it and "Used by N workspaces").
+  No folders: **"No folders yet"**, one sentence, **New folder**.
+- Documents of the selected folder (`data-testid="library-document"`, `data-status`):
+  title, filename, "N pages" (PDFs only), size, relative upload time (absolute in
+  `title`), status **Processing** (spinner) / **Ready** / **Failed** with the reason.
+  "Delete document <title>" (confirm). Empty folder: **"No documents in this folder"**.
+- **Upload** and a drop zone (`data-testid="upload-dropzone"`, "Drop PDF, text or Markdown
+  files here"). The type comes from the extension (.pdf, .txt, .md, .markdown); other
+  files, and files over 20 MB, are refused in the browser and never sent. Files upload
+  one after another; each refusal names its file and does not stop the rest. While any
+  document is Processing the list refreshes every 3 s.
 
 ## 7. Ask (chat)
 

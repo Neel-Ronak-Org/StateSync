@@ -11,6 +11,7 @@
 
 import type { Page, Route } from '@playwright/test'
 
+import { LibraryMock } from './mock-library'
 import { WorkspaceMock } from './mock-workspaces'
 
 export const TOKEN = 'test-token-for-mocked-suite'
@@ -222,6 +223,8 @@ export class MockApi {
   readonly jobs = new Map<string, BuildJob>()
   /** Workspaces (Phase 3): mock-workspaces.ts. */
   readonly workspaces = new WorkspaceMock()
+  /** The document library (Phase 3c slice 5): mock-library.ts. */
+  readonly library = new LibraryMock()
   private failures = new Map<string, { status: number; detail: string; headers?: Record<string, string> }>()
   storedRowsLimit: number | null = null
   nextChart: Record<string, unknown> | null = null
@@ -376,7 +379,7 @@ export class MockApi {
         headers: {
           'access-control-allow-origin': '*',
           'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE',
-          'access-control-allow-headers': 'authorization, content-type',
+          'access-control-allow-headers': 'authorization, content-type, x-filename',
         },
       })
     }
@@ -404,7 +407,9 @@ export class MockApi {
       return this.json(route, 401, { detail: 'Missing or invalid bearer token.' })
     }
 
-    const body = request.postData() ? (JSON.parse(request.postData() as string) as Record<string, unknown>) : {}
+    // An upload's body is the raw file, not JSON.
+    const isUpload = method === 'POST' && /^\/library\/folders\/[^/]+\/documents$/.test(path)
+    const body = !isUpload && request.postData() ? (JSON.parse(request.postData() as string) as Record<string, unknown>) : {}
 
     if (path === '/query' && method === 'POST') return this.query(route, body)
     if (path === '/sessions' && method === 'GET') {
@@ -443,6 +448,14 @@ export class MockApi {
     }
     if (path.startsWith('/dashboards')) return this.dashboardsRoute(route, method, path, url, body)
     if (path.startsWith('/tiles')) return this.tilesRoute(route, method, path, url, body)
+    if (path.startsWith('/library/')) {
+      return this.library.handle(route, method, path, url.searchParams, body, (r, status, b) => this.json(r, status, b))
+    }
+    const wsFolders = path.match(/^\/workspaces\/([^/]+)\/folders$/)
+    if (wsFolders) {
+      const id = decodeURIComponent(wsFolders[1])
+      return this.library.workspaceFoldersRoute(route, method, id, body, (r, status, b) => this.json(r, status, b), this.workspaces.workspaces.has(id))
+    }
     if (path === '/workspaces' || path.startsWith('/workspaces/')) {
       return this.workspaces.handle(route, method, path, body, (r, status, b) => this.json(r, status, b))
     }

@@ -407,3 +407,16 @@ async def workspaces_manage(
         "workspaces.manage",
         {"action": action, "principal_id": principal_id, **{k: v for k, v in params.items() if v is not None}},
     )
+
+
+async def library_manage(
+    session: MCPSession,
+    principal_id: str,
+    action: str,
+    **params: Any,
+) -> dict[str, Any]:
+    """Forward a document-library action to the MCP library.manage tool (Phase 3c)."""
+    return await session.call(
+        "library.manage",
+        {"action": action, "principal_id": principal_id, **{k: v for k, v in params.items() if v is not None}},
+    )

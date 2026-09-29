@@ -8,6 +8,7 @@ import type { Workspace } from '@/api/types'
 import { AskView } from '@/features/ask/AskView'
 import { SignInCard } from '@/features/auth/SignInCard'
 import { useConversation } from '@/features/chat/useConversation'
+import { LibraryView } from '@/features/library/LibraryView'
 import { DashboardsView } from '@/features/dashboard/DashboardsView'
 import { AppShell } from '@/features/shell/AppShell'
 import { DatasetPicker } from '@/features/shell/DatasetPicker'
@@ -287,6 +288,7 @@ export default function App() {
             datasetPicker={picker}
           />
         )}
+        {route === 'library' && <LibraryView />}
         {route === 'workspaces' &&
           (currentWorkspaceId ? (
             <WorkspaceDetail

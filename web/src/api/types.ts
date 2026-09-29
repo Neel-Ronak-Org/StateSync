@@ -385,3 +385,28 @@ export interface SetupRun {
   finished_at: string | null
   results: SetupResult[]
 }
+
+export type LibraryDocumentStatus = 'processing' | 'ready' | 'failed'
+
+export interface LibraryFolder {
+  folder_id: string
+  name: string
+  created_at: string
+  document_count: number
+  ready_count: number
+  workspace_ids: string[]
+}
+
+export interface LibraryDocument {
+  document_id: string
+  folder_id: string
+  title: string
+  filename: string
+  content_type: string
+  pages: number | null
+  bytes: number
+  status: LibraryDocumentStatus
+  error: string | null
+  chunk_count: number
+  created_at: string
+}

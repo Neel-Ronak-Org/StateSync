@@ -18,6 +18,8 @@ import type {
   Definition,
   Health,
   LayoutItem,
+  LibraryDocument,
+  LibraryFolder,
   PinTileRequest,
   QueryRequest,
   QueryResponse,
@@ -63,11 +65,23 @@ function detailText(body: unknown): string | null {
 
 export async function apiFetch<T>(
   path: string,
-  options: { method?: Method; body?: unknown; signal?: AbortSignal; auth?: boolean } = {},
+  options: {
+    method?: Method
+    body?: unknown
+    /** A raw file body (uploads): sent as is with its own Content-Type and X-Filename. */
+    upload?: { file: Blob; contentType: string; filename: string }
+    signal?: AbortSignal
+    auth?: boolean
+  } = {},
 ): Promise<T> {
-  const { method = 'GET', body, signal, auth = true } = options
+  const { method = 'GET', body, upload, signal, auth = true } = options
   const headers: Record<string, string> = {}
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  if (upload) {
+    headers['Content-Type'] = upload.contentType
+    headers['X-Filename'] = encodeURIComponent(upload.filename)
+  } else if (body !== undefined) {
+    headers['Content-Type'] = 'application/json'
+  }
   const token = auth ? getToken() : null
   if (token) headers.Authorization = `Bearer ${token}`
 
@@ -76,7 +90,7 @@ export async function apiFetch<T>(
     response = await fetch(`${ORCHESTRATOR_URL}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: upload ? upload.file : body === undefined ? undefined : JSON.stringify(body),
       signal,
     })
   } catch (err) {
@@ -244,4 +258,29 @@ export const api = {
       `/workspaces/${enc(workspaceId)}/setup/${enc(runId)}/results/${enc(String(position))}`,
       { method: 'PUT', body: { verdict } },
     ),
+
+  libraryFolders: () => apiFetch<{ folders: LibraryFolder[] }>('/library/folders'),
+  createFolder: (name: string) =>
+    apiFetch<{ folder: LibraryFolder }>('/library/folders', { method: 'POST', body: { name } }),
+  renameFolder: (folderId: string, name: string) =>
+    apiFetch<{ folder: LibraryFolder }>(`/library/folders/${enc(folderId)}`, { method: 'PATCH', body: { name } }),
+  deleteFolder: (folderId: string) =>
+    apiFetch<{ deleted: number }>(`/library/folders/${enc(folderId)}`, { method: 'DELETE' }),
+  libraryDocuments: (folderId: string) =>
+    apiFetch<{ documents: LibraryDocument[] }>(`/library/documents?folder_id=${enc(folderId)}`),
+  uploadDocument: (folderId: string, file: File, contentType: string) =>
+    apiFetch<{ document: LibraryDocument }>(`/library/folders/${enc(folderId)}/documents`, {
+      method: 'POST',
+      upload: { file, contentType, filename: file.name },
+    }),
+  deleteDocument: (documentId: string) =>
+    apiFetch<{ deleted: number }>(`/library/documents/${enc(documentId)}`, { method: 'DELETE' }),
+
+  workspaceFolders: (workspaceId: string) =>
+    apiFetch<{ folder_ids: string[] }>(`/workspaces/${enc(workspaceId)}/folders`),
+  setWorkspaceFolders: (workspaceId: string, folderIds: string[]) =>
+    apiFetch<{ folder_ids: string[] }>(`/workspaces/${enc(workspaceId)}/folders`, {
+      method: 'PUT',
+      body: { folder_ids: folderIds },
+    }),
 }

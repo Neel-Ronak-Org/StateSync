@@ -197,7 +197,7 @@ build_keep_s              = 3600    # finished builds stay readable this long
 # The account-level document library (docs/V3_PLAN.md Phase 3c slice 5, D-v3-17,
 # migration 024). Uploads are parsed by the isolated `parser` service, chunked
 # by the orchestrator and embedded by the MCP.
-max_upload_bytes            = 20000000   # per file, checked by the orchestrator AND the parser
+max_upload_bytes            = 20971520   # 20 MiB, per file, checked by the orchestrator AND the parser
 max_pages                   = 300        # a PDF with more pages is refused
 max_chars                   = 2000000    # extracted text per file
 parse_timeout_s             = 60         # the parser's child process is killed after this

@@ -41,6 +41,7 @@ from state import StateSyncState
 from tiles_api import register_tile_routes
 from builder_api import register_build_routes
 from dashboards_api import register_dashboard_routes
+from library_api import register_library_routes
 from workspaces_api import call_workspaces, register_workspace_routes
 
 logging.basicConfig(
@@ -89,7 +90,7 @@ app.add_middleware(
     # preflight refuses those calls from the web UI's origin, which no
     # server-side test can see (found auditing Phase 1).
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-Filename"],
     # Browsers hide every non-safelisted response header from cross-origin
     # JavaScript unless it is exposed. Without this the web UI could never read
     # Retry-After on a 429 and could only say "try again shortly" (the old UI
@@ -720,6 +721,7 @@ register_dashboard_routes(app, require_principal=require_principal, audit=_audit
 register_workspace_routes(app, require_principal=require_principal, audit=_audit,
                           require_principal_for_model=require_principal_for_model,
                           answer_question=answer_question)
+register_library_routes(app, require_principal=require_principal, audit=_audit)
 register_build_routes(app, require_principal=require_principal,
                       require_principal_for_model=require_principal_for_model,
                       audit=_audit, answer_question=answer_question)
