@@ -15,6 +15,7 @@ import time
 from typing import Any
 
 from config_loader import cfg
+from datasets import is_connection_dataset
 from llm.provider import get_agent_llm
 
 logger = logging.getLogger(__name__)
@@ -153,14 +154,18 @@ async def supervisor_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     flags_snapshot: dict[str, Any] = state_dict.get("flags_snapshot", {})
     target_schema = state_dict.get("target_schema")
     library_titles: list[str] = state_dict.get("library_titles") or []
-    if (
+    # An owner's own database has no sample documents; without uploads, only
+    # the database can answer, so the router (whose prompt describes the ONDC
+    # corpus) is not asked.
+    own_database_only = is_connection_dataset(target_schema) and not library_titles
+    if own_database_only or (
         flags_snapshot.get("pipeline.router_mode") == "when_documents"
         and target_schema not in cfg.pipeline.document_schemas
         and not library_titles
     ):
         logger.info(
-            "Supervisor: query_id=%s router_mode=when_documents and source '%s' has no "
-            "documents -- route=sql without a model call.",
+            "Supervisor: query_id=%s source '%s' has no documents to search -- route=sql "
+            "without a model call.",
             query_id, target_schema,
         )
         return {

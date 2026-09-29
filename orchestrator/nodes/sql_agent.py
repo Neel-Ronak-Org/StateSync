@@ -84,6 +84,7 @@ from llm.provider import get_agent_llm
 from mcp_client import MCPSession, data_run_select, data_sample_rows, schema_describe_table, schema_list_tables, workspaces_manage
 from memory_store import get_trajectory_store
 from schema_retriever import get_schema_retriever, target_schema
+from datasets import frame_prompt, synthetic_features
 from spatial_resolver import get_spatial_resolver
 from workspace_context import format_context, system_suffix
 
@@ -698,7 +699,8 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                     draft_sql: str = state_dict.get("debug_candidate_sql") or ""
                     if not draft_sql:
                         draft_result = await get_agent_llm("sql").complete(
-                            system=_SYSTEM_PROMPT.format(max_rows=cfg.mcp.max_rows_default) + ws_suffix,
+                            system=frame_prompt(_SYSTEM_PROMPT.format(max_rows=cfg.mcp.max_rows_default),
+                                                _schema) + ws_suffix,
                             messages=[{"role": "user", "content": (
                                 f"{context_block}\n\nQuestion: {raw_query}\n\n"
                                 f"Write a single PostgreSQL SELECT query to answer this question."
@@ -786,7 +788,8 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         if entity_hint:
             context_block += "\n\n" + entity_hint
 
-        spatial_resolution = get_spatial_resolver().resolve(raw_query)
+        # DIGIPIN belongs to the synthetic ONDC corpus (datasets.py).
+        spatial_resolution = get_spatial_resolver().resolve(raw_query) if synthetic_features(_schema) else None
         if spatial_resolution:
             context_block += "\n\n" + _format_spatial_hint(spatial_resolution)
 
@@ -816,13 +819,13 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         else:
             llm = get_agent_llm("sql")
             if attempt == 0:
-                system_prompt = _SYSTEM_PROMPT.format(max_rows=max_rows) + ws_suffix
+                system_prompt = frame_prompt(_SYSTEM_PROMPT.format(max_rows=max_rows), _schema) + ws_suffix
                 user_message = (
                     f"{context_block}\n\nQuestion: {raw_query}\n\n"
                     f"Write a single PostgreSQL SELECT query to answer this question."
                 )
             else:
-                system_prompt = _CORRECTION_SYSTEM_PROMPT.format(max_rows=max_rows) + ws_suffix
+                system_prompt = frame_prompt(_CORRECTION_SYSTEM_PROMPT.format(max_rows=max_rows), _schema) + ws_suffix
                 error_history_text = _format_error_history(existing_errors)
                 # Error history first, schema second: the fix is the most
                 # important, actionable content, and leading with it reads

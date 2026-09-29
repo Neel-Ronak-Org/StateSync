@@ -31,7 +31,6 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
-import re
 from typing import Any
 from urllib.parse import unquote
 
@@ -41,6 +40,7 @@ from pydantic import BaseModel, ConfigDict
 
 from auth import Principal
 from config_loader import cfg
+from datasets import is_connection_dataset  # noqa: F401 - re-exported for main.py
 from library_ingest import IngestTasks, ingest, safe_filename, title_from_filename
 from mcp_client import MCPSession, library_manage
 from tile_render import error_status
@@ -84,14 +84,6 @@ class WorkspaceFoldersRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     folder_ids: list[str]
-
-
-_CONNECTION_DATASET = re.compile(r"^cn_[0-9a-f]{16}$")
-
-
-def is_connection_dataset(name: Any) -> bool:
-    """A connected database's dataset name (mcp/connections.py)."""
-    return isinstance(name, str) and bool(_CONNECTION_DATASET.match(name))
 
 
 def upload_limit() -> int:

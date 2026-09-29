@@ -109,6 +109,10 @@ hinglish_markers          = ["hai", "hain", "kya", "kitne", "kitna", "kitni", "k
                              "raha", "rahi", "rahe", "sabse", "zyada", "kam", "abhi", "pichle", "agle"]
 
 [pipeline]
+# Datasets where the code written for the synthetic ONDC corpus stays on (the SQL
+# writer's ONDC framing, the DIGIPIN resolver): the three built-in datasets, so their
+# measured behaviour is unchanged. An owner's own database (cn_...) is never one.
+synthetic_schemas         = ["public", "olist", "live"]
 # pipeline.router_mode = "when_documents": sources (schemas) that have documents;
 # questions on any other source go straight to SQL without the router call.
 document_schemas          = ["public", "olist"]
