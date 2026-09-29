@@ -351,7 +351,8 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
     # The workspace travels as X-Workspace-ID, so vector.semantic_search also
     # searches the uploaded documents in the folders the workspace chose.
     async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id,
-                          workspace_id=state_dict.get("workspace_id")) as session:
+                          workspace_id=state_dict.get("workspace_id"),
+                          dataset=state_dict.get("target_schema")) as session:
         if route == "docs":
             matches = await _semantic_search_expanded(session, query_text, cfg.retrieval.semantic_top_k)
             trajectory_steps += 2  # the expanded call is a second round-trip

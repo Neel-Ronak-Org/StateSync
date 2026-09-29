@@ -51,6 +51,7 @@ from typing import Any
 
 from psycopg.types.json import Jsonb
 
+import connections
 from config_loader import cfg
 from db import get_history_connection
 from serialization import to_json_safe
@@ -101,7 +102,13 @@ class _RelationCollector(Visitor):
             self.ctes.add(node.ctename)
 
 
-def table_refs(sql: str) -> list[tuple[str, str]]:
+def _default_for(dataset: str | None) -> str:
+    """Where an unqualified table name resolves: the connected dataset (its search_path is its
+    chosen schema, mcp/connections.py) or, as for our reader role, DEFAULT_SCHEMA."""
+    return dataset if connections.is_token(dataset) else DEFAULT_SCHEMA
+
+
+def table_refs(sql: str, dataset: str | None = None) -> list[tuple[str, str]]:
     """(schema, table) for every real table the SQL reads: sorted, unique.
 
     An unqualified name resolves to DEFAULT_SCHEMA, as the reader role's
@@ -114,7 +121,7 @@ def table_refs(sql: str) -> list[tuple[str, str]]:
     for raw in pglast.parse_sql(sql):
         collector(raw.stmt)
     return sorted({
-        (schema or DEFAULT_SCHEMA, name)
+        (schema or _default_for(dataset), name)
         for schema, name in collector.relations
         if not (schema is None and name in collector.ctes)
     })
@@ -234,10 +241,10 @@ def _error_text(error: Any) -> str:
 
 # ── Database access (every statement scoped by tenant AND principal) ──────────
 
-async def _fingerprint(sql: str) -> str | None:
+async def _fingerprint(sql: str, dataset: str | None = None) -> str | None:
     """Fingerprint of the columns `sql` reads, or None if any table is gone."""
     described = []
-    for schema, table in table_refs(sql):
+    for schema, table in table_refs(sql, dataset):
         try:
             desc = await describe_table(table, schema)
         except ValueError:
@@ -277,7 +284,7 @@ async def _pinnable_sql(tenant_id: str, principal_id: str, session_id: Any, turn
     rejection = _check_layer1(sql)
     if rejection:
         return _fail("not_pinnable", f"This answer's SQL does not pass the SQL gate: {rejection}")
-    fingerprint = await _fingerprint(sql)
+    fingerprint = await _fingerprint(sql, target_schema)
     if fingerprint is None:
         return _fail("not_pinnable", "A table this answer reads no longer exists.")
     return (sql, chart, columns, title_fallback(raw_query, rewritten_query, rewrite_applied),
@@ -375,7 +382,7 @@ async def _refresh(tenant_id: str, principal_id: str, tile_id: str, force: bool)
         row = await (await conn.execute(
             """
             SELECT t.state, t.refresh_interval_s, t.current_version, t.error_at,
-                   v.sql_text, v.fingerprint, r.computed_at
+                   v.sql_text, v.fingerprint, r.computed_at, t.target_schema
             FROM session_state.tiles t
             JOIN session_state.tile_versions v ON v.tile_id = t.tile_id AND v.version = t.current_version
             LEFT JOIN session_state.tile_results r ON r.tile_id = t.tile_id
@@ -385,7 +392,7 @@ async def _refresh(tenant_id: str, principal_id: str, tile_id: str, force: bool)
         )).fetchone()
     if row is None:
         return _fail("not_found", "No such tile.")
-    state, interval, version, error_at, sql, stored_fp, computed_at = row
+    state, interval, version, error_at, sql, stored_fp, computed_at, dataset = row
 
     if state == "needs_review":
         return None                      # a person must confirm first
@@ -394,7 +401,7 @@ async def _refresh(tenant_id: str, principal_id: str, tile_id: str, force: bool)
         return None
 
     # Both of these read through the reader pool; no write connection is held.
-    if await _fingerprint(sql) != stored_fp:
+    if await _fingerprint(sql, dataset) != stored_fp:
         async with get_history_connection() as conn:
             await conn.execute(
                 """
@@ -407,7 +414,7 @@ async def _refresh(tenant_id: str, principal_id: str, tile_id: str, force: bool)
                        tile_id, tenant_id)
         return None
 
-    result = await run_select(sql, max_rows=int(cfg.tiles.result_max_rows))
+    result = await run_select(sql, max_rows=int(cfg.tiles.result_max_rows), dataset=dataset)
 
     async with get_history_connection() as conn:
         if result.get("ok"):
@@ -609,7 +616,7 @@ async def _confirm(tenant_id, principal_id, tile_id):
     async with get_history_connection() as conn:
         row = await (await conn.execute(
             """
-            SELECT v.sql_text, v.chart, v.sql_columns, v.source_session_id, v.source_turn_index
+            SELECT v.sql_text, v.chart, v.sql_columns, v.source_session_id, v.source_turn_index, t.target_schema
             FROM session_state.tiles t
             JOIN session_state.tile_versions v ON v.tile_id = t.tile_id AND v.version = t.current_version
             WHERE t.tenant_id = %s AND t.principal_id = %s AND t.tile_id = %s
@@ -618,8 +625,8 @@ async def _confirm(tenant_id, principal_id, tile_id):
         )).fetchone()
     if row is None:
         return _fail("not_found", "No such tile.")
-    sql, chart, columns, session_id, turn_index = row
-    fingerprint = await _fingerprint(sql)
+    sql, chart, columns, session_id, turn_index, dataset = row
+    fingerprint = await _fingerprint(sql, dataset)
     if fingerprint is None:
         return _fail("not_pinnable",
                      "A table this tile reads no longer exists. Replace it from a new answer instead.")

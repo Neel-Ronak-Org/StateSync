@@ -193,6 +193,25 @@ goal_max_chars            = 200
 question_max_chars        = 300
 build_keep_s              = 3600    # finished builds stay readable this long
 
+[connections]
+# Your own Postgres (docs/V3_PLAN.md Phase 3c slice 6, migration 026,
+# mcp/connections.py). A connection is saved only when its login is read-only.
+max_per_principal           = 10
+name_max_chars              = 60
+host_max_chars              = 255
+field_max_chars             = 128      # database, user and schema names
+password_max_chars          = 512
+connect_timeout_s           = 5
+pool_max                    = 2        # open connections per saved connection
+pool_idle_s                 = 300      # an idle pool connection is closed after this
+sample_schemas_max          = 50       # schemas listed for the owner to choose from
+# Never a connection target: StateSync's own services and loopback. Addresses these
+# names resolve to are refused too, so an IP cannot sidestep the list. For a database
+# on your own machine, use host.docker.internal.
+blocked_hosts               = ["postgres", "qdrant", "ollama", "mcp", "orchestrator", "parser",
+                               "frontend", "simulator", "evaluator", "localhost"]
+sslmodes                    = ["disable", "prefer", "require", "verify-ca", "verify-full"]
+
 [library]
 # The account-level document library (docs/V3_PLAN.md Phase 3c slice 5, D-v3-17,
 # migration 024). Uploads are parsed by the isolated `parser` service, chunked

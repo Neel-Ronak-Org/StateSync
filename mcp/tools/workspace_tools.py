@@ -44,6 +44,7 @@ from typing import Any
 
 from psycopg.types.json import Jsonb
 
+import connections
 from config_loader import cfg
 from db import get_history_connection
 from serialization import to_json_safe
@@ -237,11 +238,14 @@ async def _create(tenant_id, principal_id, name=None, target_schema=None, busine
     clean_name = clean_text(name, int(cfg.workspaces.name_max_chars))
     if clean_name is None:
         return _fail("invalid", "name must not be blank.")
-    if target_schema not in ALLOWED_SCHEMAS:
+    if target_schema not in ALLOWED_SCHEMAS and not connections.is_token(target_schema):
         return _fail("invalid", f"Unknown dataset {target_schema!r}.")
     context = clean_text(business_context or "", int(cfg.workspaces.business_context_max_chars), allow_empty=True) or ""
     workspace_id = str(uuid.uuid4())
     async with get_history_connection() as conn:
+        if connections.is_token(target_schema) and not await connections.owns_dataset(
+                conn, tenant_id, principal_id, target_schema):
+            return _fail("invalid", "Unknown dataset: that connection is not yours, or has no schema chosen yet.")
         count = (await (await conn.execute(
             "SELECT count(*) FROM session_state.workspaces WHERE tenant_id = %s AND owner_principal_id = %s",
             (tenant_id, principal_id))).fetchone())[0]
@@ -251,10 +255,12 @@ async def _create(tenant_id, principal_id, name=None, target_schema=None, busine
         await conn.execute(
             """
             INSERT INTO session_state.workspaces
-                (workspace_id, tenant_id, owner_principal_id, name, target_schema, business_context, context_version)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                (workspace_id, tenant_id, owner_principal_id, name, target_schema, business_context, context_version,
+                 connection_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
-            (workspace_id, tenant_id, principal_id, clean_name, target_schema, context, 1 if context else 0),
+            (workspace_id, tenant_id, principal_id, clean_name, target_schema, context, 1 if context else 0,
+             target_schema if connections.is_token(target_schema) else None),
         )
         if context:
             await conn.execute(
@@ -648,8 +654,10 @@ async def _check_examples(tenant_id, principal_id, workspace_id=None, **_):
     the same path every data query takes. A failure is recorded, not raised.
     """
     async with get_history_connection() as conn:
-        if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
+        owned = await _owned(conn, tenant_id, principal_id, workspace_id)
+        if owned is None:
             return _fail("not_found", "No such workspace.")
+        dataset = owned[1]
         rows = await (await conn.execute(
             "SELECT example_id, sql_text, result_signature FROM session_state.kb_examples "
             "WHERE tenant_id = %s AND workspace_id = %s AND approved "
@@ -658,7 +666,7 @@ async def _check_examples(tenant_id, principal_id, workspace_id=None, **_):
     counts = {"ok": 0, "changed": 0, "failed": 0}
     outcomes: list[tuple[str, str, str | None, str | None]] = []
     for example_id, sql_text, recorded in rows:
-        result = await run_select(sql_text, max_rows=1)
+        result = await run_select(sql_text, max_rows=1, dataset=dataset)
         if not result.get("ok"):
             message = str((result.get("error") or {}).get("message", "The query failed."))
             outcomes.append((example_id, "failed", recorded, message[:_CHECK_DETAIL_MAX_CHARS]))

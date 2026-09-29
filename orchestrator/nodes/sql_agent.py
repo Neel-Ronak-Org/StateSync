@@ -587,7 +587,8 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
 
     mcp_base_url = os.environ.get("MCP_URL", "http://mcp:8080")
 
-    async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id) as session:
+    async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id,
+                          dataset=state_dict.get("target_schema")) as session:
         # Always needed: fingerprint (memory key on attempt 0) and table list.
         _schema = state_dict.get("target_schema") or target_schema()
         tables_result = await schema_list_tables(session, _schema)

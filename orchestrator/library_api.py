@@ -31,6 +31,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+import re
 from typing import Any
 from urllib.parse import unquote
 
@@ -61,10 +62,36 @@ class FolderNameRequest(BaseModel):
     name: str
 
 
+class ConnectionRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    name: str
+    host: str
+    port: int = 5432  # noqa: literals - Postgres's standard port, the form's default
+    dbname: str
+    username: str
+    password: str
+    sslmode: str = "prefer"
+
+
+class ConnectionSchemaRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    schema_name: str
+
+
 class WorkspaceFoldersRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     folder_ids: list[str]
+
+
+_CONNECTION_DATASET = re.compile(r"^cn_[0-9a-f]{16}$")
+
+
+def is_connection_dataset(name: Any) -> bool:
+    """A connected database's dataset name (mcp/connections.py)."""
+    return isinstance(name, str) and bool(_CONNECTION_DATASET.match(name))
 
 
 def upload_limit() -> int:
@@ -102,12 +129,13 @@ def register_library_routes(app: Any, require_principal: Any, audit: Any) -> Non
             raise HTTPException(status_code=503, detail="Library service unavailable. Try again shortly.") from None
 
         detail = f"library:{action}"
+        # Ids only: never a password or any other request field.
         for label, value in (("workspace", params.get("workspace_id")), ("folder", params.get("folder_id")),
-                             ("document", params.get("document_id"))):
+                             ("document", params.get("document_id")), ("connection", params.get("connection_id"))):
             if value:
                 detail += f" {label}={value}"
-        made = result.get("folder") or result.get("document") or {}
-        for label, key in (("folder", "folder_id"), ("document", "document_id")):
+        made = result.get("folder") or result.get("document") or result.get("connection") or {}
+        for label, key in (("folder", "folder_id"), ("document", "document_id"), ("connection", "connection_id")):
             if made.get(key) and f" {label}=" not in detail:
                 detail += f" {label}={made[key]}"
         if not result.get("ok"):
@@ -217,6 +245,45 @@ def register_library_routes(app: Any, require_principal: Any, audit: Any) -> Non
                               principal: Principal = Depends(require_principal)) -> dict[str, Any]:
         result = await _execute(principal, request, "delete_document", f"/library/documents/{document_id}",
                                 document_id=document_id)
+        return {"deleted": result.get("deleted", 1)}
+
+    # ── Connections: the owner's own Postgres (mcp/connections.py) ──────────
+    # The password travels once, in the create request, to the MCP, which
+    # encrypts it; nothing returns it and it is never logged or audited.
+
+    @app.get("/library/connections", tags=["library"])
+    async def list_connections(request: Request, principal: Principal = Depends(require_principal)) -> dict[str, Any]:
+        result = await _execute(principal, request, "connections", "/library/connections")
+        return {"connections": result.get("connections", []), "available": result.get("available", False)}
+
+    @app.post("/library/connections", status_code=201, tags=["library"])
+    async def create_connection(body: ConnectionRequest, request: Request,
+                                principal: Principal = Depends(require_principal)) -> dict[str, Any]:
+        result = await _execute(principal, request, "create_connection", "/library/connections",
+                                name=body.name, host=body.host, port=body.port, dbname=body.dbname,
+                                username=body.username, password=body.password, sslmode=body.sslmode)
+        return {k: result.get(k) for k in ("connection", "schemas", "warnings")}
+
+    @app.put("/library/connections/{connection_id}/schema", tags=["library"])
+    async def set_connection_schema(connection_id: str, body: ConnectionSchemaRequest, request: Request,
+                                    principal: Principal = Depends(require_principal)) -> dict[str, Any]:
+        result = await _execute(principal, request, "set_connection_schema",
+                                f"/library/connections/{connection_id}/schema", connection_id=connection_id,
+                                schema_name=body.schema_name)
+        return {"connection": result["connection"]}
+
+    @app.post("/library/connections/{connection_id}/test", tags=["library"])
+    async def test_connection(connection_id: str, request: Request,
+                              principal: Principal = Depends(require_principal)) -> dict[str, Any]:
+        result = await _execute(principal, request, "test_connection", f"/library/connections/{connection_id}/test",
+                                connection_id=connection_id)
+        return {k: result.get(k) for k in ("connection", "schemas", "warnings")}
+
+    @app.delete("/library/connections/{connection_id}", tags=["library"])
+    async def delete_connection(connection_id: str, request: Request,
+                                principal: Principal = Depends(require_principal)) -> dict[str, Any]:
+        result = await _execute(principal, request, "delete_connection", f"/library/connections/{connection_id}",
+                                connection_id=connection_id)
         return {"deleted": result.get("deleted", 1)}
 
     @app.get("/workspaces/{workspace_id}/folders", tags=["library"])

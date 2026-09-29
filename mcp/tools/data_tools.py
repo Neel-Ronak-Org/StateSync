@@ -33,6 +33,7 @@ from typing import Any
 
 import psycopg
 
+import connections
 from db import get_connection
 from config_loader import cfg as _cfg
 
@@ -247,9 +248,9 @@ async def sample_rows(
     # agent believes it is inspecting the real corpus. Validated against the
     # same allowlist the discovery tools use, so this cannot become a way to
     # reach pg_catalog.
-    from tools.schema_tools import ALLOWED_SCHEMAS, DEFAULT_SCHEMA
+    from tools.schema_tools import ALLOWED_SCHEMAS, DEFAULT_SCHEMA, source
     schema = schema or DEFAULT_SCHEMA
-    if schema not in ALLOWED_SCHEMAS:
+    if schema not in ALLOWED_SCHEMAS and not connections.is_token(schema):
         raise ValueError(
             f"Schema {schema!r} is not allowed. Allowed: {sorted(ALLOWED_SCHEMAS)}.")
 
@@ -266,14 +267,12 @@ async def sample_rows(
     else:
         col_list = "*"
 
-    sql = f'SELECT {col_list} FROM "{schema}"."{table}" LIMIT {effective_limit}'
-
-    # Run through Layer 1 gate (even though we built the SQL, belt-and-suspenders)
-    rejection = _check_layer1(sql)
-    if rejection:
-        raise ValueError(f"Internal gate rejection for sample query: {rejection}")
-
-    async with get_connection() as conn:
+    async with source(schema) as (conn, real_schema):
+        sql = f'SELECT {col_list} FROM {connections.quote_ident(real_schema)}."{table}" LIMIT {effective_limit}'
+        # Run through Layer 1 gate (even though we built the SQL, belt-and-suspenders)
+        rejection = _check_layer1(sql)
+        if rejection:
+            raise ValueError(f"Internal gate rejection for sample query: {rejection}")
         cur = await conn.execute(sql)
         rows = await cur.fetchall()
         col_names = [desc.name for desc in cur.description] if cur.description else []
@@ -289,9 +288,49 @@ async def sample_rows(
 
 
 # ── A4.4 data.run_select ─────────────────────────────────────────────────────
+def _rows_result(cur: Any, rows: list, effective_max: int) -> dict[str, Any]:
+    col_names = [desc.name for desc in cur.description] if cur.description else []
+    return {"ok": True, "columns": col_names, "rows": [dict(zip(col_names, row)) for row in rows[:effective_max]],
+            "row_count": min(len(rows), effective_max), "truncated": len(rows) > effective_max, "error": None}
+
+
+async def _run_external(sql: str, dataset: str, effective_max: int) -> dict[str, Any]:
+    """run_select on the owner's database (mcp/connections.py): map, gate again, run read-only."""
+    try:
+        async with connections.external(dataset) as (conn, real_schema):
+            try:
+                mapped = connections.map_sql(sql, dataset, real_schema)
+            except connections.Refused as exc:
+                return _refused(str(exc))
+            rejection = _check_layer1(mapped)
+            if rejection:
+                return _refused(rejection)
+            try:
+                cur = await conn.execute(mapped)
+                rows = await cur.fetchmany(effective_max + 1)
+            except psycopg.Error as exc:
+                sqlstate = getattr(exc, "sqlstate", None)
+                logger.warning("data.run_select (connected %s): sqlstate=%s message=%s", dataset, sqlstate, exc)
+                return {"ok": False, "columns": [], "rows": [], "row_count": 0, "truncated": False,
+                        "error": {"sqlstate": sqlstate, "message": str(exc)}}
+            result = _rows_result(cur, rows, effective_max)
+            logger.info("data.run_select (connected %s): ok=True rows=%d truncated=%s", dataset,
+                        result["row_count"], result["truncated"])
+            return result
+    except connections.Refused as exc:
+        return {"ok": False, "columns": [], "rows": [], "row_count": 0, "truncated": False,
+                "error": {"sqlstate": None, "message": str(exc)}}
+
+
+def _refused(message: str) -> dict[str, Any]:
+    return {"ok": False, "columns": [], "rows": [], "row_count": 0, "truncated": False,
+            "error": {"sqlstate": None, "message": f"[Layer 1 Gate] {message}"}}
+
+
 async def run_select(
     sql: str,
     max_rows: int = _MAX_ROWS_DEFAULT,
+    dataset: str | None = None,
 ) -> dict[str, Any]:
     """
     A4.4 data.run_select — the only relational execution path.
@@ -318,6 +357,19 @@ async def run_select(
                 "message": f"[Layer 1 Gate] {rejection}",
             },
         }
+
+    # ── Which database (mcp/connections.py, rule 4) ──────────────────────────
+    # A connected dataset's SQL runs on the owner's database, with its cn_
+    # qualifier mapped to the real schema and gated again; SQL for a built-in
+    # dataset may not name a connection at all.
+    try:
+        named, _ = connections.datasets_named(sql)
+    except Exception:  # noqa: BLE001 - Layer 1 already parsed this SQL; never block on a second look
+        named = set()
+    if connections.is_token(dataset):
+        return await _run_external(sql, dataset, effective_max)
+    if named:
+        return _refused("This query names a connected database; ask it in a workspace that uses that database.")
 
     # ── Layer 2 (enforced in db.get_connection) + Layer 3 (role grants) ──────
     async with get_connection() as conn:

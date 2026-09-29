@@ -30,8 +30,13 @@ class MCPSession:
     """
 
     def __init__(self, tenant_id: str, base_url: str | None = None,
-                session_id: str | None = None, workspace_id: str | None = None) -> None:
+                session_id: str | None = None, workspace_id: str | None = None,
+                dataset: str | None = None) -> None:
         self.tenant_id = tenant_id
+        # The dataset the question is about. data_run_select sends it, so the
+        # MCP runs the SQL on the right database: ours for a built-in schema,
+        # the owner's for a connected one (mcp/connections.py, cn_... names).
+        self.dataset = dataset
         # Phase 3: the workspace a question is asked in, carried as
         # X-Workspace-ID. The MCP checks it against tenant and principal; it
         # is routing information, not a credential.
@@ -169,6 +174,8 @@ async def data_run_select(
     params: dict[str, Any] = {"sql": sql}
     if max_rows is not None:
         params["max_rows"] = max_rows
+    if getattr(session, "dataset", None):
+        params["dataset"] = session.dataset
     return await session.call("data.run_select", params)
 
 

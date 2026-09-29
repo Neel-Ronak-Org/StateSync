@@ -31,6 +31,7 @@ import logging
 import uuid
 from typing import Any
 
+import connections
 from config_loader import cfg
 from db import get_history_connection
 from session import get_tenant_id
@@ -202,7 +203,7 @@ async def _view(conn: Any, tenant_id: str, principal_id: str, dashboard_id: str)
 # ── Actions ───────────────────────────────────────────────────────────────────
 
 async def _list(tenant_id: str, principal_id: str, target_schema: Any) -> dict[str, Any]:
-    if target_schema is not None and target_schema not in ALLOWED_SCHEMAS:
+    if target_schema is not None and target_schema not in ALLOWED_SCHEMAS and not connections.is_token(target_schema):
         return _fail("invalid", f"Unknown dataset {target_schema!r}.")
     async with get_history_connection() as conn:
         if target_schema is None:
@@ -218,9 +219,12 @@ async def _create(tenant_id: str, principal_id: str, name: Any, target_schema: A
     clean = resolve_name(name)
     if clean is None:
         return _fail("invalid", "name must not be blank.")
-    if target_schema not in ALLOWED_SCHEMAS:
+    if target_schema not in ALLOWED_SCHEMAS and not connections.is_token(target_schema):
         return _fail("invalid", f"Unknown dataset {target_schema!r}.")
     async with get_history_connection() as conn:
+        if connections.is_token(target_schema) and not await connections.owns_dataset(
+                conn, tenant_id, principal_id, target_schema):
+            return _fail("invalid", f"Unknown dataset {target_schema!r}.")
         count = (await (await conn.execute(
             "SELECT count(*) FROM session_state.dashboards WHERE tenant_id = %s AND principal_id = %s",
             (tenant_id, principal_id),

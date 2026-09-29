@@ -14,6 +14,10 @@ import json
 import logging
 from typing import Any
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+import connections
 from db import get_connection
 from fingerprint import compute_fingerprint
 
@@ -44,13 +48,49 @@ ALLOWED_SCHEMAS = frozenset({"public", "olist", "live"})
 
 def _validate_schema(schema: str) -> None:
     """Refuse an unknown schema loudly. An unresolvable name is an error, not a
-    silent fallback to public -- the same rule A8 applies to scorer names."""
-    if schema not in ALLOWED_SCHEMAS:
+    silent fallback to public -- the same rule A8 applies to scorer names.
+    A connected database's dataset name (cn_...) is resolved by `source`."""
+    if schema not in ALLOWED_SCHEMAS and not connections.is_token(schema):
         raise ValueError(
             f"Schema {schema!r} is not discoverable. Allowed: "
             f"{sorted(ALLOWED_SCHEMAS)}. Add it to ALLOWED_SCHEMAS deliberately; "
             f"note that only 'public' participates in the A5 fingerprint."
         )
+
+
+@asynccontextmanager
+async def source(schema: str) -> AsyncIterator[tuple[Any, str]]:
+    """(connection, schema to query) for a dataset: our own database for a built-in
+    schema, the owner's database (mcp/connections.py) for a cn_ dataset. Both are
+    READ ONLY transactions that are rolled back."""
+    _validate_schema(schema)
+    if connections.is_token(schema):
+        try:
+            async with connections.external(schema) as (conn, real_schema):
+                yield conn, real_schema
+        except connections.Refused as exc:
+            raise ValueError(str(exc)) from None
+    else:
+        async with get_connection() as conn:
+            yield conn, schema
+
+
+_EXTERNAL_TABLES = """
+    SELECT c.relname, GREATEST(c.reltuples::bigint, 0), obj_description(c.oid, 'pg_class')
+    FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = %s AND c.relkind IN ('r', 'p', 'v', 'm')
+      AND pg_catalog.has_table_privilege(c.oid, 'SELECT')
+    ORDER BY c.relname
+"""
+
+_EXTERNAL_FINGERPRINT = """
+    SELECT c.relname, a.attname, pg_catalog.format_type(a.atttypid, a.atttypmod)
+    FROM pg_catalog.pg_attribute a
+    JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = %s AND c.relkind IN ('r', 'p', 'v', 'm') AND a.attnum > 0 AND NOT a.attisdropped
+    ORDER BY 1, 2
+"""
 
 
 async def list_tables(schema: str = DEFAULT_SCHEMA) -> dict[str, Any]:
@@ -72,6 +112,16 @@ async def list_tables(schema: str = DEFAULT_SCHEMA) -> dict[str, Any]:
     is exactly the case C1-V4 exists to test.
     """
     _validate_schema(schema)
+    if connections.is_token(schema):
+        # The owner's database: every readable table or view in the chosen
+        # schema. Its fingerprint hashes that schema's columns (the A5
+        # fingerprint describes our public schema only).
+        async with source(schema) as (conn, real_schema):
+            rows = await (await conn.execute(_EXTERNAL_TABLES, (real_schema,))).fetchall()
+            columns = await (await conn.execute(_EXTERNAL_FINGERPRINT, (real_schema,))).fetchall()
+        tables = [{"name": r[0], "row_estimate": int(r[1]), "comment": r[2]} for r in rows]
+        fingerprint = hashlib.sha256(json.dumps(columns, separators=(",", ":")).encode()).hexdigest()
+        return {"tables": tables, "fingerprint": fingerprint, "schema": schema}
     async with get_connection() as conn:
         # Table list with row estimates from pg_stat_user_tables.
         #
@@ -148,9 +198,7 @@ async def describe_table(table: str, schema: str = DEFAULT_SCHEMA) -> dict[str, 
     import re
     if not re.match(r'^[a-z_][a-z0-9_]{0,62}$', table):
         raise ValueError(f"Invalid table name: {table!r}")
-    _validate_schema(schema)
-
-    async with get_connection() as conn:
+    async with source(schema) as (conn, schema):
         # Columns
         cols_query = """
             SELECT

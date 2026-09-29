@@ -26,6 +26,11 @@ echo "changeme_history" > secrets/pg_history_password
 
 # Anthropic API key
 echo "sk-ant-..." > secrets/anthropic_api_key
+
+# Encryption key for the passwords of your own connected databases
+# (mcp/connections.py, migration 026). Mounted into the mcp container only.
+# Never regenerate it once connections exist: their passwords become unreadable.
+python3 scripts/make_connection_key.py
 ```
 
 ### In production:

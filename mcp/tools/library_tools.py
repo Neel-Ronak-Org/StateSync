@@ -14,6 +14,8 @@ One JSON-RPC method, library.manage (decision D-v3-10), takes an `action`:
                                                          (titles, for the router)
   workspace_chunks                                       their passages, in reading order (for finding
                                                          definitions in documents)
+  connections, create_connection, set_connection_schema,  the owner's own Postgres databases
+  test_connection, delete_connection                     (mcp/connections.py; passwords never returned)
 
 WHY INGESTION IS SPLIT INTO start / add_chunks / finish. The orchestrator
 parses the upload (in the isolated parser service) and chunks it; this tool
@@ -48,6 +50,9 @@ from typing import Any
 
 import psycopg
 
+import asyncio
+
+import connections
 from config_loader import cfg
 from db import get_history_connection
 from embeddings import embed_texts
@@ -60,6 +65,7 @@ _ACTIONS = frozenset({
     "folders", "create_folder", "rename_folder", "delete_folder",
     "documents", "start_document", "add_chunks", "finish_document", "delete_document",
     "workspace_folders", "set_workspace_folders", "workspace_documents", "workspace_chunks",
+    "connections", "create_connection", "set_connection_schema", "test_connection", "delete_connection",
 })
 _FINISH_STATUSES = frozenset({"ready", "failed"})
 _SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")  # noqa: literals - a SHA-256 digest is 64 hex characters
@@ -457,12 +463,206 @@ async def _workspace_chunks(tenant_id, principal_id, workspace_id=None, **_):
     return {"ok": True, "chunks": [dict(zip(fields, row)) for row in rows]}
 
 
+# ── Connections (the owner's own Postgres; mcp/connections.py) ────────────────
+
+_CONNECTION_VIEW = """
+    SELECT c.connection_id, c.name, c.host, c.port, c.dbname, c.username, c.sslmode, c.schema_name, c.status,
+           c.check_detail, c.checked_at, c.created_at,
+           COALESCE((SELECT array_agg(w.workspace_id ORDER BY w.workspace_id) FROM session_state.workspaces w
+                     WHERE w.connection_id = c.connection_id), '{}')
+    FROM session_state.connections c
+    WHERE c.tenant_id = %s AND c.owner_principal_id = %s
+"""
+_CONNECTION_FIELDS = ("connection_id", "name", "host", "port", "dbname", "username", "sslmode", "schema_name",
+                      "status", "check_detail", "checked_at", "created_at", "workspace_ids")
+
+
+def _connection_from_row(row: tuple) -> dict[str, Any]:
+    view = dict(zip(_CONNECTION_FIELDS, row, strict=True))
+    view["workspace_ids"] = list(view["workspace_ids"] or [])
+    return to_json_safe(view)
+
+
+async def _connection_view(conn: Any, tenant_id: str, principal_id: str, connection_id: Any) -> dict | None:
+    if not connections.is_token(connection_id):
+        return None
+    row = await (await conn.execute(_CONNECTION_VIEW + " AND c.connection_id = %s",
+                                    (tenant_id, principal_id, connection_id))).fetchone()
+    return _connection_from_row(row) if row else None
+
+
+def _connection_fields(name, host, port, dbname, username, password, sslmode) -> dict[str, Any] | str:
+    """Clean connection settings, or why they are unusable. No network access."""
+    limit = int(cfg.connections.field_max_chars)
+    fields = {
+        "name": clean_text(name, int(cfg.connections.name_max_chars)),
+        "host": clean_text(host, int(cfg.connections.host_max_chars)),
+        "dbname": clean_text(dbname, limit),
+        "username": clean_text(username, limit),
+    }
+    missing = [k for k, v in fields.items() if v is None]
+    if missing:
+        return f"{', '.join(missing)} must not be blank."
+    if any(ch.isspace() or ch in "/@?#" for ch in fields["host"]):
+        return "host must be a host name or address only (no spaces, slashes or @)."
+    if not _is_int(port) or not 1 <= port <= 65535:  # noqa: literals - the TCP port range
+        return "port must be a whole number from 1 to 65535."
+    if not isinstance(password, str) or not password or len(password) > int(cfg.connections.password_max_chars):
+        return "password must not be blank."
+    if sslmode not in list(cfg.connections.sslmodes):
+        return f"sslmode must be one of {list(cfg.connections.sslmodes)}."
+    return {**fields, "port": port, "password": password, "sslmode": sslmode}
+
+
+async def _check_login(host: str, port: int, dbname: str, username: str, password: str,
+                       sslmode: str) -> tuple[list[str], list[str]]:
+    hostaddr = await asyncio.to_thread(connections.check_host, host)
+    return await connections.verify(connections.connect_kwargs(host, hostaddr, port, dbname, username, password,
+                                                               sslmode))
+
+
+async def _connections(tenant_id, principal_id, **_):
+    async with get_history_connection() as conn:
+        rows = await (await conn.execute(_CONNECTION_VIEW + " ORDER BY c.name", (tenant_id, principal_id))).fetchall()
+    return {"ok": True, "available": connections.available(),
+            "connections": [_connection_from_row(r) for r in rows]}
+
+
+async def _create_connection(tenant_id, principal_id, name=None, host=None, port=None, dbname=None, username=None,
+                             password=None, sslmode="prefer", **_):
+    fields = _connection_fields(name, host, port, dbname, username, password, sslmode)
+    if isinstance(fields, str):
+        return _fail("invalid", fields)
+    if not connections.available():
+        return _fail("invalid", "Connections are not set up on this server (no encryption key).")
+    async with get_history_connection() as conn:
+        count = (await (await conn.execute(
+            "SELECT count(*) FROM session_state.connections WHERE tenant_id = %s AND owner_principal_id = %s",
+            (tenant_id, principal_id))).fetchone())[0]
+        if count >= int(cfg.connections.max_per_principal):
+            return _fail("limit_reached", f"You already have {count} connections; the limit is "
+                                          f"{cfg.connections.max_per_principal}.")
+        taken = await (await conn.execute(
+            "SELECT 1 FROM session_state.connections WHERE tenant_id = %s AND owner_principal_id = %s AND name = %s",
+            (tenant_id, principal_id, fields["name"]))).fetchone()
+        if taken:
+            return _fail("invalid", "A connection with that name already exists.")
+    try:
+        schemas, warnings = await _check_login(fields["host"], fields["port"], fields["dbname"], fields["username"],
+                                               fields["password"], fields["sslmode"])
+    except connections.Refused as exc:
+        return _fail("invalid", str(exc))
+    connection_id = _new_id("cn_")
+    chosen = schemas[0] if len(schemas) == 1 else None
+    try:
+        async with get_history_connection() as conn:
+            await conn.execute(
+                "INSERT INTO session_state.connections (connection_id, tenant_id, owner_principal_id, name, host, "
+                "port, dbname, username, password_enc, sslmode, schema_name, status, check_detail) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'ok', %s)",
+                (connection_id, tenant_id, principal_id, fields["name"], fields["host"], fields["port"],
+                 fields["dbname"], fields["username"], connections.encrypt(fields["password"]), fields["sslmode"],
+                 chosen, " ".join(warnings) or None))
+            view = await _connection_view(conn, tenant_id, principal_id, connection_id)
+    except psycopg.errors.UniqueViolation:
+        return _fail("invalid", "A connection with that name already exists.")
+    logger.info("library: connection %s added (tenant=%s, %d schemas)", connection_id, tenant_id, len(schemas))
+    return {"ok": True, "connection": view, "schemas": schemas, "warnings": warnings}
+
+
+async def _stored_login(conn: Any, tenant_id: str, principal_id: str, connection_id: Any) -> tuple | None:
+    if not connections.is_token(connection_id):
+        return None
+    return await (await conn.execute(
+        "SELECT host, port, dbname, username, password_enc, sslmode FROM session_state.connections "
+        "WHERE tenant_id = %s AND owner_principal_id = %s AND connection_id = %s",
+        (tenant_id, principal_id, connection_id))).fetchone()
+
+
+async def _recheck(tenant_id: str, principal_id: str, connection_id: str,
+                   login: tuple) -> tuple[list[str], list[str]] | str:
+    """Re-verify a stored login and record the outcome; (schemas, warnings) or the refusal."""
+    host, port, dbname, username, password_enc, sslmode = login
+    try:
+        schemas, warnings = await _check_login(host, port, dbname, username, connections.decrypt(password_enc),
+                                               sslmode)
+        status, detail = "ok", " ".join(warnings) or None
+    except connections.Refused as exc:
+        schemas, warnings, status, detail = [], [], "failed", str(exc)
+    async with get_history_connection() as conn:
+        await conn.execute(
+            "UPDATE session_state.connections SET status = %s, check_detail = %s, checked_at = now() "
+            "WHERE tenant_id = %s AND owner_principal_id = %s AND connection_id = %s",
+            (status, detail, tenant_id, principal_id, connection_id))
+    return (schemas, warnings) if status == "ok" else str(detail)
+
+
+async def _test_connection(tenant_id, principal_id, connection_id=None, **_):
+    async with get_history_connection() as conn:
+        login = await _stored_login(conn, tenant_id, principal_id, connection_id)
+    if login is None:
+        return _fail("not_found", "No such connection.")
+    outcome = await _recheck(tenant_id, principal_id, connection_id, login)
+    await connections.forget(connection_id)
+    async with get_history_connection() as conn:
+        view = await _connection_view(conn, tenant_id, principal_id, connection_id)
+    if isinstance(outcome, str):
+        return {"ok": True, "connection": view, "schemas": [], "warnings": []}
+    return {"ok": True, "connection": view, "schemas": outcome[0], "warnings": outcome[1]}
+
+
+async def _set_connection_schema(tenant_id, principal_id, connection_id=None, schema_name=None, **_):
+    if not isinstance(schema_name, str) or not schema_name.strip():
+        return _fail("invalid", "Choose a schema.")
+    async with get_history_connection() as conn:
+        login = await _stored_login(conn, tenant_id, principal_id, connection_id)
+        in_use = await (await conn.execute(
+            "SELECT count(*) FROM session_state.workspaces WHERE tenant_id = %s AND connection_id = %s",
+            (tenant_id, connection_id))).fetchone()
+    if login is None:
+        return _fail("not_found", "No such connection.")
+    if in_use and in_use[0]:
+        return _fail("invalid", "Workspaces use this connection's schema; it cannot change under them. "
+                                "Add another connection for a different schema.")
+    outcome = await _recheck(tenant_id, principal_id, connection_id, login)
+    if isinstance(outcome, str):
+        return _fail("invalid", outcome)
+    if schema_name not in outcome[0]:
+        return _fail("invalid", f"This login cannot read any table in {schema_name!r}.")
+    async with get_history_connection() as conn:
+        await conn.execute(
+            "UPDATE session_state.connections SET schema_name = %s WHERE tenant_id = %s AND owner_principal_id = %s "
+            "AND connection_id = %s", (schema_name, tenant_id, principal_id, connection_id))
+        view = await _connection_view(conn, tenant_id, principal_id, connection_id)
+    await connections.forget(connection_id)
+    return {"ok": True, "connection": view}
+
+
+async def _delete_connection(tenant_id, principal_id, connection_id=None, **_):
+    async with get_history_connection() as conn:
+        view = await _connection_view(conn, tenant_id, principal_id, connection_id)
+        if view is None:
+            return _fail("not_found", "No such connection.")
+        if view["workspace_ids"]:
+            count = len(view["workspace_ids"])
+            return _fail("invalid", f"{count} workspace{'s use' if count != 1 else ' uses'} this connection. "
+                                    f"Delete {'them' if count != 1 else 'it'} first.")
+        await conn.execute("DELETE FROM session_state.connections WHERE tenant_id = %s AND owner_principal_id = %s "
+                           "AND connection_id = %s", (tenant_id, principal_id, connection_id))
+    await connections.forget(connection_id)
+    logger.info("library: connection %s deleted (tenant=%s)", connection_id, tenant_id)
+    return {"ok": True, "deleted": 1}
+
+
 _HANDLERS = {
     "folders": _folders, "create_folder": _create_folder, "rename_folder": _rename_folder,
     "delete_folder": _delete_folder, "documents": _documents, "start_document": _start_document,
     "add_chunks": _add_chunks, "finish_document": _finish_document, "delete_document": _delete_document,
     "workspace_folders": _workspace_folders, "set_workspace_folders": _set_workspace_folders,
     "workspace_documents": _workspace_documents, "workspace_chunks": _workspace_chunks,
+    "connections": _connections, "create_connection": _create_connection,
+    "set_connection_schema": _set_connection_schema, "test_connection": _test_connection,
+    "delete_connection": _delete_connection,
 }
 
 

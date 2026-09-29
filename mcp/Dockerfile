@@ -14,7 +14,8 @@ RUN uv pip install --system --no-cache \
     "pglast>=6.2" \
     "pydantic>=2.7.0" \
     "httpx>=0.27.0" \
-    "qdrant-client>=1.9.0,<1.10.0"
+    "qdrant-client>=1.9.0,<1.10.0" \
+    "cryptography>=42"
 
 COPY . .
 

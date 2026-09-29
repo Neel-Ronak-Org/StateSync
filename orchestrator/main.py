@@ -41,7 +41,7 @@ from state import StateSyncState
 from tiles_api import register_tile_routes
 from builder_api import register_build_routes
 from dashboards_api import register_dashboard_routes
-from library_api import call_library, register_library_routes
+from library_api import call_library, is_connection_dataset, register_library_routes
 from workspaces_api import call_workspaces, register_workspace_routes
 
 logging.basicConfig(
@@ -662,7 +662,9 @@ async def run_query(
             raise HTTPException(status_code=409, detail=(
                 f"This workspace uses the {workspace['target_schema']} dataset, not {body.schema}."))
         requested = workspace["target_schema"]
-    if requested not in cfg.api.allowed_schemas:
+    # A connected database (cn_...) is reachable only through a workspace of the
+    # caller's own, checked just above; the MCP resolves it for this tenant.
+    if requested not in cfg.api.allowed_schemas and not (body.workspace_id and is_connection_dataset(requested)):
         raise HTTPException(
             status_code=422,
             detail=f"Schema {requested!r} is not allowed. Allowed schemas: {sorted(cfg.api.allowed_schemas)}",

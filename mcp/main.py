@@ -56,6 +56,7 @@ from serialization import to_json_safe
 from tools.tile_tools import manage as tiles_manage
 from tools.dashboard_tools import manage as dashboards_manage
 from tools.workspace_tools import manage as workspaces_manage
+from connections import close_all as close_external_connections
 from tools.library_tools import manage as library_manage
 from tools.history_tools import (append_turn, check_session, delete_session, get_recent_turns,
                                  get_turn_rows, list_sessions, record_audit)
@@ -82,6 +83,7 @@ async def lifespan(app: FastAPI):
     logger.info("MCP service ready. Exposing %d tools.", len(_REGISTERED_TOOLS))
     yield
     await close_qdrant()
+    await close_external_connections()
     await close_embeddings_client()
     await close_pool()
     await close_history_pool()
