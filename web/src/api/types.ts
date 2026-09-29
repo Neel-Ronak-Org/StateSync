@@ -52,6 +52,21 @@ export interface TraceMetrics {
   [key: string]: unknown
 }
 
+/** One model call made while answering, in call order (developer mode shows these). */
+export interface ModelCall {
+  role: string
+  model: string
+  tokens_in?: number
+  tokens_out?: number
+  cached_tokens?: number
+  retries?: number
+  waited_ms?: number
+  ms: number
+  rate_remaining_tokens?: number | null
+  /** Set instead of the token fields when the call failed. */
+  error?: string
+}
+
 export interface StateTrace {
   query_id: string
   target_schema: string
@@ -76,6 +91,7 @@ export interface StateTrace {
   context_guessed: boolean
   subtasks: string[]
   retrievals: Retrieval[]
+  calls?: ModelCall[]
   [key: string]: unknown
 }
 

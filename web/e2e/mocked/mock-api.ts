@@ -530,6 +530,13 @@ export class MockApi {
         context_guessed: false,
         subtasks: [],
         retrievals: [],
+        calls: [
+          { role: 'normalizer', model: 'llama-3.1-8b-instant', tokens_in: 412, tokens_out: 38, cached_tokens: 0, retries: 0, waited_ms: 0, ms: 310, rate_remaining_tokens: 7588 },
+          { role: 'supervisor', model: 'llama-3.1-8b-instant', tokens_in: 655, tokens_out: 22, cached_tokens: 384, retries: 0, waited_ms: 0, ms: 280, rate_remaining_tokens: 6911 },
+          { role: 'sql', model: 'openai/gpt-oss-120b', tokens_in: 2104, tokens_out: 96, cached_tokens: 1024, retries: 0, waited_ms: 0, ms: 1240, rate_remaining_tokens: 4800 },
+          { role: 'sql', model: 'openai/gpt-oss-120b', tokens_in: 1290, tokens_out: 71, cached_tokens: 0, retries: 1, waited_ms: 2000, ms: 3410, rate_remaining_tokens: 3500 },
+          { role: 'synthesizer', model: 'openai/gpt-oss-120b', tokens_in: 703, tokens_out: 71, cached_tokens: 0, retries: 0, waited_ms: 0, ms: 840, rate_remaining_tokens: 2700 },
+        ],
       },
     })
   }

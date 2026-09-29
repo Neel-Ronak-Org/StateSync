@@ -528,6 +528,35 @@ waits for Groq's daily token quota on gpt-oss-120b, exhausted on 2026-09-27.
   public): a workspace set up through the wizard scores at least 8 of 10 on its setup
   test.
 
+### Phase 3b — Measure, then lean (scope review, 2026-09-28)
+
+The scope review (Claude Docs: "StateSync scope review") measured the pipeline on the
+live stack: a database question makes 5 model calls, ~4,900 input tokens, ~3.3 s, and
+the Groq free tier (8K tokens/min, 200K/day per model) caps use at ~55 questions a day.
+No accuracy number in this repo was measured on the Groq models in use.
+
+Order of work (owner, 2026-09-29; cleanup items are **kept for now**, D-v3-13):
+
+1. **Instrumentation:** every model call recorded per answer (tokens in/out/cached, time,
+   retries, rate-limit headroom); developer mode shows it.
+2. **Groq baseline:** a fixed 30-question set (`fixtures/golden/groq_baseline.json`,
+   selected by rule from existing fixtures) and `scripts/eval_groq.py` (paced, resumable,
+   dry-run costs no quota).
+3. **Lean pipeline behind flags, default off until measured:** language check in code,
+   router only where a source has documents (merged with the follow-up rewrite), column
+   profiles instead of the SQL draft, shorter answers with numbers formatted in code,
+   cache-friendly prompt order, at most one retry on a timeout, fail fast on stalls.
+4. **Trust features:** answer checks (fan-out, empty/NULL-heavy, ratio formatting, dates
+   outside the data), plain-English "how I got this", column profiles at scan.
+5. **Rest of Phase 3 around evidence-tiered answering** (Verified / Compiled / Checked /
+   Unchecked): metrics, templates from verified queries, definitions mined from documents
+   with citations, a self-testing workspace; then uploads, own Postgres (self-hosted),
+   the synthetic-schema switches.
+
+Each change ships only if accuracy on the baseline set holds within one question and
+tokens or time fall. Implementation is delegated from written specs to Sonnet subagents
+and audited by execution (D-v3-15).
+
 ### Phase 4 — Deploy
 
 - One server: Caddy, a hosted model with spending caps, a guest demo workspace, and
@@ -572,6 +601,9 @@ header requires a record for any change there).
 | D-v3-10 | 2026-09-28 | MCP methods 19 and 20: `workspaces.manage`, `docs.manage`; the ceiling stays 20 | Workspaces, the knowledge store and connections share one method; documents another. The ceiling is now full: a further method needs a new decision |
 | D-v3-11 | 2026-09-28 | Text PDFs are parsed with pypdf, not Docling | Docling's layout models are about 2 GB and scanned PDFs are out of scope; pypdf is BSD-licensed (PyMuPDF is AGPL) |
 | D-v3-12 | 2026-09-28 | Setup tests on sample datasets are graded by execution accuracy against curated reference SQL | An objective score beats the owner grading their own demo; right answers become approved examples for that workspace only, so the benchmarks stay clean |
+| D-v3-13 | 2026-09-29 | The scope review's cleanup list (memory + Qdrant, vision scorer, unused adapters, tenancy placeholder, evaluator service) stays for now | Owner decision: test before removing; each item is measured before it goes |
+| D-v3-14 | 2026-09-29 | Measure first: instrumentation and a Groq baseline precede any pipeline change; lean changes land behind flags, default off | Every existing accuracy number predates Groq; the draft call and others were never measured on their own |
+| D-v3-15 | 2026-09-29 | Bulk implementation goes to Sonnet subagents from written specs with completion criteria; the lead audits by execution and reading | Owner request for cheaper usage; audits caught real bugs in delegated work before (Phase 3 slice 4) |
 
 ## 9. Issue register
 

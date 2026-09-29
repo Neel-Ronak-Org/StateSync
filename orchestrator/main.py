@@ -27,6 +27,7 @@ from auth import (AuthError, Principal, RateLimited, RateLimiter, authenticate, 
 from config_loader import cfg, flags, snapshot_flags
 from graph import graph
 from llm.provider import LLM_READINESS, validate_llm_config
+from llm.recording import start_recording, stop_recording
 from failures import user_facing_failure
 from mcp_client import (MCPSession, audit_record, history_append_turn,
                         history_check_session, history_get_recent_turns,
@@ -414,6 +415,7 @@ async def answer_question(
     }
 
     t0 = time.monotonic()
+    model_calls = start_recording()
     try:
         raw_final = await graph.ainvoke(
             StateSyncState(
@@ -444,6 +446,8 @@ async def answer_question(
         )
         status_code, message = user_facing_failure(exc, query_id)
         raise HTTPException(status_code=status_code, detail=message)
+    finally:
+        stop_recording()
 
     latency_ms = int((time.monotonic() - t0) * 1000)  # noqa: literals — ms conversion factor
 
@@ -483,6 +487,7 @@ async def answer_question(
         "spatial":            final_state.spatial.model_dump(),
         "subtasks":           final_state.subtasks,
         "retrievals":         [r.model_dump() for r in final_state.retrievals],
+        "calls":              model_calls,
     }
 
     # Recomputed here from final_state's typed fields, not read off the

@@ -249,4 +249,22 @@ test.describe('appearance', () => {
     const panel = page.getByRole('dialog', { name: 'Answer details' })
     await expect(panel.getByText('llm_calls')).toBeVisible()
   })
+
+  test('developer mode lists every model call with a total; off, it is hidden', async ({ page }) => {
+    await openApp(page, { hash: '#/ask' })
+    await ask(page, 'How many orders are there in total?')
+    const details = page.getByTestId('turn').last().getByRole('button', { name: 'Details' })
+    const panel = page.getByRole('dialog', { name: 'Answer details' })
+
+    await details.click()
+    await expect(panel.getByTestId('model-calls')).toHaveCount(0)
+    await page.keyboard.press('Escape')
+
+    await page.getByRole('switch', { name: 'Developer mode' }).click()
+    await details.click()
+    const table = panel.getByTestId('model-calls')
+    await expect(table.getByTestId('model-call')).toHaveCount(5)
+    await expect(table.getByTestId('model-calls-total')).toContainText('5,164')
+    await expect(table.getByText('0.84 s')).toBeVisible()
+  })
 })

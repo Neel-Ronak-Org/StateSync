@@ -13,6 +13,7 @@ import {
 import { copyToClipboard } from '@/lib/clipboard'
 import { formatNumber } from '@/lib/format'
 import { sourceLabel } from '@/lib/sources'
+import type { ModelCall } from '@/api/types'
 import type { ChatTurn } from '@/types/chat'
 
 interface DetailsSheetProps {
@@ -47,6 +48,10 @@ export function DetailsSheet({ turn, open, onOpenChange, devMode }: DetailsSheet
   }
 
   const metrics = turn.stateTrace?.metrics
+  const calls = turn.stateTrace?.calls ?? []
+  const anyWaited = calls.some((c) => (c.waited_ms ?? 0) > 0)
+  const sum = (pick: (c: ModelCall) => number | undefined) =>
+    calls.reduce((total, c) => total + (pick(c) ?? 0), 0)
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -162,6 +167,67 @@ export function DetailsSheet({ turn, open, onOpenChange, devMode }: DetailsSheet
               <p className="text-xs text-muted-foreground">No citations for this answer.</p>
             )}
           </div>
+
+          {/* Section: Model calls (Developer Mode) */}
+          {devMode && calls.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-foreground">Model calls</h3>
+              <div className="overflow-x-auto rounded-md border">
+                <table data-testid="model-calls" className="w-full text-xs">
+                  <thead className="text-muted-foreground">
+                    <tr className="border-b text-left">
+                      <th className="p-2 font-medium">Step</th>
+                      <th className="p-2 font-medium">Model</th>
+                      <th className="p-2 text-right font-medium">In</th>
+                      <th className="p-2 text-right font-medium">Out</th>
+                      <th className="p-2 text-right font-medium">Cached</th>
+                      <th className="p-2 text-right font-medium">Time</th>
+                      {anyWaited && <th className="p-2 text-right font-medium">Waited</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="font-mono">
+                    {calls.map((c, idx) => (
+                      <tr key={idx} data-testid="model-call" className="border-b">
+                        <td className="p-2">{c.role}</td>
+                        <td className="p-2 break-all">{c.model}</td>
+                        {c.error ? (
+                          <td colSpan={3} className="p-2 text-right text-destructive">
+                            failed: {c.error}
+                          </td>
+                        ) : (
+                          <>
+                            <td className="p-2 text-right">{formatNumber(c.tokens_in ?? 0)}</td>
+                            <td className="p-2 text-right">{formatNumber(c.tokens_out ?? 0)}</td>
+                            <td className="p-2 text-right">{formatNumber(c.cached_tokens ?? 0)}</td>
+                          </>
+                        )}
+                        <td className="p-2 text-right">{(c.ms / 1000).toFixed(2)} s</td>
+                        {anyWaited && (
+                          <td className="p-2 text-right">
+                            {c.waited_ms ? `${(c.waited_ms / 1000).toFixed(2)} s` : '—'}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="font-mono font-medium">
+                    <tr data-testid="model-calls-total">
+                      <td className="p-2" colSpan={2}>Total</td>
+                      <td className="p-2 text-right">{formatNumber(sum((c) => c.tokens_in))}</td>
+                      <td className="p-2 text-right">{formatNumber(sum((c) => c.tokens_out))}</td>
+                      <td className="p-2 text-right">{formatNumber(sum((c) => c.cached_tokens))}</td>
+                      <td className="p-2 text-right">{(sum((c) => c.ms) / 1000).toFixed(2)} s</td>
+                      {anyWaited && (
+                        <td className="p-2 text-right">
+                          {(sum((c) => c.waited_ms) / 1000).toFixed(2)} s
+                        </td>
+                      )}
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Section 4: Trace (Developer Mode) */}
           {devMode && turn.stateTrace && (
