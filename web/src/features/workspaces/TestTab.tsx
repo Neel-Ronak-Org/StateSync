@@ -1,8 +1,8 @@
-import { CheckCircle2, Play, XCircle } from 'lucide-react'
+import { CheckCircle2, Play, RefreshCw, Trash2, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { ApiError } from '@/api/client'
-import type { SetupJob, SetupRun, SetupState } from '@/api/types'
+import type { ExampleCheckState, ExampleInfo, SetupJob, SetupRun, SetupState } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -15,6 +15,17 @@ interface TestTabProps {
   isRunning: boolean
   onStartSetup: () => Promise<unknown>
   onSetVerdict: (runId: string, position: number, verdict: 'right' | 'wrong') => Promise<unknown>
+  examples: ExampleInfo[]
+  isChecking: boolean
+  onRecheck: () => Promise<unknown>
+  onRemoveExample: (question: string) => Promise<unknown>
+}
+
+const CHECK_LABEL: Record<ExampleCheckState | 'unchecked', string> = {
+  ok: 'OK',
+  changed: 'Changed',
+  failed: 'Failed',
+  unchecked: 'Not checked yet',
 }
 
 /** The Test tab for running the 10-question acceptance test and viewing results. */
@@ -26,6 +37,10 @@ export function TestTab({
   isRunning,
   onStartSetup,
   onSetVerdict,
+  examples,
+  isChecking,
+  onRecheck,
+  onRemoveExample,
 }: TestTabProps) {
   const canRun = setupState === 'approved' || setupState === 'tested'
   // Why the last test stopped (e.g. the model's quota ran out), when it did.
@@ -48,6 +63,22 @@ export function TestTab({
       await onSetVerdict(run.run_id, position, verdict)
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Failed to record verdict.')
+    }
+  }
+
+  const handleRecheck = async () => {
+    try {
+      await onRecheck()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'The re-check failed.')
+    }
+  }
+
+  const handleRemove = async (question: string) => {
+    try {
+      await onRemoveExample(question)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Failed to remove the approved answer.')
     }
   }
 
@@ -197,6 +228,92 @@ export function TestTab({
           </div>
         </div>
       )}
+
+      {/* Approved answers: re-run with no model; a changed shape or an error is flagged */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-1">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Approved answers
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              Re-run without a model to catch data changes; results are compared by shape, not values.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {isChecking && (
+              <span role="status" className="text-xs text-primary font-medium animate-pulse">
+                Checking…
+              </span>
+            )}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleRecheck}
+              disabled={isChecking || examples.length === 0}
+              className="gap-1.5"
+            >
+              <RefreshCw className={cn('size-3.5', isChecking && 'animate-spin')} />
+              Re-check
+            </Button>
+          </div>
+        </div>
+
+        {examples.length === 0 ? (
+          <p className="rounded-xl border bg-card p-4 text-xs text-muted-foreground">
+            No approved answers yet. Mark an answer correct in chat, or pass the setup test.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {examples.map((example) => {
+              const state: ExampleCheckState | 'unchecked' = example.check_state ?? 'unchecked'
+              return (
+                <div
+                  key={example.example_id}
+                  data-testid="approved-answer"
+                  data-state={state}
+                  className="flex items-start justify-between gap-3 rounded-xl border bg-card p-3"
+                >
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="text-sm font-medium text-foreground">{example.question}</p>
+                    {(state === 'changed' || state === 'failed') && example.check_detail && (
+                      <p className="text-xs text-muted-foreground font-mono break-words">
+                        {example.check_detail}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'text-xs font-normal',
+                        state === 'ok' && 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500',
+                        state === 'changed' && 'border-amber-500/30 bg-amber-500/10 text-amber-500',
+                        state === 'failed' && 'border-destructive/30 bg-destructive/10 text-destructive',
+                        state === 'unchecked' && 'text-muted-foreground',
+                      )}
+                    >
+                      {CHECK_LABEL[state]}
+                    </Badge>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Remove approved answer ${example.question}`}
+                      onClick={() => handleRemove(example.question)}
+                      className="gap-1.5 h-7 text-xs"
+                    >
+                      <Trash2 className="size-3.5" />
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

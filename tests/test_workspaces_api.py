@@ -175,3 +175,36 @@ def test_example_routes_map_failures_to_statuses(setup):
     assert client.request("DELETE", "/workspaces/ws-9/examples", json={"question": "q"}).status_code == 404
     harness.result = {"ok": False, "error": "invalid", "message": "gate"}
     assert client.post("/workspaces/ws-1/examples", json={"question": "q", "sql": "DROP TABLE x"}).status_code == 422
+
+
+def test_check_examples_route_runs_the_check_as_the_authenticated_principal(setup):
+    harness, client = setup
+    harness.result = {"ok": True, "checked": 2, "counts": {"ok": 1, "changed": 1, "failed": 0},
+                      "checked_at": "2026-09-29T10:00:00+00:00", "principal_id": "p_attacker"}
+    response = client.post("/workspaces/ws-1/examples/check", json={"principal_id": "p_attacker"})
+    assert response.status_code == 200
+    assert response.json() == {"checked": 2, "counts": {"ok": 1, "changed": 1, "failed": 0},
+                               "checked_at": "2026-09-29T10:00:00+00:00"}
+    assert harness.calls[-1] == {"principal_id": "p_test", "action": "check_examples",
+                                 "params": {"workspace_id": "ws-1"}}
+    assert harness.audit_log[-1]["detail"] == "workspaces:check_examples workspace=ws-1"
+
+
+def test_examples_route_lists_the_approved_answers_with_their_state(setup):
+    harness, client = setup
+    listed = [{"example_id": "e1", "question": "How many orders?", "sql_text": "SELECT 1", "source": "owner",
+               "check_state": "changed", "checked_at": "2026-09-29T10:00:00+00:00", "check_detail": "Shape differs."}]
+    harness.result = {"ok": True, "examples": listed}
+    response = client.get("/workspaces/ws-1/examples")
+    assert response.status_code == 200 and response.json() == {"examples": listed}
+    assert harness.calls[-1] == {"principal_id": "p_test", "action": "examples", "params": {"workspace_id": "ws-1"}}
+
+
+def test_example_check_routes_map_failures_to_statuses(setup):
+    harness, client = setup
+    harness.result = {"ok": False, "error": "not_found", "message": "No such workspace."}
+    assert client.post("/workspaces/ws-9/examples/check").status_code == 404
+    assert client.get("/workspaces/ws-9/examples").status_code == 404
+    assert harness.audit_log[-1]["detail"] == "workspaces:examples workspace=ws-9 not_found"
+    harness.exception = ConnectionError("down")
+    assert client.post("/workspaces/ws-1/examples/check").status_code == 503

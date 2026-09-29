@@ -136,6 +136,12 @@ max_candidates            = 3       # templates shown to the matcher per questio
 matcher_max_tokens        = 300
 text_slot_max_chars       = 80
 
+[example_checks]
+# The self-testing workspace (docs/V3_PLAN.md Phase 3c slice 4): approved examples
+# re-run with no model; a changed result shape or an error flags them for review.
+max_per_check             = 50      # examples re-run per check
+stale_after_s             = 86400   # opening a workspace re-checks when the last check is older
+
 [spatial]
 provider                  = "digipin"
 default_radius_m          = 5000

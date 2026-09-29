@@ -281,3 +281,39 @@ export function useApproveWorkspace(workspaceId: string | null) {
     isApproving: approveMutation.isPending,
   }
 }
+
+/** The approved answers with their self-check state; re-check and remove. */
+export function useExamples(workspaceId: string | null) {
+  const queryClient = useQueryClient()
+
+  const query = useQuery({
+    queryKey: ['workspace-examples', workspaceId],
+    queryFn: () => api.workspaceExamples(workspaceId!),
+    enabled: Boolean(workspaceId),
+  })
+
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ['workspace-examples', workspaceId] })
+    void queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] })
+    void queryClient.invalidateQueries({ queryKey: ['workspaces'] })
+  }
+
+  const checkMutation = useMutation({
+    mutationFn: () => api.checkExamples(workspaceId!),
+    onSuccess: refresh,
+  })
+
+  const removeMutation = useMutation({
+    mutationFn: (question: string) => api.removeExample(workspaceId!, question),
+    onSuccess: refresh,
+  })
+
+  return {
+    examples: query.data?.examples ?? [],
+    isLoading: query.isLoading,
+    recheck: checkMutation.mutateAsync,
+    isChecking: checkMutation.isPending,
+    removeExample: removeMutation.mutateAsync,
+    isRemoving: removeMutation.isPending,
+  }
+}

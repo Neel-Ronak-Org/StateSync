@@ -73,6 +73,16 @@ export interface SetupJob {
   finished_at: string | null
 }
 
+export type CheckState = 'ok' | 'changed' | 'failed'
+
+export interface MockExample {
+  question: string
+  sql: string
+  check_state?: CheckState | null
+  check_detail?: string | null
+  checked_at?: string | null
+}
+
 export interface MockWorkspace {
   workspace_id: string
   name: string
@@ -86,12 +96,13 @@ export interface MockWorkspace {
   updated_at: string
   catalog: CatalogEntry[]
   definitions: Definition[]
-  examples: { question: string; sql: string }[]
+  examples: MockExample[]
   runs: SetupRun[]
 }
 
 const REFERENCE_SCHEMAS = ['olist', 'public']
 const AT = '2026-09-28T10:00:00Z'
+const STALE_AFTER_S = 86400
 
 function entry(table: string, column: string, type: string, samples: string[] = []): CatalogEntry {
   return {
@@ -133,6 +144,7 @@ export class WorkspaceMock {
   failNextDraft: string | null = null
   /** When set, the next setup test stops at its first poll with this message (as when the quota runs out). */
   failNextTest: string | null = null
+  private nextOutcomes = new Map<string, { state: CheckState; detail: string | null }>()
   private jobs = new Map<string, SetupJob>()
   private seq = 0
 
@@ -159,7 +171,7 @@ export class WorkspaceMock {
   }
 
   /** A workspace already through the wizard, for tests that start after setup. */
-  createReady(name: string, targetSchema: string, examples: { question: string; sql: string }[] = []): MockWorkspace {
+  createReady(name: string, targetSchema: string, examples: MockExample[] = []): MockWorkspace {
     const ws = this.create(name, targetSchema, 'A test business.')
     ws.catalog = sampleCatalog().map((e) => ({ ...e, description: aiDescription(e), description_source: 'ai', approved: true }))
     ws.setup_state = 'tested'
@@ -187,7 +199,29 @@ export class WorkspaceMock {
         definitions: ws.definitions.length,
         examples: ws.examples.length,
       },
+      health: {
+        ok: ws.examples.filter((e) => e.check_state === 'ok').length,
+        changed: ws.examples.filter((e) => e.check_state === 'changed').length,
+        failed: ws.examples.filter((e) => e.check_state === 'failed').length,
+        unchecked: ws.examples.filter((e) => !e.check_state).length,
+        checked_at: ws.examples.map((e) => e.checked_at ?? null).filter(Boolean).sort().pop() ?? null,
+      },
+      example_check_stale_after_s: STALE_AFTER_S,
     }
+  }
+
+  /** Test hook: mark an approved example as a past check left it (checked just now unless given). */
+  setExampleCheck(workspaceId: string, question: string, state: CheckState | null, detail: string | null = null, checkedAt?: string): void {
+    const example = this.workspaces.get(workspaceId)?.examples.find((e) => e.question === question)
+    if (!example) throw new Error(`no example ${question} in ${workspaceId}`)
+    example.check_state = state
+    example.check_detail = detail
+    example.checked_at = state ? (checkedAt ?? new Date().toISOString()) : null
+  }
+
+  /** Test hook: what the next re-check finds for this example (consumed by it); others come back ok. */
+  nextCheckOutcome(question: string, state: CheckState, detail: string | null = null): void {
+    this.nextOutcomes.set(question, { state, detail })
   }
 
   static normalize(q: string): string {
@@ -377,6 +411,32 @@ export class WorkspaceMock {
         if (ws.definitions.length === before) return reply(route, 404, { detail: 'No such definition.' })
         return reply(route, 200, { deleted: parts[3] })
       }
+    }
+    if (sub === 'examples' && parts.length === 4 && parts[3] === 'check' && method === 'POST') {
+      const at = new Date().toISOString()
+      const counts = { ok: 0, changed: 0, failed: 0 }
+      for (const e of ws.examples) {
+        const outcome = this.nextOutcomes.get(e.question) ?? { state: 'ok' as CheckState, detail: null }
+        this.nextOutcomes.delete(e.question)
+        Object.assign(e, { check_state: outcome.state, check_detail: outcome.detail, checked_at: at })
+        counts[outcome.state] += 1
+      }
+      return reply(route, 200, { checked: ws.examples.length, counts, checked_at: at })
+    }
+    if (sub === 'examples' && parts.length === 3 && method === 'GET') {
+      const rank = { failed: 0, changed: 1, ok: 2 }
+      const listed = ws.examples
+        .map((e, i) => ({
+          example_id: `ex-${ws.workspace_id}-${i}`,
+          question: e.question,
+          sql_text: e.sql,
+          source: 'owner',
+          check_state: e.check_state ?? null,
+          checked_at: e.checked_at ?? null,
+          check_detail: e.check_detail ?? null,
+        }))
+        .sort((a, b) => (a.check_state ? rank[a.check_state] : 3) - (b.check_state ? rank[b.check_state] : 3) || a.question.localeCompare(b.question))
+      return reply(route, 200, { examples: listed })
     }
     if (sub === 'examples' && parts.length === 3) {
       const question = String(body.question ?? '').trim()

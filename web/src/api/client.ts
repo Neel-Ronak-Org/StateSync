@@ -12,6 +12,8 @@
 import type {
   BuildJob,
   CatalogEntry,
+  ExampleCheckResult,
+  ExampleInfo,
   Dashboard,
   Definition,
   Health,
@@ -206,6 +208,11 @@ export const api = {
       method: 'DELETE',
       body: { question },
     }),
+
+  workspaceExamples: (workspaceId: string) =>
+    apiFetch<{ examples: ExampleInfo[] }>(`/workspaces/${enc(workspaceId)}/examples`),
+  checkExamples: (workspaceId: string) =>
+    apiFetch<ExampleCheckResult>(`/workspaces/${enc(workspaceId)}/examples/check`, { method: 'POST' }),
 
   approveWorkspace: (workspaceId: string) =>
     apiFetch<{ workspace: Workspace; approved_columns: number; approved_definitions: number }>(

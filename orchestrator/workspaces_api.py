@@ -236,6 +236,21 @@ def register_workspace_routes(app: Any, require_principal: Any, audit: Any,
                                 workspace_id=workspace_id, question=body.question)
         return {"removed": result["removed"]}
 
+    @app.get("/workspaces/{workspace_id}/examples", tags=["workspaces"])
+    async def list_examples(workspace_id: str, request: Request,
+                            principal: Principal = Depends(require_principal)) -> dict[str, Any]:
+        result = await _execute(principal, request, "examples", f"/workspaces/{workspace_id}/examples",
+                                workspace_id=workspace_id)
+        return {"examples": result["examples"]}
+
+    @app.post("/workspaces/{workspace_id}/examples/check", tags=["workspaces"])
+    async def check_examples(workspace_id: str, request: Request,
+                             principal: Principal = Depends(require_principal)) -> dict[str, Any]:
+        """Re-run the approved examples with no model; the MCP compares result shapes (read-only path)."""
+        result = await _execute(principal, request, "check_examples", f"/workspaces/{workspace_id}/examples/check",
+                                workspace_id=workspace_id)
+        return {"checked": result["checked"], "counts": result["counts"], "checked_at": result["checked_at"]}
+
     @app.post("/workspaces/{workspace_id}/approve", tags=["workspaces"])
     async def approve_workspace(workspace_id: str, request: Request,
                                 principal: Principal = Depends(require_principal)) -> dict[str, Any]:

@@ -137,3 +137,17 @@ def test_setup_runs_are_validated_before_anything_is_written():
 def test_verdicts_are_restricted():
     assert _manage("record_result", principal_id="p", run_id="r", position=1, verdict="maybe")["error"] == "invalid"
     assert _manage("set_verdict", principal_id="p", run_id="r", position=1, verdict="pending")["error"] == "invalid"
+
+
+def test_result_signature_is_the_shape_not_the_values():
+    assert wt.result_signature(["a", "b", "c"], 5) == "cols=a,b,c;rows=yes"
+    assert wt.result_signature(["a", "b", "c"], 1) == wt.result_signature(["a", "b", "c"], 900)
+    assert wt.result_signature(["a"], 0) == "cols=a;rows=no"
+    # Column order and names are part of the shape.
+    assert wt.result_signature(["b", "a"], 1) != wt.result_signature(["a", "b"], 1)
+    assert wt.result_signature([], 0) == "cols=;rows=no"
+
+
+def test_example_checks_need_a_workspace():
+    assert _manage("check_examples", principal_id="p")["error"] == "invalid"
+    assert _manage("examples", principal_id="p")["error"] == "invalid"

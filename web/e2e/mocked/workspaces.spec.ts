@@ -477,3 +477,108 @@ test.describe('evidence and thumbs', () => {
     await expect(turn.getByRole('button', { name: 'Mark answer correct' })).toHaveCount(0)
   })
 })
+
+test.describe('the self-testing workspace: approved answers are re-run with no model', () => {
+  const Q = ['How many orders are there?', 'Revenue by month?', 'Top sellers?', 'Late deliveries?']
+  const CHECK = 'POST /workspaces/ws-1/examples/check'
+
+  async function openReady(page: Page, seed: (api: MockApi) => void) {
+    return openApp(page, {
+      hash: '#/workspaces/ws-1',
+      seed: (api) => {
+        // Fresh objects each time: the mock mutates them, and tests must not share state.
+        api.workspaces.createReady('Furniture shop', 'olist', Q.map((question) => ({ question, sql: 'SELECT 1' })))
+        seed(api)
+      },
+    })
+  }
+
+  test('lists approved answers with their check states, the worst first', async ({ page }) => {
+    await openReady(page, (api) => {
+      const w = api.workspaces
+      w.setExampleCheck('ws-1', Q[0], 'ok')
+      w.setExampleCheck('ws-1', Q[1], 'changed', 'Result shape changed. Was cols=a;rows=yes; now cols=b;rows=yes.')
+      w.setExampleCheck('ws-1', Q[2], 'failed', 'column "gone" does not exist')
+      w.setExampleCheck('ws-1', Q[3], null)
+    })
+    const rows = page.getByTestId('approved-answer')
+    await expect(rows).toHaveCount(4)
+    await expect(rows.nth(0)).toHaveAttribute('data-state', 'failed')
+    await expect(rows.nth(0)).toContainText(Q[2])
+    await expect(rows.nth(0)).toContainText('Failed')
+    await expect(rows.nth(0)).toContainText('column "gone" does not exist')
+    await expect(rows.nth(1)).toHaveAttribute('data-state', 'changed')
+    await expect(rows.nth(1)).toContainText('Changed')
+    await expect(rows.nth(1)).toContainText('Result shape changed')
+    await expect(rows.nth(2)).toHaveAttribute('data-state', 'ok')
+    await expect(rows.nth(2)).toContainText('OK')
+    await expect(rows.nth(3)).toHaveAttribute('data-state', 'unchecked')
+    await expect(rows.nth(3)).toContainText('Not checked yet')
+  })
+
+  test('Re-check runs the check and updates the states', async ({ page }) => {
+    const api = await openReady(page, (a) => {
+      for (const q of Q) a.workspaces.setExampleCheck('ws-1', q, 'ok')
+      a.workspaces.setExampleCheck('ws-1', Q[0], 'changed', 'Old news.')
+      a.workspaces.nextCheckOutcome(Q[1], 'failed', 'relation "olist.gone" does not exist')
+    })
+    await expect(page.locator('[data-testid="approved-answer"][data-state="changed"]')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Re-check' }).click()
+    await expect(page.locator('[data-testid="approved-answer"][data-state="failed"]')).toHaveCount(1)
+    await expect(page.locator('[data-testid="approved-answer"][data-state="changed"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid="approved-answer"][data-state="ok"]')).toHaveCount(3)
+    await expect(page.getByTestId('approved-answer').first()).toContainText('relation "olist.gone" does not exist')
+    expect(api.workspaces.calls.filter((c) => c === CHECK)).toHaveLength(1)
+  })
+
+  test('Remove deletes one approved answer and refreshes the list and the header', async ({ page }) => {
+    const api = await openReady(page, (a) => {
+      for (const q of Q) a.workspaces.setExampleCheck('ws-1', q, 'ok')
+      a.workspaces.setExampleCheck('ws-1', Q[2], 'changed', 'Shape differs.')
+    })
+    await expect(page.getByTestId('approved-answer')).toHaveCount(4)
+    await page.getByRole('button', { name: `Remove approved answer ${Q[2]}` }).click()
+    await expect(page.getByTestId('approved-answer')).toHaveCount(3)
+    await expect(page.getByTestId('approved-answer').filter({ hasText: Q[2] })).toHaveCount(0)
+    await expect(page.getByTestId('workspace-health')).toHaveText('Approved answers: 3 OK')
+    expect(api.workspaces.workspaces.get('ws-1')?.examples.map((e) => e.question)).toEqual([Q[0], Q[1], Q[3]])
+  })
+
+  test('the header shows the counts, in a warning colour when something changed', async ({ page }) => {
+    await openReady(page, (a) => {
+      for (const q of Q.slice(0, 3)) a.workspaces.setExampleCheck('ws-1', q, 'ok')
+      a.workspaces.setExampleCheck('ws-1', Q[3], 'changed', 'Shape differs.')
+    })
+    const health = page.getByTestId('workspace-health')
+    await expect(health).toHaveText('Approved answers: 3 OK · 1 changed')
+    await expect(health).toHaveClass(/text-amber-500/)
+  })
+
+  test('the header is calm when every answer is OK', async ({ page }) => {
+    const api = await openReady(page, (a) => {
+      for (const q of Q) a.workspaces.setExampleCheck('ws-1', q, 'ok')
+    })
+    const health = page.getByTestId('workspace-health')
+    await expect(health).toHaveText('Approved answers: 4 OK')
+    await expect(health).not.toHaveClass(/text-amber-500/)
+    expect(api.workspaces.calls.filter((c) => c === CHECK)).toHaveLength(0)
+  })
+
+  test('opening a workspace whose health is stale triggers exactly one check', async ({ page }) => {
+    const api = await openReady(page, () => undefined) // never checked
+    await expect(page.locator('[data-testid="approved-answer"][data-state="ok"]')).toHaveCount(4)
+    await expect(page.getByTestId('workspace-health')).toHaveText('Approved answers: 4 OK')
+    // Moving around the page must not start another.
+    await page.getByRole('tab', { name: 'Knowledge' }).click()
+    await page.getByRole('tab', { name: 'Test' }).click()
+    expect(api.workspaces.calls.filter((c) => c === CHECK)).toHaveLength(1)
+  })
+
+  test('a last check older than the limit also triggers one', async ({ page }) => {
+    const api = await openReady(page, (a) => {
+      const old = new Date(Date.now() - 2 * 86400 * 1000).toISOString()
+      for (const q of Q) a.workspaces.setExampleCheck('ws-1', q, 'ok', null, old)
+    })
+    await expect.poll(() => api.workspaces.calls.filter((c) => c === CHECK).length).toBe(1)
+  })
+})

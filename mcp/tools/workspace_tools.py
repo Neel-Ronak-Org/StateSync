@@ -14,6 +14,7 @@ One JSON-RPC method, workspaces.manage (decision D-v3-10), takes an `action`:
   add_example, remove_example              an approved question -> SQL pair, and taking one back
   context                                  what a question in this workspace may use
   templates                                approved queries as fill-in-the-values templates (Phase 3c)
+  check_examples, examples                 re-run approved examples with no model; list them with their check state
   start_run, record_result, finish_run,
   get_run, set_verdict                     the 10-question setup test
 
@@ -38,6 +39,7 @@ from __future__ import annotations
 import logging
 import re
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from psycopg.types.json import Jsonb
@@ -46,7 +48,7 @@ from config_loader import cfg
 from db import get_history_connection
 from serialization import to_json_safe
 from session import get_tenant_id
-from tools.data_tools import _check_layer1, sample_rows
+from tools.data_tools import _check_layer1, run_select, sample_rows
 from tools.schema_tools import ALLOWED_SCHEMAS, describe_table, list_tables
 from tools.sql_templates import derive_template
 
@@ -55,7 +57,7 @@ logger = logging.getLogger(__name__)
 _ACTIONS = frozenset({
     "list", "create", "get", "update", "delete", "scan", "catalog", "save_descriptions",
     "definitions", "save_definitions", "delete_definition", "approve", "add_example", "remove_example",
-    "context", "templates",
+    "context", "templates", "check_examples", "examples",
     "start_run", "record_result", "finish_run", "get_run", "set_verdict",
 })
 _NO_WORKSPACE = frozenset({"list", "create"})
@@ -63,6 +65,8 @@ _VERDICTS = frozenset({"pending", "running", "right", "wrong", "error"})
 _DESCRIPTION_SOURCES = frozenset({"ai", "owner"})
 _EXAMPLE_SOURCES = frozenset({"setup_test", "tile", "owner"})
 _SAMPLE_VALUE_MAX_CHARS = 80  # noqa: literals - a sample value is a hint for the drafter, not data
+_CHECK_DETAIL_MAX_CHARS = 300  # noqa: literals - a stored error message is truncated for display
+_CHECK_SEVERITY = {"failed": 0, "changed": 1, "ok": 2}
 _STOPWORDS = frozenset(
     "the a an of in on for to and or is are was were by with what which how many much per "
     "from at as that this these those be do does did show me list give total all each".split()
@@ -106,6 +110,15 @@ def mentioned_terms(question: str, terms: list[str]) -> list[str]:
     return [t for t in terms if f" {normalize_question(t)} " in q]
 
 
+def result_signature(columns: list[str], row_count: int) -> str:
+    """The SHAPE of a query result: its column names in order, and whether it has rows.
+
+    Values are left out on purpose: live data changes legitimately, but a renamed
+    column or a table that has gone empty means an approved answer may be wrong.
+    """
+    return f"cols={','.join(columns)};rows={'yes' if row_count > 0 else 'no'}"
+
+
 def sample_values(rows: list[dict], column: str, limit: int) -> list[str]:
     """Up to `limit` distinct non-empty text values of a column, in first-seen order."""
     seen: list[str] = []
@@ -135,7 +148,17 @@ _VIEW = """
            (SELECT count(*) FROM session_state.kb_columns c WHERE c.workspace_id = w.workspace_id AND c.column_name = ''),
            (SELECT count(*) FROM session_state.kb_columns c WHERE c.workspace_id = w.workspace_id AND c.approved),
            (SELECT count(*) FROM session_state.kb_definitions d WHERE d.workspace_id = w.workspace_id),
-           (SELECT count(*) FROM session_state.kb_examples e WHERE e.workspace_id = w.workspace_id)
+           (SELECT count(*) FROM session_state.kb_examples e WHERE e.workspace_id = w.workspace_id),
+           (SELECT count(*) FROM session_state.kb_examples e
+             WHERE e.workspace_id = w.workspace_id AND e.approved AND e.check_state = 'ok'),
+           (SELECT count(*) FROM session_state.kb_examples e
+             WHERE e.workspace_id = w.workspace_id AND e.approved AND e.check_state = 'changed'),
+           (SELECT count(*) FROM session_state.kb_examples e
+             WHERE e.workspace_id = w.workspace_id AND e.approved AND e.check_state = 'failed'),
+           (SELECT count(*) FROM session_state.kb_examples e
+             WHERE e.workspace_id = w.workspace_id AND e.approved AND e.check_state IS NULL),
+           (SELECT max(e.checked_at) FROM session_state.kb_examples e
+             WHERE e.workspace_id = w.workspace_id AND e.approved)
     FROM session_state.workspaces w
     WHERE w.tenant_id = %s AND w.owner_principal_id = %s
 """
@@ -143,13 +166,17 @@ _VIEW = """
 
 def _to_view(row: tuple) -> dict[str, Any]:
     (workspace_id, name, schema, context, version, state, score, total, created, updated,
-     tables, approved, definitions, examples) = row
+     tables, approved, definitions, examples, h_ok, h_changed, h_failed, h_unchecked, h_checked_at) = row
     return {
         "workspace_id": workspace_id, "name": name, "target_schema": schema,
         "business_context": context, "context_version": version, "setup_state": state,
         "setup_score": score, "setup_total": total,
         "created_at": created.isoformat(), "updated_at": updated.isoformat(),
         "counts": {"tables": tables, "approved": approved, "definitions": definitions, "examples": examples},
+        "health": {"ok": h_ok, "changed": h_changed, "failed": h_failed, "unchecked": h_unchecked,
+                   "checked_at": h_checked_at.isoformat() if h_checked_at else None},
+        # Lets the page decide, from config, when opening a workspace should re-check it.
+        "example_check_stale_after_s": int(cfg.example_checks.stale_after_s),
     }
 
 
@@ -577,6 +604,65 @@ async def _templates(tenant_id, principal_id, workspace_id=None, question=None, 
         if score >= float(cfg.templates.min_similarity)][: int(cfg.templates.max_candidates)]}
 
 
+async def _check_examples(tenant_id, principal_id, workspace_id=None, **_):
+    """Re-run approved examples with no model and compare each result's shape with the first one.
+
+    The SQL goes through run_select: the Layer 1 gate and the read-only connection,
+    the same path every data query takes. A failure is recorded, not raised.
+    """
+    async with get_history_connection() as conn:
+        if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
+            return _fail("not_found", "No such workspace.")
+        rows = await (await conn.execute(
+            "SELECT example_id, sql_text, result_signature FROM session_state.kb_examples "
+            "WHERE tenant_id = %s AND workspace_id = %s AND approved "
+            "ORDER BY checked_at ASC NULLS FIRST LIMIT %s",
+            (tenant_id, workspace_id, int(cfg.example_checks.max_per_check)))).fetchall()
+    counts = {"ok": 0, "changed": 0, "failed": 0}
+    outcomes: list[tuple[str, str, str | None, str | None]] = []
+    for example_id, sql_text, recorded in rows:
+        result = await run_select(sql_text, max_rows=1)
+        if not result.get("ok"):
+            message = str((result.get("error") or {}).get("message", "The query failed."))
+            outcomes.append((example_id, "failed", recorded, message[:_CHECK_DETAIL_MAX_CHARS]))
+            continue
+        signature = result_signature(result.get("columns", []), int(result.get("row_count", 0)))
+        if recorded is None or recorded == signature:
+            outcomes.append((example_id, "ok", signature, None))
+        else:
+            detail = f"Result shape changed. Was {recorded}; now {signature}."
+            outcomes.append((example_id, "changed", recorded, detail[:_CHECK_DETAIL_MAX_CHARS]))
+    checked_at = datetime.now(timezone.utc)
+    async with get_history_connection() as conn:
+        for example_id, state, signature, detail in outcomes:
+            counts[state] += 1
+            await conn.execute(
+                "UPDATE session_state.kb_examples SET check_state = %s, result_signature = %s, check_detail = %s, "
+                "checked_at = %s WHERE tenant_id = %s AND workspace_id = %s AND example_id = %s",
+                (state, signature, detail, checked_at, tenant_id, workspace_id, example_id))
+    return {"ok": True, "checked": len(outcomes), "counts": counts, "checked_at": checked_at.isoformat()}
+
+
+async def _examples(tenant_id, principal_id, workspace_id=None, **_):
+    """The workspace's approved examples with their check state, worst first."""
+    async with get_history_connection() as conn:
+        if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
+            return _fail("not_found", "No such workspace.")
+        rows = await (await conn.execute(
+            "SELECT example_id, question, sql_text, source, check_state, checked_at, check_detail "
+            "FROM session_state.kb_examples WHERE tenant_id = %s AND workspace_id = %s AND approved",
+            (tenant_id, workspace_id))).fetchall()
+    def severity(row: tuple) -> tuple[int, str]:
+        _id, question, _sql, _source, state, *_rest = row
+        return _CHECK_SEVERITY.get(state, len(_CHECK_SEVERITY)), question.lower()
+
+    rows = sorted(rows, key=severity)
+    return {"ok": True, "examples": [
+        {"example_id": i, "question": q, "sql_text": s, "source": src, "check_state": st,
+         "checked_at": at.isoformat() if at else None, "check_detail": d}
+        for i, q, s, src, st, at, d in rows]}
+
+
 async def _start_run(tenant_id, principal_id, workspace_id=None, graded_by=None, questions=None, **_):
     if graded_by not in ("reference", "owner"):
         return _fail("invalid", "graded_by must be reference or owner.")
@@ -719,6 +805,7 @@ _HANDLERS = {
     "catalog": _catalog, "save_descriptions": _save_descriptions, "definitions": _definitions,
     "save_definitions": _save_definitions, "delete_definition": _delete_definition, "approve": _approve,
     "add_example": _add_example, "remove_example": _remove_example, "context": _context, "templates": _templates,
+    "check_examples": _check_examples, "examples": _examples,
     "start_run": _start_run, "record_result": _record_result,
     "finish_run": _finish_run, "get_run": _get_run, "set_verdict": _set_verdict,
 }

@@ -299,6 +299,37 @@ export interface Workspace {
     definitions: number
     examples: number
   }
+  /** How the approved examples fared at their last re-run (no model involved). */
+  health: WorkspaceHealth
+  /** A workspace whose last check is older than this many seconds is re-checked on opening. */
+  example_check_stale_after_s: number
+}
+
+export type ExampleCheckState = 'ok' | 'changed' | 'failed'
+
+export interface WorkspaceHealth {
+  ok: number
+  changed: number
+  failed: number
+  unchecked: number
+  checked_at: string | null
+}
+
+/** An approved answer with the result of its latest self-check. */
+export interface ExampleInfo {
+  example_id: string
+  question: string
+  sql_text: string
+  source: string
+  check_state: ExampleCheckState | null
+  checked_at: string | null
+  check_detail: string | null
+}
+
+export interface ExampleCheckResult {
+  checked: number
+  counts: { ok: number; changed: number; failed: number }
+  checked_at: string
 }
 
 export interface CatalogEntry {

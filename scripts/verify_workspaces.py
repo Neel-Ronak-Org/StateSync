@@ -427,6 +427,49 @@ def main() -> int:
         check(removed.get("removed") == 1 and left == "0", "withdrawing the example removes its template",
               f"{removed} templates left={left}")
 
+        section("The self-testing workspace: approved examples are re-run with no model (Phase 3c)")
+        added = mcp(tenant_a, "workspaces.manage", {
+            "action": "add_example", "principal_id": principal_a, "workspace_id": wid,
+            "question": "How many orders exist, for the self-check?", "sql": "SELECT count(*) FROM olist.orders"})
+        eid = added.get("example_id", "")
+        check(added.get("ok") is True and eid, "an approved example to check is stored", str(added))
+        check_args = {"principal_id": principal_a, "workspace_id": wid}
+
+        def example_row() -> str:
+            return psql(f"SELECT check_state || ' | ' || coalesce(result_signature, '') FROM session_state.kb_examples "
+                        f"WHERE example_id = '{eid}';")
+
+        checked = mcp(tenant_a, "workspaces.manage", {"action": "check_examples", **check_args})
+        check(checked.get("ok") is True and checked["counts"]["failed"] == 0 and checked["counts"]["changed"] == 0
+              and checked["counts"]["ok"] >= 1 and checked.get("checked_at"),
+              "checking runs the examples: all ok", str(checked)[:200])
+        check(example_row() == "ok | cols=count;rows=yes", "its state is ok and its result shape is recorded", example_row())
+        health = call("GET", f"/workspaces/{wid}")[1]["workspace"]["health"]
+        check(health["failed"] == 0 and health["changed"] == 0 and health["ok"] >= 1 and health["checked_at"],
+              "the workspace view reports the health", str(health))
+
+        psql(f"UPDATE session_state.kb_examples SET sql_text = 'SELECT no_such_column FROM olist.orders' "
+             f"WHERE example_id = '{eid}';")
+        failed = mcp(tenant_a, "workspaces.manage", {"action": "check_examples", **check_args})
+        check(failed.get("ok") and failed["counts"]["failed"] == 1, "a query that no longer runs is flagged failed", str(failed)[:200])
+        listed = mcp(tenant_a, "workspaces.manage", {"action": "examples", **check_args})
+        first = (listed.get("examples") or [{}])[0]
+        check(first.get("example_id") == eid and first.get("check_state") == "failed"
+              and "no_such_column" in (first.get("check_detail") or ""),
+              "the failure is listed first, with the database's message", str(first)[:300])
+
+        psql(f"UPDATE session_state.kb_examples SET sql_text = 'SELECT count(*) FROM olist.orders', "
+             f"result_signature = 'cols=other;rows=yes' WHERE example_id = '{eid}';")
+        mcp(tenant_a, "workspaces.manage", {"action": "check_examples", **check_args})
+        check(example_row().startswith("changed | cols=other;rows=yes"),
+              "a different result shape is flagged changed (and the first shape kept)", example_row())
+
+        for tool_action in ("check_examples", "examples"):
+            other = mcp("tenant-that-does-not-exist", "workspaces.manage", {"action": tool_action, **check_args})
+            check(other.get("error") == "not_found", f"another tenant cannot {tool_action.replace('_', ' ')}", str(other)[:200])
+        mcp(tenant_a, "workspaces.manage", {"action": "remove_example", **check_args,
+                                            "question": "How many orders exist, for the self-check?"})
+
         section("Questions asked in the workspace")
         status, body = call("POST", "/query", body={"query": "How many orders are there?", "workspace_id": wid})
         trace = body.get("state_trace", {}) if status == 200 else {}

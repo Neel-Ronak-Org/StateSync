@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, MessageSquare, MoreHorizontal, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -28,9 +28,11 @@ import {
   useCatalog,
   useDefinitions,
   useDraftStatus,
+  useExamples,
   useSetupStatus,
   useWorkspace,
 } from '@/features/workspaces/useWorkspaces'
+import { cn } from '@/lib/utils'
 
 interface WorkspaceDetailProps {
   workspaceId: string
@@ -56,11 +58,24 @@ export function WorkspaceDetail({
     setVerdict,
   } = useSetupStatus(workspaceId)
   const { approve } = useApproveWorkspace(workspaceId)
+  const { examples, recheck, isChecking, removeExample } = useExamples(workspaceId)
 
   const [activeTab, setActiveTab] = useState<string>('knowledge')
   const [hasSetInitialTab, setHasSetInitialTab] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // Opening a workspace whose approved answers were last checked long ago (or never)
+  // re-checks them once, in the background: the owner sees fresh health without asking.
+  const autoChecked = useRef<string | null>(null)
+  useEffect(() => {
+    if (!workspace || autoChecked.current === workspace.workspace_id) return
+    const { health } = workspace
+    if (health.ok + health.changed + health.failed + health.unchecked === 0) return
+    const age = health.checked_at ? (Date.now() - Date.parse(health.checked_at)) / 1000 : Infinity
+    autoChecked.current = workspace.workspace_id
+    if (age > workspace.example_check_stale_after_s) recheck().catch(() => undefined)
+  }, [workspace, recheck])
 
   // Set initial tab based on setup_state
   useEffect(() => {
@@ -115,6 +130,16 @@ export function WorkspaceDetail({
     }
   }
 
+  const { health } = workspace
+  const healthLine = [
+    `Approved answers: ${health.ok} OK`,
+    health.changed > 0 ? `${health.changed} changed` : null,
+    health.failed > 0 ? `${health.failed} failed` : null,
+    health.unchecked > 0 ? `${health.unchecked} not checked yet` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
   return (
     <div className="flex h-full flex-1 flex-col overflow-y-auto">
       {/* Top Header */}
@@ -131,6 +156,17 @@ export function WorkspaceDetail({
             <h1 className="text-xl font-semibold tracking-tight text-foreground">
               {workspace.name}
             </h1>
+            {health.ok + health.changed + health.failed + health.unchecked > 0 && (
+              <span
+                data-testid="workspace-health"
+                className={cn(
+                  'text-xs',
+                  health.changed + health.failed > 0 ? 'text-amber-500 font-medium' : 'text-muted-foreground',
+                )}
+              >
+                {healthLine}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -198,6 +234,10 @@ export function WorkspaceDetail({
               isRunning={isSetupRunning}
               onStartSetup={startSetup}
               onSetVerdict={setVerdict}
+              examples={examples}
+              isChecking={isChecking}
+              onRecheck={recheck}
+              onRemoveExample={removeExample}
             />
           </TabsContent>
         </Tabs>
