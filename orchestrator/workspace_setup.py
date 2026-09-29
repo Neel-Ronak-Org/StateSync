@@ -225,7 +225,7 @@ def _now() -> str:
 @dataclass
 class SetupJob:
     job_id: str
-    kind: str                      # draft | test
+    kind: str                      # draft | test | mine
     principal_id: str
     workspace_id: str
     state: str = "running"         # running | done | failed
@@ -233,12 +233,15 @@ class SetupJob:
     total: int = 0
     error: str | None = None
     run_id: str | None = None
+    found: int = 0                 # mine: definitions proposed to the owner
+    dropped: int = 0               # mine: proposals whose quote was not in the document
     started_at: str = field(default_factory=_now)
     finished_at: str | None = None
 
     def view(self) -> dict[str, Any]:
         return {k: getattr(self, k) for k in ("job_id", "kind", "workspace_id", "state", "done", "total",
-                                              "error", "run_id", "started_at", "finished_at")}
+                                              "error", "run_id", "found", "dropped", "started_at",
+                                              "finished_at")}
 
 
 class SetupRegistry:

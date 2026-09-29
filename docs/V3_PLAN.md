@@ -598,8 +598,15 @@ first. Slices, each a written spec, delegated and audited:
    workspace's document titles (as data, after the fixed prompt), and citations carry the
    document's title. Live: `scripts/verify_library.py` 24/24; one real question in an
    olist workspace routed to docs and cited the uploaded policy. Ingestion runs at about
-   0.3 s per chunk on the local CPU embedder (88 chunks in 28 s). Next: definitions mined
-   from documents.
+   0.3 s per chunk on the local CPU embedder (88 chunks in 28 s).
+   **Definitions from documents, done 2026-09-29** (migration 025,
+   `orchestrator/doc_definitions.py`): passages are scored in code for definitional
+   wording and only the best, up to `mine_max_chars`, go to the model; each proposal must
+   quote one sentence, and it is kept only if that quote is really in the cited passage and
+   contains the term (dropped ones are counted, never shown). Kept proposals are drafts
+   (source `document`) with their citation (title, page, quote) for the owner to approve;
+   the owner's own definitions are never replaced. Live on a handbook: 4 of 4 definitions
+   found, 0 invented, one model call, 2.6 s.
 6. **Metrics** (governed definitions compiled to SQL), the **account-level library**
    (sources chosen by workspaces), **own Postgres** (self-hosted, enabled on the owner's
    machine per D-v3-18), and the synthetic-schema switches.

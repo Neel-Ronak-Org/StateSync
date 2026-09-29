@@ -215,6 +215,7 @@ export function WorkspaceDetail({
 
           <TabsContent value="knowledge" className="outline-none">
             <KnowledgeTab
+              workspaceId={workspace.workspace_id}
               catalog={catalog}
               definitions={definitions}
               draftJob={draftJob}

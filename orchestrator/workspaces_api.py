@@ -32,6 +32,8 @@ from pydantic import BaseModel, ConfigDict
 
 from auth import Principal
 from config_loader import cfg
+from doc_definitions import run_mining
+from library_api import call_library
 from llm.provider import get_agent_llm
 from mcp_client import MCPSession, data_run_select, workspaces_manage
 from tile_render import error_status
@@ -314,6 +316,34 @@ def register_workspace_routes(app: Any, require_principal: Any, audit: Any,
                            principal: Principal = Depends(require_principal)) -> dict[str, Any]:
         await owned(principal, request, workspace_id, f"/workspaces/{workspace_id}/draft")
         job = registry.latest(principal.principal_id, workspace_id, "draft")
+        return {"job": job.view() if job else None}
+
+    @app.post("/workspaces/{workspace_id}/definitions/mine", status_code=HTTP_ACCEPTED, tags=["workspaces"])
+    async def start_mining(workspace_id: str, request: Request,
+                           principal: Principal = Depends(require_principal_for_model)) -> dict[str, Any]:
+        """Find definitions in the workspace's documents, in the background (doc_definitions.py)."""
+        workspace = await owned(principal, request, workspace_id, f"/workspaces/{workspace_id}/definitions/mine")
+        if registry.active(principal.principal_id):
+            raise HTTPException(status_code=409, detail="A setup step is already running. Wait for it to finish.")
+        job = new_job("mine", principal.principal_id, workspace_id)
+        manage = manager(principal)
+
+        async def library(action: str, **params: Any) -> dict:
+            return await call_library(principal, action, **params)
+
+        async def work(j: SetupJob) -> None:
+            await run_mining(j, manage, library, complete, workspace["business_context"])
+            logger.info("definition mining %s on %s: %s (%d/%d, found %d, dropped %d)", j.job_id, workspace_id,
+                        j.state, j.done, j.total, j.found, j.dropped)
+
+        registry.start(job, work)
+        return {"job": job.view()}
+
+    @app.get("/workspaces/{workspace_id}/definitions/mine", tags=["workspaces"])
+    async def mining_status(workspace_id: str, request: Request,
+                            principal: Principal = Depends(require_principal)) -> dict[str, Any]:
+        await owned(principal, request, workspace_id, f"/workspaces/{workspace_id}/definitions/mine")
+        job = registry.latest(principal.principal_id, workspace_id, "mine")
         return {"job": job.view() if job else None}
 
     @app.post("/workspaces/{workspace_id}/setup", status_code=HTTP_ACCEPTED, tags=["workspaces"])

@@ -63,6 +63,26 @@ _ACTIONS = frozenset({
 _NO_WORKSPACE = frozenset({"list", "create"})
 _VERDICTS = frozenset({"pending", "running", "right", "wrong", "error"})
 _DESCRIPTION_SOURCES = frozenset({"ai", "owner"})
+# A definition may also come from an uploaded document (migration 025); it then
+# carries a citation, and like an AI draft it never replaces the owner's words.
+_DEFINITION_SOURCES = frozenset({"ai", "owner", "document"})
+_CITATION_FIELDS = ("document_id", "chunk_id", "page", "title", "quote")
+
+
+def clean_citation(value: Any) -> dict[str, Any] | None:
+    """A document citation {document_id, chunk_id, page, title, quote}, or None if malformed."""
+    if not isinstance(value, dict):
+        return None
+    chunk_id = clean_text(value.get("chunk_id"), int(cfg.library.title_max_chars))
+    document_id = clean_text(value.get("document_id"), int(cfg.library.title_max_chars))
+    quote = clean_text(value.get("quote"), int(cfg.workspaces.mine_quote_max_chars))
+    title = clean_text(value.get("title"), int(cfg.library.title_max_chars)) or ""
+    page = value.get("page")
+    if chunk_id is None or document_id is None or quote is None:
+        return None
+    if page is not None and (not isinstance(page, int) or isinstance(page, bool) or page < 0):
+        return None
+    return {"document_id": document_id, "chunk_id": chunk_id, "page": page, "title": title, "quote": quote}
 _EXAMPLE_SOURCES = frozenset({"setup_test", "tile", "owner"})
 _SAMPLE_VALUE_MAX_CHARS = 80  # noqa: literals - a sample value is a hint for the drafter, not data
 _CHECK_DETAIL_MAX_CHARS = 300  # noqa: literals - a stored error message is truncated for display
@@ -417,10 +437,13 @@ async def _definitions(tenant_id, principal_id, workspace_id=None, **_):
         if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
             return _fail("not_found", "No such workspace.")
         rows = await (await conn.execute(
-            "SELECT definition_id, term, definition, source, approved FROM session_state.kb_definitions "
+            "SELECT definition_id, term, definition, source, approved, cite_document_id, cite_chunk_id, cite_page, "
+            "cite_title, cite_quote FROM session_state.kb_definitions "
             "WHERE workspace_id = %s ORDER BY lower(term)", (workspace_id,))).fetchall()
     return {"ok": True, "definitions": [
-        {"definition_id": i, "term": t, "definition": d, "source": s, "approved": a} for i, t, d, s, a in rows]}
+        {"definition_id": i, "term": t, "definition": d, "source": s, "approved": a,
+         "citation": dict(zip(_CITATION_FIELDS, cite)) if cite[1] else None}
+        for i, t, d, s, a, *cite in rows]}
 
 
 async def _save_definitions(tenant_id, principal_id, workspace_id=None, items=None, **_):
@@ -437,8 +460,13 @@ async def _save_definitions(tenant_id, principal_id, workspace_id=None, items=No
                 text = clean_text(item.get("definition") if isinstance(item, dict) else None,
                                   int(cfg.workspaces.description_max_chars))
                 source = item.get("source", "owner") if isinstance(item, dict) else None
-                if term is None or text is None or source not in _DESCRIPTION_SOURCES:
-                    raise _Abort(_fail("invalid", "Every definition needs a term, a definition and a source of ai or owner."))
+                if term is None or text is None or source not in _DEFINITION_SOURCES:
+                    raise _Abort(_fail("invalid", "Every definition needs a term, a definition and a source of "
+                                                  "ai, owner or document."))
+                citation = clean_citation(item.get("citation")) if source == "document" else None
+                if source == "document" and citation is None:
+                    raise _Abort(_fail("invalid", "A definition from a document needs its citation "
+                                                  "(document_id, chunk_id, quote)."))
                 exists = (await (await conn.execute(
                     "SELECT 1 FROM session_state.kb_definitions WHERE workspace_id = %s AND lower(term) = lower(%s)",
                     (workspace_id, term))).fetchone()) is not None
@@ -448,15 +476,24 @@ async def _save_definitions(tenant_id, principal_id, workspace_id=None, items=No
                     count += 1
                 await conn.execute(
                     """
-                    INSERT INTO session_state.kb_definitions (definition_id, workspace_id, tenant_id, term, definition, source)
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    INSERT INTO session_state.kb_definitions (definition_id, workspace_id, tenant_id, term, definition,
+                        source, cite_document_id, cite_chunk_id, cite_page, cite_title, cite_quote)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (workspace_id, lower(term)) DO UPDATE SET
                         term = EXCLUDED.term, definition = EXCLUDED.definition, source = EXCLUDED.source,
+                        -- an owner edit keeps the citation, so the origin stays visible
+                        cite_document_id = COALESCE(EXCLUDED.cite_document_id, session_state.kb_definitions.cite_document_id),
+                        cite_chunk_id = COALESCE(EXCLUDED.cite_chunk_id, session_state.kb_definitions.cite_chunk_id),
+                        cite_page = CASE WHEN EXCLUDED.cite_chunk_id IS NOT NULL THEN EXCLUDED.cite_page
+                                         ELSE session_state.kb_definitions.cite_page END,
+                        cite_title = COALESCE(EXCLUDED.cite_title, session_state.kb_definitions.cite_title),
+                        cite_quote = COALESCE(EXCLUDED.cite_quote, session_state.kb_definitions.cite_quote),
                         approved = FALSE, updated_at = now()
-                    -- an AI draft never replaces the owner's definition
-                    WHERE EXCLUDED.source = 'owner' OR session_state.kb_definitions.source = 'ai'
+                    -- a draft (AI or document) never replaces the owner's definition
+                    WHERE EXCLUDED.source = 'owner' OR session_state.kb_definitions.source IN ('ai', 'document')
                     """,
-                    (str(uuid.uuid4()), workspace_id, tenant_id, term, text, source))
+                    (str(uuid.uuid4()), workspace_id, tenant_id, term, text, source,
+                     *((citation[k] for k in _CITATION_FIELDS) if citation else (None,) * len(_CITATION_FIELDS))))
     except _Abort as abort:
         return abort.failure
     return await _definitions(tenant_id, principal_id, workspace_id=workspace_id)

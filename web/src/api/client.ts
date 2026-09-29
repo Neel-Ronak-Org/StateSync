@@ -238,6 +238,10 @@ export const api = {
     apiFetch<{ job: SetupJob }>(`/workspaces/${enc(workspaceId)}/draft`, { method: 'POST' }),
   draftStatus: (workspaceId: string) =>
     apiFetch<{ job: SetupJob | null }>(`/workspaces/${enc(workspaceId)}/draft`),
+  startMining: (workspaceId: string) =>
+    apiFetch<{ job: SetupJob }>(`/workspaces/${enc(workspaceId)}/definitions/mine`, { method: 'POST' }),
+  miningStatus: (workspaceId: string) =>
+    apiFetch<{ job: SetupJob | null }>(`/workspaces/${enc(workspaceId)}/definitions/mine`),
 
   startSetup: (workspaceId: string) =>
     apiFetch<{ job: SetupJob; graded_by: 'reference' | 'owner' }>(

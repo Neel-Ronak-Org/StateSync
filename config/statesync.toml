@@ -218,6 +218,7 @@ title_max_chars             = 200
 chunk_max_chars             = 4000       # the MCP refuses a longer chunk
 processing_stale_s          = 1800       # a document still "processing" after this is shown as failed
 router_titles_max           = 20         # uploaded document titles the router sees for a workspace
+mine_max_chunks             = 400        # passages read when finding definitions in a workspace's documents
 
 [workspaces]
 # Workspaces and their knowledge store (docs/V3_PLAN.md Phase 3, migration 021).
@@ -244,6 +245,16 @@ draft_max_tokens            = 4000
 draft_attempts              = 2
 draft_definitions_per_batch = 6
 job_keep_s                  = 3600    # finished jobs stay readable this long
+# Definitions found in uploaded documents (orchestrator/doc_definitions.py). Passages
+# are scored for definitional wording in code; only the best, up to mine_max_chars in
+# total, go to the model, in batches. A proposal is kept only if its quote is really
+# in the cited passage.
+mine_max_chars              = 24000   # ~6k tokens of passages per run, whatever the library's size
+mine_batch_chars            = 6000    # passages per model call
+mine_max_tokens             = 1500
+mine_per_batch              = 8       # proposals the model may return per call
+mine_quote_max_chars        = 400
+mine_min_score              = 1       # a passage needs at least this much definitional wording
 # What a question in a workspace gets (context assembly, slice 3).
 context_max_examples        = 3
 context_max_definitions     = 12

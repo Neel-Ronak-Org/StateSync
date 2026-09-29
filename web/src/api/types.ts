@@ -347,19 +347,32 @@ export interface Definition {
   definition_id: string
   term: string
   definition: string
-  source: 'ai' | 'owner'
+  source: 'ai' | 'owner' | 'document'
   approved: boolean
+  /** Where a definition found in a document came from (the exact sentence, checked against the passage). */
+  citation?: DefinitionCitation | null
+}
+
+export interface DefinitionCitation {
+  document_id: string
+  chunk_id: string
+  page: number | null
+  title: string
+  quote: string
 }
 
 export interface SetupJob {
   job_id: string
-  kind: 'draft' | 'test'
+  kind: 'draft' | 'test' | 'mine'
   workspace_id: string
   state: 'running' | 'done' | 'failed'
   done: number
   total: number
   error: string | null
   run_id: string | null
+  /** mine: definitions proposed, and proposals left out because their quote was not in the document. */
+  found?: number
+  dropped?: number
   started_at: string
   finished_at: string | null
 }

@@ -191,6 +191,38 @@ export function useDraftStatus(workspaceId: string | null) {
   }
 }
 
+/** Finding definitions in the workspace's documents, with polling while it runs. */
+export function useMiningStatus(workspaceId: string) {
+  const queryClient = useQueryClient()
+
+  const query = useQuery({
+    queryKey: ['workspace-mine', workspaceId],
+    queryFn: () => api.miningStatus(workspaceId),
+    refetchInterval: (q) => (q.state.data?.job?.state === 'running' ? DRAFT_POLL_MS : false),
+  })
+
+  const job = query.data?.job ?? null
+  const prevJobState = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (prevJobState.current === 'running' && job && job.state !== 'running') {
+      void queryClient.invalidateQueries({ queryKey: ['workspace-definitions', workspaceId] })
+      void queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] })
+    }
+    prevJobState.current = job?.state ?? null
+  }, [job, workspaceId, queryClient])
+
+  const startMutation = useMutation({
+    mutationFn: () => api.startMining(workspaceId),
+    onSuccess: (res) => {
+      queryClient.setQueryData(['workspace-mine', workspaceId], { job: res.job })
+      void query.refetch()
+    },
+  })
+
+  return { job, startMining: startMutation.mutateAsync, isStarting: startMutation.isPending }
+}
+
 /** Hook for running and grading the setup test. */
 export function useSetupStatus(workspaceId: string | null) {
   const queryClient = useQueryClient()

@@ -34,8 +34,9 @@ export interface Definition {
   definition_id: string
   term: string
   definition: string
-  source: 'ai' | 'owner'
+  source: 'ai' | 'owner' | 'document'
   approved: boolean
+  citation?: { document_id: string; chunk_id: string; page: number | null; title: string; quote: string } | null
 }
 
 export interface SetupResult {
@@ -62,13 +63,15 @@ export interface SetupRun {
 
 export interface SetupJob {
   job_id: string
-  kind: 'draft' | 'test'
+  kind: 'draft' | 'test' | 'mine'
   workspace_id: string
   state: 'running' | 'done' | 'failed'
   done: number
   total: number
   error: string | null
   run_id: string | null
+  found?: number
+  dropped?: number
   started_at: string
   finished_at: string | null
 }
@@ -144,6 +147,17 @@ export class WorkspaceMock {
   failNextDraft: string | null = null
   /** When set, the next setup test stops at its first poll with this message (as when the quota runs out). */
   failNextTest: string | null = null
+  /** What the next "find in documents" run proposes (the server has already dropped ungrounded ones). */
+  mineProposals: { term: string; definition: string; title: string; page: number | null; quote: string }[] = [
+    {
+      term: 'On time',
+      definition: 'Delivered on or before the estimated delivery date.',
+      title: 'Ops handbook',
+      page: 4,
+      quote: 'An order is on time when it is delivered on or before the estimated delivery date.',
+    },
+  ]
+  mineDropped = 2
   private nextOutcomes = new Map<string, { state: CheckState; detail: string | null }>()
   private jobs = new Map<string, SetupJob>()
   private seq = 0
@@ -238,12 +252,12 @@ export class WorkspaceMock {
     return [...this.jobs.values()].find((j) => j.state === 'running')
   }
 
-  private latestJob(workspaceId: string, kind: 'draft' | 'test'): SetupJob | null {
+  private latestJob(workspaceId: string, kind: SetupJob['kind']): SetupJob | null {
     const mine = [...this.jobs.values()].filter((j) => j.workspace_id === workspaceId && j.kind === kind)
     return mine.length ? mine[mine.length - 1] : null
   }
 
-  private newJob(kind: 'draft' | 'test', workspaceId: string, total: number): SetupJob {
+  private newJob(kind: SetupJob['kind'], workspaceId: string, total: number): SetupJob {
     this.seq += 1
     const job: SetupJob = {
       job_id: `job-${this.seq}`,
@@ -289,6 +303,27 @@ export class WorkspaceMock {
     job.done = job.total
     job.state = 'done'
     job.finished_at = AT
+  }
+
+  /** As doc_definitions.run_mining: drafts with citations; the owner's own terms are never replaced. */
+  private advanceMining(ws: MockWorkspace, job: SetupJob): void {
+    if (job.state !== 'running') return
+    let found = 0
+    for (const p of this.mineProposals) {
+      const existing = ws.definitions.find((d) => d.term.toLowerCase() === p.term.toLowerCase())
+      if (existing?.source === 'owner') continue
+      const citation = { document_id: 'up_doc', chunk_id: 'up_doc_c00003', page: p.page, title: p.title, quote: p.quote }
+      if (existing) Object.assign(existing, { definition: p.definition, source: 'document', approved: false, citation })
+      else {
+        this.seq += 1
+        ws.definitions.push({
+          definition_id: `def-${this.seq}`, term: p.term, definition: p.definition, source: 'document',
+          approved: false, citation,
+        })
+      }
+      found += 1
+    }
+    Object.assign(job, { found, dropped: this.mineDropped, done: job.total, state: 'done', finished_at: AT })
   }
 
   private advanceTest(ws: MockWorkspace, job: SetupJob): void {
@@ -388,6 +423,18 @@ export class WorkspaceMock {
         e.approved = false
       }
       return reply(route, 200, { updated: items.length })
+    }
+    if (sub === 'definitions' && parts[3] === 'mine') {
+      if (method === 'POST') {
+        if (this.activeJob()) return reply(route, 409, { detail: 'A setup step is already running. Wait for it to finish.' })
+        return reply(route, 202, { job: { ...this.newJob('mine', ws.workspace_id, 2), found: 0, dropped: 0 } })
+      }
+      if (method === 'GET') {
+        const job = this.latestJob(ws.workspace_id, 'mine')
+        const view = job ? { found: 0, dropped: 0, ...job } : null // the poll sees the state before this step
+        if (job) this.advanceMining(ws, job)
+        return reply(route, 200, { job: view })
+      }
     }
     if (sub === 'definitions') {
       if (method === 'GET') return reply(route, 200, { definitions: ws.definitions })

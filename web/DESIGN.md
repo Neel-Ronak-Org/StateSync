@@ -188,6 +188,14 @@ cards appear as they are added. It ends with a toast: "Added 7 of 8 insights."
     ("Description of <table>.<column>") and its source badge (**AI draft** / **Yours**);
     **Save changes** sends only changed rows. Definitions (`data-testid="definition-row"`)
     with **Term** / **Definition** / **Add definition** and "Delete definition <term>".
+    Source badges **AI draft** / **From document** / **Yours**. **From your documents**:
+    **Find in documents** (disabled, with a pointer to the Documents tab, until the
+    workspace's folders hold ready documents); progress `data-testid="mine-progress"`
+    "Reading documents… d/t"; then `data-testid="mine-summary"`: "Found N definitions to
+    review below." (or "No new definitions were found.") and how many suggestions were
+    left out because their quoted sentence is not in the document. A definition from a
+    document shows `data-testid="definition-citation"`: the exact sentence in quotes and
+    "<title>, p. N". The owner's own definitions are never replaced.
     **Approve** (blocked while edits are unsaved) then moves to Test. Only approved
     knowledge is used when answering; any edit needs approving again.
   - **Test**: "Graded against reference answers" (olist, public) or "You grade each

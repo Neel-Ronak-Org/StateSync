@@ -151,3 +151,16 @@ def test_result_signature_is_the_shape_not_the_values():
 def test_example_checks_need_a_workspace():
     assert _manage("check_examples", principal_id="p")["error"] == "invalid"
     assert _manage("examples", principal_id="p")["error"] == "invalid"
+
+
+def test_document_definitions_need_a_well_formed_citation():
+    ok = {"document_id": "up_1", "chunk_id": "up_1_c00000", "page": 2, "title": "Ops", "quote": "X means Y."}
+    assert wt.clean_citation(ok) == ok
+    assert wt.clean_citation({**ok, "page": None})["page"] is None
+    assert wt.clean_citation({**ok, "quote": "  "}) is None
+    assert wt.clean_citation({**ok, "chunk_id": None}) is None
+    assert wt.clean_citation({**ok, "page": -1}) is None
+    assert wt.clean_citation({**ok, "page": True}) is None
+    assert wt.clean_citation("up_1") is None
+    long_quote = wt.clean_citation({**ok, "quote": "q" * 5000})["quote"]
+    assert len(long_quote) == int(wt.cfg.workspaces.mine_quote_max_chars)
