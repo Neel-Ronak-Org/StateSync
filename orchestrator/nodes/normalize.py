@@ -17,6 +17,7 @@ import logging
 import time
 from typing import Any
 
+from language_gate import needs_language_model
 from language_normalizer import get_language_normalizer
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,25 @@ async def normalize_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         logger.info(
             "Normalize gate DISABLED (control path) for query_id=%s -- "
             "raw_query passed straight to Supervisor, no LanguageNormalizer call.",
+            query_id,
+        )
+        return {
+            "detected_language": "en",
+            "normalized_query": raw_query,
+            "preserved_entities": {},
+            "metrics": {
+                "tokens_in": 0, "tokens_out": 0, "llm_calls": 0,
+                "trajectory_steps": 0, "latency_ms": 0,
+            },
+        }
+
+    if (
+        flags_snapshot.get("pipeline.language_gate") == "script"
+        and not needs_language_model(raw_query)
+    ):
+        logger.info(
+            "Normalize gate: query_id=%s language_gate=script found no Devanagari or "
+            "Hinglish markers -- skipped the LanguageNormalizer call.",
             query_id,
         )
         return {

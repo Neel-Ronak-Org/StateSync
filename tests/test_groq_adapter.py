@@ -214,3 +214,22 @@ def test_accounting_defaults_when_provider_reports_nothing(key_file, monkeypatch
 
     assert (result.cached_tokens, result.retries, result.waited_ms) == (0, 0, 0)
     assert result.rate_remaining_tokens is None
+
+
+def test_fail_fast_gives_up_when_total_wait_would_exceed_the_cap(key_file, monkeypatch):
+    monkeypatch.setattr(groq_mod, "_max_total_wait_s", lambda: 5.0)  # noqa: literals - seconds cap for the test
+    attempts = int(cfg.models.groq_max_retries) + 1
+    adapter, recorder, sleeps = _adapter(PLAIN_MODEL, [_rate_limit("3")] * attempts, monkeypatch)
+
+    with pytest.raises(openai.RateLimitError):
+        _complete(adapter)
+    # First 3s wait fits under 5s; the second would make 6s, so it stops there.
+    assert sleeps == [3.0]
+    assert len(recorder.calls) == 2
+
+
+def test_default_total_wait_cap_does_not_change_the_retry_schedule(key_file, monkeypatch):
+    adapter, recorder, sleeps = _adapter(PLAIN_MODEL, [_rate_limit("2"), _completion("ok")], monkeypatch)
+
+    assert _complete(adapter).text == "ok"
+    assert sleeps == [2.0]

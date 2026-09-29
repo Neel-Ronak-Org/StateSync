@@ -488,6 +488,7 @@ async def answer_question(
         "subtasks":           final_state.subtasks,
         "retrievals":         [r.model_dump() for r in final_state.retrievals],
         "calls":              model_calls,
+        "synth_style":        final_state.flags_snapshot.get("pipeline.synth_style", "full"),
     }
 
     # Recomputed here from final_state's typed fields, not read off the

@@ -47,6 +47,11 @@ logger = logging.getLogger(__name__)
 _PLACEHOLDER_PREFIX = "REPLACE"
 
 
+def _max_total_wait_s() -> float:
+    """models.groq_max_total_wait_s as an accessor so tests can lower it (cfg is read-only)."""
+    return float(cfg.models.groq_max_total_wait_s)
+
+
 class GroqConfigError(RuntimeError):
     """Groq is selected but its key or configuration is unusable.
 
@@ -181,6 +186,13 @@ class GroqAdapter:
                 if attempt == attempts - 1:
                     raise
                 delay = self._retry_delay(exc, backoff)
+                if waited_s + delay > _max_total_wait_s():
+                    logger.warning(
+                        "Groq gave up after %.1fs of waiting (models.groq_max_total_wait_s=%.1f, "
+                        "model=%s); raising %s.",
+                        waited_s, _max_total_wait_s(), self.model, type(exc).__name__,
+                    )
+                    raise
                 logger.warning(
                     "Groq call failed transiently (%s, attempt %d/%d, model=%s); retrying in %.1fs.",
                     type(exc).__name__, attempt + 1, attempts, self.model, delay,

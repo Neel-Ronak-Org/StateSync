@@ -132,6 +132,25 @@ async def supervisor_node(state_dict: dict[str, Any]) -> dict[str, Any]:
 
     logger.info("Supervisor routing query_id=%s", query_id)
 
+    flags_snapshot: dict[str, Any] = state_dict.get("flags_snapshot", {})
+    target_schema = state_dict.get("target_schema")
+    if (
+        flags_snapshot.get("pipeline.router_mode") == "when_documents"
+        and target_schema not in cfg.pipeline.document_schemas
+    ):
+        logger.info(
+            "Supervisor: query_id=%s router_mode=when_documents and source '%s' has no "
+            "documents -- route=sql without a model call.",
+            query_id, target_schema,
+        )
+        return {
+            "route": "sql",
+            "metrics": {
+                "tokens_in": 0, "tokens_out": 0, "llm_calls": 0,
+                "trajectory_steps": 0, "latency_ms": 0,
+            },
+        }
+
     llm = get_agent_llm("supervisor")
     start_ms = int(time.monotonic() * 1000)
 

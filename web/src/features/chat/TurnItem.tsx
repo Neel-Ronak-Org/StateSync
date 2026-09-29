@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Download, MoreHorizontal, PanelRight, Pin } from 'lucide-react'
 import { toast } from 'sonner'
@@ -24,6 +24,8 @@ import { copyToClipboard } from '@/lib/clipboard'
 import { downloadCsv } from '@/lib/csv'
 import { sourceLabel } from '@/lib/sources'
 import type { ChatTurn } from '@/types/chat'
+import { resolveKind, shapeOf, VEGA_KINDS } from '@/viz/infer'
+import { buildSpec } from '@/viz/spec'
 
 interface TurnItemProps {
   turn: ChatTurn
@@ -63,6 +65,18 @@ export function TurnItem({
   )
 
   const blocks = turn.answer ? answerBlocks(turn.answer) : []
+
+  // The short answer writer sends no chart: draw one here from the rows with the
+  // same presentation code the dashboard tiles use. VegaChart still runs the A7
+  // check on it. One row is an answer, not a chart.
+  const clientChart = useMemo(() => {
+    if (turn.chart || turn.stateTrace?.synth_style !== 'short') return null
+    if (!turn.rows || turn.rows.length < 2) return null
+    const shape = shapeOf(turn.rows, turn.columns.length > 0 ? turn.columns : null)
+    const kind = resolveKind(null, shape)
+    return VEGA_KINDS.has(kind) ? buildSpec(kind, shape) : null
+  }, [turn.chart, turn.stateTrace?.synth_style, turn.rows, turn.columns])
+  const chart = turn.chart ?? clientChart
 
   const handlePin = async () => {
     setIsPinning(true)
@@ -167,7 +181,7 @@ export function TurnItem({
     }
   }
 
-  const hasArtifacts = Boolean(turn.chart || (turn.rows && turn.rows.length > 0))
+  const hasArtifacts = Boolean(chart || (turn.rows && turn.rows.length > 0))
   const routeLabel = formatRoute(turn.route)
   const latencyLabel = turn.latencyMs ? `${(turn.latencyMs / 1000).toFixed(1)} s` : null
 
@@ -234,9 +248,9 @@ export function TurnItem({
           {/* Artifact card */}
           {hasArtifacts && (
             <div className="rounded-lg border bg-card p-4 space-y-4">
-              {turn.chart && (
+              {chart && (
                 <VegaChart
-                  spec={turn.chart}
+                  spec={chart}
                   height={260}
                   onView={(view) => {
                     chartViewRef.current = view
@@ -376,7 +390,7 @@ export function TurnItem({
                 </Tooltip>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleDownloadJson}>Download JSON</DropdownMenuItem>
-                  {turn.chart && (
+                  {chart && (
                     <DropdownMenuItem onClick={handleDownloadPng}>Download PNG</DropdownMenuItem>
                   )}
                   {turn.sql && <DropdownMenuItem onClick={handleCopySql}>Copy SQL</DropdownMenuItem>}

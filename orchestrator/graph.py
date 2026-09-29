@@ -108,6 +108,11 @@ def _route_after_supervisor(state: StateSyncState) -> str:
     return route
 
 
+def _timeout_retry_max() -> int:
+    """sql.timeout_retry_max as an accessor so tests can lower it (cfg is read-only)."""
+    return int(cfg.sql.timeout_retry_max)
+
+
 # ── Routing condition (called by LangGraph after sql_agent_node) — C2 ─────────
 def _route_after_sql(state: StateSyncState) -> str:
     """
@@ -132,6 +137,16 @@ def _route_after_sql(state: StateSyncState) -> str:
             last_error.category, state.attempt,
         )
         return "terminal"
+
+    if last_error.category == "timeout":
+        timeouts = sum(1 for e in state.errors if e.category == "timeout")
+        if timeouts > _timeout_retry_max():
+            logger.info(
+                "sql_agent timeout retry bound (sql.timeout_retry_max=%d) exceeded "
+                "at attempt=%d — exiting the loop.",
+                _timeout_retry_max(), state.attempt,
+            )
+            return "terminal"
 
     if state.attempt >= cfg.sql.retry_max:
         logger.info(

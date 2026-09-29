@@ -225,6 +225,8 @@ export class MockApi {
   private failures = new Map<string, { status: number; detail: string; headers?: Record<string, string> }>()
   storedRowsLimit: number | null = null
   nextChart: Record<string, unknown> | null = null
+  /** 'short' mimics pipeline.synth_style=short: /query returns no chart and says so in state_trace. */
+  nextSynthStyle: 'full' | 'short' = 'full'
   /** When set, the next /query answer text is this instead of the canned one. */
   nextAnswer: string | null = null
   liveSchemas: string[] = []
@@ -482,6 +484,7 @@ export class MockApi {
       canned.chart = this.nextChart
       this.nextChart = null
     }
+    if (this.nextSynthStyle === 'short') canned.chart = null
     const turnIndex = turns.length + 1
     const at = this.now()
     turns.push({
@@ -518,6 +521,7 @@ export class MockApi {
         sql_rows_count: canned.rows.length,
         sql_rows: canned.rows,
         sql_columns: canned.columns,
+        synth_style: this.nextSynthStyle,
         attempt: 1,
         errors: [],
         metrics: { tokens_in: 5164, tokens_out: 298, llm_calls: 5 },

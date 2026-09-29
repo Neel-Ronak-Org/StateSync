@@ -89,6 +89,22 @@ test.describe('asking', () => {
     expect(chartBox?.width ?? 0).toBeGreaterThan((turnBox?.width ?? Infinity) * 0.6)
   })
 
+  test('short style: the browser draws the chart from the rows, and a single row gets none', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask' })
+    api.nextSynthStyle = 'short'
+    await ask(page, 'Show orders by status as a chart')
+    const multi = page.getByTestId('turn').last()
+    await expect(multi.getByTestId('answer-text')).toHaveText('Delivered orders dominate: 96,478 of 98,210.')
+    await expect(multi.getByTestId('vega-chart').locator('canvas')).toBeVisible()
+    await expect(multi.getByRole('table')).toContainText('delivered')
+
+    await ask(page, 'How many orders are there in total?')
+    const single = page.getByTestId('turn').last()
+    await expect(single.getByTestId('answer-text')).toHaveText('There are 550 orders in total.')
+    await expect(single.getByRole('table')).toContainText('550')
+    await expect(single.getByTestId('vega-chart')).toHaveCount(0)
+  })
+
   test('a chart that fails the safety check is withheld, and the answer still shows', async ({ page }) => {
     await openApp(page, { hash: '#/ask' })
     await ask(page, 'Show the unsafe chart')

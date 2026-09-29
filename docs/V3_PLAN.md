@@ -604,6 +604,7 @@ header requires a record for any change there).
 | D-v3-13 | 2026-09-29 | The scope review's cleanup list (memory + Qdrant, vision scorer, unused adapters, tenancy placeholder, evaluator service) stays for now | Owner decision: test before removing; each item is measured before it goes |
 | D-v3-14 | 2026-09-29 | Measure first: instrumentation and a Groq baseline precede any pipeline change; lean changes land behind flags, default off | Every existing accuracy number predates Groq; the draft call and others were never measured on their own |
 | D-v3-15 | 2026-09-29 | Bulk implementation goes to Sonnet subagents from written specs with completion criteria; the lead audits by execution and reading | Owner request for cheaper usage; audits caught real bugs in delegated work before (Phase 3 slice 4) |
+| D-v3-16 | 2026-09-29 | Four lean-pipeline variants exist behind `[pipeline]` flags (language_gate, router_mode, sql_draft_mode, synth_style), plus `sql.timeout_retry_max` and `models.groq_max_total_wait_s`; all ship at today's behaviour | A variant becomes the default only after `scripts/eval_groq.py` shows accuracy within one question of the baseline and lower tokens or time |
 
 ## 9. Issue register
 

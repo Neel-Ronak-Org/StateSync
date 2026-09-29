@@ -75,6 +75,7 @@ import os
 import time
 from typing import Any
 
+from column_profiles import format_profiles, get_profiles
 from config_loader import cfg
 from classifiers.error_classifier import classify_error
 from llm.provider import get_agent_llm
@@ -609,59 +610,71 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 if ws_block:
                     context_block += "\n\n" + ws_block
 
-                # Step 2: draft the query BEFORE interrogating, so interrogation
-                # can target the tables this question actually touches rather
-                # than the first few tables in schema order (which was blind to
-                # the question and sampled the same four tables every time).
-                # This costs one extra generation call on the miss path only --
-                # recorded in docs/phase_e_gap_log.md, since it shifts the M1
-                # control baseline and must not be read as a memory-path win.
-                #
-                # The test harness's injected candidate doubles as the draft
-                # when present, so seeded-SQL tests (C2-V1..V4) get targeted
-                # sampling for free and their call counts are unchanged.
-                draft_sql: str = state_dict.get("debug_candidate_sql") or ""
-                if not draft_sql:
-                    draft_result = await get_agent_llm("sql").complete(
-                        system=_SYSTEM_PROMPT.format(max_rows=cfg.mcp.max_rows_default) + ws_suffix,
-                        messages=[{"role": "user", "content": (
-                            f"{context_block}\n\nQuestion: {raw_query}\n\n"
-                            f"Write a single PostgreSQL SELECT query to answer this question."
-                        )}],
-                        max_tokens=cfg.sql.max_tokens_sql,
+                draft_mode = str(flags_snapshot.get("pipeline.sql_draft_mode", "llm"))
+                if draft_mode == "profiles" and not state_dict.get("debug_candidate_sql"):
+                    # One-call variant: cached column profiles replace the throwaway
+                    # draft call and the live sampling (orchestrator/column_profiles.py).
+                    # Live sampling returns only after an empty_result (retry branch).
+                    profiles = await get_profiles(
+                        session, _schema, schema_fingerprint, table_names, table_descriptions,
                     )
-                    tokens_in_total += draft_result.tokens_in
-                    tokens_out_total += draft_result.tokens_out
-                    llm_calls_total += 1
-                    draft_sql = _strip_sql_fences(draft_result.text)
+                    profile_block = format_profiles(profiles, int(cfg.pipeline.profile_max_chars))
+                    if profile_block:
+                        context_block += "\n\n" + profile_block
+                else:
+                    # Step 2: draft the query BEFORE interrogating, so interrogation
+                    # can target the tables this question actually touches rather
+                    # than the first few tables in schema order (which was blind to
+                    # the question and sampled the same four tables every time).
+                    # This costs one extra generation call on the miss path only --
+                    # recorded in docs/phase_e_gap_log.md, since it shifts the M1
+                    # control baseline and must not be read as a memory-path win.
+                    #
+                    # The test harness's injected candidate doubles as the draft
+                    # when present, so seeded-SQL tests (C2-V1..V4) get targeted
+                    # sampling for free and their call counts are unchanged.
+                    draft_sql: str = state_dict.get("debug_candidate_sql") or ""
+                    if not draft_sql:
+                        draft_result = await get_agent_llm("sql").complete(
+                            system=_SYSTEM_PROMPT.format(max_rows=cfg.mcp.max_rows_default) + ws_suffix,
+                            messages=[{"role": "user", "content": (
+                                f"{context_block}\n\nQuestion: {raw_query}\n\n"
+                                f"Write a single PostgreSQL SELECT query to answer this question."
+                            )}],
+                            max_tokens=cfg.sql.max_tokens_sql,
+                        )
+                        tokens_in_total += draft_result.tokens_in
+                        tokens_out_total += draft_result.tokens_out
+                        llm_calls_total += 1
+                        draft_sql = _strip_sql_fences(draft_result.text)
 
-                referenced_tables = _parse_referenced_tables(draft_sql)
-                logger.info(
-                    "SQL Agent interrogation targeting for query_id=%s: draft references %s",
-                    query_id,
-                    referenced_tables or "(nothing parseable -- schema-wide fallback)",
-                )
-
-                # Step 3: active interrogation (miss path, attempt 0 only).
-                targets = _pick_interrogation_targets(
-                    table_descriptions,
-                    cfg.sql.interrogation_max_samples,
-                    referenced_tables=referenced_tables,
-                )
-                for target in targets:
-                    sample_result = await data_sample_rows(
-                        session, target["table"], columns=target["columns"],
-                        schema=_schema,
+                    referenced_tables = _parse_referenced_tables(draft_sql)
+                    logger.info(
+                        "SQL Agent interrogation targeting for query_id=%s: draft references %s",
+                        query_id,
+                        referenced_tables or "(nothing parseable -- schema-wide fallback)",
                     )
-                    new_interrogation_samples.append({
-                        "table": target["table"],
-                        "columns_sampled": target["columns_display"],
-                        "rows": sample_result.get("rows", []),
-                    })
-                    trajectory_steps += 1
 
-                if new_interrogation_samples:
-                    context_block += "\n\n" + _format_interrogation_samples(new_interrogation_samples)
+                    # Step 3: active interrogation (miss path, attempt 0 only).
+                    targets = _pick_interrogation_targets(
+                        table_descriptions,
+                        cfg.sql.interrogation_max_samples,
+                        referenced_tables=referenced_tables,
+                    )
+                    for target in targets:
+                        sample_result = await data_sample_rows(
+                            session, target["table"], columns=target["columns"],
+                            schema=_schema,
+                        )
+                        new_interrogation_samples.append({
+                            "table": target["table"],
+                            "columns_sampled": target["columns_display"],
+                            "rows": sample_result.get("rows", []),
+                        })
+                        trajectory_steps += 1
+
+                    if new_interrogation_samples:
+                        context_block += "\n\n" + _format_interrogation_samples(new_interrogation_samples)
         else:
             # Retry: full schema always (regardless of attempt-0 hit/miss),
             # no memory re-consultation, no interrogation (already in state
@@ -672,6 +685,34 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             context_block = f"Schema:\n{schema_context}"
             if ws_block:
                 context_block += "\n\n" + ws_block
+
+            # "profiles" draft mode: attempt 0 ran on cached profiles alone, so
+            # the first live sampling happens here, and only when the failure
+            # was a valid-but-empty result (a literal that matches no stored
+            # value). Targets are the tables the failed SQL referenced.
+            last_err = existing_errors[-1]
+            if (
+                flags_snapshot.get("pipeline.sql_draft_mode", "llm") == "profiles"
+                and last_err.get("category") == "empty_result"
+            ):
+                failed_sql = last_err.get("offending_sql") or state_dict.get("candidate_sql") or ""
+                for target in _pick_interrogation_targets(
+                    table_descriptions,
+                    cfg.sql.interrogation_max_samples,
+                    referenced_tables=_parse_referenced_tables(failed_sql),
+                ):
+                    sample_result = await data_sample_rows(
+                        session, target["table"], columns=target["columns"],
+                        schema=_schema,
+                    )
+                    new_interrogation_samples.append({
+                        "table": target["table"],
+                        "columns_sampled": target["columns_display"],
+                        "rows": sample_result.get("rows", []),
+                    })
+                    trajectory_steps += 1
+                if new_interrogation_samples:
+                    context_block += "\n\n" + _format_interrogation_samples(new_interrogation_samples)
 
         # Phase D: entity-preservation + spatial predicate hints, appended
         # regardless of which branch above built context_block (memory hit,

@@ -92,6 +92,8 @@ export interface StateTrace {
   subtasks: string[]
   retrievals: Retrieval[]
   calls?: ModelCall[]
+  /** Which answer writer ran (pipeline.synth_style); 'short' leaves the chart to the browser. */
+  synth_style?: 'full' | 'short'
   [key: string]: unknown
 }
 

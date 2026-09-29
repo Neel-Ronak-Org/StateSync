@@ -75,6 +75,12 @@ SHIPPED_DEFAULTS: dict[tuple[str, str], str] = {
     # value is what produced 80d35c8's silent wrong-corpus measurement, and
     # until now nothing guarded it or recorded it in a report's provenance.
     ("schema_retriever", "target_schema"): "public",
+    # Phase 3b lean-pipeline experiments (docs/V3_PLAN.md D-v3-16): each ships
+    # at today's behaviour until the Groq baseline shows a variant holds.
+    ("pipeline", "language_gate"): "llm",
+    ("pipeline", "router_mode"): "always",
+    ("pipeline", "sql_draft_mode"): "llm",
+    ("pipeline", "synth_style"): "full",
 }
 
 

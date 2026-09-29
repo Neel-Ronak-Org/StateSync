@@ -221,6 +221,16 @@ enabled                         = true   # D7 cost gate; read at query entry
 [evaluation.vision_scorer]
 enabled                         = false  # D11 stretch; resolved at process start
 
+# Phase 3b lean-pipeline experiments (docs/V3_PLAN.md D-v3-16, scope review).
+# Each ships at today's behaviour; a variant becomes the default only after the
+# Groq baseline (scripts/eval_groq.py) shows accuracy holds and cost falls.
+# Guarded by scripts/shipped_flags.py SHIPPED_DEFAULTS.
+[pipeline]
+language_gate                   = "llm"      # "llm": ask the model every time | "script": only for non-English text
+router_mode                     = "always"   # "always" | "when_documents": skip routing for sources without documents
+sql_draft_mode                  = "llm"      # "llm": draft + live sampling | "profiles": one SQL call with column profiles
+synth_style                     = "full"     # "full" | "short": <= 3 sentences, no chart proposal, numbers formatted by rule
+
 [tenancy]
 enforced                        = false  # D6; threading is mandatory even when false
 
