@@ -190,9 +190,13 @@ export class WorkspaceMock {
     }
   }
 
+  static normalize(q: string): string {
+    return q.toLowerCase().replace(/['’]/g, '').match(/[a-z0-9]+/g)?.join(' ') ?? ''
+  }
+
   /** The exact approved example for a question, as the fast path matches it. */
   exactExample(ws: MockWorkspace, question: string): { question: string; sql: string } | null {
-    const norm = (q: string) => q.toLowerCase().replace(/['’]/g, '').match(/[a-z0-9]+/g)?.join(' ') ?? ''
+    const norm = WorkspaceMock.normalize
     return ws.examples.find((e) => norm(e.question) === norm(question)) ?? null
   }
 
@@ -372,6 +376,24 @@ export class WorkspaceMock {
         ws.definitions = ws.definitions.filter((d) => d.definition_id !== parts[3])
         if (ws.definitions.length === before) return reply(route, 404, { detail: 'No such definition.' })
         return reply(route, 200, { deleted: parts[3] })
+      }
+    }
+    if (sub === 'examples' && parts.length === 3) {
+      const question = String(body.question ?? '').trim()
+      if (method === 'POST') {
+        const sql = String(body.sql ?? '').trim()
+        if (!question || !sql) return reply(route, 422, { detail: 'An example needs a question and its SQL.' })
+        // One approved answer per question: a newer one replaces it.
+        ws.examples = ws.examples.filter((e) => WorkspaceMock.normalize(e.question) !== WorkspaceMock.normalize(question))
+        ws.examples.push({ question, sql })
+        this.seq += 1
+        return reply(route, 200, { example_id: `ex-${this.seq}` })
+      }
+      if (method === 'DELETE') {
+        if (!question) return reply(route, 422, { detail: 'question is required.' })
+        const before = ws.examples.length
+        ws.examples = ws.examples.filter((e) => WorkspaceMock.normalize(e.question) !== WorkspaceMock.normalize(question))
+        return reply(route, 200, { removed: before - ws.examples.length })
       }
     }
     if (sub === 'approve' && method === 'POST') {

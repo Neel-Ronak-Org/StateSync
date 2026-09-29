@@ -72,6 +72,8 @@ export interface StateTrace {
   target_schema: string
   workspace_id?: string | null
   verified_example?: boolean
+  /** How much to trust the answer (orchestrator/evidence.py); absent or null when no SQL ran. */
+  evidence?: 'verified' | 'compiled' | 'checked' | 'unchecked' | null
   route: Route | null
   executed_sql: string | null
   /** Plain-English reading of the executed SQL ("How I got this"); absent or null when none. */

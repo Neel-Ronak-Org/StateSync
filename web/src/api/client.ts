@@ -199,6 +199,14 @@ export const api = {
       { method: 'DELETE' },
     ),
 
+  addExample: (workspaceId: string, body: { question: string; sql: string }) =>
+    apiFetch<{ example_id: string }>(`/workspaces/${enc(workspaceId)}/examples`, { method: 'POST', body }),
+  removeExample: (workspaceId: string, question: string) =>
+    apiFetch<{ removed: number }>(`/workspaces/${enc(workspaceId)}/examples`, {
+      method: 'DELETE',
+      body: { question },
+    }),
+
   approveWorkspace: (workspaceId: string) =>
     apiFetch<{ workspace: Workspace; approved_columns: number; approved_definitions: number }>(
       `/workspaces/${enc(workspaceId)}/approve`,

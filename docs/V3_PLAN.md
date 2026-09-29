@@ -557,6 +557,36 @@ Each change ships only if accuracy on the baseline set holds within one question
 tokens or time fall. Implementation is delegated from written specs to Sonnet subagents
 and audited by execution (D-v3-15).
 
+### Phase 3c — Evidence-tiered answering (scope review, "a distinctive method")
+
+Every answer carries the evidence behind it, and the cheapest trustworthy path answers
+first. Slices, each a written spec, delegated and audited:
+
+1. **Tier labels.** Each answer gets `evidence`: `verified` (an approved query, run as
+   is), `compiled` (a template or metric filled in code), `checked` (new SQL that passed
+   the answer checks), `unchecked` (new SQL with a caveat, or checks off). The chat's
+   Verified badge becomes a tier chip with a one-line explanation.
+2. **Thumbs up / down.** A confirmed answer becomes an approved example in its workspace
+   (and later a template); a thumbs-down records the question for the setup test.
+3. **Templates from verified queries.** Literals in an approved query (dates, limits,
+   numbers, text values) become typed slots, found with the SQL parser and stored per
+   workspace (new table, RLS). A question close to a template is matched by one short
+   qwen call that returns the template and slot values; the SQL is assembled in code,
+   values validated (dates parse, numbers, text values quoted and checked against column
+   profiles) and passed through the same SQL gate. No SQL-model call.
+4. **Self-testing workspace.** Approved examples re-run on a schedule like dashboard
+   cards (no model); a failure or changed result shape flags them for review; a weekly
+   sample re-asked through the full pipeline keeps a live accuracy score.
+5. **Uploads and documents per workspace** (the original slice 5: parser service, text
+   PDFs, chunking into `workspace_docs`), then **definitions mined from documents** with
+   page citations for owner approval.
+6. **Metrics** (governed definitions compiled to SQL), the **account-level library**
+   (sources chosen by workspaces), **own Postgres** (self-hosted), and the
+   synthetic-schema switches.
+
+Exit: the Phase 3 exit (8/10 on olist and public through the wizard) plus, on the Groq
+baseline set, the share of answers on each tier and accuracy per tier reported.
+
 ### Phase 4 — Deploy
 
 - One server: Caddy, a hosted model with spending caps, a guest demo workspace, and

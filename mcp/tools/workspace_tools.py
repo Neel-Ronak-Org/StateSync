@@ -11,7 +11,7 @@ One JSON-RPC method, workspaces.manage (decision D-v3-10), takes an `action`:
   definitions, save_definitions,
   delete_definition                        business terms
   approve                                  the owner accepts the knowledge
-  add_example                              an approved question -> SQL pair
+  add_example, remove_example              an approved question -> SQL pair, and taking one back
   context                                  what a question in this workspace may use
   start_run, record_result, finish_run,
   get_run, set_verdict                     the 10-question setup test
@@ -52,7 +52,8 @@ logger = logging.getLogger(__name__)
 
 _ACTIONS = frozenset({
     "list", "create", "get", "update", "delete", "scan", "catalog", "save_descriptions",
-    "definitions", "save_definitions", "delete_definition", "approve", "add_example", "context",
+    "definitions", "save_definitions", "delete_definition", "approve", "add_example", "remove_example",
+    "context",
     "start_run", "record_result", "finish_run", "get_run", "set_verdict",
 })
 _NO_WORKSPACE = frozenset({"list", "create"})
@@ -488,6 +489,20 @@ async def _add_example(tenant_id, principal_id, workspace_id=None, question=None
     return {"ok": True, "example_id": example_id}
 
 
+async def _remove_example(tenant_id, principal_id, workspace_id=None, question=None, **_):
+    """Withdraw the approved answer to a question (a thumbs-down on a verified answer)."""
+    q = clean_text(question, int(cfg.workspaces.question_max_chars))
+    if q is None:
+        return _fail("invalid", "question is required.")
+    async with get_history_connection() as conn:
+        if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
+            return _fail("not_found", "No such workspace.")
+        removed = (await conn.execute(
+            "DELETE FROM session_state.kb_examples WHERE tenant_id = %s AND workspace_id = %s AND question_norm = %s",
+            (tenant_id, workspace_id, normalize_question(q)))).rowcount
+    return {"ok": True, "removed": removed}
+
+
 async def _context(tenant_id, principal_id, workspace_id=None, question=None, **_):
     """What a question in this workspace may use: approved knowledge only (§5.1)."""
     if not isinstance(question, str):
@@ -665,7 +680,7 @@ _HANDLERS = {
     "list": _list, "create": _create, "get": _get, "update": _update, "delete": _delete, "scan": _scan,
     "catalog": _catalog, "save_descriptions": _save_descriptions, "definitions": _definitions,
     "save_definitions": _save_definitions, "delete_definition": _delete_definition, "approve": _approve,
-    "add_example": _add_example, "context": _context, "start_run": _start_run, "record_result": _record_result,
+    "add_example": _add_example, "remove_example": _remove_example, "context": _context, "start_run": _start_run, "record_result": _record_result,
     "finish_run": _finish_run, "get_run": _get_run, "set_verdict": _set_verdict,
 }
 

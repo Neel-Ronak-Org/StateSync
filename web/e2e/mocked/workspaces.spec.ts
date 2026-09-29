@@ -405,3 +405,75 @@ test.describe('phone width', () => {
     expect(await overflow()).toBeLessThanOrEqual(0)
   })
 })
+
+test.describe('evidence and thumbs', () => {
+  const QUESTION = 'How many orders are there in total?'
+
+  async function inWorkspace(page: Page, examples: { question: string; sql: string }[] = []) {
+    const api = await openApp(page, {
+      hash: '#/ask',
+      seed: (a) => void a.workspaces.createReady('Furniture shop', 'olist', examples),
+    })
+    await page.getByRole('combobox', { name: 'Dataset' }).click()
+    await page.getByRole('option', { name: 'Furniture shop' }).click()
+    return api
+  }
+
+  test('an unchecked answer shows its chip and thumbs; thumbs up makes the next identical question verified', async ({ page }) => {
+    const api = await inWorkspace(page)
+    await ask(page, QUESTION)
+    const first = page.getByTestId('turn').last()
+    await expect(first.getByTestId('evidence-chip')).toHaveText('Unchecked')
+    await expect(first.getByTestId('evidence-chip')).toHaveAttribute('data-evidence', 'unchecked')
+    await first.getByRole('button', { name: 'Mark answer correct' }).click()
+    await expect(page.getByText('Saved as an approved answer for this workspace')).toBeVisible()
+    await expect(first.getByRole('button', { name: 'Mark answer correct' })).toBeDisabled()
+    await expect(first.getByRole('button', { name: 'Mark answer wrong' })).toBeDisabled()
+    expect(api.workspaces.workspaces.get('ws-1')?.examples.map((e) => e.question)).toEqual([QUESTION])
+
+    await ask(page, QUESTION)
+    await expect(page.getByTestId('answer-text')).toHaveCount(2)
+    await expect(page.getByTestId('turn').last().getByTestId('evidence-chip')).toHaveAttribute('data-evidence', 'verified')
+    await expect(page.getByTestId('turn').last().getByTestId('verified-badge')).toHaveText('Verified')
+  })
+
+  test('thumbs down on a verified answer withdraws it; the next identical question is not verified', async ({ page }) => {
+    const api = await inWorkspace(page, [{ question: QUESTION, sql: 'SELECT count(*) FROM olist.orders' }])
+    await ask(page, QUESTION)
+    const first = page.getByTestId('turn').last()
+    await expect(first.getByTestId('evidence-chip')).toHaveAttribute('data-evidence', 'verified')
+    await first.getByRole('button', { name: 'Mark answer wrong' }).click()
+    await expect(page.getByText('Removed the approved answer; the next time it will be worked out again')).toBeVisible()
+    expect(api.workspaces.workspaces.get('ws-1')?.examples).toEqual([])
+
+    await ask(page, QUESTION)
+    await expect(page.getByTestId('answer-text')).toHaveCount(2)
+    await expect(page.getByTestId('turn').last().getByTestId('evidence-chip')).toHaveAttribute('data-evidence', 'unchecked')
+  })
+
+  test('thumbs down on an unverified answer only says thanks, with no server call', async ({ page }) => {
+    const api = await inWorkspace(page)
+    await ask(page, QUESTION)
+    await page.getByTestId('turn').last().getByRole('button', { name: 'Mark answer wrong' }).click()
+    await expect(page.getByText('Thanks — noted')).toBeVisible()
+    expect(api.workspaces.calls.filter((c) => c.includes('/examples'))).toEqual([])
+  })
+
+  test('outside a workspace there are no thumbs, but the tier still shows', async ({ page }) => {
+    await openApp(page, { hash: '#/ask' })
+    await ask(page, QUESTION)
+    const turn = page.getByTestId('turn').last()
+    await expect(turn.getByTestId('evidence-chip')).toHaveAttribute('data-evidence', 'unchecked')
+    await expect(turn.getByRole('button', { name: 'Mark answer correct' })).toHaveCount(0)
+    await expect(turn.getByRole('button', { name: 'Mark answer wrong' })).toHaveCount(0)
+  })
+
+  test('a documents answer has no chip and no thumbs', async ({ page }) => {
+    await inWorkspace(page)
+    await ask(page, 'What does the SLA policy say for LP003?')
+    const turn = page.getByTestId('turn').last()
+    await expect(turn.getByTestId('answer-text')).toBeVisible()
+    await expect(turn.getByTestId('evidence-chip')).toHaveCount(0)
+    await expect(turn.getByRole('button', { name: 'Mark answer correct' })).toHaveCount(0)
+  })
+})

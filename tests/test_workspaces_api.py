@@ -144,3 +144,34 @@ def test_an_unreachable_mcp_is_503(setup):
     harness, client = setup
     harness.exception = ConnectionError("down")
     assert client.get("/workspaces").status_code == 503
+
+
+def test_a_thumbs_up_is_an_owner_example_for_the_authenticated_principal(setup):
+    harness, client = setup
+    harness.result = {"ok": True, "example_id": "e1"}
+    response = client.post("/workspaces/ws-1/examples", json={
+        "question": "How many orders?", "sql": "SELECT count(*) FROM olist.orders",
+        "source": "setup_test", "principal_id": "p_attacker"})
+    assert response.status_code == 200 and response.json() == {"example_id": "e1"}
+    assert harness.calls[-1] == {"principal_id": "p_test", "action": "add_example", "params": {
+        "workspace_id": "ws-1", "question": "How many orders?",
+        "sql": "SELECT count(*) FROM olist.orders", "source": "owner"}}
+    assert harness.audit_log[-1]["detail"] == "workspaces:add_example workspace=ws-1"
+
+
+def test_a_thumbs_down_removes_the_example_by_question(setup):
+    harness, client = setup
+    harness.result = {"ok": True, "removed": 1}
+    response = client.request("DELETE", "/workspaces/ws-1/examples", json={"question": "How many orders?"})
+    assert response.status_code == 200 and response.json() == {"removed": 1}
+    assert harness.calls[-1] == {"principal_id": "p_test", "action": "remove_example",
+                                 "params": {"workspace_id": "ws-1", "question": "How many orders?"}}
+
+
+def test_example_routes_map_failures_to_statuses(setup):
+    harness, client = setup
+    harness.result = {"ok": False, "error": "not_found", "message": "No such workspace."}
+    assert client.post("/workspaces/ws-9/examples", json={"question": "q", "sql": "SELECT 1"}).status_code == 404
+    assert client.request("DELETE", "/workspaces/ws-9/examples", json={"question": "q"}).status_code == 404
+    harness.result = {"ok": False, "error": "invalid", "message": "gate"}
+    assert client.post("/workspaces/ws-1/examples", json={"question": "q", "sql": "DROP TABLE x"}).status_code == 422

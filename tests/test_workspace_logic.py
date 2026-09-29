@@ -97,6 +97,11 @@ def test_unknown_action_and_missing_ids_are_refused():
     assert _manage("list", principal_id="")["error"] == "invalid"
 
 
+def test_remove_example_needs_a_workspace_and_a_question():
+    assert _manage("remove_example", principal_id="p", question="q")["error"] == "invalid"
+    assert _manage("remove_example", principal_id="p", workspace_id="w", question=" ")["error"] == "invalid"
+
+
 def test_create_refuses_unknown_dataset_and_blank_name():
     assert _manage("create", principal_id="p", name="Shop", target_schema="pg_catalog")["error"] == "invalid"
     assert _manage("create", principal_id="p", name="  ", target_schema="olist")["error"] == "invalid"

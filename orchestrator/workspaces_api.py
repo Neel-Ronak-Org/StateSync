@@ -92,6 +92,19 @@ class VerdictRequest(BaseModel):
     verdict: Literal["right", "wrong"]
 
 
+class ExampleRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    question: str
+    sql: str
+
+
+class RemoveExampleRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    question: str
+
+
 async def call_workspaces(principal: Principal, action: str, **params: Any) -> dict[str, Any]:
     """One workspaces.manage call as this principal (also used by the setup flow)."""
     async with MCPSession(
@@ -207,6 +220,21 @@ def register_workspace_routes(app: Any, require_principal: Any, audit: Any,
                        f"/workspaces/{workspace_id}/definitions/{definition_id}",
                        workspace_id=workspace_id, definition_id=definition_id)
         return {"deleted": definition_id}
+
+    @app.post("/workspaces/{workspace_id}/examples", tags=["workspaces"])
+    async def add_example(workspace_id: str, body: ExampleRequest, request: Request,
+                          principal: Principal = Depends(require_principal)) -> dict[str, Any]:
+        # A thumbs-up is the owner's word; the MCP runs the SQL through the gate and caps the count.
+        result = await _execute(principal, request, "add_example", f"/workspaces/{workspace_id}/examples",
+                                workspace_id=workspace_id, question=body.question, sql=body.sql, source="owner")
+        return {"example_id": result["example_id"]}
+
+    @app.delete("/workspaces/{workspace_id}/examples", tags=["workspaces"])
+    async def remove_example(workspace_id: str, body: RemoveExampleRequest, request: Request,
+                             principal: Principal = Depends(require_principal)) -> dict[str, Any]:
+        result = await _execute(principal, request, "remove_example", f"/workspaces/{workspace_id}/examples",
+                                workspace_id=workspace_id, question=body.question)
+        return {"removed": result["removed"]}
 
     @app.post("/workspaces/{workspace_id}/approve", tags=["workspaces"])
     async def approve_workspace(workspace_id: str, request: Request,

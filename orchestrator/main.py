@@ -29,6 +29,7 @@ from graph import graph
 from llm.provider import LLM_READINESS, validate_llm_config
 from llm.recording import start_recording, stop_recording
 from failures import user_facing_failure
+from evidence import evidence_tier
 from sql_explain import explain_sql
 from mcp_client import (MCPSession, audit_record, history_append_turn,
                         history_check_session, history_get_recent_turns,
@@ -463,6 +464,8 @@ async def answer_question(
         "target_schema": final_state.target_schema,
         "workspace_id": final_state.workspace_id,
         "verified_example": final_state.verified_example,
+        "evidence": evidence_tier(final_state.verified_example, final_state.executed_sql,
+                                  final_state.flags_snapshot, final_state.caveats),
         "route":       final_state.route,
         "executed_sql": final_state.executed_sql,
         # executed_sql is null when a statement was rejected before execution,

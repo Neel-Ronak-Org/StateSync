@@ -1,10 +1,10 @@
 import { useId, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Download, MoreHorizontal, PanelRight, Pin } from 'lucide-react'
+import { AlertTriangle, Download, MoreHorizontal, PanelRight, Pin, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { api, ApiError } from '@/api/client'
-import type { Tile } from '@/api/types'
+import type { StateTrace, Tile } from '@/api/types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -43,6 +43,34 @@ function formatRoute(route: string | null | undefined): string {
   return ''
 }
 
+type Evidence = NonNullable<StateTrace['evidence']>
+
+const GREEN_CHIP = 'border-emerald-500/30 bg-emerald-500/10 text-emerald-500 font-normal text-xs'
+
+/** The chip for each evidence tier: what to show and the one-line reason (orchestrator/evidence.py). */
+const EVIDENCE_CHIPS: Record<Evidence, { label: string; className: string; hint: string }> = {
+  verified: {
+    label: 'Verified',
+    className: GREEN_CHIP,
+    hint: 'Answered with a query approved for this workspace.',
+  },
+  compiled: {
+    label: 'Compiled',
+    className: 'border-sky-500/30 bg-sky-500/10 text-sky-500 font-normal text-xs',
+    hint: "Built from an approved query pattern, with this question's values.",
+  },
+  checked: {
+    label: 'Checked',
+    className: 'border-sky-500/30 bg-sky-500/10 text-sky-500 font-normal text-xs',
+    hint: 'New query; it passed the automatic checks.',
+  },
+  unchecked: {
+    label: 'Unchecked',
+    className: 'font-normal text-xs text-muted-foreground',
+    hint: 'New query; not independently checked.',
+  },
+}
+
 export function TurnItem({
   turn,
   devMode,
@@ -55,6 +83,7 @@ export function TurnItem({
   const [isLoadingFull, setIsLoadingFull] = useState(false)
   const [isPinning, setIsPinning] = useState(false)
   const [showHow, setShowHow] = useState(false)
+  const [rated, setRated] = useState(false)
   const howId = useId()
   const queryClient = useQueryClient()
 
@@ -104,6 +133,34 @@ export function TurnItem({
       toast.error(err instanceof ApiError ? err.message : 'Failed to pin to dashboard.')
     } finally {
       setIsPinning(false)
+    }
+  }
+
+  const evidence: Evidence | null =
+    turn.stateTrace?.evidence ?? (turn.verifiedExample ? 'verified' : null)
+  const chip = evidence ? EVIDENCE_CHIPS[evidence] : null
+  // Thumbs only where an approved answer can be made or withdrawn: a workspace answer that ran SQL.
+  const workspaceId = turn.stateTrace?.workspace_id ?? null
+  const executedSql = turn.stateTrace?.executed_sql ?? null
+  const canRate = Boolean(workspaceId && executedSql)
+
+  const handleRate = async (correct: boolean) => {
+    if (!workspaceId || !executedSql) return
+    // The standalone form of the question is what the fast path matches next time.
+    const question = turn.stateTrace?.normalized_query || turn.question
+    try {
+      if (correct) {
+        await api.addExample(workspaceId, { question, sql: executedSql })
+        toast.success('Saved as an approved answer for this workspace')
+      } else if (evidence === 'verified') {
+        await api.removeExample(workspaceId, question)
+        toast.success('Removed the approved answer; the next time it will be worked out again')
+      } else {
+        toast.success('Thanks — noted')
+      }
+      setRated(true)
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Could not save your rating.')
     }
   }
 
@@ -343,20 +400,20 @@ export function TurnItem({
               <Badge variant="outline" data-testid="turn-dataset" className="font-normal text-xs">
                 {turn.dataset}
               </Badge>
-              {turn.verifiedExample && (
+              {chip && evidence && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Badge
-                      data-testid="verified-badge"
+                      data-testid="evidence-chip"
+                      data-evidence={evidence}
                       variant="outline"
-                      className="border-emerald-500/30 bg-emerald-500/10 text-emerald-500 font-normal text-xs"
+                      className={chip.className}
                     >
-                      Verified
+                      {/* One element carries one test id: the older Verified tests look for this inner label. */}
+                      {evidence === 'verified' ? <span data-testid="verified-badge">{chip.label}</span> : chip.label}
                     </Badge>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    Answered with a query approved for this workspace.
-                  </TooltipContent>
+                  <TooltipContent>{chip.hint}</TooltipContent>
                 </Tooltip>
               )}
               {routeLabel && <span>{routeLabel}</span>}
@@ -364,6 +421,38 @@ export function TurnItem({
             </div>
 
             <div className="flex items-center gap-1">
+              {canRate && (
+                <>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Mark answer correct"
+                        disabled={rated}
+                        onClick={() => void handleRate(true)}
+                      >
+                        <ThumbsUp className="size-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Correct: approve this answer for the workspace</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Mark answer wrong"
+                        disabled={rated}
+                        onClick={() => void handleRate(false)}
+                      >
+                        <ThumbsDown className="size-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Wrong</TooltipContent>
+                  </Tooltip>
+                </>
+              )}
               {turn.sql && !isPinned && (
                 <Tooltip>
                   <TooltipTrigger asChild>

@@ -229,6 +229,8 @@ export class MockApi {
   nextSynthStyle: 'full' | 'short' = 'full'
   /** Caveats the next /query reports in state_trace (pipeline.answer_checks); cleared after use. */
   nextCaveats: string[] = []
+  /** When set, the next /query reports this evidence tier instead of the default (verified or unchecked). */
+  nextEvidence: 'verified' | 'compiled' | 'checked' | 'unchecked' | null = null
   /** When set, the next /query answer text is this instead of the canned one. */
   nextAnswer: string | null = null
   liveSchemas: string[] = []
@@ -489,6 +491,9 @@ export class MockApi {
     if (this.nextSynthStyle === 'short') canned.chart = null
     const caveats = this.nextCaveats
     this.nextCaveats = []
+    // The default tier: an approved example ran as is, else new SQL nobody checked; no SQL, no tier.
+    const evidence = this.nextEvidence ?? (canned.sql ? (verifiedExample ? 'verified' : 'unchecked') : null)
+    this.nextEvidence = null
     const turnIndex = turns.length + 1
     const at = this.now()
     turns.push({
@@ -519,6 +524,7 @@ export class MockApi {
         target_schema: schema,
         workspace_id: workspaceId,
         verified_example: verifiedExample,
+        evidence,
         route: canned.route,
         executed_sql: canned.sql,
         ...(canned.sql ? { explanation: 'Counted rows in orders, grouped by order status.' } : {}),
