@@ -109,6 +109,7 @@ class Citation(BaseModel):
     kind: str
     ref:  str
     page: int | None = None
+    title: str | None = None   # an uploaded document's title (Phase 3c slice 5)
 
     @field_validator("kind")
     @classmethod

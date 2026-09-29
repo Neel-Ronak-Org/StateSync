@@ -589,6 +589,17 @@ first. Slices, each a written spec, delegated and audited:
 5. **Uploads and documents per workspace** (the original slice 5: parser service, text
    PDFs, chunking into `workspace_docs`), then **definitions mined from documents** with
    page citations for owner approval.
+   **Done 2026-09-29 (5a/5b):** account library with folders (migration 024, D-v3-17);
+   isolated `parser` service (internal network, no secrets, read-only, per-file child
+   process with memory/CPU/time limits); MCP `library.manage` (20th tool) with batched
+   Ollama embedding; `/library` routes with background ingestion; Library page and a
+   workspace Documents tab. A question in a workspace searches its chosen folders next to
+   the sample corpus (same model and cosine, merged by score), the router is told the
+   workspace's document titles (as data, after the fixed prompt), and citations carry the
+   document's title. Live: `scripts/verify_library.py` 24/24; one real question in an
+   olist workspace routed to docs and cited the uploaded policy. Ingestion runs at about
+   0.3 s per chunk on the local CPU embedder (88 chunks in 28 s). Next: definitions mined
+   from documents.
 6. **Metrics** (governed definitions compiled to SQL), the **account-level library**
    (sources chosen by workspaces), **own Postgres** (self-hosted, enabled on the owner's
    machine per D-v3-18), and the synthetic-schema switches.

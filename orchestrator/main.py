@@ -41,7 +41,7 @@ from state import StateSyncState
 from tiles_api import register_tile_routes
 from builder_api import register_build_routes
 from dashboards_api import register_dashboard_routes
-from library_api import register_library_routes
+from library_api import call_library, register_library_routes
 from workspaces_api import call_workspaces, register_workspace_routes
 
 logging.basicConfig(
@@ -384,6 +384,18 @@ async def get_turn_rows_route(
     return result
 
 
+async def _library_titles(principal: Principal, workspace_id: str | None) -> list[str]:
+    """Titles of the ready uploaded documents a workspace searches ([] without one, or on failure)."""
+    if not workspace_id:
+        return []
+    try:
+        result = await call_library(principal, "workspace_documents", workspace_id=workspace_id)
+    except Exception as exc:
+        logger.warning("Library titles unavailable for workspace %s: %s", workspace_id, exc)
+        return []
+    return [d["title"] for d in result.get("documents", [])] if result.get("ok") else []
+
+
 async def answer_question(
     principal: Principal,
     query: str,
@@ -429,6 +441,7 @@ async def answer_question(
                 raw_query=initial_input["raw_query"],
                 target_schema=requested,
                 workspace_id=workspace_id,
+                library_titles=await _library_titles(principal, workspace_id),
                 allow_fast_path=allow_fast_path,
                 flags_snapshot=initial_input["flags_snapshot"],
                 debug_candidate_sql=debug_candidate_sql,

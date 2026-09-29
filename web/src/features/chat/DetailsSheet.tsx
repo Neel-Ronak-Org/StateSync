@@ -153,7 +153,7 @@ export function DetailsSheet({ turn, open, onOpenChange, devMode }: DetailsSheet
                     ) : (
                       <>
                         <span className="text-foreground break-words" title={c.ref}>
-                          {sourceLabel(c.ref)}
+                          {c.title || sourceLabel(c.ref)}
                         </span>
                         {c.page != null && (
                           <span className="text-muted-foreground ml-1">p. {c.page}</span>

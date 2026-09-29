@@ -155,6 +155,14 @@ test.describe('asking', () => {
     await expect(turn.getByRole('table')).toHaveCount(0)
   })
 
+  test('an answer from an uploaded document cites it by title and page, not by id', async ({ page }) => {
+    await openApp(page, { hash: '#/ask' })
+    await ask(page, 'How fast are refunds issued?')
+    const citations = page.getByTestId('turn').last().getByTestId('citations')
+    await expect(citations).toContainText('Refund policy 2026 p. 3')
+    await expect(citations).not.toContainText('up_0123456789abcdef')
+  })
+
   test('the details panel shows the SQL behind an answer', async ({ page }) => {
     await openApp(page, { hash: '#/ask' })
     await ask(page, 'How many orders are there in total?')

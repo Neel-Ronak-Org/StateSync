@@ -13,6 +13,9 @@ What it proves, through the real API:
   first one's folder, nor link it to their own workspace;
 - workspace links: a workspace saves and reads back its chosen folders, and
   deleting a folder removes the link;
+- retrieval (MCP, no model): a question asked in the workspace finds the
+  uploaded document first, with its title, and fetches its passage; the same
+  search without the workspace never sees it;
 - clean-up: deleting a folder removes its documents.
 
 Needs: the stack running (parser included), migration 024 applied,
@@ -25,6 +28,7 @@ Usage: python3 scripts/verify_library.py
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import time
 import urllib.error
@@ -41,6 +45,25 @@ TOKEN_A = api_token()
 TOKEN_B = (REPO_ROOT / "secrets" / "api_token_second").read_text().strip()
 PDF = REPO_ROOT / "fixtures" / "documents" / "supplier_agreement_S001.pdf"
 READY_WAIT_S = 90
+ORCHESTRATOR = "statesync-orchestrator-1"
+POLICY = """# Acme Furniture refund policy 2026
+
+Customers may return any sofa, chair or table within 30 days of delivery.
+
+Refunds are issued to the original payment method within 7 business days after the returned item
+has been inspected at our Curitiba warehouse."""
+POLICY_QUESTION = "How many days does Acme take to issue a refund after inspection?"
+
+_MCP_SNIPPET = """
+import json, sys, urllib.request
+req = json.load(sys.stdin)
+headers = {"Content-Type": "application/json", "X-Tenant-ID": req["tenant"]}
+if req.get("workspace"):
+    headers["X-Workspace-ID"] = req["workspace"]
+body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": req["method"], "params": req["params"]}).encode()
+r = urllib.request.Request("http://mcp:8080/rpc", data=body, method="POST", headers=headers)
+print(urllib.request.urlopen(r, timeout=60).read().decode())
+"""
 
 results: list[tuple[bool, str]] = []
 
@@ -68,6 +91,22 @@ def call(method: str, path: str, token: str = TOKEN_A, body: dict | None = None,
             return e.code, json.loads(body_raw or b"{}")
         except json.JSONDecodeError:
             return e.code, {"raw": body_raw.decode(errors="replace")}
+
+
+def psql(sql: str) -> str:
+    out = subprocess.run(["docker", "exec", "-i", "postgres", "psql", "-U", "statesync_migrator", "-d", "statesync",
+                          "-qtA"], input=sql, capture_output=True, text=True)
+    return out.stdout.strip()
+
+
+def mcp(tenant: str, workspace: str | None, method: str, params: dict) -> dict:
+    """Call the MCP from inside the network, as the orchestrator does."""
+    out = subprocess.run(["docker", "exec", "-i", ORCHESTRATOR, "python", "-c", _MCP_SNIPPET],
+                         input=json.dumps({"tenant": tenant, "workspace": workspace, "method": method,
+                                           "params": params}), capture_output=True, text=True)
+    if out.returncode:
+        raise SystemExit(f"FATAL: MCP call failed: {out.stderr.strip()}")
+    return json.loads(out.stdout).get("result") or {}
 
 
 def wait_until_done(folder_id: str) -> dict:
@@ -136,6 +175,24 @@ def main() -> int:
         mine = next((f for f in body.get("folders", []) if f["folder_id"] == folder_id), {})
         check(mine.get("workspace_ids") == [workspace_id] and mine.get("ready_count") == 1,
               "the folder shows its workspace and ready count", str(mine))
+
+        status, body = call("POST", upload, raw=POLICY.encode(), content_type="text/markdown",
+                            filename="Acme refund policy 2026.md")
+        policy = wait_until_done(folder_id)
+        check(status == 202 and policy.get("status") == "ready", "a Markdown upload becomes ready", str(policy))
+        tenant = psql(f"SELECT tenant_id FROM workspace_docs.folders WHERE folder_id = '{folder_id}';")
+        search = {"query_text": POLICY_QUESTION, "top_k": 5}
+        inside = mcp(tenant, workspace_id, "vector.semantic_search", search).get("matches", [])
+        top = inside[0] if inside else {}
+        check(top.get("chunk_id", "").startswith("up_") and top.get("title") == "Acme refund policy 2026",
+              "in the workspace, the uploaded document is the best match, with its title",
+              str([(m.get("chunk_id"), m.get("title")) for m in inside[:3]]))
+        passage = mcp(tenant, workspace_id, "docs.get_passage", {"chunk_id": top.get("chunk_id", "x")})
+        check("7 business days" in passage.get("content_md", "") and passage.get("title") == "Acme refund policy 2026",
+              "its passage is fetched by chunk id", str(passage)[:200])
+        outside = mcp(tenant, None, "vector.semantic_search", search).get("matches", [])
+        check(outside and not any(m["chunk_id"].startswith("up_") for m in outside),
+              "without the workspace, the search never sees uploads", str([m.get("chunk_id") for m in outside]))
 
         status, body = call("POST", "/workspaces", token=TOKEN_B,
                             body={"name": f"verify library B {stamp}", "target_schema": "olist"})

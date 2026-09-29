@@ -217,6 +217,7 @@ folder_name_max_chars       = 60
 title_max_chars             = 200
 chunk_max_chars             = 4000       # the MCP refuses a longer chunk
 processing_stale_s          = 1800       # a document still "processing" after this is shown as failed
+router_titles_max           = 20         # uploaded document titles the router sees for a workspace
 
 [workspaces]
 # Workspaces and their knowledge store (docs/V3_PLAN.md Phase 3, migration 021).

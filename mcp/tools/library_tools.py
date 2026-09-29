@@ -10,6 +10,8 @@ One JSON-RPC method, library.manage (decision D-v3-10), takes an `action`:
   documents, start_document, delete_document             the documents inside them
   add_chunks, finish_document                            ingestion, driven by the orchestrator
   workspace_folders, set_workspace_folders               which folders a workspace searches
+  workspace_documents                                    the READY documents a workspace can search
+                                                         (titles, for the router)
 
 WHY INGESTION IS SPLIT INTO start / add_chunks / finish. The orchestrator
 parses the upload (in the isolated parser service) and chunks it; this tool
@@ -55,7 +57,7 @@ logger = logging.getLogger(__name__)
 _ACTIONS = frozenset({
     "folders", "create_folder", "rename_folder", "delete_folder",
     "documents", "start_document", "add_chunks", "finish_document", "delete_document",
-    "workspace_folders", "set_workspace_folders",
+    "workspace_folders", "set_workspace_folders", "workspace_documents",
 })
 _FINISH_STATUSES = frozenset({"ready", "failed"})
 _SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")  # noqa: literals - a SHA-256 digest is 64 hex characters
@@ -425,11 +427,25 @@ async def _set_workspace_folders(tenant_id, principal_id, workspace_id=None, fol
     return {"ok": True, "folder_ids": sorted(unique)}
 
 
+async def _workspace_documents(tenant_id, principal_id, workspace_id=None, **_):
+    async with get_history_connection() as conn:
+        if not await _owns_workspace(conn, tenant_id, principal_id, workspace_id):
+            return _fail("not_found", "No such workspace.")
+        rows = await (await conn.execute(
+            "SELECT d.document_id, d.title FROM workspace_docs.documents d "
+            "JOIN workspace_docs.workspace_folders wf ON wf.folder_id = d.folder_id "
+            "WHERE d.tenant_id = %s AND wf.workspace_id = %s AND d.status = 'ready' "
+            "ORDER BY d.created_at DESC LIMIT %s",
+            (tenant_id, workspace_id, int(cfg.library.router_titles_max)))).fetchall()
+    return {"ok": True, "documents": [{"document_id": r[0], "title": r[1]} for r in rows]}
+
+
 _HANDLERS = {
     "folders": _folders, "create_folder": _create_folder, "rename_folder": _rename_folder,
     "delete_folder": _delete_folder, "documents": _documents, "start_document": _start_document,
     "add_chunks": _add_chunks, "finish_document": _finish_document, "delete_document": _delete_document,
     "workspace_folders": _workspace_folders, "set_workspace_folders": _set_workspace_folders,
+    "workspace_documents": _workspace_documents,
 }
 
 

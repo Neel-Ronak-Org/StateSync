@@ -38,7 +38,7 @@ import psycopg
 from config_loader import cfg
 from db import get_connection
 from embeddings import embed_text
-from session import get_tenant_id, enforce_tenancy_policy
+from session import enforce_tenancy_policy, get_tenant_id, get_workspace_id
 from tools.data_tools import _check_layer1
 
 logger = logging.getLogger(__name__)
@@ -51,6 +51,7 @@ except ImportError:
     _PGLAST_AVAILABLE = False
 
 _CHUNK_ID_RE = re.compile(r'^[A-Za-z0-9_\-]{1,128}$')
+_UPLOAD_PREFIX = "up_"   # uploaded documents' ids (mcp/tools/library_tools.py)
 
 # Dangerous non-builtin-in-spirit functions: file I/O, admin/superuser,
 # network, long-sleep. ss_embed is not on this list, so it needs no
@@ -219,25 +220,59 @@ async def semantic_search(
 
     sql = f"""
         SELECT dc.chunk_id, dc.document_id, dc.content_md, dc.page,
-               1 - (dc.embedding <=> %(qvec)s::vector) AS score
+               1 - (dc.embedding <=> %(qvec)s::vector) AS score, NULL::text AS title
         FROM document_chunks dc
         WHERE {' AND '.join(where_clauses)}
         ORDER BY dc.embedding <=> %(qvec)s::vector
         LIMIT %(top_k)s
     """
 
+    workspace_id = get_workspace_id()
     async with get_connection() as conn:
         await _use_exact_search(conn)
         cur = await conn.execute(sql, params)
         rows = await cur.fetchall()
         col_names = [desc.name for desc in cur.description] if cur.description else []
         matches = [dict(zip(col_names, row)) for row in rows]
+        library = await _library_matches(conn, workspace_id, params) if workspace_id else []
+
+    if library:
+        # Same model and the same cosine measure on both sides, so the scores
+        # are comparable: merge and keep the best top_k overall.
+        matches = sorted(matches + library, key=lambda m: m["score"], reverse=True)[:effective_top_k]
 
     logger.info(
-        "vector.semantic_search: tenant=%s top_k=%d matches=%d",
-        tenant_id, effective_top_k, len(matches),
+        "vector.semantic_search: tenant=%s workspace=%s top_k=%d matches=%d library_matches=%d",
+        tenant_id, workspace_id, effective_top_k, len(matches), len(library),
     )
     return {"matches": matches}
+
+
+async def _library_matches(conn: Any, workspace_id: str, params: dict[str, Any]) -> list[dict]:
+    """Chunks of READY uploaded documents in the folders this workspace chose.
+
+    Uploads (docs/V3_PLAN.md Phase 3c slice 5, migration 024) live in
+    workspace_docs, apart from the sample corpus. The workspace comes from the
+    session (X-Workspace-ID); the orchestrator has already checked that it is
+    the caller's own, and row-level security plus the tenant predicate keep
+    every other tenant's links, documents and chunks out of reach.
+    """
+    where = ["wf.workspace_id = %(workspace_id)s", "c.tenant_id = %(tenant_id)s", "d.status = 'ready'"]
+    if "document_ids" in params:
+        where.append("c.document_id = ANY(%(document_ids)s)")
+    cur = await conn.execute(f"""
+        SELECT c.chunk_id, c.document_id, c.content_md, c.page,
+               1 - (c.embedding <=> %(qvec)s::vector) AS score, d.title
+        FROM workspace_docs.chunks c
+        JOIN workspace_docs.documents d ON d.document_id = c.document_id
+        JOIN workspace_docs.workspace_folders wf ON wf.folder_id = d.folder_id
+        WHERE {' AND '.join(where)}
+        ORDER BY c.embedding <=> %(qvec)s::vector
+        LIMIT %(top_k)s
+    """, {**params, "workspace_id": workspace_id})
+    rows = await cur.fetchall()
+    col_names = [desc.name for desc in cur.description] if cur.description else []
+    return [dict(zip(col_names, row)) for row in rows]
 
 
 async def _use_exact_search(conn: Any) -> None:
@@ -322,12 +357,22 @@ async def get_passage(chunk_id: str) -> dict[str, Any]:
         raise ValueError(f"Invalid chunk_id: {chunk_id!r}")
 
     tenant_id = get_tenant_id()
-    sql = """
-        SELECT dc.chunk_id, dc.document_id, dc.content_md, dc.page, d.source_uri
-        FROM document_chunks dc
-        JOIN documents d ON d.document_id = dc.document_id
-        WHERE dc.chunk_id = %(chunk_id)s AND dc.tenant_id = %(tenant_id)s
-    """
+    if chunk_id.startswith(_UPLOAD_PREFIX):
+        # An uploaded document's chunk (workspace_docs, migration 024); it has
+        # no source URI, so its file name stands in.
+        sql = """
+            SELECT c.chunk_id, c.document_id, c.content_md, c.page, d.filename AS source_uri, d.title
+            FROM workspace_docs.chunks c
+            JOIN workspace_docs.documents d ON d.document_id = c.document_id
+            WHERE c.chunk_id = %(chunk_id)s AND c.tenant_id = %(tenant_id)s
+        """
+    else:
+        sql = """
+            SELECT dc.chunk_id, dc.document_id, dc.content_md, dc.page, d.source_uri, d.title
+            FROM document_chunks dc
+            JOIN documents d ON d.document_id = dc.document_id
+            WHERE dc.chunk_id = %(chunk_id)s AND dc.tenant_id = %(tenant_id)s
+        """
     async with get_connection() as conn:
         cur = await conn.execute(sql, {"chunk_id": chunk_id, "tenant_id": tenant_id})
         row = await cur.fetchone()

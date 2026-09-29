@@ -490,7 +490,10 @@ def build_citations(
 
     for r in retrievals[: cfg.retrieval.citation_max_chunks]:
         prov = r["provenance"]
-        citations.append({"kind": "chunk", "ref": prov["chunk_id"], "page": prov.get("page")})
+        citation = {"kind": "chunk", "ref": prov["chunk_id"], "page": prov.get("page")}
+        if prov.get("title"):
+            citation["title"] = prov["title"]
+        citations.append(citation)
 
     return citations
 

@@ -216,6 +216,7 @@ def _to_retrievals(matches: list[dict]) -> list[dict]:
             "provenance": {
                 "document_id": m["document_id"], "chunk_id": m["chunk_id"],
                 "page": m.get("page"), "score": float(m.get("score", 0.0)),
+                "title": m.get("title"),
             },
         }
         for m in matches
@@ -347,7 +348,10 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
     tokens_in_total = tokens_out_total = llm_calls_total = trajectory_steps = 0
     mcp_base_url = os.environ.get("MCP_URL", "http://mcp:8080")
 
-    async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id) as session:
+    # The workspace travels as X-Workspace-ID, so vector.semantic_search also
+    # searches the uploaded documents in the folders the workspace chose.
+    async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id,
+                          workspace_id=state_dict.get("workspace_id")) as session:
         if route == "docs":
             matches = await _semantic_search_expanded(session, query_text, cfg.retrieval.semantic_top_k)
             trajectory_steps += 2  # the expanded call is a second round-trip

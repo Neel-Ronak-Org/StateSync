@@ -177,6 +177,18 @@ export function cannedAnswer(question: string): Canned {
       citations: [{ kind: 'sql', ref: sql }],
     }
   }
+  if (q.includes('refund')) {
+    // An answer from an uploaded document: the server sends its title (Phase 3c slice 5).
+    return {
+      answer: 'Refunds are issued within 7 business days of the return being inspected.',
+      route: 'docs',
+      sql: null,
+      columns: [],
+      rows: [],
+      chart: null,
+      citations: [{ kind: 'chunk', ref: 'up_0123456789abcdef_c00004', page: 3, title: 'Refund policy 2026' }],
+    }
+  }
   if (q.includes('policy') || q.includes('document') || q.includes('sla')) {
     return {
       answer: 'FastShip 3 (LP003) commits to 20 hours for Metro Mumbai at a 99% on-time rate.',

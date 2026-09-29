@@ -386,7 +386,7 @@ export function TurnItem({
                     title={c.ref}
                     className="text-xs font-normal"
                   >
-                    {sourceLabel(c.ref)}
+                    {c.title || sourceLabel(c.ref)}
                     {c.page != null ? ` p. ${c.page}` : ''}
                   </Badge>
                 )

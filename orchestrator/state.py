@@ -46,6 +46,9 @@ class Provenance(BaseModel):
     chunk_id:     str
     page:         int | None
     score:        float
+    # An uploaded document's title (Phase 3c slice 5); None for the sample corpus,
+    # whose ids the web app already turns into labels.
+    title:        str | None = None
 
 
 class RetrievalResult(BaseModel):
@@ -140,6 +143,10 @@ class StateSyncState(BaseModel):
     # With one, the SQL agent adds the workspace's approved knowledge to its
     # prompt, and an exact match of an approved example runs its SQL directly.
     workspace_id: str | None = None
+    # Titles of the READY uploaded documents this workspace searches (Phase 3c
+    # slice 5), loaded at entry; the router sees them so a question about one
+    # of them goes to the docs route.
+    library_titles: list[str] = Field(default_factory=list)
 
     # --- input & normalization (Part D) ---
     raw_query:    str
