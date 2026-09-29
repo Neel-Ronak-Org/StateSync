@@ -74,6 +74,8 @@ export interface StateTrace {
   verified_example?: boolean
   route: Route | null
   executed_sql: string | null
+  /** Plain-English reading of the executed SQL ("How I got this"); absent or null when none. */
+  explanation?: string | null
   candidate_sql: string | null
   sql_rows_count: number
   sql_rows: Row[]

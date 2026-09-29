@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useId, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, Download, MoreHorizontal, PanelRight, Pin } from 'lucide-react'
 import { toast } from 'sonner'
@@ -54,6 +54,8 @@ export function TurnItem({
   const chartViewRef = useRef<ChartView | null>(null)
   const [isLoadingFull, setIsLoadingFull] = useState(false)
   const [isPinning, setIsPinning] = useState(false)
+  const [showHow, setShowHow] = useState(false)
+  const howId = useId()
   const queryClient = useQueryClient()
 
   const { data: tilesData } = useAllTiles()
@@ -244,6 +246,26 @@ export function TurnItem({
               )
             })}
           </div>
+
+          {/* How I got this: deterministic plain-English reading of the SQL, collapsed by default */}
+          {turn.stateTrace?.explanation && (
+            <div className="text-xs text-muted-foreground">
+              <button
+                type="button"
+                aria-expanded={showHow}
+                aria-controls={howId}
+                onClick={() => setShowHow((v) => !v)}
+                className="font-medium underline-offset-2 hover:underline"
+              >
+                How I got this
+              </button>
+              {showHow && (
+                <p id={howId} data-testid="how-i-got-this" className="mt-1 leading-relaxed">
+                  {turn.stateTrace.explanation}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Caveats: the result ran, but may mislead (join fan-out, truncation, all-NULL) */}
           {turn.stateTrace?.caveats?.map((caveat, idx) => (

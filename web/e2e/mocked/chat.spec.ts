@@ -130,6 +130,23 @@ test.describe('asking', () => {
     await expect(page.getByTestId('turn').last().getByTestId('answer-caveat')).toHaveCount(0)
   })
 
+  test('"How I got this" is collapsed under a SQL answer and opens to the explanation; documents have none', async ({ page }) => {
+    await openApp(page, { hash: '#/ask' })
+    await ask(page, 'How many orders are there in total?')
+    const sqlTurn = page.getByTestId('turn').last()
+    const toggle = sqlTurn.getByRole('button', { name: 'How I got this' })
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(sqlTurn.getByTestId('how-i-got-this')).toHaveCount(0)
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(sqlTurn.getByTestId('how-i-got-this')).toContainText('Counted rows')
+
+    await ask(page, 'What does the SLA policy say for LP003?')
+    const docsTurn = page.getByTestId('turn').last()
+    await expect(docsTurn.getByTestId('answer-text')).toBeVisible()
+    await expect(docsTurn.getByRole('button', { name: 'How I got this' })).toHaveCount(0)
+  })
+
   test('a document answer lists its sources and has no table', async ({ page }) => {
     await openApp(page, { hash: '#/ask' })
     await ask(page, 'What does the SLA policy say for LP003?')

@@ -29,6 +29,7 @@ from graph import graph
 from llm.provider import LLM_READINESS, validate_llm_config
 from llm.recording import start_recording, stop_recording
 from failures import user_facing_failure
+from sql_explain import explain_sql
 from mcp_client import (MCPSession, audit_record, history_append_turn,
                         history_check_session, history_get_recent_turns,
                         history_get_turn_rows, history_list_sessions, history_delete_session)
@@ -467,6 +468,8 @@ async def answer_question(
         # executed_sql is null when a statement was rejected before execution,
         # so candidate_sql is what a caller inspects to see what the agent actually proposed.
         "candidate_sql": final_state.candidate_sql,
+        # Plain-English reading of the SQL (deterministic, no model): "How I got this".
+        "explanation": explain_sql(final_state.executed_sql),
         "sql_rows_count": len(final_state.sql_rows),
         "sql_rows":    final_state.sql_rows,
         "sql_columns": final_state.sql_columns,

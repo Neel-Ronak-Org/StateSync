@@ -521,6 +521,7 @@ export class MockApi {
         verified_example: verifiedExample,
         route: canned.route,
         executed_sql: canned.sql,
+        ...(canned.sql ? { explanation: 'Counted rows in orders, grouped by order status.' } : {}),
         candidate_sql: canned.sql,
         sql_rows_count: canned.rows.length,
         sql_rows: canned.rows,
