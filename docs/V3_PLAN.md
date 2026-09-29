@@ -553,6 +553,15 @@ Order of work (owner, 2026-09-29; cleanup items are **kept for now**, D-v3-13):
    with citations, a self-testing workspace; then uploads, own Postgres (self-hosted),
    the synthetic-schema switches.
 
+**Groq baseline, measured 2026-09-29** (`docs/eval/groq_baseline_2026-09-29.json`, commit
+9800de1, shipped flags): **25/30 (83%)** — olist 10/10, logistics SQL 6/8, documents 5/6,
+follow-ups 4/6; routing 30/30; 4,652 input + 356 output tokens and 4.7 model calls per
+question; latency p50 2.6 s, p90 3.5 s; 150,238 tokens for the run. Misses: a percentage
+where the reference returns a fraction (scored strictly, scorer unchanged); a projection
+difference; one document retrieval miss; two follow-ups that counted at the wrong grain
+(payment rows instead of orders; reviews duplicated by a join under COUNT(*) — the fan-out
+check covers SUM/AVG only so far).
+
 Each change ships only if accuracy on the baseline set holds within one question and
 tokens or time fall. Implementation is delegated from written specs to Sonnet subagents
 and audited by execution (D-v3-15).
