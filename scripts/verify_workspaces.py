@@ -403,6 +403,30 @@ def main() -> int:
         ctx = mcp(tenant_a, "workspaces.manage", {**context_args, "question": "how many orders are there"})
         check((ctx.get("exact") or {}).get("sql") == "SELECT count(*) FROM olist.orders",
               "the right answer is now an exact match for the fast path", str(ctx.get("exact")))
+        section("Templates from approved queries (Phase 3c)")
+        added = mcp(tenant_a, "workspaces.manage", {
+            "action": "add_example", "principal_id": principal_a, "workspace_id": wid,
+            "question": "How many orders have the status delivered?",
+            "sql": "SELECT count(*) FROM olist.orders o WHERE o.order_status = 'delivered'"})
+        check(added.get("ok") is True, "an approved example with a value is stored", str(added))
+        tpl = psql(f"SELECT template_sql || ' | ' || slots::text FROM session_state.kb_templates "
+                   f"WHERE workspace_id = '{wid}';")
+        check("$1" in tpl and '"type": "text"' in tpl, "its template has a typed text slot", tpl[:200])
+        offered = mcp(tenant_a, "workspaces.manage", {
+            "action": "templates", "principal_id": principal_a, "workspace_id": wid,
+            "question": "How many orders have the status shipped?"})
+        check(len(offered.get("templates", [])) == 1, "a similar question is offered that template", str(offered)[:200])
+        other = mcp("tenant-that-does-not-exist", "workspaces.manage", {
+            "action": "templates", "principal_id": principal_a, "workspace_id": wid,
+            "question": "How many orders have the status shipped?"})
+        check(other.get("error") == "not_found", "another tenant is offered nothing", str(other)[:200])
+        removed = mcp(tenant_a, "workspaces.manage", {
+            "action": "remove_example", "principal_id": principal_a, "workspace_id": wid,
+            "question": "How many orders have the status delivered?"})
+        left = psql(f"SELECT count(*) FROM session_state.kb_templates WHERE workspace_id = '{wid}';")
+        check(removed.get("removed") == 1 and left == "0", "withdrawing the example removes its template",
+              f"{removed} templates left={left}")
+
         section("Questions asked in the workspace")
         status, body = call("POST", "/query", body={"query": "How many orders are there?", "workspace_id": wid})
         trace = body.get("state_trace", {}) if status == 200 else {}
