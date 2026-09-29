@@ -5,6 +5,7 @@ import type { SetupState, Workspace } from '@/api/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useDatasetLabel } from '@/features/library/useConnections'
 import { NewWorkspaceDialog } from '@/features/workspaces/NewWorkspaceDialog'
 
 /** Where a workspace is in its setup, in words a person reads. */
@@ -37,6 +38,7 @@ export function WorkspacesView({
   onCreated,
 }: WorkspacesViewProps) {
   const [newOpen, setNewOpen] = useState(false)
+  const label = useDatasetLabel(workspaces.map((w) => w.target_schema))
 
   return (
     <div className="flex h-full flex-1 flex-col overflow-y-auto">
@@ -88,7 +90,7 @@ export function WorkspacesView({
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Database className="size-3.5" />
-                    <span>{ws.target_schema}</span>
+                    <span>{label(ws.target_schema)}</span>
                   </div>
                 </div>
 

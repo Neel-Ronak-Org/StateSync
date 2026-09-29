@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button'
+import { useDatasetLabel } from '@/features/library/useConnections'
 
 const SUGGESTIONS: Record<string, string[]> = {
   public: [
@@ -22,13 +23,14 @@ interface EmptyStateProps {
 
 export function EmptyState({ dataset, onSelectSuggestion }: EmptyStateProps) {
   const suggestions = SUGGESTIONS[dataset] ?? SUGGESTIONS.public
+  const label = useDatasetLabel([dataset])
 
   return (
     <div className="flex flex-col items-start gap-4 py-8">
       <div>
         <h2 className="text-lg font-semibold tracking-tight">Ask about your data</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Questions are answered from the <strong className="font-semibold text-foreground">{dataset}</strong> dataset.
+          Questions are answered from the <strong className="font-semibold text-foreground">{label(dataset)}</strong> dataset.
         </p>
       </div>
       <div className="grid w-full grid-cols-1 gap-2.5 sm:grid-cols-2 mt-2">

@@ -20,6 +20,7 @@ import { VegaChart, type ChartView } from '@/charts/VegaChart'
 import { answerBlocks } from '@/features/chat/answerBlocks'
 import { ResultTable } from '@/features/chat/ResultTable'
 import { useAllTiles } from '@/features/dashboard/useTiles'
+import { useDatasetLabel } from '@/features/library/useConnections'
 import { copyToClipboard } from '@/lib/clipboard'
 import { downloadCsv } from '@/lib/csv'
 import { sourceLabel } from '@/lib/sources'
@@ -88,6 +89,7 @@ export function TurnItem({
   const queryClient = useQueryClient()
 
   const { data: tilesData } = useAllTiles()
+  const datasetLabel = useDatasetLabel([turn.dataset])
 
   const isPinned = Boolean(
     tilesData?.tiles?.some(
@@ -398,7 +400,7 @@ export function TurnItem({
           <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
             <div className="flex items-center gap-2">
               <Badge variant="outline" data-testid="turn-dataset" className="font-normal text-xs">
-                {turn.dataset}
+                {datasetLabel(turn.dataset)}
               </Badge>
               {chip && evidence && (
                 <Tooltip>

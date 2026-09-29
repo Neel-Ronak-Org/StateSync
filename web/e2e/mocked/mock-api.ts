@@ -11,6 +11,7 @@
 
 import type { Page, Route } from '@playwright/test'
 
+import { ConnectionsMock } from './mock-connections'
 import { LibraryMock } from './mock-library'
 import { WorkspaceMock } from './mock-workspaces'
 
@@ -237,6 +238,8 @@ export class MockApi {
   readonly workspaces = new WorkspaceMock()
   /** The document library (Phase 3c slice 5): mock-library.ts. */
   readonly library = new LibraryMock()
+  /** The user's own databases (Phase 3c slice 6a): mock-connections.ts. */
+  readonly connections = new ConnectionsMock()
   private failures = new Map<string, { status: number; detail: string; headers?: Record<string, string> }>()
   storedRowsLimit: number | null = null
   nextChart: Record<string, unknown> | null = null
@@ -262,6 +265,9 @@ export class MockApi {
   private jobSeq = 0
 
   constructor(options: { buildPlan?: BuildPlanItem[] } = {}) {
+    this.connections.workspaceIdsFor = (id) =>
+      [...this.workspaces.workspaces.values()].filter((w) => w.target_schema === id).map((w) => w.workspace_id)
+    this.workspaces.extraDataset = (schema) => this.connections.hasDataset(schema)
     if (options.buildPlan) {
       this.buildPlan = options.buildPlan
     }
@@ -460,6 +466,9 @@ export class MockApi {
     }
     if (path.startsWith('/dashboards')) return this.dashboardsRoute(route, method, path, url, body)
     if (path.startsWith('/tiles')) return this.tilesRoute(route, method, path, url, body)
+    if (path === '/library/connections' || path.startsWith('/library/connections/')) {
+      return this.connections.handle(route, method, path, body, (r, status, b) => this.json(r, status, b))
+    }
     if (path.startsWith('/library/')) {
       return this.library.handle(route, method, path, url.searchParams, body, (r, status, b) => this.json(r, status, b))
     }

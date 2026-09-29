@@ -610,6 +610,16 @@ first. Slices, each a written spec, delegated and audited:
 6. **Metrics** (governed definitions compiled to SQL), the **account-level library**
    (sources chosen by workspaces), **own Postgres** (self-hosted, enabled on the owner's
    machine per D-v3-18), and the synthetic-schema switches.
+   **Own Postgres and the switches, done 2026-09-29** (migration 026, `mcp/connections.py`,
+   `orchestrator/datasets.py`): a connection's id (`cn_<16 hex>`) is its dataset name, so
+   every existing path reaches it; saved only when the login is really read-only; password
+   encrypted with a key only the MCP holds; StateSync's own services and local addresses
+   refused; SQL may read only that database's tables (qualifier mapped at parse-tree
+   positions, gated again). Library → Databases tab; connections listed as datasets for new
+   workspaces. `scripts/verify_connections.py` 24/24 live against a throwaway Postgres; one
+   real question answered correctly. `[pipeline].synthetic_schemas` keeps the ONDC framing
+   and DIGIPIN on the three built-in datasets only; an own database without uploads skips
+   the router call. Remaining in slice 6: metrics (awaiting the owner's go-ahead on the design).
 
 Exit: the Phase 3 exit (8/10 on olist and public through the wizard) plus, on the Groq
 baseline set, the share of answers on each tier and accuracy per tier reported.

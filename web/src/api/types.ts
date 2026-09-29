@@ -423,3 +423,42 @@ export interface LibraryDocument {
   chunk_count: number
   created_at: string
 }
+
+export type ConnectionStatus = 'ok' | 'failed'
+
+export type SslMode = 'disable' | 'prefer' | 'require' | 'verify-ca' | 'verify-full'
+
+/** A Postgres database the user connected (never carries the password). */
+export interface Connection {
+  connection_id: string
+  name: string
+  host: string
+  port: number
+  dbname: string
+  username: string
+  sslmode: SslMode | string
+  schema_name: string | null
+  status: ConnectionStatus
+  check_detail: string | null
+  checked_at: string | null
+  created_at: string
+  workspace_ids: string[]
+}
+
+/** The body of POST /library/connections. The password is sent once and never returned. */
+export interface NewConnection {
+  name: string
+  host: string
+  port: number
+  dbname: string
+  username: string
+  password: string
+  sslmode: SslMode
+}
+
+/** What a create or a test returns: the connection and the schemas the login can read. */
+export interface ConnectionCheck {
+  connection: Connection
+  schemas: string[]
+  warnings: string[]
+}

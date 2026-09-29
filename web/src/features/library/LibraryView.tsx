@@ -13,6 +13,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { DatabasesTab } from '@/features/library/DatabasesTab'
 import { ConfirmDeleteDialog, FolderNameDialog } from '@/features/library/FolderDialogs'
 import { ACCEPT, contentTypeFor, folderDeleteWarning, formatBytes, pagesLabel, refusalFor } from '@/features/library/files'
 import { useDocuments, useFolders } from '@/features/library/useLibrary'
@@ -145,8 +147,11 @@ function UploadZone({ folderId, onUploaded, compact }: { folderId: string; onUpl
   )
 }
 
-/** The Library page (web/DESIGN.md §6b): folders on the left, the selected folder's documents on the right. */
+type LibraryTab = 'documents' | 'databases'
+
+/** The Library page (web/DESIGN.md §6b): a Documents tab (folders on the left, the selected folder's documents on the right) and a Databases tab. */
 export function LibraryView() {
+  const [tab, setTab] = useState<LibraryTab>('documents')
   const { folders, isLoading, isError, error, refetch, createFolder, renameFolder, deleteFolder } = useFolders()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [newOpen, setNewOpen] = useState(false)
@@ -164,141 +169,154 @@ export function LibraryView() {
           <h1 className="text-xl font-semibold tracking-tight text-foreground">Library</h1>
           <p className="text-xs text-muted-foreground">Documents you upload once and use in any workspace.</p>
         </div>
-        <Button onClick={() => setNewOpen(true)} className="gap-2">
-          <Plus className="size-4" />
-          New folder
-        </Button>
+        {tab === 'documents' && (
+          <Button onClick={() => setNewOpen(true)} className="gap-2">
+            <Plus className="size-4" />
+            New folder
+          </Button>
+        )}
       </header>
 
       <main className="flex-1 p-6">
-        {isLoading ? (
-          <div className="grid gap-6 md:grid-cols-[16rem_1fr]">
-            <Skeleton className="h-40 rounded-xl" />
-            <Skeleton className="h-64 rounded-xl" />
-          </div>
-        ) : isError ? (
-          <div className="flex h-72 flex-col items-center justify-center gap-4 p-8 text-center">
-            <p className="text-sm text-muted-foreground">
-              {error instanceof ApiError ? error.message : 'The library could not be loaded.'}
-            </p>
-            <Button onClick={() => void refetch()}>Retry</Button>
-          </div>
-        ) : folders.length === 0 ? (
-          <div className="flex h-72 flex-col items-center justify-center rounded-xl border border-dashed p-8 text-center">
-            <div className="mb-4 grid size-12 place-items-center rounded-xl bg-muted/60 text-muted-foreground">
-              <Library className="size-6" />
-            </div>
-            <h2 className="mb-1.5 text-base font-semibold text-foreground">No folders yet</h2>
-            <p className="mb-4 max-w-md text-sm text-muted-foreground">
-              Folders hold the documents you upload, such as policies or manuals. Any workspace can search the
-              folders you choose for it.
-            </p>
-            <Button onClick={() => setNewOpen(true)} className="gap-2">
-              <Plus className="size-4" />
-              New folder
-            </Button>
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-[16rem_1fr]">
-            <nav aria-label="Folders">
-              <ul className="space-y-1">
-                {folders.map((folder) => {
-                  const active = folder.folder_id === selected?.folder_id
-                  return (
-                    <li key={folder.folder_id} className="group relative">
-                      <button
-                        type="button"
-                        data-testid="folder-item"
-                        aria-current={active ? 'true' : undefined}
-                        onClick={() => setSelectedId(folder.folder_id)}
-                        className={cn(
-                          'flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2 pr-11 text-left outline-none transition-colors',
-                          'hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring',
-                          active && 'border-primary/30 bg-primary/10',
-                        )}
-                      >
-                        <FolderOpen className={cn('size-4 shrink-0', active ? 'text-primary' : 'text-muted-foreground')} />
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-medium text-foreground">{folder.name}</span>
-                          <span className="block text-xs text-muted-foreground">
-                            {folder.document_count} {folder.document_count === 1 ? 'document' : 'documents'}
-                          </span>
-                        </span>
-                      </button>
-                      {active && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label="Folder actions"
-                              className="absolute right-1 top-1/2 size-8 -translate-y-1/2"
-                            >
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setRenaming(folder)} className="gap-2">
-                              <Pencil className="size-4" />
-                              Rename folder
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => setDeletingFolder(folder)}
-                              className="gap-2 text-destructive focus:text-destructive"
-                            >
-                              <Trash2 className="size-4" />
-                              Delete folder
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            </nav>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as LibraryTab)} className="gap-6">
+          <TabsList aria-label="Library sections">
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="databases">Databases</TabsTrigger>
+          </TabsList>
+          <TabsContent value="documents" className="outline-none">
+            {isLoading ? (
+              <div className="grid gap-6 md:grid-cols-[16rem_1fr]">
+                <Skeleton className="h-40 rounded-xl" />
+                <Skeleton className="h-64 rounded-xl" />
+              </div>
+            ) : isError ? (
+              <div className="flex h-72 flex-col items-center justify-center gap-4 p-8 text-center">
+                <p className="text-sm text-muted-foreground">
+                  {error instanceof ApiError ? error.message : 'The library could not be loaded.'}
+                </p>
+                <Button onClick={() => void refetch()}>Retry</Button>
+              </div>
+            ) : folders.length === 0 ? (
+              <div className="flex h-72 flex-col items-center justify-center rounded-xl border border-dashed p-8 text-center">
+                <div className="mb-4 grid size-12 place-items-center rounded-xl bg-muted/60 text-muted-foreground">
+                  <Library className="size-6" />
+                </div>
+                <h2 className="mb-1.5 text-base font-semibold text-foreground">No folders yet</h2>
+                <p className="mb-4 max-w-md text-sm text-muted-foreground">
+                  Folders hold the documents you upload, such as policies or manuals. Any workspace can search the
+                  folders you choose for it.
+                </p>
+                <Button onClick={() => setNewOpen(true)} className="gap-2">
+                  <Plus className="size-4" />
+                  New folder
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-[16rem_1fr]">
+                <nav aria-label="Folders">
+                  <ul className="space-y-1">
+                    {folders.map((folder) => {
+                      const active = folder.folder_id === selected?.folder_id
+                      return (
+                        <li key={folder.folder_id} className="group relative">
+                          <button
+                            type="button"
+                            data-testid="folder-item"
+                            aria-current={active ? 'true' : undefined}
+                            onClick={() => setSelectedId(folder.folder_id)}
+                            className={cn(
+                              'flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2 pr-11 text-left outline-none transition-colors',
+                              'hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring',
+                              active && 'border-primary/30 bg-primary/10',
+                            )}
+                          >
+                            <FolderOpen className={cn('size-4 shrink-0', active ? 'text-primary' : 'text-muted-foreground')} />
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-medium text-foreground">{folder.name}</span>
+                              <span className="block text-xs text-muted-foreground">
+                                {folder.document_count} {folder.document_count === 1 ? 'document' : 'documents'}
+                              </span>
+                            </span>
+                          </button>
+                          {active && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label="Folder actions"
+                                  className="absolute right-1 top-1/2 size-8 -translate-y-1/2"
+                                >
+                                  <MoreHorizontal className="size-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setRenaming(folder)} className="gap-2">
+                                  <Pencil className="size-4" />
+                                  Rename folder
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => setDeletingFolder(folder)}
+                                  className="gap-2 text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="size-4" />
+                                  Delete folder
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </nav>
 
-            <section aria-label={selected ? `Documents in ${selected.name}` : 'Documents'} className="min-w-0 space-y-4">
-              {selected && (
-                <>
-                  <h2 className="text-base font-semibold text-foreground">{selected.name}</h2>
-                  {docs.isLoading ? (
-                    <div className="space-y-3">
-                      <Skeleton className="h-20 rounded-xl" />
-                      <Skeleton className="h-20 rounded-xl" />
-                    </div>
-                  ) : docs.isError ? (
-                    <div className="flex flex-col items-start gap-3">
-                      <p className="text-sm text-muted-foreground">
-                        {docs.error instanceof ApiError ? docs.error.message : 'The documents could not be loaded.'}
-                      </p>
-                      <Button variant="outline" onClick={() => void docs.refetch()}>
-                        Retry
-                      </Button>
-                    </div>
-                  ) : docs.documents.length === 0 ? (
-                    <div className="space-y-3">
-                      <div>
-                        <h3 className="font-medium text-foreground">No documents in this folder</h3>
-                        <p className="text-sm text-muted-foreground">Upload a file and it becomes searchable once it is ready.</p>
-                      </div>
-                      <UploadZone folderId={selected.folder_id} onUploaded={docs.refresh} />
-                    </div>
-                  ) : (
+                <section aria-label={selected ? `Documents in ${selected.name}` : 'Documents'} className="min-w-0 space-y-4">
+                  {selected && (
                     <>
-                      <ul className="space-y-3">
-                        {docs.documents.map((doc) => (
-                          <DocumentRow key={doc.document_id} doc={doc} onDelete={setDeletingDoc} />
-                        ))}
-                      </ul>
-                      <UploadZone folderId={selected.folder_id} onUploaded={docs.refresh} compact />
+                      <h2 className="text-base font-semibold text-foreground">{selected.name}</h2>
+                      {docs.isLoading ? (
+                        <div className="space-y-3">
+                          <Skeleton className="h-20 rounded-xl" />
+                          <Skeleton className="h-20 rounded-xl" />
+                        </div>
+                      ) : docs.isError ? (
+                        <div className="flex flex-col items-start gap-3">
+                          <p className="text-sm text-muted-foreground">
+                            {docs.error instanceof ApiError ? docs.error.message : 'The documents could not be loaded.'}
+                          </p>
+                          <Button variant="outline" onClick={() => void docs.refetch()}>
+                            Retry
+                          </Button>
+                        </div>
+                      ) : docs.documents.length === 0 ? (
+                        <div className="space-y-3">
+                          <div>
+                            <h3 className="font-medium text-foreground">No documents in this folder</h3>
+                            <p className="text-sm text-muted-foreground">Upload a file and it becomes searchable once it is ready.</p>
+                          </div>
+                          <UploadZone folderId={selected.folder_id} onUploaded={docs.refresh} />
+                        </div>
+                      ) : (
+                        <>
+                          <ul className="space-y-3">
+                            {docs.documents.map((doc) => (
+                              <DocumentRow key={doc.document_id} doc={doc} onDelete={setDeletingDoc} />
+                            ))}
+                          </ul>
+                          <UploadZone folderId={selected.folder_id} onUploaded={docs.refresh} compact />
+                        </>
+                      )}
                     </>
                   )}
-                </>
-              )}
-            </section>
-          </div>
-        )}
+                </section>
+              </div>
+            )}
+          </TabsContent>
+          <TabsContent value="databases" className="outline-none">
+            <DatabasesTab />
+          </TabsContent>
+        </Tabs>
       </main>
 
       <FolderNameDialog

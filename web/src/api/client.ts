@@ -11,6 +11,9 @@
 
 import type {
   BuildJob,
+  Connection,
+  ConnectionCheck,
+  NewConnection,
   CatalogEntry,
   ExampleCheckResult,
   ExampleInfo,
@@ -262,6 +265,20 @@ export const api = {
       `/workspaces/${enc(workspaceId)}/setup/${enc(runId)}/results/${enc(String(position))}`,
       { method: 'PUT', body: { verdict } },
     ),
+
+  connections: () =>
+    apiFetch<{ connections: Connection[]; available: boolean }>('/library/connections'),
+  createConnection: (body: NewConnection) =>
+    apiFetch<ConnectionCheck>('/library/connections', { method: 'POST', body }),
+  setConnectionSchema: (connectionId: string, schemaName: string) =>
+    apiFetch<{ connection: Connection }>(`/library/connections/${enc(connectionId)}/schema`, {
+      method: 'PUT',
+      body: { schema_name: schemaName },
+    }),
+  testConnection: (connectionId: string) =>
+    apiFetch<ConnectionCheck>(`/library/connections/${enc(connectionId)}/test`, { method: 'POST' }),
+  deleteConnection: (connectionId: string) =>
+    apiFetch<{ deleted: number }>(`/library/connections/${enc(connectionId)}`, { method: 'DELETE' }),
 
   libraryFolders: () => apiFetch<{ folders: LibraryFolder[] }>('/library/folders'),
   createFolder: (name: string) =>

@@ -34,6 +34,7 @@ import { TileCard } from '@/features/dashboard/TileCard'
 import { useBuild } from '@/features/dashboard/useBuild'
 import { useDashboards } from '@/features/dashboard/useDashboards'
 import { useTiles } from '@/features/dashboard/useTiles'
+import { useDatasetLabel } from '@/features/library/useConnections'
 import { DatasetPicker } from '@/features/shell/DatasetPicker'
 import { useNow } from '@/hooks/useNow'
 import { formatRelativeTime } from '@/lib/format'
@@ -93,6 +94,7 @@ export function DashboardsView({
   onAsk,
 }: DashboardsViewProps) {
   const boards = useDashboards(dataset)
+  const datasetLabel = useDatasetLabel([dataset])
   const active = boards.active
   const tiles = useTiles(active?.dashboard_id ?? null)
   const build = useBuild(active?.dashboard_id ?? null)
@@ -269,7 +271,7 @@ export function DashboardsView({
           </div>
         ) : noDashboards ? (
           <EmptyState
-            title={<>No dashboards for <span className="text-primary">{dataset}</span> yet</>}
+            title={<>No dashboards for <span className="text-primary">{datasetLabel(dataset)}</span> yet</>}
             text="Let the AI plan one from the data, or start empty and pin answers from Ask."
             onBuild={() => setBuildOpen(true)}
             secondary={{ label: 'Start empty', onClick: () => void boards.create('Overview') }}
@@ -337,7 +339,7 @@ export function DashboardsView({
       <BuildDialog
         open={buildOpen}
         onOpenChange={setBuildOpen}
-        dataset={dataset}
+        dataset={datasetLabel(dataset)}
         needsName={Boolean(active && view.length > 0)}
         onBuild={startBuild}
       />

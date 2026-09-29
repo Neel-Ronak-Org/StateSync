@@ -10,6 +10,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { useDatasetLabel } from '@/features/library/useConnections'
 import { copyToClipboard } from '@/lib/clipboard'
 import { formatNumber } from '@/lib/format'
 import { sourceLabel } from '@/lib/sources'
@@ -32,6 +33,7 @@ function formatRoute(route: string | null | undefined): string {
 
 export function DetailsSheet({ turn, open, onOpenChange, devMode }: DetailsSheetProps) {
   const [copiedSql, setCopiedSql] = useState(false)
+  const datasetLabel = useDatasetLabel([turn?.dataset])
 
   if (!turn) return null
 
@@ -70,7 +72,7 @@ export function DetailsSheet({ turn, open, onOpenChange, devMode }: DetailsSheet
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="rounded-md border p-2">
                 <span className="text-muted-foreground block">Dataset</span>
-                <span className="font-medium text-foreground">{turn.dataset}</span>
+                <span className="font-medium text-foreground">{datasetLabel(turn.dataset)}</span>
               </div>
               <div className="rounded-md border p-2">
                 <span className="text-muted-foreground block">Route</span>

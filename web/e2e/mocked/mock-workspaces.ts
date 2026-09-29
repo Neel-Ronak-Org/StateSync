@@ -145,6 +145,8 @@ export class WorkspaceMock {
   wrongPositions: number[] = [3, 7]
   /** When set, the next draft job fails with this message. */
   failNextDraft: string | null = null
+  /** Set by MockApi: true for a connection id that is a usable dataset (a connected database with a schema). */
+  extraDataset: (schema: string) => boolean = () => false
   /** When set, the next setup test stops at its first poll with this message (as when the quota runs out). */
   failNextTest: string | null = null
   /** What the next "find in documents" run proposes (the server has already dropped ungrounded ones). */
@@ -385,7 +387,7 @@ export class WorkspaceMock {
         const name = String(body.name ?? '').trim()
         const schema = String(body.target_schema ?? '')
         if (!name) return reply(route, 422, { detail: 'name must not be blank.' })
-        if (!['olist', 'public', 'live'].includes(schema)) return reply(route, 422, { detail: `Unknown dataset '${schema}'.` })
+        if (!['olist', 'public', 'live'].includes(schema) && !this.extraDataset(schema)) return reply(route, 422, { detail: `Unknown dataset '${schema}'.` })
         const ws = this.create(name, schema, String(body.business_context ?? '').trim())
         return reply(route, 201, { workspace: this.view(ws) })
       }

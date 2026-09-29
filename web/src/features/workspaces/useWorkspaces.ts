@@ -23,6 +23,7 @@ export function useWorkspaces(enabled = true) {
       api.createWorkspace(body),
     onSuccess: (res) => {
       queryClient.setQueryData(['workspace', res.workspace.workspace_id], { workspace: res.workspace })
+      void queryClient.invalidateQueries({ queryKey: ['library-connections'] })
       void queryClient.invalidateQueries({ queryKey: ['workspaces'] })
     },
   })
@@ -31,6 +32,7 @@ export function useWorkspaces(enabled = true) {
     mutationFn: (workspaceId: string) => api.deleteWorkspace(workspaceId),
     onSuccess: (_, workspaceId) => {
       queryClient.removeQueries({ queryKey: ['workspace', workspaceId] })
+      void queryClient.invalidateQueries({ queryKey: ['library-connections'] })
       void queryClient.invalidateQueries({ queryKey: ['workspaces'] })
     },
   })

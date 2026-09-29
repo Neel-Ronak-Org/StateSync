@@ -16,11 +16,14 @@ import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { useConnections } from '@/features/library/useConnections'
 
 interface NewWorkspaceDialogProps {
   open: boolean
@@ -47,6 +50,8 @@ export function NewWorkspaceDialog({
   const [about, setAbout] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  // A connected database with a chosen schema is a dataset; its id is the target_schema.
+  const yourDatabases = useConnections(open).connections.filter((c) => c.schema_name)
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -119,6 +124,16 @@ export function NewWorkspaceDialog({
                     {schema}
                   </SelectItem>
                 ))}
+                {yourDatabases.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel>Your databases</SelectLabel>
+                    {yourDatabases.map((c) => (
+                      <SelectItem key={c.connection_id} value={c.connection_id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
               </SelectContent>
             </Select>
           </div>

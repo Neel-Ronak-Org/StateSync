@@ -179,6 +179,14 @@ cards appear as they are added. It ends with a toast: "Added 7 of 8 insights."
   Empty: **"No workspaces yet"** and one sentence on what a workspace is.
 - **New workspace** dialog: **Name**, **Dataset**, **About your business** (optional);
   **Cancel** / **Create**; server refusals shown in the dialog. Opens the new workspace.
+  The Dataset select lists the sample datasets, then a group **"Your databases"** with the
+  connected databases that have a schema (label = the connection name, value = its
+  `connection_id`, which is sent as `target_schema`). A workspace on one has
+  `target_schema === connection_id`.
+- Wherever a dataset is shown as text (workspace cards, the Ask empty state and turn badge,
+  Answer details, the conversation list, dashboards) a connection id `cn_<16 hex>` is shown
+  as the connection's name (`datasetLabel`, src/features/library/datasets.ts); never the raw
+  id (an id with no matching connection reads "Your database").
 - Detail (`#/workspaces/<id>`): name, **"Ask in this workspace"**, **"Workspace
   actions"** → **"Delete workspace"** (confirm). Tabs (`aria-label="Setup steps"`):
   - **Business**: **About your business**, "Version N", **Save** (each save is a version).
@@ -214,6 +222,9 @@ cards appear as they are added. It ends with a toast: "Added 7 of 8 insights."
 ## 6b. Library (docs/V3_PLAN.md Phase 3c slice 5, D-v3-17)
 
 - `#/library`: heading **"Library"**, "Documents you upload once and use in any workspace."
+  Two tabs (`aria-label="Library sections"`): **Documents** (default; what follows until
+  "Databases tab") and **Databases**. The chosen tab is local state, not in the address.
+  **New folder** is in the header on the Documents tab only.
 - Folders (`data-testid="folder-item"`, `aria-current` on the selected one) with
   "N documents"; **New folder** (dialog **Name**, **Cancel** / **Create**, server refusals in
   the dialog, e.g. a duplicate name). **Folder actions** → **Rename folder** and **Delete
@@ -228,6 +239,35 @@ cards appear as they are added. It ends with a toast: "Added 7 of 8 insights."
   files, and files over 20 MB, are refused in the browser and never sent. Files upload
   one after another; each refusal names its file and does not stop the rest. While any
   document is Processing the list refreshes every 3 s.
+
+### Databases tab (docs/V3_PLAN.md Phase 3c slice 6a)
+
+- Connect your own Postgres with a read-only login. One sentence: "Connect a Postgres
+  database with a read-only login. StateSync only ever reads it."
+- List (`data-testid="connection-item"`, `data-status` ok / failed): name; `user@host:port/dbname`;
+  status **Ready** / **Failed** with the server's `check_detail` (warnings from the last
+  create or test are shown muted when Ready); the schema, or, until one is chosen, a
+  **Schema** select (`aria-label="Schema for <name>"`) listing the schemas from the last
+  create or test response (with none known: "use Test again to list the schemas");
+  "Used by N workspaces" when non-empty; **Test again**; **Delete connection <name>**
+  (confirm dialog; a server refusal, e.g. "1 workspace uses this connection. Delete it
+  first.", shows in the dialog and it stays open).
+- **Add database** dialog: **Name**, **Host** (hint "For a database on this computer, use
+  host.docker.internal."), **Port** (5432), **Database**, **User**, **Password**, **SSL**
+  (disable, prefer, require, verify-ca, verify-full; default prefer); **Cancel** /
+  **Connect** ("Checking…" while pending). The server's refusal shows in the dialog
+  (`role="alert"`) and the dialog stays open. On success it closes, toasts "Connected", and
+  a login that can read several schemas leaves the new item with the Schema select.
+- The password: `<input type="password" autoComplete="new-password">`, held only in the
+  dialog's state, sent once in the create request (called directly, never through a
+  query or mutation cache), cleared on success, cancel and close. It never appears in the
+  DOM afterwards, a toast, a URL, storage or a log; the server never returns it.
+- A collapsible **"How to create a read-only login"** (`<details>`) with the four-statement
+  SQL in a `<pre>` (text only).
+- Empty: **"No databases yet"**, the sentence, **Add database**. A server without an
+  encryption key (`available: false`) shows "Connecting your own databases is not set up
+  on this server. Run scripts/make_connection_key.py and restart the stack." and hides
+  **Add database**.
 
 ## 7. Ask (chat)
 
