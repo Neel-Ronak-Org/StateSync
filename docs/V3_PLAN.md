@@ -590,8 +590,8 @@ first. Slices, each a written spec, delegated and audited:
    PDFs, chunking into `workspace_docs`), then **definitions mined from documents** with
    page citations for owner approval.
 6. **Metrics** (governed definitions compiled to SQL), the **account-level library**
-   (sources chosen by workspaces), **own Postgres** (self-hosted), and the
-   synthetic-schema switches.
+   (sources chosen by workspaces), **own Postgres** (self-hosted, enabled on the owner's
+   machine per D-v3-18), and the synthetic-schema switches.
 
 Exit: the Phase 3 exit (8/10 on olist and public through the wizard) plus, on the Groq
 baseline set, the share of answers on each tier and accuracy per tier reported.
@@ -645,6 +645,7 @@ header requires a record for any change there).
 | D-v3-15 | 2026-09-29 | Bulk implementation goes to Sonnet subagents from written specs with completion criteria; the lead audits by execution and reading | Owner request for cheaper usage; audits caught real bugs in delegated work before (Phase 3 slice 4) |
 | D-v3-16 | 2026-09-29 | Four lean-pipeline variants exist behind `[pipeline]` flags (language_gate, router_mode, sql_draft_mode, synth_style), plus `sql.timeout_retry_max` and `models.groq_max_total_wait_s`; all ship at today's behaviour | A variant becomes the default only after `scripts/eval_groq.py` shows accuracy within one question of the baseline and lower tokens or time |
 | D-v3-17 | 2026-09-29 | Documents (and later database connections) live in an account-level library with folders; each workspace chooses the folders and connection it uses. Column meanings stay with the connection; business terms and approved answers stay per workspace | Owner decision: upload once, reuse across teams; one contract, one copy |
+| D-v3-18 | 2026-09-29 | v1 is built and run self-hosted, everything on the owner's machine: uploads and own-Postgres connections are enabled there. Hosted multi-user concerns (usage metering, plans, a connector inside a customer's network, encrypted connections on a public site) wait until a hosted version is wanted | Owner decision: a self-hosted copy cannot be monitored, so plans and usage only matter for a hosted SaaS; build the product first, host it later if required |
 
 ## 9. Issue register
 
