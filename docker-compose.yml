@@ -8,6 +8,12 @@ networks:
     internal: true   # no external routing; containers cannot reach the internet
   app_net:
     driver: bridge
+  # The upload parser's network (docs/V3_PLAN.md Phase 3c slice 5): internal,
+  # shared only with the orchestrator. The parser reaches no database, no
+  # model and no internet; the orchestrator is the only thing that reaches it.
+  parser_net:
+    driver: bridge
+    internal: true
 
 # ─── Volumes ─────────────────────────────────────────────────────────────────
 volumes:
@@ -155,7 +161,8 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     networks:
-      - app_net         # app_net ONLY — intentionally not on db_net
+      - app_net         # app_net — intentionally not on db_net
+      - parser_net      # to hand uploads to the parser; the parser reaches nothing
     environment:
       - ORCHESTRATOR_HOST=0.0.0.0
       - ORCHESTRATOR_PORT=8090
@@ -171,6 +178,7 @@ services:
       - CONFIG_DIR=/app/config
       # Reference questions for a workspace's setup test (docs/V3_PLAN.md Phase 3).
       - FIXTURES_DIR=/app/fixtures
+      - PARSER_URL=http://parser:8095
     volumes:
       - ./config:/app/config:ro
       - ./fixtures:/app/fixtures:ro
@@ -189,6 +197,33 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+
+  # ── 5b. parser ─────────────────────────────────────────────────────────────
+  # Turns uploaded files into text (parser/server.py). The most hostile input
+  # StateSync accepts, so: internal network shared only with the orchestrator,
+  # no secrets, non-root, read-only filesystem, no capabilities, bounded memory
+  # and processes, and each file parsed in a child process with its own limits.
+  parser:
+    build:
+      context: ./parser
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - parser_net
+    environment:
+      - CONFIG_DIR=/app/config
+      - PARSER_PORT=8095
+    volumes:
+      - ./config:/app/config:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    pids_limit: 64
 
   # ── 6. frontend ────────────────────────────────────────────────────────────
   # The web app (web/, docs/V3_PLAN.md Phase 2): a React bundle served by nginx,

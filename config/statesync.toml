@@ -193,6 +193,31 @@ goal_max_chars            = 200
 question_max_chars        = 300
 build_keep_s              = 3600    # finished builds stay readable this long
 
+[library]
+# The account-level document library (docs/V3_PLAN.md Phase 3c slice 5, D-v3-17,
+# migration 024). Uploads are parsed by the isolated `parser` service, chunked
+# by the orchestrator and embedded by the MCP.
+max_upload_bytes            = 20000000   # per file, checked by the orchestrator AND the parser
+max_pages                   = 300        # a PDF with more pages is refused
+max_chars                   = 2000000    # extracted text per file
+parse_timeout_s             = 60         # the parser's child process is killed after this
+parse_memory_mb             = 768        # address-space limit of that child process
+parse_cpu_s                 = 60         # CPU-time limit of that child process
+parser_request_timeout_s    = 90         # orchestrator -> parser HTTP timeout
+content_types               = ["application/pdf", "text/plain", "text/markdown"]
+# Chunking (orchestrator/library_ingest.py). mxbai-embed-large reads 512 tokens,
+# roughly 2,000 characters of English; chunks stay under that with room to spare.
+chunk_chars                 = 1400
+chunk_overlap_chars         = 200
+chunk_min_chars             = 40         # shorter fragments are dropped (page numbers, headers)
+embed_batch                 = 24         # chunks per MCP call (one Ollama batch each; stays inside the MCP timeout)
+max_folders                 = 50         # per account
+max_documents               = 500        # per account
+folder_name_max_chars       = 60
+title_max_chars             = 200
+chunk_max_chars             = 4000       # the MCP refuses a longer chunk
+processing_stale_s          = 1800       # a document still "processing" after this is shown as failed
+
 [workspaces]
 # Workspaces and their knowledge store (docs/V3_PLAN.md Phase 3, migration 021).
 max_per_principal           = 12
