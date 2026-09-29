@@ -81,6 +81,7 @@ SHIPPED_DEFAULTS: dict[tuple[str, str], str] = {
     ("pipeline", "router_mode"): "always",
     ("pipeline", "sql_draft_mode"): "llm",
     ("pipeline", "synth_style"): "full",
+    ("pipeline", "answer_checks"): "off",
 }
 
 

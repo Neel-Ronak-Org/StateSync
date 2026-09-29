@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Download, MoreHorizontal, PanelRight, Pin } from 'lucide-react'
+import { AlertTriangle, Download, MoreHorizontal, PanelRight, Pin } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { api, ApiError } from '@/api/client'
@@ -244,6 +244,18 @@ export function TurnItem({
               )
             })}
           </div>
+
+          {/* Caveats: the result ran, but may mislead (join fan-out, truncation, all-NULL) */}
+          {turn.stateTrace?.caveats?.map((caveat, idx) => (
+            <p
+              key={idx}
+              data-testid="answer-caveat"
+              className="flex items-start gap-1.5 text-xs text-muted-foreground"
+            >
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              <span>{caveat}</span>
+            </p>
+          ))}
 
           {/* Artifact card */}
           {hasArtifacts && (

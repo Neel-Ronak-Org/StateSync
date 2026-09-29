@@ -80,6 +80,8 @@ export interface StateTrace {
   sql_columns: string[]
   attempt: number
   errors: unknown[]
+  /** Warnings about a result that ran but may mislead (pipeline.answer_checks); absent when none. */
+  caveats?: string[]
   metrics: TraceMetrics
   memory_hit: boolean
   detected_language: string | null

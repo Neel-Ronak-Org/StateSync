@@ -75,11 +75,12 @@ import os
 import time
 from typing import Any
 
+import answer_checks
 from column_profiles import format_profiles, get_profiles
 from config_loader import cfg
 from classifiers.error_classifier import classify_error
 from llm.provider import get_agent_llm
-from mcp_client import MCPSession, data_run_select, data_sample_rows, schema_list_tables, workspaces_manage
+from mcp_client import MCPSession, data_run_select, data_sample_rows, schema_describe_table, schema_list_tables, workspaces_manage
 from memory_store import get_trajectory_store
 from schema_retriever import get_schema_retriever, target_schema
 from spatial_resolver import get_spatial_resolver
@@ -734,6 +735,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         # only) or the provider seam.
         debug_sql = state_dict.get("debug_candidate_sql")
         verified_example = False
+        used_debug_sql = False
         if attempt == 0 and exact_sql:
             candidate_sql = exact_sql
             verified_example = True
@@ -741,6 +743,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                         query_id, workspace_id)
         elif attempt == 0 and debug_sql:
             candidate_sql = debug_sql
+            used_debug_sql = True
             logger.warning(
                 "SQL Agent using debug_candidate_sql override for query_id=%s "
                 "(test harness only -- never set by production request paths).",
@@ -828,12 +831,79 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             and last_error.get("category") == "empty_result"
         )
 
-        if ok and (rows or repeat_empty_accepted):
+        # pipeline.answer_checks: deterministic checks on a result that RAN. Never for
+        # the fast path (an approved example is already verified) or the test harness's
+        # injected SQL; with the flag off none of this issues a query.
+        fanout_finding: answer_checks.Finding | None = None
+        caveats: list[str] = []
+        if (
+            ok and rows
+            and flags_snapshot.get("pipeline.answer_checks", "off") == "on"
+            and not verified_example and not used_debug_sql
+        ):
+            try:
+                table_columns = {
+                    d["table"]: [c["name"] for c in d.get("columns", []) if isinstance(c, dict) and "name" in c]
+                    for d in table_descriptions if isinstance(d, dict) and "table" in d
+                }
+                # A memory hit reads no schema, so describe just the probed tables.
+                for probe in answer_checks.fanout_probe(candidate_sql, _schema) or []:
+                    bare = probe.table.split(".")[-1]
+                    if bare not in table_columns and probe.table not in table_columns:
+                        desc = await schema_describe_table(session, bare, _schema)
+                        table_columns[bare] = [
+                            c["name"] for c in desc.get("columns", []) if isinstance(c, dict) and "name" in c
+                        ]
+                fanout_finding = await answer_checks.check_fanout(
+                    session, candidate_sql, schema_fingerprint, table_columns, _schema,
+                )
+            except Exception as exc:
+                logger.warning("SQL Agent answer checks skipped for query_id=%s: %s", query_id, exc)
+            caveats = [
+                c for c in (
+                    answer_checks.truncation_caveat(len(rows), max_rows),
+                    answer_checks.null_aggregate_caveat(rows),
+                ) if c
+            ]
+
+        fanout_retry = False
+        if fanout_finding is not None:
+            prior_fanouts = sum(1 for e in existing_errors if e.get("category") == "join_cardinality")
+            if prior_fanouts < int(cfg.answer_checks.fanout_retry_max):
+                fanout_retry = True
+            else:
+                caveats.append("These figures may count some rows more than once (join fan-out).")
+
+        if fanout_retry:
+            # Failure-shaped, like any other failed attempt: no executed_sql, so the graph
+            # retries and the correction prompt shows this message and hint.
+            logger.warning(
+                "SQL Agent join fan-out for query_id=%s attempt=%d: %s",
+                query_id, attempt, fanout_finding.message,
+            )
+            update["sql_rows"] = []
+            update["sql_columns"] = []
+            update["errors"] = [{
+                "attempt": attempt,
+                "category": "join_cardinality",
+                "engine_code": None,
+                "message": fanout_finding.message,
+                "offending_sql": candidate_sql,
+                "remediation_hint": (
+                    "Aggregate the joined table in a subquery before joining, or aggregate at the "
+                    "right grain (e.g. COUNT(DISTINCT key)), so each row of "
+                    f"{fanout_finding.table} counts once."
+                ),
+            }]
+
+        elif ok and (rows or repeat_empty_accepted):
             # Real success, or a second empty_result in a row accepted as
             # the answer (A3) -- both are terminal-success shaped state.
             update["executed_sql"] = candidate_sql
             update["sql_rows"] = rows
             update["sql_columns"] = exec_result.get("columns", [])
+            if caveats:
+                update["caveats"] = caveats
             logger.info(
                 "SQL Agent success for query_id=%s attempt=%d: %d rows returned.",
                 query_id, attempt, len(rows),

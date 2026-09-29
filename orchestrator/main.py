@@ -474,6 +474,7 @@ async def answer_question(
         "errors":      [e.model_dump() for e in final_state.errors],
         "interrogation_samples": final_state.interrogation_samples,
         "script_repairs": final_state.script_repairs,
+        "caveats":     final_state.caveats,
         "metrics":     final_state.metrics.model_dump(),
         "memory_hit":       final_state.memory_hit,
         "memory_trace_id":  final_state.memory_trace_id,

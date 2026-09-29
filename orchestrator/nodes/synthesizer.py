@@ -585,6 +585,10 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     if retrievals:
         context_parts.append(_format_doc_context(retrievals))
 
+    caveats: list[str] = state_dict.get("caveats") or []
+    if caveats:
+        context_parts.append("Caveats (mention them briefly to the user): " + " ".join(caveats))
+
     if not context_parts:
         context_parts.append("No data was retrieved for this question.")
 

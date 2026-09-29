@@ -122,6 +122,11 @@ profile_max_chars         = 1500
 synth_short_preview_rows  = 20
 synth_short_max_sentences = 3
 
+[answer_checks]
+# pipeline.answer_checks = "on". Deterministic checks on an executed SELECT.
+fanout_retry_max          = 1       # retries after a confirmed join fan-out; then the answer ships with a caveat
+key_column_suffixes       = ["_id", "id"]   # candidate single-column keys, verified unique before use
+
 [spatial]
 provider                  = "digipin"
 default_radius_m          = 5000

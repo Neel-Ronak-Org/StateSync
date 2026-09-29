@@ -114,6 +114,22 @@ test.describe('asking', () => {
     await expect(turn.locator('canvas')).toHaveCount(0)
   })
 
+  test('caveats show under the answer, and nothing shows when there are none', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask' })
+    api.nextCaveats = [
+      'These figures may count some rows more than once (join fan-out).',
+      'Showing the first 1,000 rows; the full result is larger.',
+    ]
+    await ask(page, 'How many orders are there in total?')
+    const withCaveats = page.getByTestId('turn').last()
+    await expect(withCaveats.getByTestId('answer-caveat')).toHaveCount(2)
+    await expect(withCaveats.getByTestId('answer-caveat').first()).toContainText('join fan-out')
+
+    await ask(page, 'How many orders are there in total?')
+    await expect(page.getByTestId('turn').last().getByTestId('answer-text')).toBeVisible()
+    await expect(page.getByTestId('turn').last().getByTestId('answer-caveat')).toHaveCount(0)
+  })
+
   test('a document answer lists its sources and has no table', async ({ page }) => {
     await openApp(page, { hash: '#/ask' })
     await ask(page, 'What does the SLA policy say for LP003?')
