@@ -1,0 +1,163 @@
+"""
+orchestrator/number_grounding.py
+Every figure in an answer's prose, traced to where it came from (docs/V3_PLAN.md
+Phase 3c, "answers you can check").
+
+WHY. The SQL can be right and the rows correct while the sentence written about
+them states a number that is in neither: a misread row, a sum the model did in
+its head, a percentage of the wrong base. Readers trust the sentence more than
+the table, so each figure in it is matched, in code and with no model call,
+against what the answer is built on:
+
+  cell       a value in the result rows (a fraction written as a percent counts)
+  aggregate  a column's sum, average, minimum or maximum, or the row count
+  question   a number the question itself contains ("top 5", "last 30 days")
+  passage    for document answers, a figure written in a cited passage
+
+A figure matches within the rounding its own digits imply: "1.2M" matches
+anything from 1,150,000 to 1,250,000; "45%" matches 0.4461 or 45.3. Figures
+that match nothing are returned as unmatched; the caller turns them into a
+caveat, which also moves the answer out of the "checked" evidence tier.
+
+Not figures: four-digit years, dates and times, numbered-list markers ("1. "
+at the start of a line), and digits inside identifiers (S001, LP003, order_12).
+"""
+
+from __future__ import annotations
+
+import math
+import re
+from dataclasses import dataclass
+from typing import Any
+
+_SCALE = {"k": 1e3, "thousand": 1e3, "m": 1e6, "mn": 1e6, "million": 1e6, "b": 1e9, "bn": 1e9,  # noqa: literals - unit words, not settings
+          "billion": 1e9, "lakh": 1e5, "lakhs": 1e5, "crore": 1e7, "crores": 1e7}  # noqa: literals - unit words, not settings
+
+# A number not glued to letters or digits on its left (so S001 and 2026-09 parts are skipped),
+# optionally followed by a scale word and/or a percent sign.
+_NUMBER = re.compile(
+    r"(?<![\w.\-/:])"
+    r"(?P<sign>-)?"
+    r"(?P<num>\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?|\.\d+)"
+    r"(?:\s?(?P<scale>k|thousand|mn|m|million|bn|b|billion|lakhs?|crores?)\b)?"
+    r"(?P<pct>\s?%|\s?percent\b)?"
+    r"(?![\w\-/:]|\.\d)",
+    re.IGNORECASE,
+)
+_DATE_OR_TIME = re.compile(r"\b\d{4}-\d{2}(?:-\d{2})?\b|\b\d{1,2}:\d{2}\b|\b\d{1,2}/\d{1,2}/\d{2,4}\b")
+_YEAR = re.compile(r"^(1[89]\d{2}|2[01]\d{2})$")
+# A numbered-list marker ("1. ", "2) ") at the start of a line is not a figure.
+_LIST_MARKER = re.compile(r"^[ \t]*\d{1,3}[.)](?=\s)", re.MULTILINE)
+
+
+@dataclass(frozen=True)
+class Mention:
+    text: str
+    start: int
+    end: int
+    value: float
+    tolerance: float
+    percent: bool
+
+
+def _tolerance(num: str, scale: float) -> float:
+    decimals = len(num.split(".", 1)[1]) if "." in num else 0
+    return 0.5 * (10 ** -decimals) * scale  # noqa: literals - half a unit of the last digit
+
+
+def extract_mentions(text: str) -> list[Mention]:
+    """The figures in `text`, with the rounding tolerance each one's digits imply."""
+    blocked = [(m.start(), m.end()) for m in _DATE_OR_TIME.finditer(text)]
+    blocked += [(m.start(), m.end()) for m in _LIST_MARKER.finditer(text)]
+    mentions: list[Mention] = []
+    for m in _NUMBER.finditer(text):
+        if any(s <= m.start() < e for s, e in blocked):
+            continue
+        num = m.group("num").replace(",", "")
+        scale_word = (m.group("scale") or "").lower()
+        percent = bool(m.group("pct"))
+        if not scale_word and not percent and _YEAR.match(num):
+            continue
+        scale = _SCALE.get(scale_word, 1.0)
+        value = float(num) * scale * (-1 if m.group("sign") else 1)
+        mentions.append(Mention(text=m.group(0).strip(), start=m.start(), end=m.end(), value=value,
+                                tolerance=_tolerance(num, scale), percent=percent))
+    return mentions
+
+
+def _numeric(value: Any) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value) if math.isfinite(float(value)) else None
+    if isinstance(value, str):
+        try:
+            number = float(value.replace(",", ""))
+        except ValueError:
+            return None
+        return number if math.isfinite(number) else None
+    try:  # Decimal and friends
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _close(mention: Mention, candidate: float) -> bool:
+    targets = [candidate]
+    if mention.percent:
+        targets.append(candidate * 100)          # noqa: literals - a fraction written as a percent
+    return any(abs(abs(mention.value) - abs(t)) <= mention.tolerance + 1e-9 * max(1.0, abs(t)) for t in targets)  # noqa: literals - float comparison slack
+
+
+def _aggregates(rows: list[dict], columns: list[str]) -> list[tuple[str, str, float]]:
+    found: list[tuple[str, str, float]] = [("count", "rows", float(len(rows)))]
+    for column in columns:
+        values = [v for v in (_numeric(r.get(column)) for r in rows) if v is not None]
+        if len(values) < 2:  # noqa: literals - one value is already a cell
+            continue
+        found += [("sum", column, sum(values)), ("avg", column, sum(values) / len(values)),
+                  ("min", column, min(values)), ("max", column, max(values))]
+    return found
+
+
+def ground(answer_text: str, rows: list[dict], columns: list[str], question: str = "",
+           passages: list[str] | None = None) -> dict[str, Any]:
+    """Each figure in the answer with where it came from; see the module docstring."""
+    question_values = [m.value for m in extract_mentions(question or "")]
+    passage_mentions = [m for p in (passages or []) for m in extract_mentions(p)]
+    aggregates = _aggregates(rows, columns)
+    results: list[dict[str, Any]] = []
+    for mention in extract_mentions(answer_text or ""):
+        source: dict[str, Any] | None = None
+        for index, row in enumerate(rows):
+            for column in columns:
+                cell = _numeric(row.get(column))
+                if cell is not None and _close(mention, cell):
+                    source = {"kind": "cell", "row": index, "column": column}
+                    break
+            if source:
+                break
+        if source is None:
+            for name, column, value in aggregates:
+                if _close(mention, value):
+                    source = {"kind": "aggregate", "aggregate": name, "column": column}
+                    break
+        if source is None and any(abs(mention.value - q) <= mention.tolerance for q in question_values):
+            source = {"kind": "question"}
+        if source is None and any(abs(mention.value - p.value) <= max(mention.tolerance, p.tolerance)
+                                  for p in passage_mentions):
+            source = {"kind": "passage"}
+        results.append({"text": mention.text, "start": mention.start, "end": mention.end,
+                        "matched": source is not None, "source": source})
+    unmatched = [r["text"] for r in results if not r["matched"]]
+    return {"figures": results, "matched": len(results) - len(unmatched), "unmatched": unmatched}
+
+
+def caveat(unmatched: list[str]) -> str | None:
+    """The caveat for figures that match nothing, or None."""
+    if not unmatched:
+        return None
+    listed = ", ".join(unmatched)
+    noun = "figure" if len(unmatched) == 1 else "figures"
+    return f"The explanation mentions {noun} not found in the result ({listed}); check them against the table."

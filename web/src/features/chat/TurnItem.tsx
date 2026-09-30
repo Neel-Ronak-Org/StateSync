@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { VegaChart, type ChartView } from '@/charts/VegaChart'
 import { answerBlocks } from '@/features/chat/answerBlocks'
+import { figureCursor, figureSource, type Segment } from '@/features/chat/figures'
 import { ResultTable } from '@/features/chat/ResultTable'
 import { useAllTiles } from '@/features/dashboard/useTiles'
 import { useDatasetLabel } from '@/features/library/useConnections'
@@ -72,6 +73,29 @@ const EVIDENCE_CHIPS: Record<Evidence, { label: string; className: string; hint:
   },
 }
 
+/** A chunk of answer text with each figure marked: dotted when it matches its source, amber when it does not. */
+function renderFigures(segments: (chunk: string) => Segment[], chunk: string) {
+  return segments(chunk).map((seg, i) =>
+    seg.figure ? (
+      <span
+        key={i}
+        data-testid="figure"
+        data-matched={seg.figure.matched ? 'true' : 'false'}
+        title={figureSource(seg.figure)}
+        className={
+          seg.figure.matched
+            ? 'underline decoration-dotted decoration-muted-foreground/60 underline-offset-2'
+            : 'rounded-sm bg-destructive/10 px-0.5 text-destructive underline decoration-dotted underline-offset-2'
+        }
+      >
+        {seg.text}
+      </span>
+    ) : (
+      <span key={i}>{seg.text}</span>
+    ),
+  )
+}
+
 export function TurnItem({
   turn,
   devMode,
@@ -98,6 +122,7 @@ export function TurnItem({
   )
 
   const blocks = turn.answer ? answerBlocks(turn.answer) : []
+  const grounding = turn.stateTrace?.number_grounding ?? null
 
   // The short answer writer sends no chart: draw one here from the rows with the
   // same presentation code the dashboard tiles use. VegaChart still runs the A7
@@ -283,28 +308,41 @@ export function TurnItem({
         <div className="space-y-3">
           {/* Answer text */}
           <div data-testid="answer-text" className="text-sm leading-6 space-y-3 text-foreground">
-            {blocks.map((b, idx) => {
-              if (b.kind === 'p') {
-                return <p key={idx}>{b.text}</p>
-              }
-              if (b.kind === 'ul') {
+            {(() => {
+              const segments = figureCursor(grounding?.figures)
+              const draw = (chunk: string) => renderFigures(segments, chunk)
+              return blocks.map((b, idx) => {
+                if (b.kind === 'p') {
+                  return <p key={idx}>{draw(b.text)}</p>
+                }
+                if (b.kind === 'ul') {
+                  return (
+                    <ul key={idx} className="list-disc space-y-1 pl-5">
+                      {b.items.map((item, iIdx) => (
+                        <li key={iIdx}>{draw(item)}</li>
+                      ))}
+                    </ul>
+                  )
+                }
                 return (
-                  <ul key={idx} className="list-disc space-y-1 pl-5">
+                  <ol key={idx} className="list-decimal space-y-1 pl-5">
                     {b.items.map((item, iIdx) => (
-                      <li key={iIdx}>{item}</li>
+                      <li key={iIdx}>{draw(item)}</li>
                     ))}
-                  </ul>
+                  </ol>
                 )
-              }
-              return (
-                <ol key={idx} className="list-decimal space-y-1 pl-5">
-                  {b.items.map((item, iIdx) => (
-                    <li key={iIdx}>{item}</li>
-                  ))}
-                </ol>
-              )
-            })}
+              })
+            })()}
           </div>
+
+          {/* Every figure checked against the result (number_grounding.py); unmatched ones also arrive as a caveat. */}
+          {grounding && grounding.figures.length > 0 && grounding.unmatched.length === 0 && (
+            <p data-testid="figures-check" className="text-xs text-muted-foreground">
+              {grounding.figures.length === 1
+                ? 'The figure in this answer matches the result.'
+                : `All ${grounding.figures.length} figures in this answer match the result.`}
+            </p>
+          )}
 
           {/* How I got this: deterministic plain-English reading of the SQL, collapsed by default */}
           {turn.stateTrace?.explanation && (

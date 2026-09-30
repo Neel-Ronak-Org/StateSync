@@ -83,6 +83,8 @@ SHIPPED_DEFAULTS: dict[tuple[str, str], str] = {
     ("pipeline", "synth_style"): "full",
     ("pipeline", "answer_checks"): "off",
     ("pipeline", "templates"): "off",
+    # Answers you can check: annotation plus a caveat, never a change to SQL or rows.
+    ("pipeline", "number_grounding"): "on",
 }
 
 

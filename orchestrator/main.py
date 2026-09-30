@@ -30,6 +30,8 @@ from llm.provider import LLM_READINESS, validate_llm_config
 from llm.recording import start_recording, stop_recording
 from failures import user_facing_failure
 from evidence import evidence_tier
+from number_grounding import caveat as grounding_caveat
+from number_grounding import ground
 from sql_explain import explain_sql
 from mcp_client import (MCPSession, audit_record, history_append_turn,
                         history_check_session, history_get_recent_turns,
@@ -471,6 +473,19 @@ async def answer_question(
     # sql_rows/sql_columns are included (not just the count) so C1-V3 can do
     # execution-based dataframe equality across repeated runs -- this trace
     # object is verification/debugging-oriented, not the user-facing payload.
+    # Every figure in the prose, traced to a cell, a total, the question or a
+    # cited passage (number_grounding.py, no model). Unmatched figures become a
+    # caveat, which also keeps the answer out of the "checked" tier.
+    grounding = None
+    caveats = list(final_state.caveats)
+    if final_state.flags_snapshot.get("pipeline.number_grounding") == "on" and final_state.answer_text:
+        grounding = ground(final_state.answer_text, final_state.sql_rows, final_state.sql_columns,
+                           final_state.normalized_query or final_state.raw_query,
+                           [r.content for r in final_state.retrievals])
+        figure_caveat = grounding_caveat(grounding["unmatched"])
+        if figure_caveat:
+            caveats.append(figure_caveat)
+
     state_trace = {
         "query_id":    final_state.query_id,
         "tenant_id":   final_state.tenant_id,
@@ -479,8 +494,9 @@ async def answer_question(
         "workspace_id": final_state.workspace_id,
         "verified_example": final_state.verified_example,
         "evidence": evidence_tier(final_state.verified_example, final_state.executed_sql,
-                                  final_state.flags_snapshot, final_state.caveats,
+                                  final_state.flags_snapshot, caveats,
                                   final_state.compiled_template),
+        "number_grounding": grounding,
         "route":       final_state.route,
         "executed_sql": final_state.executed_sql,
         # executed_sql is null when a statement was rejected before execution,
@@ -495,7 +511,7 @@ async def answer_question(
         "errors":      [e.model_dump() for e in final_state.errors],
         "interrogation_samples": final_state.interrogation_samples,
         "script_repairs": final_state.script_repairs,
-        "caveats":     final_state.caveats,
+        "caveats":     caveats,
         "metrics":     final_state.metrics.model_dump(),
         "memory_hit":       final_state.memory_hit,
         "memory_trace_id":  final_state.memory_trace_id,

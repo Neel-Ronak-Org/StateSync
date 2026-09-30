@@ -67,6 +67,20 @@ export interface ModelCall {
   error?: string
 }
 
+export interface GroundedFigure {
+  text: string
+  start: number
+  end: number
+  matched: boolean
+  source: { kind: 'cell' | 'aggregate' | 'question' | 'passage'; row?: number; column?: string; aggregate?: string } | null
+}
+
+export interface NumberGrounding {
+  figures: GroundedFigure[]
+  matched: number
+  unmatched: string[]
+}
+
 export interface StateTrace {
   query_id: string
   target_schema: string
@@ -86,6 +100,8 @@ export interface StateTrace {
   errors: unknown[]
   /** Warnings about a result that ran but may mislead (pipeline.answer_checks); absent when none. */
   caveats?: string[]
+  /** Every figure in the prose traced to its source (pipeline.number_grounding); null when off. */
+  number_grounding?: NumberGrounding | null
   metrics: TraceMetrics
   memory_hit: boolean
   detected_language: string | null

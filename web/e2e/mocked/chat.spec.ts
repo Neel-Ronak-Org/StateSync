@@ -114,6 +114,51 @@ test.describe('asking', () => {
     await expect(turn.locator('canvas')).toHaveCount(0)
   })
 
+  test('each figure in the answer says where it came from; one the result lacks is marked', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask' })
+    api.nextAnswer = 'Delivered orders dominate: 96,478 of 98,210, up 12% on last year.'
+    api.nextGrounding = {
+      figures: [
+        { text: '96,478', start: 27, end: 33, matched: true, source: { kind: 'cell', row: 0, column: 'n' } },
+        { text: '98,210', start: 37, end: 43, matched: true, source: { kind: 'aggregate', aggregate: 'sum', column: 'n' } },
+        { text: '12%', start: 48, end: 51, matched: false, source: null },
+      ],
+      matched: 2,
+      unmatched: ['12%'],
+    }
+    api.nextCaveats = ['The explanation mentions a figure not found in the result (12%); check them against the table.']
+    await ask(page, 'Which order status is most common?')
+    const turn = page.getByTestId('turn').last()
+    const figures = turn.getByTestId('figure')
+    await expect(figures).toHaveCount(3)
+    await expect(figures.nth(0)).toHaveText('96,478')
+    await expect(figures.nth(0)).toHaveAttribute('title', 'From the result: row 1, n')
+    await expect(figures.nth(1)).toHaveAttribute('title', 'Total of n in the result')
+    await expect(figures.nth(2)).toHaveAttribute('data-matched', 'false')
+    await expect(figures.nth(2)).toHaveAttribute('title', /^Not found in the result/)
+    await expect(turn.getByTestId('answer-text')).toHaveText('Delivered orders dominate: 96,478 of 98,210, up 12% on last year.')
+    await expect(turn.getByTestId('answer-caveat')).toContainText('(12%)')
+    await expect(turn.getByTestId('figures-check')).toHaveCount(0)
+  })
+
+  test('when every figure matches, the answer says so', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask' })
+    api.nextAnswer = 'Delivered orders dominate: 96,478 of 98,210.'
+    api.nextGrounding = {
+      figures: [
+        { text: '96,478', start: 27, end: 33, matched: true, source: { kind: 'cell', row: 0, column: 'n' } },
+        { text: '98,210', start: 37, end: 43, matched: true, source: { kind: 'aggregate', aggregate: 'sum', column: 'n' } },
+      ],
+      matched: 2,
+      unmatched: [],
+    }
+    await ask(page, 'Which order status is most common?')
+    const turn = page.getByTestId('turn').last()
+    await expect(turn.getByTestId('figures-check')).toHaveText('All 2 figures in this answer match the result.')
+    await expect(turn.locator('[data-testid="figure"][data-matched="true"]')).toHaveCount(2)
+    await expect(turn.locator('[data-testid="figure"][data-matched="false"]')).toHaveCount(0)
+  })
+
   test('caveats show under the answer, and nothing shows when there are none', async ({ page }) => {
     const api = await openApp(page, { hash: '#/ask' })
     api.nextCaveats = [

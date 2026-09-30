@@ -232,6 +232,7 @@ sql_draft_mode                  = "llm"      # "llm": draft + live sampling | "p
 synth_style                     = "full"     # "full" | "short": <= 3 sentences, no chart proposal, numbers formatted by rule
 answer_checks                   = "off"      # "off" | "on": deterministic checks after the SQL runs (join fan-out, date coverage, truncation, empty aggregates)
 templates                       = "off"      # "off" | "on": answer from a template of an approved query when only the values differ (the "compiled" tier)
+number_grounding                = "on"       # "off" | "on": trace every figure in the prose to a result cell, total, the question or a cited passage; unmatched figures become a caveat (never changes SQL or rows)
 
 [tenancy]
 enforced                        = false  # D6; threading is mandatory even when false

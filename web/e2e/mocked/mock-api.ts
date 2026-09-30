@@ -247,6 +247,8 @@ export class MockApi {
   nextSynthStyle: 'full' | 'short' = 'full'
   /** Caveats the next /query reports in state_trace (pipeline.answer_checks); cleared after use. */
   nextCaveats: string[] = []
+  /** The figure tracing the next /query reports (pipeline.number_grounding); cleared after use. */
+  nextGrounding: Json | null = null
   /** When set, the next /query reports this evidence tier instead of the default (verified or unchecked). */
   nextEvidence: 'verified' | 'compiled' | 'checked' | 'unchecked' | null = null
   /** When set, the next /query answer text is this instead of the canned one. */
@@ -525,6 +527,8 @@ export class MockApi {
     if (this.nextSynthStyle === 'short') canned.chart = null
     const caveats = this.nextCaveats
     this.nextCaveats = []
+    const grounding = this.nextGrounding
+    this.nextGrounding = null
     // The default tier: an approved example ran as is, else new SQL nobody checked; no SQL, no tier.
     const evidence = this.nextEvidence ?? (canned.sql ? (verifiedExample ? 'verified' : 'unchecked') : null)
     this.nextEvidence = null
@@ -568,6 +572,7 @@ export class MockApi {
         sql_columns: canned.columns,
         synth_style: this.nextSynthStyle,
         ...(caveats.length > 0 ? { caveats } : {}),
+        ...(grounding ? { number_grounding: grounding } : {}),
         attempt: 1,
         errors: [],
         metrics: { tokens_in: 5164, tokens_out: 298, llm_calls: 5 },
