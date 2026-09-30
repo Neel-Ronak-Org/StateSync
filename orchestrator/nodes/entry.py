@@ -4,7 +4,8 @@ Entry node — first node in the graph.
 
 Responsibilities:
 - Generates query_id (uuid4).
-- Sets tenant_id from config (A0.6; always config default, never from input).
+- Keeps the authenticated principal's tenant_id (set by main.py); the config
+  default only when none was supplied (A0.6, from the single-tenant phase).
 - Generates session_id.
 - Captures flags_snapshot once (A2: flags_snapshot is captured at query entry
   and never re-read mid-query).
@@ -44,7 +45,12 @@ async def entry_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         # it through (not regenerating it) is what makes the immutable-field
         # assertion in state.merge() a real check rather than a guaranteed
         # first-node failure.
-        "tenant_id": cfg.tenancy.default_tenant,    # A0.6: always config default
+        # The tenant of the authenticated principal, set by main.py when the
+        # state is built (tenant_id is immutable from there on). The config
+        # default only stands in when no caller supplied one (A0.6's original
+        # single-tenant rule); overwriting a principal's tenant broke every
+        # question from an account outside the default tenant.
+        "tenant_id": state_dict.get("tenant_id") or cfg.tenancy.default_tenant,
         "session_id": session_id,
         "raw_query": raw_query,
         "flags_snapshot": snapshot_flags(),          # A2: captured once, never re-read
