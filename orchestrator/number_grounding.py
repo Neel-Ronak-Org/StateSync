@@ -10,9 +10,11 @@ the table, so each figure in it is matched, in code and with no model call,
 against what the answer is built on:
 
   cell       a value in the result rows (a fraction written as a percent counts)
+  text       part of a text value in the result ("Seller Store 28", "port=5432")
   aggregate  a column's sum, average, minimum or maximum, or the row count
   question   a number the question itself contains ("top 5", "last 30 days")
   passage    for document answers, a figure written in a cited passage
+  derived    a ratio or difference of two figures traced above ("97.0%" from two counts)
 
 A figure matches within the rounding its own digits imply: "1.2M" matches
 anything from 1,150,000 to 1,250,000; "45%" matches 0.4461 or 45.3. Figures
@@ -65,8 +67,14 @@ def _tolerance(num: str, scale: float) -> float:
     return 0.5 * (10 ** -decimals) * scale  # noqa: literals - half a unit of the last digit
 
 
+_DASHES = str.maketrans({"\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-", "\u2212": "-"})
+
+
 def extract_mentions(text: str) -> list[Mention]:
     """The figures in `text`, with the rounding tolerance each one's digits imply."""
+    # Models write dates with non-breaking hyphens ("2026\u201109\u201120"); one-for-one
+    # replacement keeps every offset valid.
+    text = text.translate(_DASHES)
     blocked = [(m.start(), m.end()) for m in _DATE_OR_TIME.finditer(text)]
     blocked += [(m.start(), m.end()) for m in _LIST_MARKER.finditer(text)]
     mentions: list[Mention] = []
@@ -121,6 +129,29 @@ def _aggregates(rows: list[dict], columns: list[str]) -> list[tuple[str, str, fl
     return found
 
 
+def _in_text_cell(mention: Mention, rows: list[dict], columns: list[str]) -> tuple[int, str] | None:
+    """(row, column) of a text value containing the figure as a whole token ("Seller Store 28")."""
+    token = re.compile(r"(?<![\w.])" + re.escape(mention.text) + r"(?![\w])")
+    for index, row in enumerate(rows):
+        for column in columns:
+            value = row.get(column)
+            if isinstance(value, str) and token.search(value):
+                return index, column
+    return None
+
+
+def _derived(mention: Mention, grounded: list[float]) -> bool:
+    """A ratio or difference of two figures already traced in this answer ("97.0%" of 96,478 / 99,441)."""
+    for a in grounded:
+        for b in grounded:
+            if a == b or b == 0:
+                continue
+            for candidate in (a / b, a - b):
+                if _close(mention, candidate):
+                    return True
+    return False
+
+
 def ground(answer_text: str, rows: list[dict], columns: list[str], question: str = "",
            passages: list[str] | None = None) -> dict[str, Any]:
     """Each figure in the answer with where it came from; see the module docstring."""
@@ -148,8 +179,18 @@ def ground(answer_text: str, rows: list[dict], columns: list[str], question: str
         if source is None and any(abs(mention.value - p.value) <= max(mention.tolerance, p.tolerance)
                                   for p in passage_mentions):
             source = {"kind": "passage"}
+        if source is None:
+            where = _in_text_cell(mention, rows, columns)
+            if where:
+                source = {"kind": "text", "row": where[0], "column": where[1]}
         results.append({"text": mention.text, "start": mention.start, "end": mention.end,
-                        "matched": source is not None, "source": source})
+                        "matched": source is not None, "source": source, "_value": mention})
+    # Second pass: arithmetic on figures traced above (a share computed from two counts).
+    grounded = [r["_value"].value for r in results if r["matched"] and r["source"]["kind"] != "text"]
+    for r in results:
+        mention = r.pop("_value")
+        if not r["matched"] and _derived(mention, grounded):
+            r["matched"], r["source"] = True, {"kind": "derived"}
     unmatched = [r["text"] for r in results if not r["matched"]]
     return {"figures": results, "matched": len(results) - len(unmatched), "unmatched": unmatched}
 

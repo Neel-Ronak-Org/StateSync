@@ -80,6 +80,22 @@ def test_the_question_and_cited_passages_are_sources_too():
     assert kinds == ["question", "passage"]
 
 
+def test_figures_inside_text_values_and_unicode_dates_are_not_flagged():
+    # Seen in the pilot over stored answers (docs/research): both were false alarms.
+    rows = [{"name": "Seller Store 28", "day": "2026-09-20", "total": 31642}]
+    result = g.ground("Seller Store 28 leads on 2026\u201109\u201120 with 31,642.", rows, ["name", "day", "total"])
+    assert result["unmatched"] == []
+    assert [f["source"]["kind"] for f in result["figures"]] == ["text", "cell"]
+
+
+def test_arithmetic_on_traced_figures_is_derived_not_invented():
+    rows = [{"delivered": 96478, "total": 99441}]
+    result = g.ground("96,478 of 99,441 were delivered, about 97.0%; 2,963 were not.", rows, ["delivered", "total"])
+    assert result["unmatched"] == []
+    assert [f["source"]["kind"] for f in result["figures"]] == ["cell", "cell", "derived", "derived"]
+    assert g.ground("96,478 of 99,441, about 91.0%.", rows, ["delivered", "total"])["unmatched"] == ["91.0%"]
+
+
 def test_no_figures_no_caveat():
     assert g.ground("Mumbai leads.", ROWS, COLS) == {"figures": [], "matched": 0, "unmatched": []}
     assert g.caveat([]) is None

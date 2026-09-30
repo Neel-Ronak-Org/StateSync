@@ -46,6 +46,8 @@ export function figureSource(figure: GroundedFigure): string {
     const word = { sum: 'Total', avg: 'Average', min: 'Smallest', max: 'Largest' }[s.aggregate ?? ''] ?? 'Computed'
     return `${word} of ${s.column} in the result`
   }
+  if (s.kind === 'text') return `Part of a value in the result: row ${(s.row ?? 0) + 1}, ${s.column}`
+  if (s.kind === 'derived') return 'Worked out from other figures in this answer'
   if (s.kind === 'question') return 'From your question'
   return 'From a cited passage'
 }

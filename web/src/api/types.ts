@@ -72,7 +72,7 @@ export interface GroundedFigure {
   start: number
   end: number
   matched: boolean
-  source: { kind: 'cell' | 'aggregate' | 'question' | 'passage'; row?: number; column?: string; aggregate?: string } | null
+  source: { kind: 'cell' | 'text' | 'aggregate' | 'question' | 'passage' | 'derived'; row?: number; column?: string; aggregate?: string } | null
 }
 
 export interface NumberGrounding {
