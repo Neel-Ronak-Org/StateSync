@@ -226,6 +226,7 @@ max_chars                   = 2000000    # extracted text per file
 parse_timeout_s             = 60         # the parser's child process is killed after this
 parse_memory_mb             = 768        # address-space limit of that child process
 parse_cpu_s                 = 60         # CPU-time limit of that child process
+blocks_time_budget_s        = 25         # the layout pass stops here; later pages fall back to flat text
 parser_request_timeout_s    = 90         # orchestrator -> parser HTTP timeout
 content_types               = ["application/pdf", "text/plain", "text/markdown"]
 # Chunking (orchestrator/library_ingest.py). mxbai-embed-large reads 512 tokens,
@@ -233,6 +234,18 @@ content_types               = ["application/pdf", "text/plain", "text/markdown"]
 chunk_chars                 = 1400
 chunk_overlap_chars         = 200
 chunk_min_chars             = 40         # shorter fragments are dropped (page numbers, headers)
+# Layout-aware parsing and chunking (docs/specs/rag_v2.md Phases B and C). The parser
+# reads the heading/paragraph thresholds; the orchestrator reads the chunker keys.
+heading_size_ratio          = 1.15       # a line this much larger than the body font is a heading
+heading_max_chars           = 120        # a longer line is never a heading
+heading_bold_max_words      = 12         # a bold line of at most this many words is a heading
+paragraph_gap_ratio         = 1.5        # line pitch above this many line heights starts a new paragraph
+chunker                     = "paragraph"  # "paragraph" (flat pages, shipped) | "layout" (headings, tables, breadcrumbs)
+layout_chunk_chars          = 1200       # layout chunker: text body budget (breadcrumb and overlap come on top)
+layout_overlap_chars        = 150        # layout chunker: tail of the previous chunk, same section and page only
+table_chunk_max_chars       = 2400       # layout chunker: a larger table is split by rows, header repeated
+table_context_max_chars     = 300        # layout chunker: the paragraph before a table rides along if this short
+section_max_chars           = 300        # the MCP refuses a longer section path
 embed_batch                 = 24         # chunks per MCP call (one Ollama batch each; stays inside the MCP timeout)
 max_folders                 = 50         # per account
 max_documents               = 500        # per account

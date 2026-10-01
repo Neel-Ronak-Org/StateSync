@@ -216,7 +216,7 @@ def _to_retrievals(matches: list[dict]) -> list[dict]:
             "provenance": {
                 "document_id": m["document_id"], "chunk_id": m["chunk_id"],
                 "page": m.get("page"), "score": float(m.get("score", 0.0)),
-                "title": m.get("title"),
+                "title": m.get("title"), "section": m.get("section"),
             },
         }
         for m in matches

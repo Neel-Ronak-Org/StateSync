@@ -48,7 +48,7 @@ class FakeMCPSession:
     def __init__(self, tenant_id: str, base_url: str | None = None, **_: Any) -> None:
         self.tenant_id = tenant_id
 
-    async def __aenter__(self) -> "FakeMCPSession":
+    async def __aenter__(self) -> FakeMCPSession:
         return self
 
     async def __aexit__(self, *args: Any) -> None:
@@ -62,9 +62,10 @@ class Harness:
         self.result: dict[str, Any] = {"ok": True}
         self.exception: Exception | None = None
         self.parser_response: httpx.Response | Exception = httpx.Response(
-            200, json={"ok": True, "pages": [{"page": 1, "text": "a"}, {"page": 2, "text": "b"}]})
+            200, json={"ok": True, "pages": [{"page": 1, "text": "a"}, {"page": 2, "text": "b"}],
+                       "blocks": [{"page": 1, "kind": "paragraph", "text": "a"}]})
         self.parser_requests: list[httpx.Request] = []
-        self.ingested: list[tuple[str, list]] = []
+        self.ingested: list[tuple[str, list, list | None, str | None]] = []
         self.ingest_calls: list[dict[str, Any]] = []
 
     async def audit(self, principal_id, tenant_id, route, outcome, query_id=None, session_id=None,
@@ -77,8 +78,8 @@ class Harness:
             raise self.exception
         return self.result
 
-    async def ingest(self, call, document_id, pages) -> None:
-        self.ingested.append((document_id, pages))
+    async def ingest(self, call, document_id, pages, blocks=None, title=None) -> None:
+        self.ingested.append((document_id, pages, blocks, title))
         self.ingest_calls.append(await call("finish_document", document_id=document_id, status="ready"))
 
     def parser_handler(self, request: httpx.Request) -> httpx.Response:
@@ -171,7 +172,9 @@ def test_upload_happy_path_is_202_and_starts_ingest(setup):
                               "sha256": hashlib.sha256(body).hexdigest()}
     assert harness.parser_requests[0].content == body
     assert harness.parser_requests[0].headers["content-type"] == "application/pdf"
-    assert harness.ingested == [("up_1", [{"page": 1, "text": "a"}, {"page": 2, "text": "b"}])]
+    # the parser's layout blocks and the document's title go to ingest with the pages (rag_v2 Phase C)
+    assert harness.ingested == [("up_1", [{"page": 1, "text": "a"}, {"page": 2, "text": "b"}],
+                                 [{"page": 1, "kind": "paragraph", "text": "a"}], "Q3 contract é")]
     assert harness.ingest_calls == [{"ok": True, "document": DOC}]  # the job's call reaches library_manage
     assert harness.calls[-1]["action"] == "finish_document" and harness.calls[-1]["principal_id"] == "p_test"
     assert harness.audit_log[0]["detail"] == "library:start_document folder=fd_1 document=up_1"

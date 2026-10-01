@@ -12,6 +12,9 @@ WHY THIS EXISTS.
   without sample documents when the workspace has uploads.
 - A citation of an uploaded chunk carries the document's title, so the answer
   cites "Refund policy 2026 p. 3", not an opaque id; sample citations are unchanged.
+- A chunk the layout chunker cut under a heading says which one: its section
+  travels in provenance and the citation title becomes "{title} › {section}"
+  (docs/specs/rag_v2.md Phase C).
 """
 
 from __future__ import annotations
@@ -35,6 +38,7 @@ if "psycopg_pool" not in sys.modules:
 
 from nodes import supervisor as supervisor_mod  # noqa: E402
 from nodes.synthesizer import build_citations  # noqa: E402
+from nodes.unstructured_knowledge import _to_retrievals  # noqa: E402
 from state import Provenance, RetrievalResult  # noqa: E402
 
 
@@ -88,9 +92,10 @@ def test_titles_cannot_close_the_data_block():
     assert supervisor_mod.library_suffix([]) == ""
 
 
-def _retrieval(chunk_id: str, title: str | None) -> dict:
+def _retrieval(chunk_id: str, title: str | None, section: str | None = None) -> dict:
     return RetrievalResult(content="text", provenance=Provenance(
-        document_id=chunk_id.rsplit("_c", 1)[0], chunk_id=chunk_id, page=3, score=0.8, title=title)).model_dump()
+        document_id=chunk_id.rsplit("_c", 1)[0], chunk_id=chunk_id, page=3, score=0.8, title=title,
+        section=section)).model_dump()
 
 
 def test_uploaded_citations_carry_their_title_and_sample_ones_do_not():
@@ -99,3 +104,15 @@ def test_uploaded_citations_carry_their_title_and_sample_ones_do_not():
     assert citations[0] == {"kind": "chunk", "ref": "up_0123456789abcdef_c00004", "page": 3,
                             "title": "Refund policy 2026"}
     assert citations[1] == {"kind": "chunk", "ref": "doc_sla_annexure_LP003_c001", "page": 3}
+
+
+def test_a_section_reaches_provenance_and_the_citation_title():
+    match = {"chunk_id": "up_0123456789abcdef_c00004", "document_id": "up_0123456789abcdef", "content_md": "text",
+             "page": 3, "score": 0.8, "title": "Refund policy 2026", "section": "2. Refunds", "kind": "text"}
+    retrievals = _to_retrievals([match, {**match, "chunk_id": "up_0123456789abcdef_c00005", "section": None},
+                                 {k: v for k, v in match.items() if k not in ("section", "kind")}])
+    assert [r["provenance"]["section"] for r in retrievals] == ["2. Refunds", None, None]
+    citations = build_citations(None, None, [_retrieval("up_0123456789abcdef_c00004", "Refund policy 2026", "2. Refunds"),
+                                             _retrieval("up_0123456789abcdef_c00005", "Refund policy 2026"),
+                                             _retrieval("doc_sla_annexure_LP003_c001", None, "ignored without a title")])
+    assert [c.get("title") for c in citations] == ["Refund policy 2026 › 2. Refunds", "Refund policy 2026", None]

@@ -76,6 +76,23 @@ def test_chunk_refusals():
     _refused(_manage("add_chunks", document_id="up_1", chunks=[{**ok, "text": "   "}]))
     _refused(_manage("add_chunks", document_id="up_1", chunks=[{**ok, "text": "a\x00b"}]))
     _refused(_manage("add_chunks", document_id="up_1", chunks=[{**ok, "ordinal": -1}]))
+    # structure fields (migration 027): a kind the CHECK constraint would refuse, a section that is too long
+    _refused(_manage("add_chunks", document_id="up_1", chunks=[{**ok, "kind": "image"}]))
+    _refused(_manage("add_chunks", document_id="up_1", chunks=[{**ok, "section": 5}]))
+    _refused(_manage("add_chunks", document_id="up_1",
+                     chunks=[{**ok, "section": "s" * (int(cfg.library.section_max_chars) + 1)}]))
+    _refused(_manage("add_chunks", document_id="up_1", chunks=[{**ok, "section": "a\x00b"}]))
+
+
+def test_chunk_kind_and_section_are_optional_and_cleaned():
+    ok = {"ordinal": 0, "page": 1, "text": " hello "}
+    clean, refusal = lt._validate_chunks([ok])
+    assert refusal is None and clean == [{"ordinal": 0, "page": 1, "text": "hello", "kind": "text", "section": None}]
+    longest = "s" * int(cfg.library.section_max_chars)
+    clean, refusal = lt._validate_chunks([{**ok, "kind": "table", "section": f" {longest} "},
+                                          {**ok, "ordinal": 1, "section": "  "}])
+    assert refusal is None
+    assert [(c["kind"], c["section"]) for c in clean] == [("table", longest), ("text", None)]
 
 
 @pytest.mark.parametrize("change", [

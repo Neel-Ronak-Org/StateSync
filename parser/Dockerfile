@@ -1,7 +1,8 @@
 FROM python:3.12-slim
 
-# The upload parser (parser/server.py): standard library + pypdf only.
-RUN pip install --no-cache-dir "pypdf>=6.1,<7" \
+# The upload parser (parser/server.py): standard library, pypdf (flat page text)
+# and pdfplumber (layout blocks; pinned to the version scripts/ingest.py uses).
+RUN pip install --no-cache-dir "pypdf>=6.1,<7" "pdfplumber==0.11.10" \
  && useradd --system --uid 10001 --no-create-home parser
 
 WORKDIR /app

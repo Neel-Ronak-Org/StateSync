@@ -49,6 +49,9 @@ class Provenance(BaseModel):
     # An uploaded document's title (Phase 3c slice 5); None for the sample corpus,
     # whose ids the web app already turns into labels.
     title:        str | None = None
+    # The heading path of an uploaded chunk ("2. Definitions"), from the layout
+    # chunker (docs/specs/rag_v2.md Phase C); None for flat chunks and the sample corpus.
+    section:      str | None = None
 
 
 class RetrievalResult(BaseModel):

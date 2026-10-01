@@ -32,7 +32,10 @@ THE RULES, enforced here rather than trusted from a caller:
    is `not_found`, so existence is never revealed. Row-level security
    (migration 024) repeats the tenant check as a backstop.
 2. Sizes, counts and lengths come from config [library]; nothing is hard-coded.
-3. chunks are only added to a document that is still `processing`.
+3. chunks are only added to a document that is still `processing`. A chunk may
+   carry `kind` ("text" | "table", default "text") and `section` (its heading
+   path, at most [library].section_max_chars; migration 027); both are stored
+   as given and returned by retrieval.
 4. A `processing` document older than [library].processing_stale_s is REPORTED
    as failed (the orchestrator restarted mid-ingest); nothing is written.
 
@@ -68,6 +71,8 @@ _ACTIONS = frozenset({
     "connections", "create_connection", "set_connection_schema", "test_connection", "delete_connection",
 })
 _FINISH_STATUSES = frozenset({"ready", "failed"})
+_CHUNK_KINDS = frozenset({"text", "table"})  # migration 027: chunks_kind_ck
+_DEFAULT_CHUNK_KIND = "text"
 _SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")  # noqa: literals - a SHA-256 digest is 64 hex characters
 _ERROR_MAX_CHARS = 300  # noqa: literals - a stored error message is truncated for display
 _ID_HEX_CHARS = 16  # noqa: literals - length of the random part of a generated id
@@ -322,7 +327,17 @@ def _validate_chunks(chunks: Any) -> tuple[list[dict[str, Any]] | None, dict[str
             return None, _fail("invalid", f"A chunk can be at most {cfg.library.chunk_max_chars} characters.")
         if "\x00" in text:
             return None, _fail("invalid", "Chunk text must not contain NUL characters.")
-        clean.append({"ordinal": ordinal, "page": page, "text": text.strip()})
+        kind, section = item.get("kind", _DEFAULT_CHUNK_KIND), item.get("section")
+        if kind not in _CHUNK_KINDS:
+            return None, _fail("invalid", f"A chunk's kind must be one of {sorted(_CHUNK_KINDS)}.")
+        if section is not None and not isinstance(section, str):
+            return None, _fail("invalid", "A chunk's section must be text or null.")
+        if section is not None and len(section.strip()) > int(cfg.library.section_max_chars):
+            return None, _fail("invalid", f"A chunk's section can be at most {cfg.library.section_max_chars} characters.")
+        if section is not None and "\x00" in section:
+            return None, _fail("invalid", "A chunk's section must not contain NUL characters.")
+        clean.append({"ordinal": ordinal, "page": page, "text": text.strip(), "kind": kind,
+                      "section": (section or "").strip() or None})
     return clean, None
 
 
@@ -359,9 +374,11 @@ async def _add_chunks(tenant_id, principal_id, document_id=None, chunks=None, **
         for item, vector in zip(clean, vectors, strict=True):
             await conn.execute(
                 "INSERT INTO workspace_docs.chunks (chunk_id, document_id, tenant_id, ordinal, page, content_md, "
-                "embedding) VALUES (%s, %s, %s, %s, %s, %s, %s::vector) ON CONFLICT (chunk_id) DO NOTHING",
+                "embedding, kind, section) VALUES (%s, %s, %s, %s, %s, %s, %s::vector, %s, %s) "
+                "ON CONFLICT (chunk_id) DO NOTHING",
                 (f"{document_id}_c{item['ordinal']:05d}", document_id, tenant_id, item["ordinal"], item["page"],
-                 item["text"], "[" + ",".join(repr(float(x)) for x in vector) + "]"))
+                 item["text"], "[" + ",".join(repr(float(x)) for x in vector) + "]", item["kind"],
+                 item["section"]))
     return {"ok": True, "added": len(clean)}
 
 

@@ -216,9 +216,11 @@ def register_library_routes(app: Any, require_principal: Any, audit: Any) -> Non
             raise HTTPException(status_code=HTTP_UNPROCESSABLE,
                                 detail=payload.get("message") or "The file could not be read.")
         pages = payload.get("pages") or []
+        blocks = payload.get("blocks") or []
+        title = title_from_filename(filename)
 
         result = await _execute(principal, request, "start_document", route_path, folder_id=folder_id,
-                                title=title_from_filename(filename), filename=filename, content_type=content_type,
+                                title=title, filename=filename, content_type=content_type,
                                 pages=len(pages), bytes=len(data), sha256=digest)
         document = result["document"]
 
@@ -227,7 +229,7 @@ def register_library_routes(app: Any, require_principal: Any, audit: Any) -> Non
                 async def call(action: str, **params: Any) -> dict[str, Any]:
                     return await library_manage(session, principal_id=principal.principal_id, action=action,
                                                 **params)
-                await ingest(call, document["document_id"], pages)
+                await ingest(call, document["document_id"], pages, blocks, title)
 
         tasks.start(job())
         return {"document": document}

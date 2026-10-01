@@ -111,6 +111,7 @@ Rules:
    declarative charts only, and does not produce or execute code (D8).
 9. Emit the raw JSON object only. Do not wrap it in markdown code fences."""
 
+_SECTION_SEP = " › "  # citation title: "{document title} › {section}" for a chunk under a heading
 _PCT_NAME_WORDS = ("rate", "share", "ratio", "pct", "percent", "conversion", "fraction")
 
 
@@ -492,7 +493,7 @@ def build_citations(
         prov = r["provenance"]
         citation = {"kind": "chunk", "ref": prov["chunk_id"], "page": prov.get("page")}
         if prov.get("title"):
-            citation["title"] = prov["title"]
+            citation["title"] = _SECTION_SEP.join(filter(None, (prov["title"], prov.get("section"))))
         citations.append(citation)
 
     return citations

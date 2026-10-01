@@ -262,7 +262,7 @@ async def _library_matches(conn: Any, workspace_id: str, params: dict[str, Any])
         where.append("c.document_id = ANY(%(document_ids)s)")
     cur = await conn.execute(f"""
         SELECT c.chunk_id, c.document_id, c.content_md, c.page,
-               1 - (c.embedding <=> %(qvec)s::vector) AS score, d.title
+               1 - (c.embedding <=> %(qvec)s::vector) AS score, d.title, c.section, c.kind
         FROM workspace_docs.chunks c
         JOIN workspace_docs.documents d ON d.document_id = c.document_id
         JOIN workspace_docs.workspace_folders wf ON wf.folder_id = d.folder_id

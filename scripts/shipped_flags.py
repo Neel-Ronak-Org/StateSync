@@ -55,6 +55,12 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FLAGS_PATH = REPO_ROOT / "config" / "flags.toml"
+# A few shipped switches live in config/statesync.toml, not flags.toml (the layout
+# chunker, docs/specs/rag_v2.md Phase C: [library].chunker). Sections listed here
+# are read from that file with a real TOML parser; every other section is read
+# from flags.toml as before.
+STATESYNC_PATH = REPO_ROOT / "config" / "statesync.toml"
+STATESYNC_SECTIONS = frozenset({"library"})
 ORCHESTRATOR_CONTAINER = "statesync-orchestrator-1"
 
 # The single source of truth. scripts/verify_seams.py's F-V6 imports this
@@ -85,11 +91,26 @@ SHIPPED_DEFAULTS: dict[tuple[str, str], str] = {
     ("pipeline", "templates"): "off",
     # Answers you can check: annotation plus a caveat, never a change to SQL or rows.
     ("pipeline", "number_grounding"): "on",
+    # RAG v2 (docs/specs/rag_v2.md): how an upload is cut into chunks. "paragraph" is
+    # today's flat-page chunker; "layout" cuts by heading and keeps tables whole.
+    ("library", "chunker"): "paragraph",
 }
 
 
 class FlagStateError(RuntimeError):
     """Raised when a measurement would run against a non-shipped flag state."""
+
+
+def _statesync_value(section: str, key: str) -> str | None:
+    """A shipped switch from config/statesync.toml as its parsed string; None if it cannot be read."""
+    import tomllib
+    try:
+        value = tomllib.loads(STATESYNC_PATH.read_text()).get(section, {}).get(key)
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    if value is None:
+        return None
+    return str(value).lower() if isinstance(value, bool) else str(value)
 
 
 def read_flag_state(flags_text: str | None = None) -> dict[str, str | None]:
@@ -106,6 +127,9 @@ def read_flag_state(flags_text: str | None = None) -> dict[str, str | None]:
         flags_text = FLAGS_PATH.read_text()
     state: dict[str, str | None] = {}
     for section, key in SHIPPED_DEFAULTS:
+        if section in STATESYNC_SECTIONS:
+            state[f"{section}.{key}"] = _statesync_value(section, key)
+            continue
         pattern = (rf"\[{re.escape(section)}\]\s*\n(?:[^\[]*?\n)*\s*"
                    rf"{re.escape(key)}\s*=\s*(true|false|\"[^\"]*\")")
         m = re.search(pattern, flags_text)
@@ -161,13 +185,13 @@ def live_staleness() -> dict[str, object] | None:
     started = _container_started_at()
     if started is None:
         return {"reason": "orchestrator container is not running (or not inspectable)"}
-    mtime = FLAGS_PATH.stat().st_mtime
+    mtime = max(FLAGS_PATH.stat().st_mtime, STATESYNC_PATH.stat().st_mtime)
     if started >= mtime:
         return None
     from datetime import datetime
     return {
-        "reason": "config/flags.toml was modified AFTER the orchestrator started, "
-                  "so the running process may hold superseded flag values "
+        "reason": "config/flags.toml or config/statesync.toml was modified AFTER the orchestrator "
+                  "started, so the running process may hold superseded flag values "
                   "(flags are read at process start, not per query)",
         "flags_mtime": datetime.fromtimestamp(mtime).isoformat(timespec="seconds"),
         "orchestrator_started": datetime.fromtimestamp(started).isoformat(timespec="seconds"),
