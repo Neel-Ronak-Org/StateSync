@@ -19,6 +19,13 @@ WHY THIS EXISTS.
   data.run_select gate), so this test is the only thing standing in for the gate.
 - mode="dense" is the shipped behaviour (D-v3-16): it must return today's
   ordering and issue none of the new statements.
+- Near-universal query terms (spec D4): "seller" is in 99.9% of the sample chunks, so
+  using it gathered ~20k candidates and, through RRF, buried the true top hit. The
+  rule 0 < df <= ratio * N must be the same in the Python twin and in both SQL
+  statements, the ratio must be a bound parameter (not a literal), and a leg left
+  with no lexeme must be empty while the dense legs still answer.
+- Phase E will abstain on the strength of best_dense_score / best_keyword_score, so
+  both modes must report them (and the lexeme counts) with the stated null rules.
 """
 
 from __future__ import annotations
@@ -162,9 +169,13 @@ class _Cursor:
 class _Conn:
     """Answers each kind of statement vector_tools issues; records (sql, params)."""
 
-    def __init__(self, *, lexemes=("seller", "abc123"), sample=(), upload=(), dense_sample=(), dense_upload=()):
+    def __init__(self, *, lexemes=("seller", "abc123"), sample=(), upload=(), dense_sample=(), dense_upload=(),
+                 kept_sample=None, kept_upload=None):
         self.calls: list[tuple[str, dict | None]] = []
         self.lexemes = list(lexemes)
+        # how many lexemes each BM25 statement reports as kept (default: all of them)
+        self.kept_sample = len(self.lexemes) if kept_sample is None else kept_sample
+        self.kept_upload = len(self.lexemes) if kept_upload is None else kept_upload
         self.sample, self.upload = list(sample), list(upload)
         self.dense_sample, self.dense_upload = list(dense_sample), list(dense_upload)
 
@@ -178,10 +189,18 @@ class _Conn:
         if "FROM search.sample_terms WHERE tenant_id" in flat:
             return _Cursor(["n", "avgdl"], [(100.0, 10.0)])
         if "WITH q AS" in flat:
-            return _Cursor(*(self._ranked(self.upload) if "workspace_docs.chunks c" in flat else self._ranked(self.sample)))
+            if "workspace_docs.chunks c" in flat:
+                return _Cursor(*self._bm25(self.upload, self.kept_upload))
+            return _Cursor(*self._bm25(self.sample, self.kept_sample))
         if "workspace_docs.chunks c" in flat:
             return _Cursor(*self._ranked(self.dense_upload))
         return _Cursor(*self._ranked(self.dense_sample))
+
+    @classmethod
+    def _bm25(cls, rows, kept):
+        """A BM25 statement's result: lexemes_kept on every row, one all-NULL row when nothing matched."""
+        cols, ranked = cls._ranked(rows or [{}])
+        return ["lexemes_kept"] + cols, [(kept, *r) for r in ranked]
 
     @staticmethod
     def _ranked(rows):
@@ -219,6 +238,7 @@ def test_a_hostile_lexeme_is_a_parameter_never_part_of_the_statement(monkeypatch
         assert HOSTILE not in sql and "DROP TABLE" not in sql
         if "WITH q AS" in " ".join(sql.split()):
             assert params["lexemes"] == [HOSTILE, "seller"]
+            assert params["max_df_ratio"] == vt.cfg.retrieval.bm25_max_df_ratio
     # the BM25 statements were the fixed templates, byte for byte
     bm25 = [sql for sql, _ in conn.calls if "WITH q AS" in sql]
     assert bm25 == [vt.BM25_SAMPLE_SQL_DOCS, vt.BM25_UPLOAD_SQL_DOCS]
@@ -256,6 +276,7 @@ def test_dense_mode_returns_todays_ordering_and_issues_no_keyword_statement(monk
     assert statements[0] == "SET LOCAL enable_indexscan = off"
     assert not any("search.sample_terms" in s or "WITH q AS" in s or "tsvector_to_array" in s for s in statements)
     assert len(statements) == 3          # exact-search switch, sample dense, upload dense
+    assert result["lexemes"] is None and result["lexemes_kept"] is None and result["best_keyword_score"] is None
     # an explicit mode="dense" and the config default are the same path
     conn2 = _Conn(dense_sample=sample, dense_upload=upload)
     _wire(monkeypatch, conn2, workspace_id="ws_1")
@@ -289,3 +310,103 @@ def test_sample_corpus_statistics_are_cached_per_tenant(monkeypatch):
     asyncio.run(vt.semantic_search("q", mode="hybrid"))
     stats = [s for s in conn.sql() if "FROM search.sample_terms WHERE tenant_id" in s]
     assert len(stats) == 1, "the sample corpus's N and avgdl should be computed once inside the TTL"
+
+
+# ── D4: near-universal query terms ──────────────────────────────────────────
+def test_bm25_keeps_lexeme_boundaries():
+    """WHY: the rule 0 < df <= ratio * N is the whole of D4; an off-by-one at the boundary
+    would silently keep (or drop) the very terms the rule exists to decide on."""
+    n, ratio = 100, 0.5
+    assert vt.bm25_keeps_lexeme(n, 0, ratio) is False            # matches nothing: dropped
+    assert vt.bm25_keeps_lexeme(n, 1, ratio) is True             # rarest possible
+    assert vt.bm25_keeps_lexeme(n, 50, ratio) is True            # df = ratio * N: kept
+    assert vt.bm25_keeps_lexeme(n, 51, ratio) is False           # df = ratio * N + 1: dropped
+    assert vt.bm25_keeps_lexeme(n, 100, ratio) is False          # in every chunk
+    # the measured case: "seller" in 20,218 of 20,245 chunks is dropped, a seller id (df 1) is kept
+    assert vt.bm25_keeps_lexeme(20245, 20218, ratio) is False
+    assert vt.bm25_keeps_lexeme(20245, 1, ratio) is True
+    # ratio 1.0 is the Phase D behaviour: every lexeme with df >= 1 is kept, df 0 still is not
+    assert all(vt.bm25_keeps_lexeme(n, df, 1.0) for df in range(1, n + 1))
+    assert vt.bm25_keeps_lexeme(n, 0, 1.0) is False
+    # the shipped ratio is the one the spec fixed before measuring
+    assert vt.cfg.retrieval.bm25_max_df_ratio == 0.5
+
+
+def test_both_bm25_statements_apply_the_same_rule_with_the_ratio_as_a_parameter():
+    """WHY: the Python twin is only worth anything if the SQL compares the same way, and a
+    ratio written into the statement as a literal could not be changed from config (or
+    tested); the OR-tsquery and the idf must also come from the kept lexemes only."""
+    for sql in (vt.BM25_SAMPLE_SQL, vt.BM25_SAMPLE_SQL_DOCS, vt.BM25_UPLOAD_SQL, vt.BM25_UPLOAD_SQL_DOCS):
+        flat = " ".join(sql.split())
+        assert flat.count("%(max_df_ratio)s") == 1
+        assert "t.df > 0 AND t.df <= %(max_df_ratio)s::float8 * " in flat      # 0 < df <= ratio * N
+        assert re.search(r"\bkept AS \(", flat)
+        assert "string_agg(qt, ' | ')::tsquery AS tq FROM kept" in flat       # the query is built from kept
+        assert "FROM kept df" in flat                                          # so is the idf
+        assert "FROM term_df" in flat                                          # ... after df was counted for all
+    assert "* %(n)s::float8" in vt.BM25_SAMPLE_SQL and "* stats.n" in vt.BM25_UPLOAD_SQL   # each leg's own N
+
+
+def test_every_lexeme_dropped_empties_the_keyword_legs_and_dense_still_answers(monkeypatch):
+    """WHY: a question made only of near-universal words must not error or return nothing;
+    the keyword legs are simply empty (the statement returns its single all-NULL row) and
+    the fused answer is the dense one."""
+    conn = _Conn(lexemes=["seller", "custom"], kept_sample=0, kept_upload=0,
+                 dense_sample=[_row("d1", 0.9), _row("d2", 0.8)], dense_upload=[_row("u1", 0.7, title="P")])
+    _wire(monkeypatch, conn, workspace_id="ws_1")
+    result = asyncio.run(vt.semantic_search("seller customer", top_k=3, mode="hybrid"))
+    assert [m["chunk_id"] for m in result["matches"]] == ["d1", "u1", "d2"]
+    assert all(m["keyword_score"] is None for m in result["matches"])
+    assert result["lexemes"] == 2 and result["lexemes_kept"] == {"sample": 0, "upload": 0}
+    assert result["best_keyword_score"] is None and result["best_dense_score"] == 0.9
+    assert sum("WITH q AS" in s for s in conn.sql()) == 2     # both statements did run (and found nothing)
+
+
+def test_the_response_carries_the_four_new_keys_in_hybrid_mode(monkeypatch):
+    """WHY: Phase E abstains on these numbers; hybrid must report the best score of each
+    kind over everything fetched (not only the rows that survive the top_k cut), the
+    lexeme count, and how many each keyword leg kept."""
+    conn = _Conn(lexemes=["a", "b", "c"], kept_sample=1, kept_upload=2,
+                 dense_sample=[_row("s1", 0.8), _row("s2", 0.6)], dense_upload=[_row("u1", 0.7)],
+                 sample=[_row("s2", 12.0), _row("s9", 5.0)], upload=[_row("u1", 15.5)])
+    _wire(monkeypatch, conn, workspace_id="ws_1")
+    result = asyncio.run(vt.semantic_search("q", top_k=1, mode="hybrid"))
+    assert len(result["matches"]) == 1
+    assert result["best_dense_score"] == 0.8
+    assert result["best_keyword_score"] == 15.5               # over both keyword legs
+    assert result["lexemes"] == 3
+    assert result["lexemes_kept"] == {"sample": 1, "upload": 2}
+    # no workspace: no upload leg, and its count is 0
+    conn2 = _Conn(lexemes=["a"], sample=[_row("s1", 4.0)], dense_sample=[_row("s1", 0.5)])
+    _wire(monkeypatch, conn2)
+    again = asyncio.run(vt.semantic_search("q", mode="hybrid"))
+    assert again["lexemes_kept"] == {"sample": 1, "upload": 0} and again["best_keyword_score"] == 4.0
+
+
+def test_the_response_carries_the_four_new_keys_in_dense_mode_with_the_null_rules(monkeypatch):
+    """WHY: dense mode is the shipped path; it must add the metadata without changing
+    `matches`. best_dense_score is the best cosine fetched (before the top_k cut), the keyword
+    score, `lexemes` and the per-leg kept counts are null (dense mode runs no keyword statement)."""
+    conn = _Conn(lexemes=["a", "b"], dense_sample=[_row("s1", 0.8), _row("s2", 0.6), _row("s3", 0.3)],
+                 dense_upload=[_row("u1", 0.9, title="P")])
+    _wire(monkeypatch, conn, workspace_id="ws_1")
+    result = asyncio.run(vt.semantic_search("q", top_k=1))
+    assert [m["chunk_id"] for m in result["matches"]] == ["u1"]
+    assert result["best_dense_score"] == 0.9
+    assert result["best_keyword_score"] is None and result["lexemes_kept"] is None
+    assert result["lexemes"] is None
+    assert set(result) == {"matches", "best_dense_score", "best_keyword_score", "lexemes", "lexemes_kept"}
+    # nothing fetched at all: best_dense_score is null, not 0
+    empty = _Conn(lexemes=[])
+    _wire(monkeypatch, empty)
+    nothing = asyncio.run(vt.semantic_search("the of", mode="dense"))
+    assert nothing["matches"] == [] and nothing["best_dense_score"] is None and nothing["lexemes"] is None
+
+
+def test_a_statement_with_no_match_is_read_as_an_empty_leg_that_still_reports_its_kept_count():
+    """WHY: the BM25 statements return one all-NULL row when nothing matches (so the kept
+    count survives); that row must not become a phantom match."""
+    assert vt._split_kept([{"lexemes_kept": 2, "chunk_id": None, "score": None}]) == ([], 2)
+    assert vt._split_kept([]) == ([], 0)
+    rows = [{"lexemes_kept": 1, "chunk_id": "c1", "score": 3.0}, {"lexemes_kept": 1, "chunk_id": "c2", "score": 2.0}]
+    assert vt._split_kept(rows) == ([{"chunk_id": "c1", "score": 3.0}, {"chunk_id": "c2", "score": 2.0}], 1)

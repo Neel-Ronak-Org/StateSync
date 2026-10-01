@@ -105,10 +105,12 @@ def call(item):
         r = urllib.request.Request(req["url"], data=body, method="POST", headers=headers)
         reply = json.loads(urllib.request.urlopen(r, timeout=req["timeout_s"]).read().decode())
         error = json.dumps(reply["error"])[:300] if reply.get("error") else None
-        matches = (reply.get("result") or {}).get("matches") or []
+        result = reply.get("result") or {}
+        matches = result.get("matches") or []
     except Exception as exc:  # recorded per question; the host decides what an error means
-        error, matches = f"{type(exc).__name__}: {exc}"[:300], []
-    return {"ms": (time.perf_counter() - started) * 1000.0, "error": error, "matches": matches}
+        error, result, matches = f"{type(exc).__name__}: {exc}"[:300], {}, []
+    return {"ms": (time.perf_counter() - started) * 1000.0, "error": error, "matches": matches,
+            "meta": {k: result.get(k) for k in ("best_dense_score", "best_keyword_score", "lexemes_kept")}}
 
 
 call(req["items"][0])
@@ -177,7 +179,16 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
     out["mrr@10"] = sum(r["rr"] for r in answerable) / n if n else None
     out["unanswerable_top1"] = score_spread([r["top1_score"] for r in unanswerable if r.get("top1_score") is not None])
     out["answerable_top1"] = score_spread([r["top1_score"] for r in answerable if r.get("top1_score") is not None])
+    out["unanswerable_best"] = best_score_medians(unanswerable)
+    out["answerable_best"] = best_score_medians(answerable)
     return out
+
+
+def best_score_medians(rows: list[dict[str, Any]]) -> dict[str, float | None]:
+    """Median of the response's best_dense_score and best_keyword_score over rows that reported one
+    (what an abstention threshold would see); None where none did, e.g. dense mode has no keyword score."""
+    return {name: percentile([r[f"best_{name}_score"] for r in rows if r.get(f"best_{name}_score") is not None], 50)
+            for name in ("dense", "keyword")}
 
 
 def score_spread(scores: list[float]) -> dict[str, float] | None:
@@ -218,17 +229,24 @@ def format_table(summary: dict[str, dict[str, Any]]) -> str:
         lines.append(f"{name:24s} {s['n']:4d} {s['n_answerable']:4d} {_pct(s['hit@1']):>6s} {_pct(s['hit@5']):>6s} {_pct(s['hit@10']):>6s} "
                      f"{_num(s['mrr@10'], 7, 3)} {_num(s['latency_p50_ms'])} {_num(s['latency_p90_ms'])}")
     lines.append("")
-    lines.append("top-1 score (cosine) of unanswerable questions vs answerable ones:")
-    lines.append(f"{'group':24s} {'n':>4s} {'min':>7s} {'p25':>7s} {'median':>7s} {'p75':>7s} {'max':>7s}")
+    lines.append("top-1 score of unanswerable questions vs answerable ones (as returned: cosine, or RRF in hybrid mode);")
+    lines.append("best dense / best keyword = median over the questions of the response's best_dense_score / best_keyword_score:")
+    lines.append(f"{'group':24s} {'n':>4s} {'min':>7s} {'p25':>7s} {'median':>7s} {'p75':>7s} {'max':>7s} {'best dense':>11s} {'best keyword':>13s}")
     overall = summary["overall"]
-    for label, key in (("unanswerable", "unanswerable_top1"), ("answerable", "answerable_top1")):
+
+    def best(s: dict[str, Any], key: str) -> str:
+        medians = s.get(key) or {}
+        return f"{_num(medians.get('dense'), 11, 3)} {_num(medians.get('keyword'), 13, 3)}"
+
+    for label, key, best_key in (("unanswerable", "unanswerable_top1", "unanswerable_best"), ("answerable", "answerable_top1", "answerable_best")):
         sp = overall[key]
         if sp:
-            lines.append(f"{label:24s} {sp['n']:4d} " + " ".join(_num(sp[c], 7, 3) for c in ("min", "p25", "median", "p75", "max")))
+            lines.append(f"{label:24s} {sp['n']:4d} " + " ".join(_num(sp[c], 7, 3) for c in ("min", "p25", "median", "p75", "max")) + " " + best(overall, best_key))
     for corpus in ("sample", "upload"):
-        sp = (summary.get(f"corpus:{corpus}") or {}).get("unanswerable_top1")
+        group = summary.get(f"corpus:{corpus}") or {}
+        sp = group.get("unanswerable_top1")
         if sp:
-            lines.append(f"{'unanswerable/' + corpus:24s} {sp['n']:4d} " + " ".join(_num(sp[c], 7, 3) for c in ("min", "p25", "median", "p75", "max")))
+            lines.append(f"{'unanswerable/' + corpus:24s} {sp['n']:4d} " + " ".join(_num(sp[c], 7, 3) for c in ("min", "p25", "median", "p75", "max")) + " " + best(group, "unanswerable_best"))
     return "\n".join(lines)
 
 
@@ -248,10 +266,14 @@ def format_compare(a_name: str, a: dict[str, Any], b_name: str, b: dict[str, Any
         cells.append(f"{_num(x['mrr@10'], 5, 3).strip():>6s} -> {_num(y['mrr@10'], 5, 3).strip():<5s}")
         cells.append(f"{_num(x['latency_p50_ms'], 5).strip():>6s} -> {_num(y['latency_p50_ms'], 5).strip():<5s}")
         lines.append(f"{name:24s} {x['n_answerable']:4d} " + " ".join(f"{c:>15s}" for c in cells))
-    for label, key in (("unanswerable top-1 median", "unanswerable_top1"), ("answerable top-1 median", "answerable_top1")):
+    for label, key, best_key in (("unanswerable", "unanswerable_top1", "unanswerable_best"), ("answerable", "answerable_top1", "answerable_best")):
         x, y = sa["overall"].get(key), sb["overall"].get(key)
         if x and y:
-            lines.append(f"{label}: {x['median']:.3f} -> {y['median']:.3f}")
+            lines.append(f"{label} top-1 median: {x['median']:.3f} -> {y['median']:.3f}")
+        for name in ("dense", "keyword"):
+            before = (sa["overall"].get(best_key) or {}).get(name)
+            after = (sb["overall"].get(best_key) or {}).get(name)
+            lines.append(f"{label} best {name} score median: {_num(before, 5, 3).strip()} -> {_num(after, 5, 3).strip()}")
     return "\n".join(lines)
 
 
@@ -380,10 +402,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         errors += bool(answer["error"])
         row = {"id": q["id"], "corpus": q["corpus"], "dataset": q["dataset"], "category": q["category"],
                "question": q["question"], "gold_document": q["gold_document"], "gold_document_id": sorted(gold_ids)[0] if gold_ids else None,
-               "latency_ms": answer["ms"], "error": answer["error"]}
+               "latency_ms": answer["ms"], "error": answer["error"], **answer["meta"]}
         row.update(score_question(q, passages, gold_ids))
         row["passages"] = [{"rank": i, "chunk_id": p.get("chunk_id"), "document_id": p.get("document_id"), "title": p.get("title"),
-                            "page": p.get("page"), "score": p.get("score"), "hit": passage_hits(p, gold_ids, q["evidence"]),
+                            "page": p.get("page"), "score": p.get("score"), "dense_score": p.get("dense_score"),
+                            "keyword_score": p.get("keyword_score"), "hit": passage_hits(p, gold_ids, q["evidence"]),
                             "excerpt": " ".join((p.get("content_md") or "").split())[:EXCERPT_CHARS]}
                            for i, p in enumerate(passages, start=1)]
         rows.append(row)

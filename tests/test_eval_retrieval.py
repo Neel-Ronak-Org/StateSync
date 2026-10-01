@@ -160,3 +160,21 @@ def test_compare_flags_different_test_sets():
     run = {"fixture_sha256": "aa", "summary": er.summarise_groups([row("table", "sample", 1, 1.0)])}
     assert "WARNING" not in er.format_compare("a", run, "b", run)
     assert "WARNING" in er.format_compare("a", run, "b", {**run, "fixture_sha256": "bb"})
+
+
+def test_summary_reports_the_median_best_dense_and_keyword_scores():
+    """WHY: Phase E picks an abstention threshold from these medians; they must be taken over the
+    questions that reported one (dense mode has no keyword score) and be absent, not 0, otherwise."""
+    rows = [{**row("unanswerable", "sample", None, 1.0), "best_dense_score": 0.4, "best_keyword_score": None},
+            {**row("unanswerable", "sample", None, 1.0), "best_dense_score": 0.6, "best_keyword_score": None},
+            {**row("table", "sample", 1, 1.0), "best_dense_score": 0.8, "best_keyword_score": 12.0},
+            row("fact", "sample", 2, 1.0)]  # an older run's row: no such fields
+    s = er.summarise(rows)
+    assert s["unanswerable_best"] == {"dense": 0.5, "keyword": None}
+    assert s["answerable_best"] == {"dense": 0.8, "keyword": 12.0}
+    # hit rates, MRR and latency are computed exactly as before
+    assert s["hit@1"] == 0.5 and s["mrr@10"] == 0.75 and s["latency_p50_ms"] == 1.0
+    table = er.format_table(er.summarise_groups(rows))
+    assert "best dense" in table and "0.500" in table and "12.000" in table
+    run = {"fixture_sha256": "aa", "summary": er.summarise_groups(rows)}
+    assert "best dense score median: 0.500 -> 0.500" in er.format_compare("a", run, "b", run)

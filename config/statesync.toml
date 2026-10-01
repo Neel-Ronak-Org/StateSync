@@ -359,6 +359,16 @@ bm25_b                    = 0.75     # BM25 length normalisation
 rrf_k                     = 60       # reciprocal rank fusion: score = sum 1 / (rrf_k + rank)
 hybrid_candidates_per_leg = 50       # each of the four lists is cut to this many before fusing
 bm25_stats_ttl_s          = 300      # the sample corpus's chunk count and mean length are cached this long, per tenant
+# A query lexeme feeds a BM25 leg only if it occurs in at most this fraction of THAT leg's chunks
+# (0 < df <= ratio * N, N and df counted in the leg's own corpus); a more common one neither gathers
+# candidates nor adds score, and a leg left with no lexeme is empty. Why 0.5: the Robertson-Sparck
+# Jones relevance weight log((N - df + 0.5) / (df + 0.5)), which BM25's IDF descends from, is <= 0
+# once a term is in half the collection -- the model treats it as no evidence of relevance, and the
+# "1 +" inside BM25's IDF only keeps scores non-negative. Phase D measured the cost of not doing so:
+# "seller" and "custom" are in 99.9% of the 20,245 sample chunks and filled the keyword list's tail
+# with arbitrary chunks that RRF then ranked above the true top hit. 1.0 = keep every lexeme with
+# df >= 1 (the Phase D behaviour). Fixed in docs/specs/rag_v2.md D4 before measuring; not tuned.
+bm25_max_df_ratio         = 0.5
 
 [scoring]
 recall_weight             = 0.70    # spec score; recall over precision per VegaChat
