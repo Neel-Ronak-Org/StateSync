@@ -1,0 +1,1227 @@
+{
+ "version": 1,
+ "created": "2026-10-01",
+ "questions": [
+  {
+   "id": "rv2_001",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "What is the contracted delivery SLA for supplier S014 in Metro NCR?",
+   "gold_document": "doc_supplier_agreement_S014",
+   "evidence": [
+    "Supplier Agreement -- Seller Store 14 (Seller ID: S014)",
+    "Metro NCR | 36 hours | 2% penalty"
+   ]
+  },
+  {
+   "id": "rv2_002",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "What is the ONDC network's return window in days for the electronics category, per the returns policy?",
+   "gold_document": "doc_policy_returns_refunds",
+   "evidence": [
+    "sets the return eligibility window and refund processing commitment for each catalog category",
+    "| electronics | 10 | 7 |"
+   ]
+  },
+  {
+   "id": "rv2_003",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "What penalty does supplier S001's agreement specify for the Metro NCR zone?",
+   "gold_document": "doc_supplier_agreement_S001",
+   "evidence": [
+    "Supplier Agreement -- Seller Store 1 (Seller ID: S001)",
+    "Metro NCR | 25 hours | 3% penalty"
+   ]
+  },
+  {
+   "id": "rv2_004",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "What committed transit time does FastShip 1's SLA annexure specify for the Metro Mumbai zone?",
+   "gold_document": "doc_sla_annexure_LP001",
+   "evidence": [
+    "SLA Annexure -- FastShip 1 (Provider ID: LP001)",
+    "Metro Mumbai | 29 hours | 99%"
+   ]
+  },
+  {
+   "id": "rv2_005",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "What is the committed resolution window in business days for a damaged_goods dispute, per the dispute resolution policy?",
+   "gold_document": "doc_policy_dispute_resolution",
+   "evidence": [
+    "each category carries its own committed resolution window and escalation tier",
+    "damaged_goods | 5 | Tier 2"
+   ]
+  },
+  {
+   "id": "rv2_006",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "What action is required when a delivery exception occurs because the recipient is unavailable, per the delivery exception handling SOP?",
+   "gold_document": "doc_sop_delivery_exceptions",
+   "evidence": [
+    "the required action and escalation window for each class of delivery exception",
+    "Recipient unavailable | Reattempt next business day | 24"
+   ]
+  },
+  {
+   "id": "rv2_007",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "What is the maximum transit time in hours for frozen goods, per the cold chain and perishables handling SOP?",
+   "gold_document": "doc_sop_cold_chain",
+   "evidence": [
+    "the maximum transit time and required temperature range for perishable product categories",
+    "Frozen goods | 24 | -18 to -12 C"
+   ]
+  },
+  {
+   "id": "rv2_008",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "How often must a seller renew their GST registration compliance, per the seller onboarding and compliance policy?",
+   "gold_document": "doc_policy_seller_compliance",
+   "evidence": [
+    "the compliance checks every seller must satisfy at onboarding and on a recurring renewal cycle",
+    "GST registration | GST certificate | Annual"
+   ]
+  },
+  {
+   "id": "rv2_009",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "How many disputes has seller S014 had in total, and what is the committed resolution window for disputes per the dispute resolution policy?",
+   "gold_document": "doc_policy_dispute_resolution",
+   "evidence": [
+    "each category carries its own committed resolution window and escalation tier",
+    "Dispute Category | Committed Resolution (business days) | Escalation Tier"
+   ]
+  },
+  {
+   "id": "rv2_010",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "What is seller S005's contracted SLA in hours in the database, and what does S005's supplier agreement specify for the Metro NCR zone?",
+   "gold_document": "doc_supplier_agreement_S005",
+   "evidence": [
+    "Supplier Agreement -- Seller Store 5 (Seller ID: S005)",
+    "Metro NCR | 37 hours | 3% penalty"
+   ]
+  },
+  {
+   "id": "rv2_011",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "How many orders has seller S001 placed, and what penalty does S001's agreement specify for the Metro NCR zone?",
+   "gold_document": "doc_supplier_agreement_S001",
+   "evidence": [
+    "Supplier Agreement -- Seller Store 1 (Seller ID: S001)",
+    "Metro NCR | 25 hours | 3% penalty"
+   ]
+  },
+  {
+   "id": "rv2_012",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "How many fulfillments has FastShip 1 handled, and what transit time does FastShip 1 commit to for the Metro Mumbai zone?",
+   "gold_document": "doc_sla_annexure_LP001",
+   "evidence": [
+    "SLA Annexure -- FastShip 1 (Provider ID: LP001)",
+    "Metro Mumbai | 29 hours | 99%"
+   ]
+  },
+  {
+   "id": "rv2_013",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "How many disputes does seller S010 have in the damaged_goods category, and what is the committed resolution window for that category?",
+   "gold_document": "doc_policy_dispute_resolution",
+   "evidence": [
+    "each category carries its own committed resolution window and escalation tier",
+    "damaged_goods | 5 | Tier 2"
+   ]
+  },
+  {
+   "id": "rv2_014",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "What category is seller S020 in, in the database, and what penalty does S020's agreement specify for the Rural North zone?",
+   "gold_document": "doc_supplier_agreement_S020",
+   "evidence": [
+    "Supplier Agreement -- Seller Store 20 (Seller ID: S020)",
+    "Tier-2 South | 49 hours | 4% penalty"
+   ]
+  },
+  {
+   "id": "rv2_015",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "How many orders has seller S025 placed, and what penalty does S025's supplier agreement specify for the Tier-2 West zone?",
+   "gold_document": "doc_supplier_agreement_S025",
+   "evidence": [
+    "Supplier Agreement -- Seller Store 25 (Seller ID: S025)",
+    "Tier-2 West | 57 hours | 3% penalty"
+   ]
+  },
+  {
+   "id": "rv2_016",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller 02dcd3e8e25bee036e32512bcf175493?",
+   "gold_document": "doc_review_digest_02dcd3e8e25bee036e32512bcf175493",
+   "evidence": [
+    "02dcd3e8e25bee036e32512bcf175493"
+   ]
+  },
+  {
+   "id": "rv2_017",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller 06579cb253ecd5a3a12a9e6eb6bf8f47?",
+   "gold_document": "doc_review_digest_06579cb253ecd5a3a12a9e6eb6bf8f47",
+   "evidence": [
+    "06579cb253ecd5a3a12a9e6eb6bf8f47"
+   ]
+  },
+  {
+   "id": "rv2_018",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller 1835b56ce799e6a4dc4eddc053f04066?",
+   "gold_document": "doc_review_digest_1835b56ce799e6a4dc4eddc053f04066",
+   "evidence": [
+    "1835b56ce799e6a4dc4eddc053f04066"
+   ]
+  },
+  {
+   "id": "rv2_019",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller 3969863bb8af7f72580b3b1ffd3a17b3?",
+   "gold_document": "doc_review_digest_3969863bb8af7f72580b3b1ffd3a17b3",
+   "evidence": [
+    "3969863bb8af7f72580b3b1ffd3a17b3"
+   ]
+  },
+  {
+   "id": "rv2_020",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller 3f3486b61f45078d4f31ee5e43d8c5bb?",
+   "gold_document": "doc_review_digest_3f3486b61f45078d4f31ee5e43d8c5bb",
+   "evidence": [
+    "3f3486b61f45078d4f31ee5e43d8c5bb"
+   ]
+  },
+  {
+   "id": "rv2_021",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller 4c8545742faaf58fafd5fd14d25d75cf?",
+   "gold_document": "doc_review_digest_4c8545742faaf58fafd5fd14d25d75cf",
+   "evidence": [
+    "4c8545742faaf58fafd5fd14d25d75cf"
+   ]
+  },
+  {
+   "id": "rv2_022",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller 6e4f5ff6b086632ba8dcb558fb10249e?",
+   "gold_document": "doc_review_digest_6e4f5ff6b086632ba8dcb558fb10249e",
+   "evidence": [
+    "6e4f5ff6b086632ba8dcb558fb10249e"
+   ]
+  },
+  {
+   "id": "rv2_023",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller 75fdd0a732287f9497b179f6bd445d32?",
+   "gold_document": "doc_review_digest_75fdd0a732287f9497b179f6bd445d32",
+   "evidence": [
+    "75fdd0a732287f9497b179f6bd445d32"
+   ]
+  },
+  {
+   "id": "rv2_024",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller 79ebd9a61bac3eaf882805ed4ecfa12a?",
+   "gold_document": "doc_review_digest_79ebd9a61bac3eaf882805ed4ecfa12a",
+   "evidence": [
+    "79ebd9a61bac3eaf882805ed4ecfa12a"
+   ]
+  },
+  {
+   "id": "rv2_025",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller 79ed755314cfe6df0daef2c6cd3022cd?",
+   "gold_document": "doc_review_digest_79ed755314cfe6df0daef2c6cd3022cd",
+   "evidence": [
+    "79ed755314cfe6df0daef2c6cd3022cd"
+   ]
+  },
+  {
+   "id": "rv2_026",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller 7dc9a3355bae96dd82008b313d3a456c?",
+   "gold_document": "doc_review_digest_7dc9a3355bae96dd82008b313d3a456c",
+   "evidence": [
+    "7dc9a3355bae96dd82008b313d3a456c"
+   ]
+  },
+  {
+   "id": "rv2_027",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller 9cea4682e16655f7da87f406902e989e?",
+   "gold_document": "doc_review_digest_9cea4682e16655f7da87f406902e989e",
+   "evidence": [
+    "9cea4682e16655f7da87f406902e989e"
+   ]
+  },
+  {
+   "id": "rv2_028",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller 9e9b539eb2806acee3f5c28085c1db9f?",
+   "gold_document": "doc_review_digest_9e9b539eb2806acee3f5c28085c1db9f",
+   "evidence": [
+    "9e9b539eb2806acee3f5c28085c1db9f"
+   ]
+  },
+  {
+   "id": "rv2_029",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller b6c6854d4d92a5f6f46be8869da3fa1a?",
+   "gold_document": "doc_review_digest_b6c6854d4d92a5f6f46be8869da3fa1a",
+   "evidence": [
+    "b6c6854d4d92a5f6f46be8869da3fa1a"
+   ]
+  },
+  {
+   "id": "rv2_030",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller cac4c8e7b1ca6252d8f20b2fc1a2e4af?",
+   "gold_document": "doc_review_digest_cac4c8e7b1ca6252d8f20b2fc1a2e4af",
+   "evidence": [
+    "cac4c8e7b1ca6252d8f20b2fc1a2e4af"
+   ]
+  },
+  {
+   "id": "rv2_031",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller d5ba419e26d246a0719437cf37d9b46d?",
+   "gold_document": "doc_review_digest_d5ba419e26d246a0719437cf37d9b46d",
+   "evidence": [
+    "d5ba419e26d246a0719437cf37d9b46d"
+   ]
+  },
+  {
+   "id": "rv2_032",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller e883aa812c37a7413226856f4579fe91?",
+   "gold_document": "doc_review_digest_e883aa812c37a7413226856f4579fe91",
+   "evidence": [
+    "e883aa812c37a7413226856f4579fe91"
+   ]
+  },
+  {
+   "id": "rv2_033",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller f3b80352b986ab4d1057a4b724be19d0?",
+   "gold_document": "doc_review_digest_f3b80352b986ab4d1057a4b724be19d0",
+   "evidence": [
+    "f3b80352b986ab4d1057a4b724be19d0"
+   ]
+  },
+  {
+   "id": "rv2_034",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller fe26f3ecb51a15e6d8335cd92da42562?",
+   "gold_document": "doc_review_digest_fe26f3ecb51a15e6d8335cd92da42562",
+   "evidence": [
+    "fe26f3ecb51a15e6d8335cd92da42562"
+   ]
+  },
+  {
+   "id": "rv2_035",
+   "corpus": "sample",
+   "dataset": "olist",
+   "category": "id",
+   "question": "What do customers say about seller fec6275253471ace26d209bbaa64cd0f?",
+   "gold_document": "doc_review_digest_fec6275253471ace26d209bbaa64cd0f",
+   "evidence": [
+    "fec6275253471ace26d209bbaa64cd0f"
+   ]
+  },
+  {
+   "id": "rv2_036",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "How many years does the network keep order transaction records?",
+   "gold_document": "doc_policy_data_retention",
+   "evidence": [
+    "Order transaction records | 7 years"
+   ]
+  },
+  {
+   "id": "rv2_037",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "How long is buyer location data retained?",
+   "gold_document": "doc_policy_data_retention",
+   "evidence": [
+    "Buyer location data | 18 months"
+   ]
+  },
+  {
+   "id": "rv2_038",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "What compensation applies to major warehouse damage where the product is unusable?",
+   "gold_document": "doc_sop_warehouse_damage",
+   "evidence": [
+    "Major (product unusable) | 48 | 100% of item value"
+   ]
+  },
+  {
+   "id": "rv2_039",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "Who resolves a critical customer complaint, and how many hours is the response time?",
+   "gold_document": "doc_sop_customer_escalation",
+   "evidence": [
+    "Critical | 1 | Network operations lead"
+   ]
+  },
+  {
+   "id": "rv2_040",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "What temperature range must dairy be kept in during cold chain transit?",
+   "gold_document": "doc_sop_cold_chain",
+   "evidence": [
+    "Dairy | 12 | 2-6 C"
+   ]
+  },
+  {
+   "id": "rv2_041",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "How many days is the return window for fashion items?",
+   "gold_document": "doc_policy_returns_refunds",
+   "evidence": [
+    "| fashion | 15 | 5 |"
+   ]
+  },
+  {
+   "id": "rv2_042",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "What on-time rate does FastShip 7 commit to in Rural North?",
+   "gold_document": "doc_sla_annexure_LP007",
+   "evidence": [
+    "Rural North | 53 hours | 84%"
+   ]
+  },
+  {
+   "id": "rv2_043",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "What is the committed transit time for FastShip 5 in Tier-2 South?",
+   "gold_document": "doc_sla_annexure_LP005",
+   "evidence": [
+    "Tier-2 South | 45 hours | 91%"
+   ]
+  },
+  {
+   "id": "rv2_044",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "How many SLA hours does seller S010 commit to for Metro Mumbai?",
+   "gold_document": "doc_supplier_agreement_S010",
+   "evidence": [
+    "Metro Mumbai | 42 hours | 4% penalty"
+   ]
+  },
+  {
+   "id": "rv2_045",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "table",
+   "question": "Which escalation tier handles a refund_delay dispute?",
+   "gold_document": "doc_policy_dispute_resolution",
+   "evidence": [
+    "refund_delay | 10 | Tier 3"
+   ]
+  },
+  {
+   "id": "rv2_046",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "fact",
+   "question": "In which product category does Seller Store 5 operate?",
+   "gold_document": "doc_supplier_agreement_S005",
+   "evidence": [
+    "operating in the electronics category"
+   ]
+  },
+  {
+   "id": "rv2_047",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "fact",
+   "question": "Is a dispute's committed resolution window affected by when it is marked resolved in operational tracking?",
+   "gold_document": "doc_policy_dispute_resolution",
+   "evidence": [
+    "independent of when the dispute happens to be marked resolved in operational tracking"
+   ]
+  },
+  {
+   "id": "rv2_048",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "fact",
+   "question": "Are the return windows in the returns and refunds policy derived from any single seller's contracted SLA?",
+   "gold_document": "doc_policy_returns_refunds",
+   "evidence": [
+    "not derived from any single seller's contracted SLA"
+   ]
+  },
+  {
+   "id": "rv2_049",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "fact",
+   "question": "How is transit time measured in FastShip 3's SLA annexure?",
+   "gold_document": "doc_sla_annexure_LP003",
+   "evidence": [
+    "Transit time is measured from hub dispatch to first delivery attempt"
+   ]
+  },
+  {
+   "id": "rv2_050",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "fact",
+   "question": "Is the on-time rate in FastShip 1's SLA annexure a per-shipment figure or a quarterly one?",
+   "gold_document": "doc_sla_annexure_LP001",
+   "evidence": [
+    "On-time rate is a rolling quarterly commitment"
+   ]
+  },
+  {
+   "id": "rv2_051",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "fact",
+   "question": "What does the data retention and privacy policy cover?",
+   "gold_document": "doc_policy_data_retention",
+   "evidence": [
+    "the retention period the Network commits to for each class of operational data"
+   ]
+  },
+  {
+   "id": "rv2_052",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "fact",
+   "question": "What does the warehouse damage assessment SOP govern?",
+   "gold_document": "doc_sop_warehouse_damage",
+   "evidence": [
+    "how warehouse-reported damage is assessed and compensated, by severity tier"
+   ]
+  },
+  {
+   "id": "rv2_053",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "fact",
+   "question": "What two things does the customer complaint escalation SOP specify?",
+   "gold_document": "doc_sop_customer_escalation",
+   "evidence": [
+    "the response time commitment and resolving tier for customer complaints, by severity"
+   ]
+  },
+  {
+   "id": "rv2_054",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "fact",
+   "question": "When must a seller satisfy the compliance checks, according to the onboarding and compliance policy?",
+   "gold_document": "doc_policy_seller_compliance",
+   "evidence": [
+    "at onboarding and on a recurring renewal cycle"
+   ]
+  },
+  {
+   "id": "rv2_055",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "fact",
+   "question": "Which product categories does the cold chain and perishables SOP cover?",
+   "gold_document": "doc_sop_cold_chain",
+   "evidence": [
+    "for perishable product categories moved through the Network's logistics providers"
+   ]
+  },
+  {
+   "id": "rv2_056",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "paraphrase",
+   "question": "For FastShip 7, at what point does the clock begin ticking on a shipment's committed speed, and what event stops it?",
+   "gold_document": "doc_sla_annexure_LP007",
+   "evidence": [
+    "Transit time is measured from hub dispatch to first delivery attempt"
+   ]
+  },
+  {
+   "id": "rv2_057",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "paraphrase",
+   "question": "Is the deadline for settling a grievance, and the seniority of whoever handles it, set separately for each kind of grievance?",
+   "gold_document": "doc_policy_dispute_resolution",
+   "evidence": [
+    "each category carries its own committed resolution window and escalation tier"
+   ]
+  },
+  {
+   "id": "rv2_058",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "paraphrase",
+   "question": "Do consumer refund deadlines depend on what an individual merchant agreed to for shipping speed?",
+   "gold_document": "doc_policy_returns_refunds",
+   "evidence": [
+    "These windows are policy commitments to buyers and are not derived from any single seller's contracted SLA"
+   ]
+  },
+  {
+   "id": "rv2_059",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "paraphrase",
+   "question": "For how long does the platform promise to hold onto the different kinds of information it gathers while purchases are being completed?",
+   "gold_document": "doc_policy_data_retention",
+   "evidence": [
+    "the retention period the Network commits to for each class of operational data collected in the course of fulfilling orders across the network"
+   ]
+  },
+  {
+   "id": "rv2_060",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "paraphrase",
+   "question": "What vetting must a merchant pass when joining and then repeatedly afterwards to stay in good standing?",
+   "gold_document": "doc_policy_seller_compliance",
+   "evidence": [
+    "the compliance checks every seller must satisfy at onboarding and on a recurring renewal cycle to remain active on the Network"
+   ]
+  },
+  {
+   "id": "rv2_061",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "paraphrase",
+   "question": "How long can chilled goods spend en route and how cold must they be kept?",
+   "gold_document": "doc_sop_cold_chain",
+   "evidence": [
+    "the maximum transit time and required temperature range for perishable product categories moved through the Network's logistics providers"
+   ]
+  },
+  {
+   "id": "rv2_062",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "paraphrase",
+   "question": "How are losses found inside a storage facility evaluated and paid back according to how serious they are?",
+   "gold_document": "doc_sop_warehouse_damage",
+   "evidence": [
+    "governs how warehouse-reported damage is assessed and compensated, by severity tier"
+   ]
+  },
+  {
+   "id": "rv2_063",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "paraphrase",
+   "question": "How fast must the support team reply to an unhappy shopper and which team ultimately fixes the problem?",
+   "gold_document": "doc_sop_customer_escalation",
+   "evidence": [
+    "the response time commitment and resolving tier for customer complaints, by severity"
+   ]
+  },
+  {
+   "id": "rv2_064",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "paraphrase",
+   "question": "What should a courier do, and by when must a problem be raised to a higher level, when a drop-off goes wrong?",
+   "gold_document": "doc_sop_delivery_exceptions",
+   "evidence": [
+    "the required action and escalation window for each class of delivery exception encountered by logistics providers operating on the Network"
+   ]
+  },
+  {
+   "id": "rv2_065",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "paraphrase",
+   "question": "If Seller Store 1 misses its promised hours for a region, what compensation does the purchasing platform get and how is it calculated?",
+   "gold_document": "doc_supplier_agreement_S001",
+   "evidence": [
+    "A breach of the committed SLA for orders shipped to a given zone entitles the affected buyer app to the penalty specified for that zone, applied as a percentage credit against the order value"
+   ]
+  },
+  {
+   "id": "rv2_066",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "id",
+   "question": "Which category does Seller ID S020 operate in?",
+   "gold_document": "doc_supplier_agreement_S020",
+   "evidence": [
+    "Seller ID: S020), operating in the food category"
+   ]
+  },
+  {
+   "id": "rv2_067",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "id",
+   "question": "Which zones does supplier agreement S005 cover, and what are their SLA hours?",
+   "gold_document": "doc_supplier_agreement_S005",
+   "evidence": [
+    "Tier-2 South | 64 hours | 4% penalty",
+    "Metro Mumbai | 52 hours | 3% penalty"
+   ]
+  },
+  {
+   "id": "rv2_068",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "id",
+   "question": "What is the committed transit time for Provider ID LP003 in Rural North?",
+   "gold_document": "doc_sla_annexure_LP003",
+   "evidence": [
+    "Rural North | 38 hours | 93%"
+   ]
+  },
+  {
+   "id": "rv2_069",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "id",
+   "question": "Show me the SLA annexure for provider LP005.",
+   "gold_document": "doc_sla_annexure_LP005",
+   "evidence": [
+    "SLA Annexure -- FastShip 5 (Provider ID: LP005)"
+   ]
+  },
+  {
+   "id": "rv2_070",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "id",
+   "question": "Give me the supplier agreement for Seller ID S010.",
+   "gold_document": "doc_supplier_agreement_S010",
+   "evidence": [
+    "Supplier Agreement -- Seller Store 10 (Seller ID: S010)"
+   ]
+  },
+  {
+   "id": "rv2_071",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "id",
+   "question": "What SLA hours does the agreement with S001 commit to for Tier-2 West?",
+   "gold_document": "doc_supplier_agreement_S001",
+   "evidence": [
+    "Tier-2 West | 41 hours | 4% penalty"
+   ]
+  },
+  {
+   "id": "rv2_072",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "id",
+   "question": "What SLA hours and penalty does S014 specify for Rural North?",
+   "gold_document": "doc_supplier_agreement_S014",
+   "evidence": [
+    "Rural North | 76 hours | 3% penalty"
+   ]
+  },
+  {
+   "id": "rv2_073",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "id",
+   "question": "What is LP007's committed transit time for Metro Mumbai?",
+   "gold_document": "doc_sla_annexure_LP007",
+   "evidence": [
+    "Metro Mumbai | 29 hours | 99%"
+   ]
+  },
+  {
+   "id": "rv2_074",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "id",
+   "question": "What does S025's supplier agreement say about the Metro Mumbai SLA hours?",
+   "gold_document": "doc_supplier_agreement_S025",
+   "evidence": [
+    "Metro Mumbai | 53 hours | 2% penalty"
+   ]
+  },
+  {
+   "id": "rv2_075",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "id",
+   "question": "What is LP001's committed transit time for Tier-2 South?",
+   "gold_document": "doc_sla_annexure_LP001",
+   "evidence": [
+    "Tier-2 South | 49 hours | 93%"
+   ]
+  },
+  {
+   "id": "rv2_076",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "table",
+   "question": "What share of delivered orders must be on time for a seller to be at the Silver level?",
+   "gold_document": "Marketplace seller handbook 2026.pdf",
+   "evidence": [
+    "Silver 50 - 199 at least 90%",
+    "| Silver | 50 - 199 | at least 90% |"
+   ]
+  },
+  {
+   "id": "rv2_077",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "table",
+   "question": "How many delivered orders in 90 days does a Gold seller need?",
+   "gold_document": "Marketplace seller handbook 2026.pdf",
+   "evidence": [
+    "Gold 200 or more at least 95%",
+    "| Gold | 200 or more | at least 95% |"
+   ]
+  },
+  {
+   "id": "rv2_078",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "table",
+   "question": "What is the on-time requirement for Bronze sellers?",
+   "gold_document": "Marketplace seller handbook 2026.pdf",
+   "evidence": [
+    "Bronze 1 - 49 at least 85%",
+    "| Bronze | 1 - 49 | at least 85% |"
+   ]
+  },
+  {
+   "id": "rv2_079",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "table",
+   "question": "Which seller level covers 50 to 199 delivered orders in 90 days?",
+   "gold_document": "Marketplace seller handbook 2026.pdf",
+   "evidence": [
+    "Silver 50 - 199 at least 90%",
+    "| Silver | 50 - 199 | at least 90% |"
+   ]
+  },
+  {
+   "id": "rv2_080",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "table",
+   "question": "What is the committed delivery time in business days for customers in SP?",
+   "gold_document": "Delivery SLA by region.pdf",
+   "evidence": [
+    "SP 5 5% of freight",
+    "| SP | 5 | 5% of freight |"
+   ]
+  },
+  {
+   "id": "rv2_081",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "table",
+   "question": "What late-delivery credit applies to customers in RJ, MG and PR?",
+   "gold_document": "Delivery SLA by region.pdf",
+   "evidence": [
+    "RJ, MG, PR 7 10% of freight",
+    "| RJ, MG, PR | 7 | 10% of freight |"
+   ]
+  },
+  {
+   "id": "rv2_082",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "table",
+   "question": "How many business days is delivery promised for the North and Northeast?",
+   "gold_document": "Delivery SLA by region.pdf",
+   "evidence": [
+    "North and Northeast 14 15% of freight",
+    "| North and Northeast | 14 | 15% of freight |"
+   ]
+  },
+  {
+   "id": "rv2_083",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "table",
+   "question": "What delivery commitment and credit apply to the Other South and Southeast group?",
+   "gold_document": "Delivery SLA by region.pdf",
+   "evidence": [
+    "Other South and Southeast 9 10% of freight",
+    "| Other South and Southeast | 9 | 10% of freight |"
+   ]
+  },
+  {
+   "id": "rv2_084",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "definition",
+   "question": "What does the handbook mean by an active seller?",
+   "gold_document": "Marketplace seller handbook 2026.pdf",
+   "evidence": [
+    "Active seller means a seller with at least one delivered order in the last 90 days"
+   ]
+  },
+  {
+   "id": "rv2_085",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "definition",
+   "question": "How is GMV defined?",
+   "gold_document": "Marketplace seller handbook 2026.pdf",
+   "evidence": [
+    "GMV means the sum of item prices of all delivered orders, excluding freight"
+   ]
+  },
+  {
+   "id": "rv2_086",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "definition",
+   "question": "How is net revenue defined?",
+   "gold_document": "Marketplace seller handbook 2026.pdf",
+   "evidence": [
+    "Net revenue is defined as GMV minus the value of refunded orders"
+   ]
+  },
+  {
+   "id": "rv2_087",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "definition",
+   "question": "What counts as a late order?",
+   "gold_document": "Marketplace seller handbook 2026.pdf",
+   "evidence": [
+    "A Late order is a delivered order whose delivery date is after the estimated delivery date"
+   ]
+  },
+  {
+   "id": "rv2_088",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "definition",
+   "question": "What is a repeat customer?",
+   "gold_document": "Marketplace seller handbook 2026.pdf",
+   "evidence": [
+    "A Repeat customer is a customer who has placed two or more orders"
+   ]
+  },
+  {
+   "id": "rv2_089",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "definition",
+   "question": "How is the cancellation rate calculated?",
+   "gold_document": "Marketplace seller handbook 2026.pdf",
+   "evidence": [
+    "The Cancellation rate is the number of canceled orders divided by all orders placed in the same period"
+   ]
+  },
+  {
+   "id": "rv2_090",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "definition",
+   "question": "When is an order considered on time?",
+   "gold_document": "Marketplace seller handbook 2026.pdf",
+   "evidence": [
+    "An order is On time when it is delivered to the customer on or before the estimated delivery date shown at purchase"
+   ]
+  },
+  {
+   "id": "rv2_091",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "fact",
+   "question": "Within how many days of delivery can a customer request a return?",
+   "gold_document": "Returns and refunds policy.pdf",
+   "evidence": [
+    "Customers may request a return within 7 days of delivery"
+   ]
+  },
+  {
+   "id": "rv2_092",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "fact",
+   "question": "Which product categories are excluded from returns?",
+   "gold_document": "Returns and refunds policy.pdf",
+   "evidence": [
+    "except perishable food and personal care items"
+   ]
+  },
+  {
+   "id": "rv2_093",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "fact",
+   "question": "How many business days does a refund take after the returned item is inspected?",
+   "gold_document": "Returns and refunds policy.pdf",
+   "evidence": [
+    "Refunds are issued to the original payment method within 10 business days"
+   ]
+  },
+  {
+   "id": "rv2_094",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "fact",
+   "question": "What happens to the refund when an order was paid with a voucher?",
+   "gold_document": "Returns and refunds policy.pdf",
+   "evidence": [
+    "Orders paid with a voucher are refunded as a new voucher of the same value"
+   ]
+  },
+  {
+   "id": "rv2_095",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "fact",
+   "question": "What fee applies when damage is reported more than 48 hours after delivery?",
+   "gold_document": "Returns and refunds policy.pdf",
+   "evidence": [
+    "After 48 hours a 15% restocking fee applies"
+   ]
+  },
+  {
+   "id": "rv2_096",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "fact",
+   "question": "How quickly must a customer-care case opened by a poor review get a first response?",
+   "gold_document": "Returns and refunds policy.pdf",
+   "evidence": [
+    "which must receive a first response within 24 hours"
+   ]
+  },
+  {
+   "id": "rv2_097",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "cross_section",
+   "question": "What does a seller need to be at the Gold level, and what happens to a seller whose on-time share falls below that threshold?",
+   "gold_document": "Marketplace seller handbook 2026.pdf",
+   "evidence": [
+    "Gold 200 or more at least 95%",
+    "| Gold | 200 or more | at least 95% |",
+    "for two consecutive months moves down one level"
+   ]
+  },
+  {
+   "id": "rv2_098",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "cross_section",
+   "question": "Which level has the strictest on-time share, and how does the handbook define an order being on time?",
+   "gold_document": "Marketplace seller handbook 2026.pdf",
+   "evidence": [
+    "Gold 200 or more at least 95%",
+    "| Gold | 200 or more | at least 95% |",
+    "An order is On time when it is delivered to the customer on or before the estimated delivery date"
+   ]
+  },
+  {
+   "id": "rv2_099",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "cross_section",
+   "question": "If an item arrives damaged and the customer reports it after two days, what is the charge and how long until the refund is issued?",
+   "gold_document": "Returns and refunds policy.pdf",
+   "evidence": [
+    "After 48 hours a 15% restocking fee applies",
+    "Refunds are issued to the original payment method within 10 business days"
+   ]
+  },
+  {
+   "id": "rv2_100",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "cross_section",
+   "question": "How is a late delivery determined for the commitment, and what credit does a customer in the North and Northeast get?",
+   "gold_document": "Delivery SLA by region.pdf",
+   "evidence": [
+    "A delivery counts against the commitment when the carrier hand-off happens more than 2 business days after payment approval",
+    "North and Northeast 14 15% of freight",
+    "| North and Northeast | 14 | 15% of freight |"
+   ]
+  },
+  {
+   "id": "rv2_101",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "unanswerable",
+   "question": "What is the data retention period for customer payment card numbers?",
+   "gold_document": null,
+   "evidence": []
+  },
+  {
+   "id": "rv2_102",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "unanswerable",
+   "question": "What is the notice period for terminating a supplier agreement?",
+   "gold_document": null,
+   "evidence": []
+  },
+  {
+   "id": "rv2_103",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "unanswerable",
+   "question": "What is the return window for jewellery under the returns and refunds policy?",
+   "gold_document": null,
+   "evidence": []
+  },
+  {
+   "id": "rv2_104",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "unanswerable",
+   "question": "What is the committed transit time for provider LP012 in Metro Delhi?",
+   "gold_document": null,
+   "evidence": []
+  },
+  {
+   "id": "rv2_105",
+   "corpus": "sample",
+   "dataset": "public",
+   "category": "unanswerable",
+   "question": "What licensing requirements apply to drone delivery under the logistics SOPs?",
+   "gold_document": null,
+   "evidence": []
+  },
+  {
+   "id": "rv2_106",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "unanswerable",
+   "question": "Can a customer exchange a returned product for a different size?",
+   "gold_document": null,
+   "evidence": []
+  },
+  {
+   "id": "rv2_107",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "unanswerable",
+   "question": "What is the threshold for the Platinum seller level?",
+   "gold_document": null,
+   "evidence": []
+  },
+  {
+   "id": "rv2_108",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "unanswerable",
+   "question": "How many days does a seller have to appeal a downgrade in level?",
+   "gold_document": null,
+   "evidence": []
+  },
+  {
+   "id": "rv2_109",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "unanswerable",
+   "question": "What is the late-delivery credit for international shipments?",
+   "gold_document": null,
+   "evidence": []
+  },
+  {
+   "id": "rv2_110",
+   "corpus": "upload",
+   "dataset": "upload",
+   "category": "unanswerable",
+   "question": "What is the shipping fee for express delivery?",
+   "gold_document": null,
+   "evidence": []
+  }
+ ]
+}
