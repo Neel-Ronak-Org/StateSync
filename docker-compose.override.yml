@@ -1,7 +1,9 @@
 # docker-compose.override.yml — dev overrides
 # Applied automatically by `docker compose up` on top of docker-compose.yml.
 # Exposes ports locally so developers can psql directly, inspect qdrant, etc.
-# These ports are NOT exposed in docker-compose.yml (production).
+# These ports are NOT exposed in docker-compose.yml (production), and here they are
+# bound to 127.0.0.1 so they are reachable from this machine only, not the LAN.
+# (postgres is left as it was: changing it would recreate the database container.)
 
 services:
   postgres:
@@ -10,25 +12,27 @@ services:
 
   qdrant:
     ports:
-      - "6333:6333"   # qdrant REST API
-      - "6334:6334"   # qdrant gRPC
+      - "127.0.0.1:6333:6333"   # qdrant REST API
+      - "127.0.0.1:6334:6334"   # qdrant gRPC
 
-  ollama:
-    ports:
-      - "11434:11434" # ollama REST API
+  # ollama: not published. The MCP reaches it on db_net; the host's own (native)
+  # Ollama app already uses localhost:11434.
 
   mcp:
     ports:
-      - "8080:8080"
+      # 127.0.0.1 only: the MCP has no authentication of its own (it trusts the
+      # X-Tenant-ID header from the orchestrator), so it must never be reachable
+      # from the network (security review 2026-10-01).
+      - "127.0.0.1:8080:8080"
     environment:
       - LOG_LEVEL=DEBUG
 
   orchestrator:
     ports:
-      - "8090:8090"
+      - "127.0.0.1:8090:8090"
     environment:
       - LOG_LEVEL=DEBUG
 
   evaluator:
     ports:
-      - "8095:8095"
+      - "127.0.0.1:8095:8095"

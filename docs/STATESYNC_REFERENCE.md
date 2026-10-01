@@ -597,8 +597,12 @@ Code: `mcp/connections.py`, `mcp/tools/library_tools.py` (connection actions), m
 - **Layer 2 (session):** every request `BEGIN READ ONLY` … `ROLLBACK`; 15 s statement timeout; 60 s
   idle-in-transaction timeout; tenant bound for RLS.
 - **Layer 3 (role):** the reader role has SELECT only — the actual guarantee.
-- **Function denylist** (file I/O, admin, `pg_sleep`, `dblink`, …): currently applied to
-  `vector.hybrid_select` only — **(open, fix scheduled 2026-10-01)** extend to `data.run_select`.
+- **Function denylist** (file I/O, admin, `pg_sleep`, `dblink`, `set_config`, …): in Layer 1, so every
+  model-SQL path (run_select, hybrid_select, tile refresh, examples, templates) is covered
+  **(fixed 2026-10-01; previously hybrid_select only)**.
+- **Internal schemas:** SQL for a built-in dataset may not name `session_state`, `workspace_docs`,
+  `search`, `live_sim`, `pg_catalog`, `information_schema`, `pg_toast` (`[mcp].internal_schemas`)
+  **(fixed 2026-10-01)**; owner databases are exempt (their schemas may have any name).
 
 ### 12.3 Tenancy and RLS
 Every table in `session_state` and `workspace_docs` has RLS with policy
@@ -613,12 +617,12 @@ startup fails closed if the file is missing/malformed. Principals: `p_dev_local`
 
 ### 12.5 Known security findings (review of 2026-10-01)
 1. **MCP unauthenticated and published on all interfaces** in the dev override (`0.0.0.0:8080`);
-   it trusts the `X-Tenant-ID` header → LAN exposure on a laptop. **(open, fix scheduled: bind to
-   127.0.0.1)**
-2. **Model SQL can read `workspace_docs`** (the reader role needs it for retrieval); RLS is per tenant,
-   not per user → two users in one tenant could read each other's uploaded chunks via a crafted
-   question. **(open, fix scheduled: model SQL may only name the question's dataset schemas)**
-3. Function denylist only on `hybrid_select` (above).
+   it trusts the `X-Tenant-ID` header → LAN exposure on a laptop. **(fixed 2026-10-01: dev ports bound
+   to 127.0.0.1; Ollama's container port no longer published; verified unreachable from the LAN
+   address.)** The MCP itself still has no authentication — it relies on not being reachable.
+2. **Model SQL could read `workspace_docs`** (the reader role needs it for retrieval; RLS is per tenant,
+   not per user). **(fixed 2026-10-01: internal-schema rule above; `tests/test_sql_gate_hardening.py`.)**
+3. Function denylist only on `hybrid_select`. **(fixed 2026-10-01.)**
 4. Owner-DB password transits the orchestrator in memory on create (not stored/logged); private
    ranges allowed, so connection errors could act as a scan oracle for an authenticated user.
 5. Postgres runs with `log_statement=all` (needed by B-V2): user questions/answers appear in the
@@ -1048,9 +1052,9 @@ answer checks on (`pipeline.answer_checks="on"`); COUNT(*) fan-out coverage; ide
 
 ## 24. Known issues, limitations and open questions
 
-**Security (review 2026-10-01; fixes scheduled):** MCP unauthenticated and published on all interfaces in the
-dev override; model SQL can read `workspace_docs` (per-tenant, not per-user isolation); function denylist only
-on `hybrid_select`. See §12.5.
+**Security:** the three review findings of 2026-10-01 are fixed (§12.5); the MCP still has no
+authentication of its own (it relies on network isolation); the frontend port 3000 is published on all
+interfaces in `docker-compose.yml` (static UI; the API it calls is bound to localhost).
 **Accuracy / coverage:** no table selection for large schemas; no value index; single SQL candidate; no
 clarifying questions; fan-out probe misses COUNT(*); router prompt and hybrid prompts are ONDC-specific;
 follow-ups are the weakest category (4/6); hybrid route has no correction loop or workspace knowledge.

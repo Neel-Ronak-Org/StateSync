@@ -3,6 +3,12 @@
 # Loaded by orchestrator/config_loader.py — never read inline in agent source.
 
 [mcp]
+# Schemas that SQL written by the model may never name on a built-in dataset:
+# StateSync's own state, uploaded documents (the reader role can read them for
+# retrieval, and RLS isolates tenants, not users), the BM25 side table, the
+# simulator's private plans, and the system catalogs (security review 2026-10-01).
+internal_schemas          = ["session_state", "workspace_docs", "search", "live_sim",
+                             "pg_catalog", "information_schema", "pg_toast"]
 # Raised 15 -> 20 on 2026-09-26 (docs/V3_PLAN.md decision log, D-v3-1): the
 # supervisor never sees MCP methods (D1 decoupled routing from MCP), so this
 # guards API sprawl, not model accuracy. 16 in use after tiles.manage.

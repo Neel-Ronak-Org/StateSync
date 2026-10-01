@@ -39,7 +39,7 @@ from config_loader import cfg
 from db import get_connection
 from embeddings import embed_text
 from session import enforce_tenancy_policy, get_tenant_id, get_workspace_id
-from tools.data_tools import _check_layer1
+from tools.data_tools import DENIED_FUNCTIONS, _check_layer1, check_internal_schemas
 
 logger = logging.getLogger(__name__)
 
@@ -53,21 +53,9 @@ except ImportError:
 _CHUNK_ID_RE = re.compile(r'^[A-Za-z0-9_\-]{1,128}$')
 _UPLOAD_PREFIX = "up_"   # uploaded documents' ids (mcp/tools/library_tools.py)
 
-# Dangerous non-builtin-in-spirit functions: file I/O, admin/superuser,
-# network, long-sleep. ss_embed is not on this list, so it needs no
-# special-casing -- everything not listed here (COUNT, AVG, EXTRACT, NOW,
-# ordinary math/string/date functions, ss_embed, ...) remains callable.
-_DENIED_FUNCTIONS = frozenset({
-    "pg_read_file", "pg_read_binary_file", "pg_ls_dir", "pg_ls_logdir",
-    "pg_ls_waldir", "pg_ls_tmpdir", "pg_stat_file",
-    "lo_import", "lo_export", "lo_read", "lo_write", "lo_open", "lo_creat",
-    "dblink", "dblink_connect", "dblink_exec", "dblink_connect_u",
-    "pg_sleep", "pg_sleep_for", "pg_sleep_until",
-    "set_config", "pg_reload_conf", "pg_rotate_logfile",
-    "pg_terminate_backend", "pg_cancel_backend",
-    "pg_read_server_files", "pg_write_server_files", "pg_execute_server_program",
-    "pg_promote", "pg_switch_wal", "pg_create_restore_point",
-})
+# The function denylist lives in data_tools (Layer 1) and now covers every
+# model-SQL path; ss_embed is not on it.
+_DENIED_FUNCTIONS = DENIED_FUNCTIONS
 
 
 class _FuncCallCollector(Visitor if _PGLAST_AVAILABLE else object):
@@ -150,7 +138,7 @@ def _check_hybrid_gate(sql: str) -> tuple[str | None, str | None]:
     when the SQL is accepted; ss_embed_literal is the text argument found in
     the (sole distinct) ss_embed(...) call, or None if the SQL doesn't call it.
     """
-    rejection = _check_layer1(sql)
+    rejection = _check_layer1(sql) or check_internal_schemas(sql)
     if rejection:
         return rejection, None
 
