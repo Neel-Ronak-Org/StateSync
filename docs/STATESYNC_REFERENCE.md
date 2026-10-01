@@ -295,7 +295,9 @@ table chunk stays next to its narrative. **Hybrid route:** one `decomposer` call
 question into a SQL sub-question and a document sub-question; a single-shot SQL sub-task (no
 correction loop, no workspace knowledge); if its result has `seller_id`/`provider_id`, a fused
 `vector.hybrid_select` narrows documents to those parties in one SQL statement using
-`ss_embed('<text>')` (Text2VectorSQL pattern, §17); else the docs route.
+`ss_embed('<text>')` (Text2VectorSQL pattern, §17); else the docs route. The docs search forwards `pipeline.retrieval_mode`, `pipeline.doc_scope` and the dataset on both
+rounds. With `pipeline.doc_abstain = "on"`, a weak first round skips the second, and the synthesizer
+answers "not found" with no model call (§7.4; all shipped off).
 
 ### 5.7 Synthesizer (`nodes/synthesizer.py`)
 One `synthesizer` call (gpt-oss-120b, 1,024 tokens, JSON): answer prose + a chart **shape**
@@ -403,6 +405,28 @@ structure-aware chunking.
 - **Fused SQL+vector** (hybrid route): `vector.hybrid_select` executes SQL that may call
   `ss_embed('<text>')`; the MCP embeds the text and binds the vector in a transaction-local setting;
   `ss_embed()` (migration 004) is a STABLE function that reads it and makes no network call.
+- **Hybrid mode** (RAG v2 Phase D; flag `pipeline.retrieval_mode`, shipped `"dense"`):
+  - **Keyword legs.** BM25 is computed in plain SQL over `tsvector` columns: `search.sample_terms` for
+    the sample corpus (migration 027 side table, refreshed by `scripts/refresh_sample_search.py`) and
+    `workspace_docs.chunks.tsv` for uploads. It uses real IDF (`ln(1 + (N − df + 0.5)/(df + 0.5))`),
+    k1 = 1.2 and b = 0.75. Postgres's `ts_rank_cd` has no IDF, which is why it is not used. Query
+    lexemes are one bound `text[]`, and each becomes a single quoted tsquery term.
+  - **D4.** A keyword leg ignores any query term found in more than half of its own corpus
+    (`bm25_max_df_ratio = 0.5`). That is where the Robertson–Spärck Jones weight reaches 0. "seller"
+    and "custom" occur in 99.9% of sample chunks.
+  - **Fusion.** Reciprocal Rank Fusion (k = 60) over 50 candidates per list.
+    `retrieval.hybrid_dense_lists = "merged"` (D5, post-hoc, shipped `"separate"`) gives RRF one dense
+    list, with sample and uploads sorted by cosine, instead of two lists whose rank-1s tie.
+  - **Response.** Each search also returns `best_dense_score`, `best_keyword_score`, `lexemes` and
+    `lexemes_kept`.
+- **Dataset scope** (Phase E; `pipeline.doc_scope`, shipped `"all"`). `"dataset"` keeps only sample
+  documents whose id starts with the dataset's prefixes (`retrieval.dataset_document_prefixes`,
+  matched with `starts_with`, never LIKE). Connected databases get no sample documents, and uploads
+  are never scoped.
+- **Abstention** (Phase E; `pipeline.doc_abstain`, shipped `"off"`). When the first round's best dense
+  AND best keyword scores are both below thresholds, the docs route answers
+  `retrieval.abstain_message` with no model call. It never uses the fused score, which is about 0.03
+  for every question in hybrid mode.
 
 ### 7.5 Measured retrieval quality
 - **2026-10-01 small benchmark** (`docs/eval/retrieval_2026-10-01.md`; 35 labelled questions):
@@ -413,10 +437,32 @@ structure-aware chunking.
   60.0%, hit@5 77.0%, hit@10 79.0%, MRR@10 0.670; sample corpus hit@5 69.3%, uploads 100%;
   ID questions hit@5 30% (Olist seller-ID probes 0/20); tables hit@5 93.9%; paraphrase 100%;
   unanswerable vs answerable top-1 cosine overlap (0.565–0.732 vs 0.549–0.870); p50 145 ms.
+- **RAG v2 final** (`docs/eval/retrieval_v2_report.md`, same frozen set, fresh `final_` runs on the final
+  code; hit@k over 100 answerable questions):
+
+  | Configuration | hit@1 | hit@5 | hit@10 | MRR@10 | p50 |
+  |---|---:|---:|---:|---:|---:|
+  | Shipped (paragraph chunker, dense) | 60.0 | 77.0 | 79.0 | 0.670 | 149 ms |
+  | Layout chunker, dense | 63.0 | 77.0 | 79.0 | 0.688 | 153 ms |
+  | Layout, hybrid (RRF, two dense lists) | 65.0 | 98.0 | 100.0 | 0.791 | 279 ms |
+  | Layout, hybrid, merged dense list (D5) | 67.0 | 98.0 | 100.0 | 0.803 | 257 ms |
+
+  - **ID questions.** hit@10 30% → 100%. Seller-ID golds in the top 5 go from 0/20 to 20/20. 16 of
+    them sit at rank 2 because a dense rank-1 and a keyword rank-1 tie at 1/61 under RRF, and the tie
+    goes to the dense list.
+  - **Paraphrase hit@1** falls from 60% to 40% in every hybrid run.
+  - **Uploads.** hit@1 80% (paragraph) → 92% (layout) → 96% (layout + hybrid + merged).
+  - **Dataset scope** gives no gain.
+  - **Abstention** catches 1 of 10 unanswerable and loses 0 of 100 answerable. Its thresholds were
+    fitted on the set.
+  - **Reproduction.** The shipped configuration reproduces the baseline on all 110 questions. The
+    lead independently reproduced the recommended run.
+  - **Post-hoc caveat.** D4, D5 and the thresholds were decided after seeing results on this set,
+    and no held-out set exists yet.
 - Older M6 metrics (cycles 003–006) were measured under the approximate HNSW index and are **not
   comparable** (§20).
 
-### 7.6 RAG v2 (in progress; spec `docs/specs/rag_v2.md`)
+### 7.6 RAG v2 (done 2026-10-01, all shipped off; spec `docs/specs/rag_v2.md`, report `docs/eval/retrieval_v2_report.md`)
 Phases, each measured against the frozen test set: (A) test set + harness [done]; (B) layout-aware
 parsing of uploads with pdfplumber — headings (font size/bold/numbering), paragraphs, lists, whole
 tables; (C) structure-aware chunking — sections never mixed, pages never mixed, tables whole (large
@@ -426,7 +472,33 @@ breadcrumb prefix "Title › Section › Subsection", ~150-char overlap only wit
 by Reciprocal Rank Fusion (Cormack et al. 2009), no database rebuild; (E) documents scoped by
 dataset and model-free abstention ("I couldn't find this in the documents…"); (F) measured
 comparison and report. Out of scope (need approved downloads): re-ranker model, new embedding model
-(e.g. Qwen3-Embedding-0.6B), Docling/OCR. Status and results: see §20.8 when Phase F completes.
+(e.g. Qwen3-Embedding-0.6B), Docling/OCR.
+
+Added during the work, each marked post-hoc in the report's decision log:
+- (D4) keyword legs drop near-universal terms;
+- (D5) one merged dense list in hybrid.
+
+Commits:
+
+| Phase | Commit |
+|---|---|
+| A | 28bdabe |
+| B+C | de5e88a |
+| D | b270bfa |
+| D4 | 40a7d5e |
+| E | b6d1de2 |
+| F | 7958aca |
+
+Every phase was implemented by a Sonnet subagent and audited by the lead. The audit reproduced each
+headline run.
+
+**Recommendation** (owner decides; nothing flipped yet):
+- Turn on `retrieval_mode = "hybrid"` with `hybrid_dense_lists = "merged"` and `chunker = "layout"`.
+- Keep `doc_scope = "all"` and `doc_abstain = "off"`.
+- First, write a fresh held-out question set and run it once. The end-to-end effect on answers
+  needs model calls and is not measured yet.
+
+Results: §7.5 and §20.3.
 
 ---
 
@@ -660,7 +732,7 @@ with 768 MB address space, 60 s CPU, 60 s wall clock; fails closed if limits can
 revert (−19 points on the 7B) · 007 olist · 008/009 join graph and revert (−11.1pp) · 010
 review_digest type · 011 conversation history · 012–016 history/auth/audit extensions · 017 tiles ·
 018 turn dataset · 019 dashboards · 020 live schema · 021 workspaces + RLS · 022 templates · 023
-example checks · 024 library · 025 definition citations · 026 connections · (027 RAG v2). Migrations
+example checks · 024 library · 025 definition citations · 026 connections · 027 RAG v2 (upload chunk kind/section/tsv; `search.sample_terms`; applied 2026-10-01). Migrations
 from 005 are applied by hand; `scripts/migrate.sh` runs only 001/002/004.
 
 ---
@@ -817,6 +889,7 @@ All citations verified 2026-10-01.
 | Es et al. *RAGAS.* arXiv:2309.15217 (2023) | Evaluated in its sense | M6 context precision / faithfulness, implemented in-house |
 | Cormack, Clarke, Büttcher. *Reciprocal Rank Fusion.* SIGIR 2009 | Prototype → RAG v2 | Hybrid fusion (k=60) |
 | Robertson, Zaragoza. *The Probabilistic Relevance Framework: BM25 and Beyond.* FnTIR 2009 | RAG v2 | BM25 keyword leg in SQL (k1=1.2, b=0.75) |
+| Robertson, Spärck Jones. *Relevance Weighting of Search Terms.* JASIS 1976 | RAG v2 (D4) | Term weight log((N−df+0.5)/(df+0.5)) is ≤ 0 once df ≥ N/2 → keyword legs drop such terms |
 | Satyanarayan, Moritz, Wongsuphasawat, Heer. *Vega-Lite.* IEEE TVCG 2017 | Foundation | Declarative charts → A7 contract |
 | Anthropic, *Contextual Retrieval* (2024 blog) | RAG v2 motivation | Breadcrumb/context prefix on chunks (misses −35% in their study) |
 
@@ -934,6 +1007,15 @@ unmatched 48), **8 answers flagged (0.85%)**, all genuine. In-sample. (The pilot
 - 2026-10-01 small benchmark (35 q): dense MRR 0.410, hybrid (ts_rank) 0.499; ID probes dense 0/20.
 - **RAG v2 baseline** (110 q): hit@1 60.0%, hit@5 77.0%, hit@10 79.0%, MRR@10 0.670; IDs hit@5 30%;
   tables 93.9%; uploads 100%; p50 145 ms.
+- **RAG v2 progression** (110 q, overall hit@5 / MRR@10 / p50):
+  - Phase D hybrid as first specified: 81% / 0.689 / 607 ms. Paraphrase hit@1 fell 60 → 40, and RRF
+    buried keyword-only seller golds.
+  - D4: 98% / 0.793 / 294 ms.
+  - Layout + hybrid + merged (D5): 98% / 0.803 / 257 ms. hit@1 67%, hit@10 100%, uploads hit@1 96%.
+  - Dataset scope: no gain.
+  - Abstention: 1/10 in-sample.
+
+  Full tables are in §7.5 and `docs/eval/retrieval_v2_report.md`.
 - Historical (cycles 003–006, under approximate HNSW — not comparable): M6 precision 0.364 over retrieved
   chunks (ceiling 0.778), faithfulness 0.896 (docs-only); seller-ID query ranked the right digest
   2,365th of 13,161 before an addressability rebuild; interference test: 365x more chunks, every metric
@@ -970,7 +1052,9 @@ lifted the English line 11 → 13/20. DIGIPIN round trip 200/200 (max 2.5 m); D-
 ### 20.8 Reverted / refuted (keep for honesty)
 Schema comments (−19 points), join graph (−11.1pp), coder-14B (−8pp), memory on (−3/10), HNSW (approximate),
 the B1 sampling hypothesis, "JSON fix recovered 7/8 nulls" (actually 1), the 313/741 document split
-(actually 349/705), mxbai query instruction (−13pp hit@1 on e1).
+(actually 349/705), mxbai query instruction (−13pp hit@1 on e1), hybrid RRF without the D4 term filter
+(paraphrase hit@1 −20pp, latency ×4), dataset scope for retrieval quality (no gain; cost three upload
+table questions rank 1 until D5), score-threshold abstention (1/10, overlapping score ranges).
 
 ---
 
@@ -1058,8 +1142,15 @@ interfaces in `docker-compose.yml` (static UI; the API it calls is bound to loca
 **Accuracy / coverage:** no table selection for large schemas; no value index; single SQL candidate; no
 clarifying questions; fan-out probe misses COUNT(*); router prompt and hybrid prompts are ONDC-specific;
 follow-ups are the weakest category (4/6); hybrid route has no correction loop or workspace knowledge.
-**RAG:** dense-only (ID questions fail); no re-ranker; uploads parsed as flat text (until RAG v2); documents not
-scoped by dataset; no abstention; small labelled sets until RAG v2.
+**RAG:**
+- The shipped search is still dense-only. RAG v2's hybrid, layout chunker, scope and abstention are
+  built and measured but shipped off, pending the owner's decision.
+- No re-ranker.
+- Hybrid hurts paraphrase rank 1.
+- ID golds often land at rank 2 because of the RRF tie.
+- Abstention is weak.
+- No held-out retrieval set: every RAG v2 number is on the set that guided D4, D5 and the thresholds.
+- Answer-level effect not measured.
 **Measurement:** no external benchmark yet; most samples small (16–36); historic numbers on other models;
 M6/E1 predate exact search; pilot script not committed; BD6 unresolved.
 **Product:** self-testing runs on open, not on a timer; pinning does not create an approved example (plan
