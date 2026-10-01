@@ -184,13 +184,19 @@ async def vector_semantic_search(
     query_text: str,
     top_k: int | None = None,
     document_ids: list[str] | None = None,
+    mode: str | None = None,
+    dataset: str | None = None,
 ) -> dict[str, Any]:
-    """A4.6 vector.semantic_search"""
+    """A4.6 vector.semantic_search. mode ("dense" | "hybrid") and dataset are sent only when given."""
     params: dict[str, Any] = {"query_text": query_text}
     if top_k is not None:
         params["top_k"] = top_k
     if document_ids is not None:
         params["document_ids"] = document_ids
+    if mode is not None:
+        params["mode"] = mode
+    if dataset is not None:
+        params["dataset"] = dataset
     return await session.call("vector.semantic_search", params)
 
 

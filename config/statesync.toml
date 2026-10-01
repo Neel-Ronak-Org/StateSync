@@ -349,6 +349,16 @@ citation_max_chunks       = 3       # synthesizer: max kind:"chunk" citations de
 # for that one transaction. Revisit with a measured recall target if the
 # corpus grows past what a sequential scan can serve.
 exact_vector_search       = true
+# Hybrid retrieval (docs/specs/rag_v2.md Phase D). mode is the default for a caller that
+# does not pass one; the orchestrator always passes flags.toml [pipeline] retrieval_mode.
+# "dense" = cosine only (today). "hybrid" = four ranked lists (dense and BM25, each over
+# the sample corpus and over uploads), fused by reciprocal rank fusion.
+mode                      = "dense"  # "dense" | "hybrid"
+bm25_k1                   = 1.2      # BM25 term-frequency saturation
+bm25_b                    = 0.75     # BM25 length normalisation
+rrf_k                     = 60       # reciprocal rank fusion: score = sum 1 / (rrf_k + rank)
+hybrid_candidates_per_leg = 50       # each of the four lists is cut to this many before fusing
+bm25_stats_ttl_s          = 300      # the sample corpus's chunk count and mean length are cached this long, per tenant
 
 [scoring]
 recall_weight             = 0.70    # spec score; recall over precision per VegaChat

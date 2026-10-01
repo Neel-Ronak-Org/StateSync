@@ -233,6 +233,7 @@ synth_style                     = "full"     # "full" | "short": <= 3 sentences,
 answer_checks                   = "off"      # "off" | "on": deterministic checks after the SQL runs (join fan-out, date coverage, truncation, empty aggregates)
 templates                       = "off"      # "off" | "on": answer from a template of an approved query when only the values differ (the "compiled" tier)
 number_grounding                = "on"       # "off" | "on": trace every figure in the prose to a result cell, total, the question or a cited passage; unmatched figures become a caveat (never changes SQL or rows)
+retrieval_mode                  = "dense"    # "dense" | "hybrid": keyword (BM25) leg fused with the dense search by reciprocal rank fusion (docs/specs/rag_v2.md Phase D)
 
 [tenancy]
 enforced                        = false  # D6; threading is mandatory even when false

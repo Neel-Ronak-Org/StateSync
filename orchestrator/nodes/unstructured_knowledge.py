@@ -132,16 +132,19 @@ def _strip_fences(text: str) -> str:
     return text
 
 
-async def _semantic_search_expanded(session: MCPSession, query_text: str, top_k: int) -> list[dict]:
+async def _semantic_search_expanded(
+    session: MCPSession, query_text: str, top_k: int, mode: str | None = None, dataset: str | None = None,
+) -> list[dict]:
     """
     Two-round retrieval: first an unrestricted semantic_search to find which
     DOCUMENTS are relevant, then a second call restricted to those documents'
     IDs with a generous top_k, so every chunk of an already-relevant
     document is available (not just whichever single chunk happened to
     embed closest to the question) -- see module docstring for why this
-    matters for table chunks specifically.
+    matters for table chunks specifically. Both rounds use the same retrieval
+    mode (pipeline.retrieval_mode: "dense" or "hybrid") and carry the dataset.
     """
-    first = await vector_semantic_search(session, query_text, top_k=top_k)
+    first = await vector_semantic_search(session, query_text, top_k=top_k, mode=mode, dataset=dataset)
     matches = first.get("matches", [])
 
     # Document ranking order = order of first appearance in the score-sorted
@@ -157,6 +160,7 @@ async def _semantic_search_expanded(session: MCPSession, query_text: str, top_k:
 
     expanded = await vector_semantic_search(
         session, query_text, top_k=cfg.retrieval.semantic_top_k_max, document_ids=doc_order,
+        mode=mode, dataset=dataset,
     )
     by_chunk_id = {m["chunk_id"]: m for m in expanded.get("matches", [])}
     for m in matches:
@@ -344,6 +348,11 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
     session_id: str = state_dict.get("session_id", "")
     flags_snapshot: dict[str, Any] = state_dict.get("flags_snapshot", {})
 
+    # RAG v2 Phase D: "dense" (shipped) or "hybrid" (BM25 fused with dense), and the
+    # dataset the question is about, forwarded to vector.semantic_search.
+    retrieval_mode: str = flags_snapshot.get("pipeline.retrieval_mode", "dense")
+    dataset: str | None = state_dict.get("target_schema")
+
     start_ms = int(time.monotonic() * 1000)
     tokens_in_total = tokens_out_total = llm_calls_total = trajectory_steps = 0
     mcp_base_url = os.environ.get("MCP_URL", "http://mcp:8080")
@@ -354,7 +363,9 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
                           workspace_id=state_dict.get("workspace_id"),
                           dataset=state_dict.get("target_schema")) as session:
         if route == "docs":
-            matches = await _semantic_search_expanded(session, query_text, cfg.retrieval.semantic_top_k)
+            matches = await _semantic_search_expanded(
+                session, query_text, cfg.retrieval.semantic_top_k, retrieval_mode, dataset,
+            )
             trajectory_steps += 2  # the expanded call is a second round-trip
             elapsed_ms = int(time.monotonic() * 1000) - start_ms
             logger.info(
@@ -396,7 +407,9 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
             matches = doc_rows
             trajectory_steps += 1
         else:
-            matches = await _semantic_search_expanded(session, doc_subtask, cfg.retrieval.semantic_top_k)
+            matches = await _semantic_search_expanded(
+                session, doc_subtask, cfg.retrieval.semantic_top_k, retrieval_mode, dataset,
+            )
             trajectory_steps += 2
 
         elapsed_ms = int(time.monotonic() * 1000) - start_ms

@@ -3,6 +3,20 @@ mcp/tools/vector_tools.py
 MCP vector/retrieval tools: vector.semantic_search (A4.6), vector.hybrid_select
 (A4.7), docs.get_passage (A4.9). Part E1.
 
+vector.semantic_search modes (docs/specs/rag_v2.md Phase D):
+  "dense"   cosine similarity only, over the sample corpus and the workspace's
+            uploads, merged by score. This is the shipped behaviour.
+  "hybrid"  four ranked lists -- dense over the sample corpus, dense over uploads,
+            BM25 over the sample corpus, BM25 over uploads -- each cut to
+            retrieval.hybrid_candidates_per_leg and fused by reciprocal rank
+            fusion. Dense search is blind to identifiers (a seller id or an S0xx
+            code embeds like any other string of characters); BM25 finds them by
+            term rarity, which is what the keyword leg is for.
+  The BM25 legs are plain SQL run directly on the connection, exactly as the dense
+  legs are: internal code, not model SQL, so they do not go through the
+  data.run_select gate. The query's lexemes are always bound as one text[]
+  parameter and never written into the SQL text.
+
 vector.hybrid_select and the ss_embed mechanism (A4.7):
   The submitted SQL may call the registered function ss_embed(query_text).
   ss_embed itself (migrations/004_ss_embed.sql) makes no network call --
@@ -30,7 +44,9 @@ vector.hybrid_select and the ss_embed mechanism (A4.7):
 from __future__ import annotations
 
 import logging
+import math
 import re
+import time
 from typing import Any
 
 import psycopg
@@ -181,14 +197,24 @@ def _check_hybrid_gate(sql: str) -> tuple[str | None, str | None]:
 
 
 # ── A4.6 vector.semantic_search ─────────────────────────────────────────────
+_MODES = ("dense", "hybrid")
+
+
 async def semantic_search(
     query_text: str,
     top_k: int | None = None,
     document_ids: list[str] | None = None,
+    mode: str | None = None,
+    dataset: str | None = None,
 ) -> dict[str, Any]:
+    # `dataset` is accepted so the orchestrator can send it; scoping the sample
+    # corpus by dataset is Phase E and is not applied here.
     top_k_max = cfg.retrieval.semantic_top_k_max
     if top_k is not None and not (1 <= top_k <= top_k_max):
         raise ValueError(f"top_k must be between 1 and {top_k_max}, got {top_k!r}")
+    effective_mode = mode if mode is not None else cfg.retrieval.mode
+    if effective_mode not in _MODES:
+        raise ValueError(f"mode must be one of {list(_MODES)}, got {effective_mode!r}")
 
     tenant_id = get_tenant_id()
     effective_top_k = top_k if top_k is not None else cfg.retrieval.semantic_top_k
@@ -199,6 +225,12 @@ async def semantic_search(
         dim=cfg.retrieval.embedding_dim,
     )
     vector_literal = _format_vector_literal(vector)
+
+    workspace_id = get_workspace_id()
+    if effective_mode == "hybrid":
+        return await _hybrid_search(
+            query_text, vector_literal, effective_top_k, document_ids, tenant_id, workspace_id,
+        )
 
     where_clauses = ["dc.tenant_id = %(tenant_id)s"]
     params: dict[str, Any] = {"tenant_id": tenant_id, "qvec": vector_literal, "top_k": effective_top_k}
@@ -215,7 +247,6 @@ async def semantic_search(
         LIMIT %(top_k)s
     """
 
-    workspace_id = get_workspace_id()
     async with get_connection() as conn:
         await _use_exact_search(conn)
         cur = await conn.execute(sql, params)
@@ -232,6 +263,269 @@ async def semantic_search(
     logger.info(
         "vector.semantic_search: tenant=%s workspace=%s top_k=%d matches=%d library_matches=%d",
         tenant_id, workspace_id, effective_top_k, len(matches), len(library),
+    )
+    return {"matches": matches}
+
+
+# ── Phase D: hybrid retrieval ───────────────────────────────────────────────
+# A lexeme as a single-lexeme tsquery, built in SQL from the text[] parameter: wrapped
+# in single quotes with ' and \ escaped, which tsquery reads as one literal term (no
+# stemming, no operators), so a lexeme such as 'x.com:80' or one holding & or | cannot
+# change the structure of the query.
+_LEXEME_TSQUERY = "('''' || replace(replace(lex, '\\', '\\\\'), '''', '''''') || '''')"
+
+_SAMPLE_DOC_FILTER = " AND s.document_id = ANY(%(document_ids)s)"
+_UPLOAD_DOC_FILTER = " AND c.document_id = ANY(%(document_ids)s)"
+
+_UPLOAD_SCOPE = """FROM workspace_docs.chunks c
+            JOIN workspace_docs.documents d ON d.document_id = c.document_id
+            JOIN workspace_docs.workspace_folders wf ON wf.folder_id = d.folder_id
+            WHERE wf.workspace_id = %(workspace_id)s AND c.tenant_id = %(tenant_id)s AND d.status = 'ready'"""
+
+
+def _bm25_sample_sql(doc_filter: str) -> str:
+    """BM25 over the sample corpus (search.sample_terms). n and avgdl arrive as
+    parameters (cached per tenant, _sample_stats); document frequency is counted over
+    the whole tenant corpus, so a document filter narrows the candidates without
+    changing how rare a term is. doc_filter is one of the two fixed strings above."""
+    return f"""
+    WITH q AS (
+        SELECT lex, {_LEXEME_TSQUERY} AS qt FROM unnest(%(lexemes)s::text[]) AS lex
+    ),
+    any_q AS (SELECT string_agg(qt, ' | ')::tsquery AS tq FROM q),
+    idf AS (
+        SELECT q.lex, ln(1 + (%(n)s::float8 - df.df + 0.5) / (df.df + 0.5)) AS idf
+        FROM q
+        CROSS JOIN LATERAL (
+            SELECT count(*)::float8 AS df FROM search.sample_terms s
+            WHERE s.tenant_id = %(tenant_id)s AND s.tsv @@ q.qt::tsquery
+        ) df
+    ),
+    top AS (
+        SELECT s.chunk_id,
+               sum(idf.idf * (e.tf * (%(k1)s + 1))
+                   / (e.tf + %(k1)s * (1 - %(b)s + %(b)s * s.len / %(avgdl)s::float8))) AS score
+        FROM search.sample_terms s
+        CROSS JOIN any_q
+        CROSS JOIN LATERAL (SELECT lexeme, coalesce(cardinality(positions), 1) AS tf FROM unnest(s.tsv)) e
+        JOIN idf ON idf.lex = e.lexeme
+        WHERE s.tenant_id = %(tenant_id)s AND s.tsv @@ any_q.tq{doc_filter}
+        GROUP BY s.chunk_id
+        ORDER BY score DESC, s.chunk_id
+        LIMIT %(limit)s
+    )
+    SELECT dc.chunk_id, dc.document_id, dc.content_md, dc.page, top.score, NULL::text AS title
+    FROM top
+    JOIN document_chunks dc ON dc.chunk_id = top.chunk_id AND dc.tenant_id = %(tenant_id)s
+    ORDER BY top.score DESC, dc.chunk_id
+"""
+
+
+def _bm25_upload_sql(doc_filter: str) -> str:
+    """BM25 over the workspace's uploads (workspace_docs.chunks.tsv): the same
+    arithmetic, with N and the mean length computed live from the chunks in scope
+    (small and workspace-specific, so there is nothing worth caching)."""
+    return f"""
+    WITH q AS (
+        SELECT lex, {_LEXEME_TSQUERY} AS qt FROM unnest(%(lexemes)s::text[]) AS lex
+    ),
+    any_q AS (SELECT string_agg(qt, ' | ')::tsquery AS tq FROM q),
+    stats AS (
+        SELECT count(*)::float8 AS n, coalesce(avg(length(c.tsv)), 1)::float8 AS avgdl
+        {_UPLOAD_SCOPE}
+    ),
+    idf AS (
+        SELECT q.lex, ln(1 + (stats.n - df.df + 0.5) / (df.df + 0.5)) AS idf
+        FROM q
+        CROSS JOIN stats
+        CROSS JOIN LATERAL (
+            SELECT count(*)::float8 AS df
+            {_UPLOAD_SCOPE} AND c.tsv @@ q.qt::tsquery
+        ) df
+    ),
+    top AS (
+        SELECT c.chunk_id,
+               sum(idf.idf * (e.tf * (%(k1)s + 1))
+                   / (e.tf + %(k1)s * (1 - %(b)s + %(b)s * length(c.tsv) / stats.avgdl))) AS score
+        FROM workspace_docs.chunks c
+        JOIN workspace_docs.documents d ON d.document_id = c.document_id
+        JOIN workspace_docs.workspace_folders wf ON wf.folder_id = d.folder_id
+        CROSS JOIN any_q
+        CROSS JOIN stats
+        CROSS JOIN LATERAL (SELECT lexeme, coalesce(cardinality(positions), 1) AS tf FROM unnest(c.tsv)) e
+        JOIN idf ON idf.lex = e.lexeme
+        WHERE wf.workspace_id = %(workspace_id)s AND c.tenant_id = %(tenant_id)s AND d.status = 'ready'
+              AND c.tsv @@ any_q.tq{doc_filter}
+        GROUP BY c.chunk_id
+        ORDER BY score DESC, c.chunk_id
+        LIMIT %(limit)s
+    )
+    SELECT c.chunk_id, c.document_id, c.content_md, c.page, top.score, d.title, c.section, c.kind
+    FROM top
+    JOIN workspace_docs.chunks c ON c.chunk_id = top.chunk_id
+    JOIN workspace_docs.documents d ON d.document_id = c.document_id
+    ORDER BY top.score DESC, c.chunk_id
+"""
+
+
+BM25_SAMPLE_SQL = _bm25_sample_sql("")
+BM25_SAMPLE_SQL_DOCS = _bm25_sample_sql(_SAMPLE_DOC_FILTER)
+BM25_UPLOAD_SQL = _bm25_upload_sql("")
+BM25_UPLOAD_SQL_DOCS = _bm25_upload_sql(_UPLOAD_DOC_FILTER)
+
+# tenant -> (monotonic time computed, chunk count, mean length). The sample corpus
+# changes only on a re-ingest, so its statistics are cached for bm25_stats_ttl_s.
+_sample_stats_cache: dict[str, tuple[float, float, float]] = {}
+
+
+def bm25_idf(n: float, df: float) -> float:
+    """BM25 inverse document frequency, as the SQL computes it: ln(1 + (N - df + 0.5) / (df + 0.5)).
+
+    The 0.5 is the Robertson-Sparck Jones smoothing term of the formula itself, not a tunable."""
+    return math.log(1 + (n - df + 0.5) / (df + 0.5))  # noqa: literals
+
+
+def bm25_term_score(idf: float, tf: float, doc_len: float, avgdl: float, k1: float, b: float) -> float:
+    """One term's BM25 contribution: idf * tf * (k1 + 1) / (tf + k1 * (1 - b + b * len / avgdl))."""
+    return idf * tf * (k1 + 1) / (tf + k1 * (1 - b + b * doc_len / avgdl))
+
+
+def rrf_fuse(
+    dense_lists: list[list[dict]], keyword_lists: list[list[dict]], k: int, top_k: int,
+) -> list[dict]:
+    """Reciprocal rank fusion over ranked lists (each best-first): score = sum 1 / (k + rank).
+
+    Ranks are 1-based and counted within each list. A row's fields come from the first
+    list it appears in (dense lists first, so an upload keeps its title and section);
+    dense_score and keyword_score are the chunk's own best score from the dense and the
+    BM25 lists, None where it was in none of that kind. Ties keep the order of first
+    appearance, so the result is deterministic.
+    """
+    fused: dict[str, dict[str, Any]] = {}
+    for lists, field in ((dense_lists, "dense_score"), (keyword_lists, "keyword_score")):
+        for ranked in lists:
+            for rank, row in enumerate(ranked, start=1):
+                entry = fused.get(row["chunk_id"])
+                if entry is None:
+                    entry = fused[row["chunk_id"]] = {
+                        "chunk_id": row["chunk_id"], "document_id": row["document_id"],
+                        "content_md": row["content_md"], "page": row.get("page"), "score": 0.0,
+                        "dense_score": None, "keyword_score": None, "title": row.get("title"),
+                        "section": row.get("section"), "kind": row.get("kind"),
+                    }
+                entry["score"] += 1 / (k + rank)
+                entry[field] = row["score"] if entry[field] is None else max(entry[field], row["score"])
+    return sorted(fused.values(), key=lambda m: m["score"], reverse=True)[:top_k]
+
+
+async def _query_lexemes(conn: Any, query_text: str) -> list[str]:
+    """The query's lexemes as the english text-search configuration reads them (stop words dropped, stemmed)."""
+    cur = await conn.execute(
+        "SELECT tsvector_to_array(to_tsvector('english', %(query)s))", {"query": query_text},
+    )
+    row = await cur.fetchone()
+    return list(row[0]) if row and row[0] else []
+
+
+async def _sample_stats(conn: Any, tenant_id: str) -> tuple[float, float]:
+    """(chunk count, mean tsvector length) of the tenant's sample corpus, cached for bm25_stats_ttl_s."""
+    now = time.monotonic()
+    cached = _sample_stats_cache.get(tenant_id)
+    if cached is not None and now - cached[0] < cfg.retrieval.bm25_stats_ttl_s:
+        return cached[1], cached[2]
+    cur = await conn.execute(
+        "SELECT count(*)::float8, coalesce(avg(len), 1)::float8 FROM search.sample_terms WHERE tenant_id = %(tenant_id)s",
+        {"tenant_id": tenant_id},
+    )
+    n, avgdl = await cur.fetchone()
+    _sample_stats_cache[tenant_id] = (now, n, avgdl)
+    return n, avgdl
+
+
+async def _fetch_dicts(conn: Any, sql: str, params: dict[str, Any]) -> list[dict]:
+    cur = await conn.execute(sql, params)
+    rows = await cur.fetchall()
+    col_names = [desc.name for desc in cur.description] if cur.description else []
+    return [dict(zip(col_names, row)) for row in rows]
+
+
+async def _bm25_sample_matches(
+    conn: Any, lexemes: list[str], tenant_id: str, document_ids: list[str] | None, limit: int,
+) -> list[dict]:
+    if not lexemes:
+        return []
+    n, avgdl = await _sample_stats(conn, tenant_id)
+    if n == 0:
+        return []
+    params: dict[str, Any] = {
+        "lexemes": lexemes, "tenant_id": tenant_id, "n": n, "avgdl": avgdl,
+        "k1": cfg.retrieval.bm25_k1, "b": cfg.retrieval.bm25_b, "limit": limit,
+    }
+    if document_ids:
+        params["document_ids"] = document_ids
+    return await _fetch_dicts(conn, BM25_SAMPLE_SQL_DOCS if document_ids else BM25_SAMPLE_SQL, params)
+
+
+async def _bm25_upload_matches(
+    conn: Any, lexemes: list[str], tenant_id: str, workspace_id: str,
+    document_ids: list[str] | None, limit: int,
+) -> list[dict]:
+    if not lexemes:
+        return []
+    params: dict[str, Any] = {
+        "lexemes": lexemes, "tenant_id": tenant_id, "workspace_id": workspace_id,
+        "k1": cfg.retrieval.bm25_k1, "b": cfg.retrieval.bm25_b, "limit": limit,
+    }
+    if document_ids:
+        params["document_ids"] = document_ids
+    return await _fetch_dicts(conn, BM25_UPLOAD_SQL_DOCS if document_ids else BM25_UPLOAD_SQL, params)
+
+
+async def _hybrid_search(
+    query_text: str, vector_literal: str, top_k: int, document_ids: list[str] | None,
+    tenant_id: str, workspace_id: str | None,
+) -> dict[str, Any]:
+    candidates = cfg.retrieval.hybrid_candidates_per_leg
+    dense_params: dict[str, Any] = {"tenant_id": tenant_id, "qvec": vector_literal, "top_k": candidates}
+    where = ["dc.tenant_id = %(tenant_id)s"]
+    if document_ids:
+        where.append("dc.document_id = ANY(%(document_ids)s)")
+        dense_params["document_ids"] = document_ids
+    dense_sql = f"""
+        SELECT dc.chunk_id, dc.document_id, dc.content_md, dc.page,
+               1 - (dc.embedding <=> %(qvec)s::vector) AS score, NULL::text AS title
+        FROM document_chunks dc
+        WHERE {' AND '.join(where)}
+        ORDER BY dc.embedding <=> %(qvec)s::vector
+        LIMIT %(top_k)s
+    """
+
+    async with get_connection() as conn:
+        # Keyword legs first: the exact-search switch below turns index scans off
+        # for the rest of the transaction and the GIN lookups should not feel it.
+        t0 = time.monotonic()
+        lexemes = await _query_lexemes(conn, query_text)
+        bm25_sample = await _bm25_sample_matches(conn, lexemes, tenant_id, document_ids, candidates)
+        t1 = time.monotonic()
+        bm25_upload = (
+            await _bm25_upload_matches(conn, lexemes, tenant_id, workspace_id, document_ids, candidates)
+            if workspace_id else []
+        )
+        t2 = time.monotonic()
+
+        await _use_exact_search(conn)
+        dense_sample = await _fetch_dicts(conn, dense_sql, dense_params)
+        dense_upload = await _library_matches(conn, workspace_id, dense_params) if workspace_id else []
+
+    matches = rrf_fuse(
+        [dense_sample, dense_upload], [bm25_sample, bm25_upload], cfg.retrieval.rrf_k, top_k,
+    )
+    logger.info(
+        "vector.semantic_search: mode=hybrid tenant=%s workspace=%s top_k=%d matches=%d lexemes=%d "
+        "dense=%d/%d bm25=%d/%d bm25_sample_ms=%d bm25_upload_ms=%d",
+        tenant_id, workspace_id, top_k, len(matches), len(lexemes),
+        len(dense_sample), len(dense_upload), len(bm25_sample), len(bm25_upload),
+        (t1 - t0) * 1000, (t2 - t1) * 1000,
     )
     return {"matches": matches}
 

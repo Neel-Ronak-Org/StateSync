@@ -26,6 +26,10 @@ Chunking: word-count approximated as token count (no real tokenizer
 dependency) -- a coarse but adequate approximation for the corpus size here;
 retrieval.chunk_target_tokens/chunk_overlap_tokens from config either way.
 
+After ANY re-ingest, run scripts/refresh_sample_search.py: hybrid retrieval ranks
+this corpus by BM25 over the side table search.sample_terms (migration 027), which
+nothing here updates. Skipping it leaves the keyword leg ranking stale chunks.
+
 Usage:
     python3 scripts/ingest.py
     python3 scripts/ingest.py --manifest fixtures/documents/manifest.json

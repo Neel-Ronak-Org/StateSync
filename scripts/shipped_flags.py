@@ -91,6 +91,8 @@ SHIPPED_DEFAULTS: dict[tuple[str, str], str] = {
     ("pipeline", "templates"): "off",
     # Answers you can check: annotation plus a caveat, never a change to SQL or rows.
     ("pipeline", "number_grounding"): "on",
+    # RAG v2 Phase D: "dense" is today's cosine-only document search; "hybrid" fuses it with BM25.
+    ("pipeline", "retrieval_mode"): "dense",
     # RAG v2 (docs/specs/rag_v2.md): how an upload is cut into chunks. "paragraph" is
     # today's flat-page chunker; "layout" cuts by heading and keeps tables whole.
     ("library", "chunker"): "paragraph",
