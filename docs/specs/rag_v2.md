@@ -286,6 +286,54 @@ Tests (pure, host): the BM25 formula on a hand-computed example; RRF fusion orde
 hand-computed example; lexemes never interpolated (inspect the SQL template); `mode=dense`
 returns exactly today's ordering (fake connection).
 
+### D4. Drop near-universal query terms (added 2026-10-01, after the Phase D measurement)
+
+**What Phase D measured.** On the sample corpus (N = 20,245 chunks) the lexemes `seller`
+(df 20,218) and `custom` (df 20,210) occur in 99.9% of chunks. A query containing either
+gathers ~20k candidates (BM25 sample leg p50 457 ms), and the keyword list's tail is filled
+with arbitrary chunks that carry almost no score. Some of those also sit in the dense list,
+and RRF ranks any chunk present in two lists (≥ 2/110) above a chunk that is first in
+only one (1/61). That buries the gold seller digest, which BM25 alone ranks first for
+20/20 seller-ID probes.
+
+**Rule (fixed before measuring; do not try other values).** In each keyword leg, a query
+lexeme is used only if `0 < df ≤ bm25_max_df_ratio × N`, with N and df counted in **that
+leg's** corpus (the tenant's sample corpus; the workspace's ready uploads). Dropped
+lexemes neither gather candidates nor add score. If no lexeme is kept, the leg is empty.
+Config `[retrieval] bm25_max_df_ratio = 0.5`; `1.0` keeps every lexeme with df ≥ 1, which
+is the Phase D behaviour (df = 0 lexemes match nothing, so dropping them changes nothing).
+Why 0.5: the Robertson–Spärck Jones relevance weight `log((N − df + 0.5) / (df + 0.5))`,
+which BM25's IDF comes from, is ≤ 0 once a term occurs in half the collection. At that
+point the probabilistic model treats the term as no evidence of relevance. The `1 +`
+inside BM25's IDF exists only to keep scores non-negative. Put this reason in the config
+comment.
+
+- SQL: compute df for every lexeme first, then build the OR-tsquery from the kept
+  lexemes only (pass the ratio as a parameter). The idf/score arithmetic is unchanged.
+  A pure `bm25_keeps_lexeme(n, df, ratio) -> bool` mirrors the rule, and a test asserts
+  the SQL applies the same comparison.
+- Response metadata, for Phase E. `vector.semantic_search` returns, beside `matches`:
+  - `best_dense_score`: the highest cosine over every dense candidate fetched, in either
+    mode, or null if there are none;
+  - `best_keyword_score`: the highest BM25 score over both keyword legs in hybrid mode,
+    or null if there are none, and always null in dense mode;
+  - `lexemes`: the query's lexeme count;
+  - `lexemes_kept`: kept per keyword leg, `{"sample": n, "upload": n}` in hybrid mode,
+    null in dense mode.
+
+  Add `lexemes_kept` to the hybrid log line. The orchestrator ignores unknown keys (it
+  reads `matches`), so nothing downstream changes.
+- Harness (`scripts/eval_retrieval.py`): record per question `best_dense_score`,
+  `best_keyword_score` and `lexemes_kept` from the response, and per saved passage its
+  `dense_score` and `keyword_score` when present. Add to the unanswerable/answerable
+  summary lines the medians of `best_dense_score` and `best_keyword_score`. Do NOT change
+  how hits, ranks, MRR or latency are computed.
+- Tests (host): boundary cases of `bm25_keeps_lexeme` (df 0 dropped; df = ratio·N kept;
+  df = ratio·N + 1 dropped; ratio 1.0 keeps every df ≥ 1); the ratio is a bound parameter
+  in both BM25 statements; with every lexeme dropped the keyword legs return [] and
+  hybrid still returns the dense results (fake connection); the response carries the four
+  new keys in both modes with the stated null rules.
+
 ## 6. Phase E — scope by dataset, and abstention
 
 - Scope: `[retrieval] dataset_document_prefixes` maps datasets to sample document-id
@@ -297,7 +345,10 @@ returns exactly today's ordering (fake connection).
   dataset with no prefixes gets no sample documents; uploads are unaffected (already scoped
   by the workspace's folders). Shipped `"all"` (today).
 - Abstention: flag `[pipeline] doc_abstain = "off"` (shipped). When `"on"` and the best
-  dense score < `abstain_min_dense` AND the best keyword score < `abstain_min_keyword`, the
+  dense score < `abstain_min_dense` AND the best keyword score < `abstain_min_keyword` (the
+  first-round response's `best_dense_score` / `best_keyword_score` from D4, never the
+  fused `score`: an RRF score is ~0.03 for answerable and unanswerable alike; a null
+  keyword score counts as below the threshold), the
   docs route returns no retrievals and the synthesizer answers, **without a model call**,
   `[retrieval].abstain_message` ("I couldn't find this in the documents available to this
   question."). Calibrate the two thresholds on the `unanswerable` vs answerable top-1 score
