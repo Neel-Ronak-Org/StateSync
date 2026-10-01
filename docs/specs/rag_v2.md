@@ -359,21 +359,85 @@ comment.
 
 ## 7. Phase F — measure and report
 
-Runs (all on the frozen test set):
-1. `baseline` — today's code (Phase A3).
-2. `layout_dense` — `chunker=layout`, `mode=dense`.
-3. `layout_hybrid` — `chunker=layout`, `mode=hybrid`.
-4. `layout_hybrid_scoped` — plus `doc_scope=dataset`.
+### F0. One dense list in hybrid mode (D5; added 2026-10-01 AFTER the Phase E results — post-hoc, say so)
+
+**What Phase E measured.** Hybrid fuses four lists by RRF: dense over the sample corpus,
+dense over uploads, and BM25 over each. The two dense lists use the same model and the same
+cosine, so their scores are directly comparable. Dense mode already merges them by score.
+Keeping them as two RRF lists throws that comparison away and invents ties. A review
+digest at rank 1 of the sample dense list ties an upload at rank 1 of the upload dense list
+(1/61 each), and the tie breaks by list order. Under `doc_scope = "dataset"` this cost
+three upload table questions their rank 1.
+
+**Change.** Config `[retrieval] hybrid_dense_lists = "separate"`, with values
+`"separate" | "merged"`.
+- `"separate"` is D3 as specified, and is today's hybrid.
+- `"merged"` concatenates the dense sample and dense upload candidates, sorts them by
+  cosine (score desc, then chunk_id), and passes them to `rrf_fuse` as ONE dense list,
+  without cutting them below `2 × hybrid_candidates_per_leg`.
+- BM25 lists stay separate in both: their scores are not comparable across corpora, since
+  N and df differ.
+- `best_dense_score` is unchanged.
+- `"separate"` must issue byte-identical statements and return identical results to today.
+
+Pure tests:
+- `"merged"` on a hand-computed example: an upload with a higher cosine than every sample
+  chunk is the merged dense rank 1, and a lower-cosine sample chunk is rank 2.
+- `"separate"` equals today.
+
+Do not change the tie-break, weights or `rrf_k`.
+
+### F1. Runs (all on the frozen test set, on the final code)
+
+Run each fresh with label prefix `final_`:
+1. `final_paragraph_dense`: the shipped configuration. It must reproduce `baseline`
+   exactly on hits, ranks and scores.
+2. `final_layout_dense`: `chunker=layout`, `mode=dense`.
+3. `final_layout_hybrid`: plus `mode=hybrid` (`hybrid_dense_lists="separate"`).
+4. `final_layout_hybrid_scoped`: plus `--scope dataset`.
+5. `final_layout_hybrid_merged`: run 3 with `hybrid_dense_lists="merged"`.
+6. `final_layout_hybrid_scoped_merged`: run 4 with `"merged"`.
+
+Runs 2–4 must reproduce `layout_dense_d4`, `layout_hybrid_d4` and `layout_hybrid_scoped`
+on hits and ranks. If one does not, investigate before writing the report.
 Changing `chunker` needs the upload re-ingested: restart only `orchestrator` after editing
 `config/statesync.toml`, and let the harness re-upload (it creates a fresh folder each run).
 **Restore every flag/config value to its shipped value at the end** and confirm with
 `/opt/anaconda3/bin/python3 scripts/shipped_flags.py` (restart `orchestrator`/`mcp` by
 name if needed).
 
-Report (`docs/eval/retrieval_v2_report.md`): the frozen-set SHA-256; per-run table
-(overall, per corpus, per category: hit@1/@5/@10, MRR, latency p50/p90); unanswerable score
-distributions and chosen thresholds; label fixes (if any) with reasons; what did not
-improve; known limitations (multi-column PDFs, scanned PDFs, sample corpus not re-chunked).
+### F2. Report (`docs/eval/retrieval_v2_report.md`)
+
+Contents:
+- The frozen-set SHA-256.
+- A per-run table: overall, per corpus and per category, with hit@1/@5/@10, MRR, and
+  latency p50/p90.
+- The unanswerable score distributions and the chosen thresholds.
+- Label fixes, if any, with reasons.
+- What did not improve.
+- Known limitations: multi-column PDFs, scanned PDFs, the sample corpus not re-chunked.
+
+Also include:
+- **A decision log in the order decisions were made.** Mark each decision as
+  pre-registered or post-hoc. Post-hoc means it was made after seeing results on this
+  same set.
+  - Pre-registered: A–E as specified.
+  - Post-hoc: D4, motivated by the Phase D failure analysis, with its 0.5 cut fixed by
+    theory before its own run. The abstention thresholds, fitted on the set. D5.
+- **The seller-ID rank table.** Show the 20 questions across baseline, Phase D and D4.
+- **The two RRF tie effects.** The 1/61 dense-vs-keyword tie (16/20 seller golds at
+  rank 2), and the dense-vs-dense tie that D5 removes.
+- **A recommendation**, as a table of flag → recommended value → evidence. The owner
+  flips shipped defaults; this report only recommends. Hybrid changes which passages the
+  answer model sees, and that end-to-end effect is not measured here: it needs model
+  calls.
+- **Limitations.**
+  - 110 questions, 10 of them unanswerable.
+  - One synthetic upload set.
+  - No held-out set: every number is on the set that guided D4, D5 and the thresholds.
+    Recommend a fresh held-out set written after the decisions are frozen.
+  - No re-ranker.
+  - Latency measured on one Mac.
 
 ## 8. Completion criteria (report each with command output)
 
