@@ -14,6 +14,13 @@ vector.semantic_search modes (docs/specs/rag_v2.md Phase D):
             term rarity, which is what the keyword leg is for.
   A BM25 leg uses only the query lexemes that are not near-universal in its own
   corpus (retrieval.bm25_max_df_ratio, spec D4).
+  retrieval.hybrid_dense_lists (spec F0, "D5") decides how many dense lists RRF sees:
+  "separate" (the shipped value) fuses the sample list and the upload list as two lists;
+  "merged" sorts them together by cosine and fuses ONE dense list. The two share a model
+  and a cosine, so their scores are comparable and dense mode already merges them by
+  score; two RRF lists throw that comparison away and invent ties (a sample chunk at
+  rank 1 and an upload at rank 1 both get 1/61, and the tie goes to list order). The
+  BM25 lists stay separate: N and df differ per corpus, so their scores are not comparable.
   Both modes also return best_dense_score, best_keyword_score, lexemes and
   lexemes_kept beside `matches`, for the abstention work of Phase E (the last
   three are null in dense mode, which runs no keyword statement).
@@ -213,6 +220,7 @@ def _check_hybrid_gate(sql: str) -> tuple[str | None, str | None]:
 
 # ── A4.6 vector.semantic_search ─────────────────────────────────────────────
 _MODES = ("dense", "hybrid")
+_DENSE_LISTS = ("separate", "merged")
 _SCOPES = ("all", "dataset")
 
 # A sample chunk is kept if its document_id starts with any of the bound prefixes. {alias} is the
@@ -487,6 +495,16 @@ def _best_score(*lists: list[dict]) -> float | None:
     return max(scores) if scores else None
 
 
+def merge_dense_lists(sample: list[dict], upload: list[dict]) -> list[dict]:
+    """The sample and upload dense candidates as ONE list, best cosine first (spec F0).
+
+    Both come from the same model and the same cosine, so a score of 0.7 means the same on
+    either side. Sorted by score descending, then chunk_id, so equal scores are deterministic.
+    Nothing is cut: each input is already at most hybrid_candidates_per_leg long, so the
+    result is at most twice that, which is the limit the spec sets."""
+    return sorted(sample + upload, key=lambda m: (-m["score"], m["chunk_id"]))
+
+
 def rrf_fuse(
     dense_lists: list[list[dict]], keyword_lists: list[list[dict]], k: int, top_k: int,
 ) -> list[dict]:
@@ -600,6 +618,9 @@ async def _hybrid_search(
     query_text: str, vector_literal: str, top_k: int, document_ids: list[str] | None,
     tenant_id: str, workspace_id: str | None, prefixes: list[str] | None = None,
 ) -> dict[str, Any]:
+    dense_lists = cfg.retrieval.hybrid_dense_lists
+    if dense_lists not in _DENSE_LISTS:
+        raise ValueError(f"retrieval.hybrid_dense_lists must be one of {list(_DENSE_LISTS)}, got {dense_lists!r}")
     candidates = cfg.retrieval.hybrid_candidates_per_leg
     dense_params: dict[str, Any] = {"tenant_id": tenant_id, "qvec": vector_literal, "top_k": candidates}
     where = ["dc.tenant_id = %(tenant_id)s"]
@@ -641,13 +662,12 @@ async def _hybrid_search(
         dense_sample = [] if no_sample else await _fetch_dicts(conn, dense_sql, sample_params)
         dense_upload = await _library_matches(conn, workspace_id, dense_params) if workspace_id else []
 
-    matches = rrf_fuse(
-        [dense_sample, dense_upload], [bm25_sample, bm25_upload], cfg.retrieval.rrf_k, top_k,
-    )
+    fused_dense = [dense_sample, dense_upload] if dense_lists == "separate" else [merge_dense_lists(dense_sample, dense_upload)]
+    matches = rrf_fuse(fused_dense, [bm25_sample, bm25_upload], cfg.retrieval.rrf_k, top_k)
     logger.info(
-        "vector.semantic_search: mode=hybrid tenant=%s workspace=%s top_k=%d scope=%s matches=%d lexemes=%d "
-        "lexemes_kept=%d/%d dense=%d/%d bm25=%d/%d bm25_sample_ms=%d bm25_upload_ms=%d",
-        tenant_id, workspace_id, top_k, "all" if prefixes is None else "dataset", len(matches), len(lexemes),
+        "vector.semantic_search: mode=hybrid tenant=%s workspace=%s top_k=%d scope=%s dense_lists=%s matches=%d "
+        "lexemes=%d lexemes_kept=%d/%d dense=%d/%d bm25=%d/%d bm25_sample_ms=%d bm25_upload_ms=%d",
+        tenant_id, workspace_id, top_k, "all" if prefixes is None else "dataset", dense_lists, len(matches), len(lexemes),
         kept_sample, kept_upload,
         len(dense_sample), len(dense_upload), len(bm25_sample), len(bm25_upload),
         (t1 - t0) * 1000, (t2 - t1) * 1000,

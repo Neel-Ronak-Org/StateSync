@@ -56,11 +56,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FLAGS_PATH = REPO_ROOT / "config" / "flags.toml"
 # A few shipped switches live in config/statesync.toml, not flags.toml (the layout
-# chunker, docs/specs/rag_v2.md Phase C: [library].chunker). Sections listed here
+# chunker, docs/specs/rag_v2.md Phase C: [library].chunker; and [retrieval].hybrid_dense_lists, F0). Sections listed here
 # are read from that file with a real TOML parser; every other section is read
 # from flags.toml as before.
 STATESYNC_PATH = REPO_ROOT / "config" / "statesync.toml"
-STATESYNC_SECTIONS = frozenset({"library"})
+STATESYNC_SECTIONS = frozenset({"library", "retrieval"})
 ORCHESTRATOR_CONTAINER = "statesync-orchestrator-1"
 
 # The single source of truth. scripts/verify_seams.py's F-V6 imports this
@@ -100,6 +100,9 @@ SHIPPED_DEFAULTS: dict[tuple[str, str], str] = {
     # RAG v2 (docs/specs/rag_v2.md): how an upload is cut into chunks. "paragraph" is
     # today's flat-page chunker; "layout" cuts by heading and keeps tables whole.
     ("library", "chunker"): "paragraph",
+    # RAG v2 F0 (post-hoc): "separate" hands RRF the sample and upload dense lists as two lists
+    # (today's hybrid); "merged" sorts them together by cosine and hands it one. [retrieval] in statesync.toml.
+    ("retrieval", "hybrid_dense_lists"): "separate",
 }
 
 

@@ -410,3 +410,122 @@ def test_a_statement_with_no_match_is_read_as_an_empty_leg_that_still_reports_it
     assert vt._split_kept([]) == ([], 0)
     rows = [{"lexemes_kept": 1, "chunk_id": "c1", "score": 3.0}, {"lexemes_kept": 1, "chunk_id": "c2", "score": 2.0}]
     assert vt._split_kept(rows) == ([{"chunk_id": "c1", "score": 3.0}, {"chunk_id": "c2", "score": 2.0}], 1)
+
+
+# ── F0 / D5: one dense list or two ──────────────────────────────────────────
+_REAL_CFG = vt.cfg
+
+
+class _CfgWith:
+    """The real config with [retrieval] keys overridden (the real one is read-only)."""
+
+    def __init__(self, **retrieval):
+        self._retrieval = SimpleNamespace(**{**_REAL_CFG.retrieval.as_dict(), **retrieval})
+
+    @property
+    def retrieval(self):
+        return self._retrieval
+
+    def __getattr__(self, name):
+        return getattr(_REAL_CFG, name)
+
+
+def test_the_shipped_dense_list_handling_is_separate():
+    """WHY: "merged" is a post-hoc change made after seeing results on the frozen set; it
+    ships off (D-v3-16) and only the lead flips it after the audit."""
+    assert vt.cfg.retrieval.hybrid_dense_lists == "separate"
+
+
+def test_merge_dense_lists_orders_by_cosine_across_both_corpora():
+    """WHY: the point of D5. An upload that is closer to the query than every sample chunk must
+    be dense rank 1 whichever corpus it came from, and a lower-cosine sample chunk rank 2."""
+    sample = [_row("s1", 0.80), _row("s2", 0.50)]
+    upload = [_row("u1", 0.90, title="Policy"), _row("u2", 0.40, title="Policy")]
+    merged = vt.merge_dense_lists(sample, upload)
+    assert [m["chunk_id"] for m in merged] == ["u1", "s1", "s2", "u2"]
+    # equal cosines fall back to chunk_id, so the order never depends on which side was passed first
+    tie_a = vt.merge_dense_lists([_row("s1", 0.7)], [_row("u1", 0.7)])
+    tie_b = vt.merge_dense_lists([_row("u1", 0.7)], [_row("s1", 0.7)])
+    assert [m["chunk_id"] for m in tie_a] == [m["chunk_id"] for m in tie_b] == ["s1", "u1"]
+    # nothing is cut, and an empty side is simply the other list
+    big_sample, big_upload = [_row(f"s{i:03d}", 0.5) for i in range(50)], [_row(f"u{i:03d}", 0.4) for i in range(50)]
+    assert len(vt.merge_dense_lists(big_sample, big_upload)) == 100
+    assert vt.merge_dense_lists([], upload) == sorted(upload, key=lambda m: -m["score"])
+
+
+def test_merged_removes_the_dense_vs_dense_rrf_tie_that_separate_has(monkeypatch):
+    """WHY: hand-computed, k = 60. Separate: s1 is rank 1 of the sample dense list and u1 is
+    rank 1 of the upload dense list, so both score 1/61 and the tie goes to list order (s1
+    first), though u1 has the higher cosine. Merged: u1 (0.90) is dense rank 1 = 1/61 and s1
+    (0.80) rank 2 = 1/62, so the closer upload wins."""
+    dense_sample = [_row("s1", 0.80), _row("s2", 0.50)]
+    dense_upload = [_row("u1", 0.90, title="Policy", section="Returns", kind="table")]
+
+    def search(mode_value: str) -> list[dict]:
+        monkeypatch.setattr(vt, "cfg", _CfgWith(hybrid_dense_lists=mode_value))
+        conn = _Conn(lexemes=[], dense_sample=dense_sample, dense_upload=dense_upload)   # no keyword leg
+        _wire(monkeypatch, conn, workspace_id="ws_1")
+        return asyncio.run(vt.semantic_search("q", top_k=3, mode="hybrid"))["matches"]
+
+    separate = search("separate")
+    assert [m["chunk_id"] for m in separate] == ["s1", "u1", "s2"]
+    assert separate[0]["score"] == separate[1]["score"] == pytest.approx(1 / 61)     # the tie
+    merged = search("merged")
+    assert [m["chunk_id"] for m in merged] == ["u1", "s1", "s2"]
+    assert [m["score"] for m in merged] == pytest.approx([1 / 61, 1 / 62, 1 / 63])
+    # the upload keeps its own fields and its own cosine
+    assert (merged[0]["title"], merged[0]["section"], merged[0]["kind"]) == ("Policy", "Returns", "table")
+    assert merged[0]["dense_score"] == 0.90
+
+
+def test_merged_keeps_the_bm25_lists_separate_and_the_best_scores_the_same(monkeypatch):
+    """WHY: BM25 scores are not comparable across corpora (N and df differ), so D5 touches
+    only the dense lists; best_dense_score is the best cosine fetched in either setting."""
+    kwargs = dict(
+        dense_sample=[_row("s1", 0.8), _row("s2", 0.6)], dense_upload=[_row("u1", 0.7, title="P")],
+        sample=[_row("s2", 12.0), _row("s9", 5.0)], upload=[_row("u1", 3.0, title="P")],
+    )
+    results = {}
+    for value in ("separate", "merged"):
+        monkeypatch.setattr(vt, "cfg", _CfgWith(hybrid_dense_lists=value))
+        conn = _Conn(**kwargs)
+        _wire(monkeypatch, conn, workspace_id="ws_1")
+        results[value] = (asyncio.run(vt.semantic_search("q", top_k=10, mode="hybrid")), conn)
+    sep, sep_conn = results["separate"]
+    mrg, mrg_conn = results["merged"]
+    assert sep["best_dense_score"] == mrg["best_dense_score"] == 0.8
+    assert sep["best_keyword_score"] == mrg["best_keyword_score"] == 12.0
+    assert sep["lexemes_kept"] == mrg["lexemes_kept"]
+    # merged: dense s1 1/61, u1 1/62, s2 1/63; bm25 sample s2 1/61, s9 1/62; bm25 upload u1 1/61
+    by_id = {m["chunk_id"]: m["score"] for m in mrg["matches"]}
+    assert by_id["s2"] == pytest.approx(1 / 63 + 1 / 61)
+    assert by_id["u1"] == pytest.approx(1 / 62 + 1 / 61)
+    assert by_id["s9"] == pytest.approx(1 / 62)
+    # the same statements are issued either way: D5 reorders rows in Python, it adds no SQL
+    assert sep_conn.calls == mrg_conn.calls
+
+
+def test_separate_is_exactly_the_unmerged_fusion(monkeypatch):
+    """WHY: "separate" must be today's hybrid, bit for bit: the same result as calling rrf_fuse
+    with the two dense lists as they came back, and the same statements."""
+    dense_sample = [_row("s1", 0.8), _row("s2", 0.6)]
+    dense_upload = [_row("u1", 0.7, title="P", section="S", kind="text")]
+    sample, upload = [_row("s2", 12.0)], [_row("u1", 3.0, title="P", section="S", kind="text")]
+    monkeypatch.setattr(vt, "cfg", _CfgWith(hybrid_dense_lists="separate"))
+    conn = _Conn(dense_sample=dense_sample, dense_upload=dense_upload, sample=sample, upload=upload)
+    _wire(monkeypatch, conn, workspace_id="ws_1")
+    got = asyncio.run(vt.semantic_search("q", top_k=10, mode="hybrid"))["matches"]
+    assert got == vt.rrf_fuse([dense_sample, dense_upload], [sample, upload], _REAL_CFG.retrieval.rrf_k, 10)
+
+
+def test_an_unknown_dense_list_setting_is_refused_before_any_statement(monkeypatch):
+    """WHY: a typo ("merge") must not silently run as one of the two behaviours."""
+    monkeypatch.setattr(vt, "cfg", _CfgWith(hybrid_dense_lists="merge"))
+    conn = _Conn()
+    _wire(monkeypatch, conn, workspace_id="ws_1")
+    with pytest.raises(ValueError, match="hybrid_dense_lists must be one of"):
+        asyncio.run(vt.semantic_search("q", mode="hybrid"))
+    assert conn.calls == []
+    # dense mode never reads the setting
+    monkeypatch.setattr(vt, "cfg", _CfgWith(hybrid_dense_lists="merge"))
+    asyncio.run(vt.semantic_search("q", mode="dense"))
