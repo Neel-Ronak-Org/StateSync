@@ -16,6 +16,11 @@ repeatedly shown small models are not reliable at following "always include
 both kinds" instructions, and a response citing only one kind is a spec
 failure even if the prose mentions both sources. A hybrid query naturally
 gets both kinds this way, without depending on the model remembering to.
+
+RAG v2 Phase E: when the docs route sets state.doc_abstained (nothing relevant was
+retrieved and pipeline.doc_abstain is on), the answer is retrieval.abstain_message, built
+here with no model call -- a model asked to answer from no passages is exactly where an
+unsupported answer comes from.
 """
 
 from __future__ import annotations
@@ -525,6 +530,25 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     short_style = (
         state_dict.get("flags_snapshot", {}).get("pipeline.synth_style", "full") == "short"
     )
+
+    if state_dict.get("doc_abstained"):
+        # RAG v2 Phase E: the docs route found nothing relevant (pipeline.doc_abstain). The answer
+        # is the fixed message: no model call, so nothing to invent; no citations (there is no
+        # passage and no SQL to cite) and no chart. It still goes through the A7 validator, like
+        # every other answer, and it holds no figure for number grounding to trace.
+        start_ms = int(time.monotonic() * 1000)
+        safe_out = safe_synthesizer_output({
+            "answer_text": cfg.retrieval.abstain_message, "chart": None, "citations": [],
+        })
+        logger.info("Synthesizer abstained for query_id=%s (no model call).", query_id)
+        return {
+            "answer_text": safe_out["answer_text"],
+            "vega_spec": None,
+            "metrics": {
+                "tokens_in": 0, "tokens_out": 0, "llm_calls": 0, "trajectory_steps": 1,
+                "latency_ms": int(time.monotonic() * 1000) - start_ms,
+            },
+        }
 
     # Derived from the typed, reliably-accumulated state.errors/state.attempt
     # (same test _route_after_sql uses), NOT a scratch key. A conditional

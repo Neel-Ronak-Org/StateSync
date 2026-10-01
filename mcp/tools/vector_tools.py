@@ -22,6 +22,15 @@ vector.semantic_search modes (docs/specs/rag_v2.md Phase D):
   data.run_select gate. The query's lexemes are always bound as one text[]
   parameter and never written into the SQL text.
 
+vector.semantic_search scope (docs/specs/rag_v2.md Phase E):
+  scope="all" (the default) searches every sample document. scope="dataset" keeps,
+  in the sample-corpus legs only, the chunks whose document_id starts with one of
+  the dataset's prefixes (retrieval.dataset_document_prefixes); a dataset that is a
+  connected database, unknown, or without prefixes gets no sample documents and no
+  sample statement is issued. Uploads are never filtered by scope: the workspace's
+  folders already scope them. Prefixes travel as one bound text[] and are matched
+  with starts_with, never LIKE ("_" is a LIKE wildcard).
+
 vector.hybrid_select and the ss_embed mechanism (A4.7):
   The submitted SQL may call the registered function ss_embed(query_text).
   ss_embed itself (migrations/004_ss_embed.sql) makes no network call --
@@ -57,6 +66,7 @@ from typing import Any
 import psycopg
 
 from config_loader import cfg
+from connections import is_token
 from db import get_connection
 from embeddings import embed_text
 from session import enforce_tenancy_policy, get_tenant_id, get_workspace_id
@@ -203,6 +213,32 @@ def _check_hybrid_gate(sql: str) -> tuple[str | None, str | None]:
 
 # ── A4.6 vector.semantic_search ─────────────────────────────────────────────
 _MODES = ("dense", "hybrid")
+_SCOPES = ("all", "dataset")
+
+# A sample chunk is kept if its document_id starts with any of the bound prefixes. {alias} is the
+# sample table's alias in the statement it is spliced into (a fixed identifier, never user text).
+_SAMPLE_SCOPE_PREDICATE = (
+    "EXISTS (SELECT 1 FROM unnest(%(prefixes)s::text[]) p WHERE starts_with({alias}.document_id, p))"
+)
+
+
+def _scope_prefixes(scope: str | None, dataset: str | None) -> list[str] | None:
+    """The sample-corpus document-id prefixes a search is limited to, or None for no limit.
+
+    None means scope "all" (today's behaviour). A list, possibly empty, means scope "dataset":
+    an empty list is a dataset with no sample documents (a connected database, one that is not
+    configured, or one configured with none), and the caller issues no sample statement for it.
+    Raises ValueError for an unknown scope, or for scope "dataset" without a dataset."""
+    effective = scope if scope is not None else "all"
+    if effective not in _SCOPES:
+        raise ValueError(f"scope must be one of {list(_SCOPES)}, got {effective!r}")
+    if effective == "all":
+        return None
+    if not dataset:
+        raise ValueError('scope="dataset" needs a dataset')
+    if is_token(dataset):
+        return []
+    return list(cfg.retrieval.dataset_document_prefixes.get(dataset) or [])
 
 
 async def semantic_search(
@@ -211,15 +247,15 @@ async def semantic_search(
     document_ids: list[str] | None = None,
     mode: str | None = None,
     dataset: str | None = None,
+    scope: str | None = None,
 ) -> dict[str, Any]:
-    # `dataset` is accepted so the orchestrator can send it; scoping the sample
-    # corpus by dataset is Phase E and is not applied here.
     top_k_max = cfg.retrieval.semantic_top_k_max
     if top_k is not None and not (1 <= top_k <= top_k_max):
         raise ValueError(f"top_k must be between 1 and {top_k_max}, got {top_k!r}")
     effective_mode = mode if mode is not None else cfg.retrieval.mode
     if effective_mode not in _MODES:
         raise ValueError(f"mode must be one of {list(_MODES)}, got {effective_mode!r}")
+    prefixes = _scope_prefixes(scope, dataset)
 
     tenant_id = get_tenant_id()
     effective_top_k = top_k if top_k is not None else cfg.retrieval.semantic_top_k
@@ -234,7 +270,7 @@ async def semantic_search(
     workspace_id = get_workspace_id()
     if effective_mode == "hybrid":
         return await _hybrid_search(
-            query_text, vector_literal, effective_top_k, document_ids, tenant_id, workspace_id,
+            query_text, vector_literal, effective_top_k, document_ids, tenant_id, workspace_id, prefixes,
         )
 
     where_clauses = ["dc.tenant_id = %(tenant_id)s"]
@@ -242,6 +278,10 @@ async def semantic_search(
     if document_ids:
         where_clauses.append("dc.document_id = ANY(%(document_ids)s)")
         params["document_ids"] = document_ids
+    sample_params = params
+    if prefixes:
+        where_clauses.append(_SAMPLE_SCOPE_PREDICATE.format(alias="dc"))
+        sample_params = {**params, "prefixes": prefixes}
 
     sql = f"""
         SELECT dc.chunk_id, dc.document_id, dc.content_md, dc.page,
@@ -254,10 +294,10 @@ async def semantic_search(
 
     async with get_connection() as conn:
         await _use_exact_search(conn)
-        cur = await conn.execute(sql, params)
-        rows = await cur.fetchall()
-        col_names = [desc.name for desc in cur.description] if cur.description else []
-        matches = [dict(zip(col_names, row)) for row in rows]
+        matches = []
+        # A scope with no prefixes has no sample documents: no sample statement at all.
+        if prefixes is None or prefixes:
+            matches = await _fetch_dicts(conn, sql, sample_params)
         library = await _library_matches(conn, workspace_id, params) if workspace_id else []
 
     best_dense_score = _best_score(matches, library)
@@ -267,8 +307,8 @@ async def semantic_search(
         matches = sorted(matches + library, key=lambda m: m["score"], reverse=True)[:effective_top_k]
 
     logger.info(
-        "vector.semantic_search: tenant=%s workspace=%s top_k=%d matches=%d library_matches=%d",
-        tenant_id, workspace_id, effective_top_k, len(matches), len(library),
+        "vector.semantic_search: tenant=%s workspace=%s top_k=%d scope=%s matches=%d library_matches=%d",
+        tenant_id, workspace_id, effective_top_k, scope or "all", len(matches), len(library),
     )
     return {
         # The keyword fields are null here: the shipped dense path issues no keyword
@@ -287,6 +327,7 @@ _LEXEME_TSQUERY = "('''' || replace(replace(lex, '\\', '\\\\'), '''', '''''') ||
 
 _SAMPLE_DOC_FILTER = " AND s.document_id = ANY(%(document_ids)s)"
 _UPLOAD_DOC_FILTER = " AND c.document_id = ANY(%(document_ids)s)"
+_SAMPLE_SCOPE_FILTER = " AND " + _SAMPLE_SCOPE_PREDICATE.format(alias="s")
 
 _UPLOAD_SCOPE = """FROM workspace_docs.chunks c
             JOIN workspace_docs.documents d ON d.document_id = c.document_id
@@ -298,11 +339,13 @@ def _bm25_sample_sql(doc_filter: str) -> str:
     """BM25 over the sample corpus (search.sample_terms). n and avgdl arrive as
     parameters (cached per tenant, _sample_stats); document frequency is counted over
     the whole tenant corpus, so a document filter narrows the candidates without
-    changing how rare a term is. df is counted for every lexeme first; only the kept
-    ones (0 < df <= max_df_ratio * n, spec D4) build the OR-tsquery and carry an idf.
-    With none kept, tq is NULL and no chunk matches. Every row carries lexemes_kept
-    (an all-NULL row when there are no matches), so the count survives an empty
-    result. doc_filter is one of the two fixed strings above."""
+    changing how rare a term is. A dataset scope (prefixes) narrows the candidates the
+    same way, in `top` only: N, avgdl and df stay corpus-wide per tenant, so a term is as
+    rare as it always was whichever documents are in scope. df is counted for every lexeme
+    first; only the kept ones (0 < df <= max_df_ratio * n, spec D4) build the OR-tsquery
+    and carry an idf. With none kept, tq is NULL and no chunk matches. Every row carries
+    lexemes_kept (an all-NULL row when there are no matches), so the count survives an
+    empty result. doc_filter is a concatenation of the fixed strings above."""
     return f"""
     WITH q AS (
         SELECT lex, {_LEXEME_TSQUERY} AS qt FROM unnest(%(lexemes)s::text[]) AS lex
@@ -407,6 +450,8 @@ def _bm25_upload_sql(doc_filter: str) -> str:
 
 BM25_SAMPLE_SQL = _bm25_sample_sql("")
 BM25_SAMPLE_SQL_DOCS = _bm25_sample_sql(_SAMPLE_DOC_FILTER)
+BM25_SAMPLE_SQL_SCOPED = _bm25_sample_sql(_SAMPLE_SCOPE_FILTER)
+BM25_SAMPLE_SQL_DOCS_SCOPED = _bm25_sample_sql(_SAMPLE_DOC_FILTER + _SAMPLE_SCOPE_FILTER)
 BM25_UPLOAD_SQL = _bm25_upload_sql("")
 BM25_UPLOAD_SQL_DOCS = _bm25_upload_sql(_UPLOAD_DOC_FILTER)
 
@@ -510,8 +555,10 @@ def _split_kept(rows: list[dict]) -> tuple[list[dict], int]:
 
 async def _bm25_sample_matches(
     conn: Any, lexemes: list[str], tenant_id: str, document_ids: list[str] | None, limit: int,
+    prefixes: list[str] | None = None,
 ) -> tuple[list[dict], int]:
-    """(ranked matches, lexemes kept) of the sample-corpus keyword leg."""
+    """(ranked matches, lexemes kept) of the sample-corpus keyword leg. prefixes limits the
+    candidates to documents whose id starts with one of them; the statistics stay corpus-wide."""
     if not lexemes:
         return [], 0
     n, avgdl = await _sample_stats(conn, tenant_id)
@@ -524,7 +571,12 @@ async def _bm25_sample_matches(
     }
     if document_ids:
         params["document_ids"] = document_ids
-    return _split_kept(await _fetch_dicts(conn, BM25_SAMPLE_SQL_DOCS if document_ids else BM25_SAMPLE_SQL, params))
+    if prefixes:
+        params["prefixes"] = prefixes
+        sql = BM25_SAMPLE_SQL_DOCS_SCOPED if document_ids else BM25_SAMPLE_SQL_SCOPED
+    else:
+        sql = BM25_SAMPLE_SQL_DOCS if document_ids else BM25_SAMPLE_SQL
+    return _split_kept(await _fetch_dicts(conn, sql, params))
 
 
 async def _bm25_upload_matches(
@@ -546,7 +598,7 @@ async def _bm25_upload_matches(
 
 async def _hybrid_search(
     query_text: str, vector_literal: str, top_k: int, document_ids: list[str] | None,
-    tenant_id: str, workspace_id: str | None,
+    tenant_id: str, workspace_id: str | None, prefixes: list[str] | None = None,
 ) -> dict[str, Any]:
     candidates = cfg.retrieval.hybrid_candidates_per_leg
     dense_params: dict[str, Any] = {"tenant_id": tenant_id, "qvec": vector_literal, "top_k": candidates}
@@ -554,6 +606,10 @@ async def _hybrid_search(
     if document_ids:
         where.append("dc.document_id = ANY(%(document_ids)s)")
         dense_params["document_ids"] = document_ids
+    sample_params = dense_params
+    if prefixes:
+        where.append(_SAMPLE_SCOPE_PREDICATE.format(alias="dc"))
+        sample_params = {**dense_params, "prefixes": prefixes}
     dense_sql = f"""
         SELECT dc.chunk_id, dc.document_id, dc.content_md, dc.page,
                1 - (dc.embedding <=> %(qvec)s::vector) AS score, NULL::text AS title
@@ -568,7 +624,12 @@ async def _hybrid_search(
         # for the rest of the transaction and the GIN lookups should not feel it.
         t0 = time.monotonic()
         lexemes = await _query_lexemes(conn, query_text)
-        bm25_sample, kept_sample = await _bm25_sample_matches(conn, lexemes, tenant_id, document_ids, candidates)
+        # A scope with no prefixes has no sample documents: neither sample leg issues a statement.
+        no_sample = prefixes is not None and not prefixes
+        bm25_sample, kept_sample = (
+            ([], 0) if no_sample
+            else await _bm25_sample_matches(conn, lexemes, tenant_id, document_ids, candidates, prefixes)
+        )
         t1 = time.monotonic()
         bm25_upload, kept_upload = (
             await _bm25_upload_matches(conn, lexemes, tenant_id, workspace_id, document_ids, candidates)
@@ -577,16 +638,17 @@ async def _hybrid_search(
         t2 = time.monotonic()
 
         await _use_exact_search(conn)
-        dense_sample = await _fetch_dicts(conn, dense_sql, dense_params)
+        dense_sample = [] if no_sample else await _fetch_dicts(conn, dense_sql, sample_params)
         dense_upload = await _library_matches(conn, workspace_id, dense_params) if workspace_id else []
 
     matches = rrf_fuse(
         [dense_sample, dense_upload], [bm25_sample, bm25_upload], cfg.retrieval.rrf_k, top_k,
     )
     logger.info(
-        "vector.semantic_search: mode=hybrid tenant=%s workspace=%s top_k=%d matches=%d lexemes=%d "
+        "vector.semantic_search: mode=hybrid tenant=%s workspace=%s top_k=%d scope=%s matches=%d lexemes=%d "
         "lexemes_kept=%d/%d dense=%d/%d bm25=%d/%d bm25_sample_ms=%d bm25_upload_ms=%d",
-        tenant_id, workspace_id, top_k, len(matches), len(lexemes), kept_sample, kept_upload,
+        tenant_id, workspace_id, top_k, "all" if prefixes is None else "dataset", len(matches), len(lexemes),
+        kept_sample, kept_upload,
         len(dense_sample), len(dense_upload), len(bm25_sample), len(bm25_upload),
         (t1 - t0) * 1000, (t2 - t1) * 1000,
     )

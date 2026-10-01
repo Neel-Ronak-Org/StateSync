@@ -369,6 +369,34 @@ bm25_stats_ttl_s          = 300      # the sample corpus's chunk count and mean 
 # with arbitrary chunks that RRF then ranked above the true top hit. 1.0 = keep every lexeme with
 # df >= 1 (the Phase D behaviour). Fixed in docs/specs/rag_v2.md D4 before measuring; not tuned.
 bm25_max_df_ratio         = 0.5
+# Abstention (docs/specs/rag_v2.md Phase E; pipeline.doc_abstain = "on"). The docs route gives up,
+# without a model call, when the FIRST retrieval round's best dense cosine is below abstain_min_dense
+# AND its best BM25 score is below abstain_min_keyword (a missing score counts as below). The fused
+# RRF score is never used: it is ~0.03 for answerable and unanswerable questions alike.
+# Thresholds: chosen by scripts/calibrate_abstention.py on 2026-10-01 from the saved run
+# layout_hybrid_scoped (hybrid mode, doc_scope = "dataset", chunker = "layout") ON THE FROZEN TEST
+# SET ITSELF, so they are an in-sample fit and not a held-out estimate. Rule: the pair that abstains
+# the most unanswerable questions while abstaining at most 2 answerable ones. Result: 1 of 10
+# unanswerable abstained, 0 of 100 answerable. The scores of unanswerable and answerable questions
+# overlap (unanswerable best dense 0.57-0.73 against answerable 0.54-0.87), so this is a weak
+# filter: it catches the clearest miss and nothing more. In dense mode only min_dense decides
+# (the keyword score is missing); the dense-only optimum on layout_dense_scoped is the same
+# min_dense with 1 of 10 and 1 of 100.
+abstain_min_dense         = 0.5767178798791651
+abstain_min_keyword       = 8.781194941742484
+abstain_message           = "I couldn't find this in the documents available to this question."
+
+# Which sample-corpus documents belong to which dataset (pipeline.doc_scope = "dataset"): a sample
+# chunk is kept only if its document_id STARTS WITH one of the dataset's prefixes (matched with
+# starts_with, never LIKE: "_" is a LIKE wildcard). Checked against the 11 distinct prefixes in
+# document_chunks on 2026-10-01: doc_policy_{data,dispute,returns,seller}_, doc_review_digest_,
+# doc_sla_annexure_, doc_sop_{cold,customer,delivery,warehouse}_, doc_supplier_agreement_.
+# A dataset that is not listed, one with an empty list, and a connected database (cn_ + 16 hex)
+# get no sample documents. Uploads are never filtered here: the workspace's folders scope them.
+[retrieval.dataset_document_prefixes]
+public = ["doc_policy_", "doc_sop_", "doc_supplier_agreement_", "doc_sla_annexure_"]
+olist  = ["doc_review_digest_"]
+live   = []
 
 [scoring]
 recall_weight             = 0.70    # spec score; recall over precision per VegaChat

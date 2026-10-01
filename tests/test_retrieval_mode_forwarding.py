@@ -47,8 +47,10 @@ class _Session:
 def _run(monkeypatch, flags: dict, target_schema: str | None = "olist") -> list[dict]:
     calls: list[dict] = []
 
-    async def fake_search(session, query_text, top_k=None, document_ids=None, mode=None, dataset=None):
-        calls.append({"top_k": top_k, "document_ids": document_ids, "mode": mode, "dataset": dataset})
+    async def fake_search(session, query_text, top_k=None, document_ids=None, mode=None, dataset=None,
+                          scope=None):
+        calls.append({"top_k": top_k, "document_ids": document_ids, "mode": mode, "dataset": dataset,
+                      "scope": scope})
         return {"matches": [{"chunk_id": "c1", "document_id": "doc_a", "content_md": "x", "score": 0.5}]}
 
     monkeypatch.setattr(uk, "MCPSession", _Session)
@@ -73,6 +75,16 @@ def test_without_the_flag_the_mode_is_dense(monkeypatch):
     assert [c["mode"] for c in calls] == ["dense", "dense"]
 
 
+def test_both_rounds_carry_the_scope_flag_and_default_to_all(monkeypatch):
+    """WHY: pipeline.doc_scope = "dataset" only limits the sample corpus if BOTH rounds carry it
+    (the expanded second round re-searches those documents' siblings and must not widen the scope);
+    an absent flag is "all", today's search."""
+    calls = _run(monkeypatch, {"pipeline.doc_scope": "dataset"}, target_schema="public")
+    assert [c["scope"] for c in calls] == ["dataset", "dataset"]
+    assert [c["dataset"] for c in calls] == ["public", "public"]
+    assert [c["scope"] for c in _run(monkeypatch, {})] == ["all", "all"]
+
+
 def test_the_shipped_flag_is_dense():
     assert uk.cfg.retrieval.mode == "dense"
     from config_loader import snapshot_flags
@@ -92,3 +104,21 @@ def test_the_client_sends_mode_and_dataset_only_when_given():
     asyncio.run(vector_semantic_search(_S(), "q", mode="hybrid", dataset="public"))
     assert sent[0] == {"query_text": "q"}
     assert sent[1] == {"query_text": "q", "mode": "hybrid", "dataset": "public"}
+
+
+def test_the_client_sends_scope_only_when_it_is_not_all():
+    """WHY: "all" is the server's default, so the shipped path's request must stay exactly
+    what it was before scoping existed."""
+    sent: list[dict] = []
+
+    class _S:
+        async def call(self, method, params):
+            sent.append(params)
+            return {"matches": []}
+
+    from mcp_client import vector_semantic_search
+    asyncio.run(vector_semantic_search(_S(), "q", dataset="public", scope="all"))
+    asyncio.run(vector_semantic_search(_S(), "q", dataset="public", scope=None))
+    asyncio.run(vector_semantic_search(_S(), "q", dataset="public", scope="dataset"))
+    assert sent[0] == sent[1] == {"query_text": "q", "dataset": "public"}
+    assert sent[2] == {"query_text": "q", "dataset": "public", "scope": "dataset"}

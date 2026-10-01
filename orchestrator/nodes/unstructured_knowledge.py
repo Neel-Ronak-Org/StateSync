@@ -132,9 +132,19 @@ def _strip_fences(text: str) -> str:
     return text
 
 
+def should_abstain(
+    best_dense: float | None, best_keyword: float | None, min_dense: float, min_keyword: float,
+) -> bool:
+    """RAG v2 Phase E: nothing relevant was found. True iff the best dense score is missing or
+    below min_dense AND the best keyword score is missing or below min_keyword (strict <, so a
+    score equal to its threshold counts as relevant). A missing score is a leg that found nothing."""
+    return (best_dense is None or best_dense < min_dense) and (best_keyword is None or best_keyword < min_keyword)
+
+
 async def _semantic_search_expanded(
     session: MCPSession, query_text: str, top_k: int, mode: str | None = None, dataset: str | None = None,
-) -> list[dict]:
+    scope: str | None = None, abstain: bool = False,
+) -> tuple[list[dict], dict[str, Any]]:
     """
     Two-round retrieval: first an unrestricted semantic_search to find which
     DOCUMENTS are relevant, then a second call restricted to those documents'
@@ -142,10 +152,27 @@ async def _semantic_search_expanded(
     document is available (not just whichever single chunk happened to
     embed closest to the question) -- see module docstring for why this
     matters for table chunks specifically. Both rounds use the same retrieval
-    mode (pipeline.retrieval_mode: "dense" or "hybrid") and carry the dataset.
+    mode (pipeline.retrieval_mode: "dense" or "hybrid") and carry the dataset and the scope
+    (pipeline.doc_scope).
+
+    Returns (matches, meta). meta carries the FIRST round's best_dense_score and
+    best_keyword_score (never the fused score: an RRF score is about the same for answerable
+    and unanswerable questions) and abstained. With abstain on and should_abstain true on those
+    two scores, the second round is skipped and matches is empty (Phase E).
     """
-    first = await vector_semantic_search(session, query_text, top_k=top_k, mode=mode, dataset=dataset)
+    first = await vector_semantic_search(session, query_text, top_k=top_k, mode=mode, dataset=dataset, scope=scope)
     matches = first.get("matches", [])
+    meta: dict[str, Any] = {
+        "best_dense_score": first.get("best_dense_score"),
+        "best_keyword_score": first.get("best_keyword_score"),
+        "abstained": False,
+    }
+    if abstain and should_abstain(
+        meta["best_dense_score"], meta["best_keyword_score"],
+        cfg.retrieval.abstain_min_dense, cfg.retrieval.abstain_min_keyword,
+    ):
+        meta["abstained"] = True
+        return [], meta
 
     # Document ranking order = order of first appearance in the score-sorted
     # first call (semantic_search already returns matches best-first).
@@ -156,11 +183,11 @@ async def _semantic_search_expanded(
             seen_docs.add(m["document_id"])
             doc_order.append(m["document_id"])
     if not doc_order:
-        return []
+        return [], meta
 
     expanded = await vector_semantic_search(
         session, query_text, top_k=cfg.retrieval.semantic_top_k_max, document_ids=doc_order,
-        mode=mode, dataset=dataset,
+        mode=mode, dataset=dataset, scope=scope,
     )
     by_chunk_id = {m["chunk_id"]: m for m in expanded.get("matches", [])}
     for m in matches:
@@ -184,7 +211,7 @@ async def _semantic_search_expanded(
     ordered: list[dict] = []
     for doc_id in doc_order:
         ordered.extend(sorted(by_doc.get(doc_id, []), key=lambda c: c["chunk_id"]))
-    return ordered
+    return ordered, meta
 
 
 async def _targeted_doc_search(
@@ -349,9 +376,12 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
     flags_snapshot: dict[str, Any] = state_dict.get("flags_snapshot", {})
 
     # RAG v2 Phase D: "dense" (shipped) or "hybrid" (BM25 fused with dense), and the
-    # dataset the question is about, forwarded to vector.semantic_search.
+    # dataset the question is about, forwarded to vector.semantic_search. Phase E: the
+    # scope ("all" | "dataset") and whether to abstain when nothing relevant was found.
     retrieval_mode: str = flags_snapshot.get("pipeline.retrieval_mode", "dense")
     dataset: str | None = state_dict.get("target_schema")
+    doc_scope: str = flags_snapshot.get("pipeline.doc_scope", "all")
+    abstain_on: bool = flags_snapshot.get("pipeline.doc_abstain", "off") == "on"
 
     start_ms = int(time.monotonic() * 1000)
     tokens_in_total = tokens_out_total = llm_calls_total = trajectory_steps = 0
@@ -363,16 +393,17 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
                           workspace_id=state_dict.get("workspace_id"),
                           dataset=state_dict.get("target_schema")) as session:
         if route == "docs":
-            matches = await _semantic_search_expanded(
+            matches, meta = await _semantic_search_expanded(
                 session, query_text, cfg.retrieval.semantic_top_k, retrieval_mode, dataset,
+                doc_scope, abstain_on,
             )
-            trajectory_steps += 2  # the expanded call is a second round-trip
+            trajectory_steps += 1 if meta["abstained"] else 2  # the expanded call is a second round-trip
             elapsed_ms = int(time.monotonic() * 1000) - start_ms
             logger.info(
-                "UKE docs route: query_id=%s matches=%d elapsed_ms=%d",
-                query_id, len(matches), elapsed_ms,
+                "UKE docs route: query_id=%s matches=%d abstained=%s elapsed_ms=%d",
+                query_id, len(matches), meta["abstained"], elapsed_ms,
             )
-            return {
+            update: dict[str, Any] = {
                 "subtasks": [query_text],
                 "retrievals": _to_retrievals(matches),
                 "metrics": {
@@ -380,6 +411,9 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
                     "trajectory_steps": trajectory_steps, "latency_ms": elapsed_ms,
                 },
             }
+            if meta["abstained"]:
+                update["doc_abstained"] = True
+            return update
 
         # route == "hybrid" -- decomposition gated to this route only (D7,
         # Callout 3). Never reached from docs or sql: this node isn't even
@@ -407,10 +441,13 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
             matches = doc_rows
             trajectory_steps += 1
         else:
-            matches = await _semantic_search_expanded(
+            matches, meta = await _semantic_search_expanded(
                 session, doc_subtask, cfg.retrieval.semantic_top_k, retrieval_mode, dataset,
+                doc_scope, abstain_on,
             )
-            trajectory_steps += 2
+            # Nothing relevant: the doc retrievals are dropped and the answer is built from the SQL
+            # result alone, with no fixed message (the SQL half may well be the whole answer).
+            trajectory_steps += 1 if meta["abstained"] else 2
 
         elapsed_ms = int(time.monotonic() * 1000) - start_ms
         logger.info(

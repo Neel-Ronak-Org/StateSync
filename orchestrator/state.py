@@ -101,6 +101,7 @@ _LAST_WRITE_WINS_FIELDS: frozenset[str] = frozenset({
     "allow_fast_path",
     "verified_example",
     "compiled_template",
+    "doc_abstained",
 })
 
 # Fields whose reducer is "append" (list concatenation)
@@ -213,6 +214,7 @@ class StateSyncState(BaseModel):
     allow_fast_path:  bool = True
     verified_example: bool = False   # the SQL is an approved example, run as-is
     compiled_template: bool = False  # the SQL is an approved example's template filled in code (Phase 3c)
+    doc_abstained: bool = False      # the docs route found nothing relevant; the synthesizer answers "not found" with no model call (RAG v2 Phase E)
 
     # --- output (Part E2) ---
     answer_text: str | None = None

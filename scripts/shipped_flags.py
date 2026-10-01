@@ -93,6 +93,10 @@ SHIPPED_DEFAULTS: dict[tuple[str, str], str] = {
     ("pipeline", "number_grounding"): "on",
     # RAG v2 Phase D: "dense" is today's cosine-only document search; "hybrid" fuses it with BM25.
     ("pipeline", "retrieval_mode"): "dense",
+    # RAG v2 Phase E: "all" is today's search over every sample document; "dataset" keeps only
+    # the question's dataset. "off" never abstains; "on" answers "not found" without a model call.
+    ("pipeline", "doc_scope"): "all",
+    ("pipeline", "doc_abstain"): "off",
     # RAG v2 (docs/specs/rag_v2.md): how an upload is cut into chunks. "paragraph" is
     # today's flat-page chunker; "layout" cuts by heading and keeps tables whole.
     ("library", "chunker"): "paragraph",
