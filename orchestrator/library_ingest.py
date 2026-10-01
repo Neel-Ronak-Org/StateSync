@@ -64,7 +64,7 @@ logger = logging.getLogger(__name__)
 _PARAGRAPH_SEP = "\n\n"
 _SENTENCE_ENDS = (". ", "? ", "! ")
 _CRUMB_SEP = " › "
-_LAYOUT_CHUNKER = "layout"
+LAYOUT_CHUNKER = "layout"
 _LIST_MARKER = re.compile(r"^(?:•|[-*]\s|\d+[.)]\s)")
 _ELLIPSIS = "…"
 _DEFAULT_TITLE = "Untitled document"
@@ -344,6 +344,24 @@ def title_from_filename(name: str) -> str:
 
 # ── The background job ───────────────────────────────────────────────────────
 
+_RETRYABLE = "unavailable"  # the MCP's code for "the embedding service failed; nothing was stored"
+
+
+async def _add_chunks(call: Call, document_id: str, chunks: list[dict]) -> dict[str, Any]:
+    """One add_chunks batch, sent again up to [library].embed_retries times while the MCP answers
+    "unavailable" (a slow or busy Ollama). Safe to resend: on that answer nothing was stored.
+    Any other answer, success or refusal, is returned at once."""
+    result = await call("add_chunks", document_id=document_id, chunks=chunks)
+    for attempt in range(1, int(cfg.library.embed_retries) + 1):
+        if result.get("ok") or result.get("error") != _RETRYABLE:
+            break
+        logger.warning("library: %s embedding unavailable; retry %d of %d", document_id, attempt,
+                       cfg.library.embed_retries)
+        await asyncio.sleep(float(cfg.library.embed_retry_backoff_s) * attempt)
+        result = await call("add_chunks", document_id=document_id, chunks=chunks)
+    return result
+
+
 async def _finish_failed(call: Call, document_id: str, message: str) -> None:
     try:
         await call("finish_document", document_id=document_id, status="failed", error=message)
@@ -353,7 +371,7 @@ async def _finish_failed(call: Call, document_id: str, message: str) -> None:
 
 def make_chunks(pages: list[dict], blocks: list[dict] | None, title: str | None) -> list[dict]:
     """The document's chunks by the configured chunker; flat pages whenever layout blocks are not usable."""
-    if cfg.library.chunker == _LAYOUT_CHUNKER and blocks:
+    if cfg.library.chunker == LAYOUT_CHUNKER and blocks:
         chunks = chunk_blocks(blocks, title or _DEFAULT_TITLE, cfg)
         if chunks:
             return chunks
@@ -370,7 +388,7 @@ async def ingest(call: Call, document_id: str, pages: list[dict], blocks: list[d
         chunks = make_chunks(pages, blocks, title)
         batch = int(cfg.library.embed_batch)
         for start in range(0, len(chunks), batch):
-            result = await call("add_chunks", document_id=document_id, chunks=chunks[start:start + batch])
+            result = await _add_chunks(call, document_id, chunks[start:start + batch])
             if not result.get("ok"):
                 logger.warning("library: %s add_chunks refused: %s", document_id, result.get("message"))
                 await _finish_failed(call, document_id, str(result.get("message") or _FAILED_MESSAGE))

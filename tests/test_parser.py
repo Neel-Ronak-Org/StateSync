@@ -277,3 +277,82 @@ def test_plain_text_is_blank_line_paragraphs_only():
 def test_a_markdown_table_needs_its_separator_row():
     blocks = server.blocks_from_markdown("a | b\nc | d")
     assert [b["kind"] for b in blocks] == ["paragraph"]
+
+
+# ── Real-filing fixes (2026-10-02; docs/eval/external_datasets.md) ───────────
+
+def _encrypted(data: bytes, user_password: str) -> bytes:
+    import io
+
+    from pypdf import PdfReader, PdfWriter
+    writer = PdfWriter(clone_from=PdfReader(io.BytesIO(data)))
+    writer.encrypt(user_password=user_password, owner_password="owner-secret", algorithm="RC4-128")
+    out = io.BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+
+def test_a_pdf_encrypted_only_for_permissions_is_read_but_a_password_pdf_is_refused():
+    """WHY: SEC filings (FinanceBench: Boeing, Corning, Amazon, ...) are encrypted with an empty user
+    password just to set permission flags; every PDF reader opens them, so refusing them as
+    "password-protected" rejected real documents. A PDF that needs a password is still refused."""
+    pytest.importorskip("pypdf")
+    pytest.importorskip("reportlab")
+    plain = _layout_pdf()
+    pages = server.parse_pdf(_encrypted(plain, user_password=""))
+    assert "Seller Handbook" in pages[0]["text"]
+    with pytest.raises(server.ParseError) as err:
+        server.parse_pdf(_encrypted(plain, user_password="open-sesame"))
+    assert err.value.code == "encrypted"
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="the limited child needs RLIMIT_AS (Linux)")
+def test_the_layout_pass_runs_only_when_asked_for():
+    """WHY: run for every PDF, the layout pass made long filings outgrow the child's memory limit
+    and be refused even with the paragraph chunker, which never reads blocks."""
+    pytest.importorskip("pdfplumber")
+    pytest.importorskip("reportlab")
+    data = _layout_pdf()
+    text_only = server.parse_pdf_isolated(data)
+    assert text_only["ok"] is True and text_only["blocks"] == [] and text_only["pages"][0]["page"] == 1
+    laid_out = server.parse_pdf_isolated(data, layout=True)
+    assert laid_out["ok"] is True and laid_out["pages"] == text_only["pages"]
+    assert any(b["kind"] == "table" for b in laid_out["blocks"])
+
+
+def test_a_layout_child_that_dies_falls_back_to_flat_text_never_a_refusal(monkeypatch):
+    """WHY: the layout pass is an improvement, never a reason to refuse a file the text pass read."""
+    pages = [{"page": 1, "text": "First paragraph.\n\nSecond paragraph."}]
+    outcomes = iter([{"ok": True, "pages": pages}, {"ok": False, "error": "unreadable", "message": "died"}])
+    monkeypatch.setattr(server, "_run_child", lambda target, args, deadline: next(outcomes))
+    assert server.parse_pdf_isolated(b"%PDF", layout=True) == {
+        "ok": True, "pages": pages,
+        "blocks": [{"page": 1, "kind": "paragraph", "text": "First paragraph."},
+                   {"page": 1, "kind": "paragraph", "text": "Second paragraph."}]}
+
+
+def test_a_refused_text_pass_is_still_a_refusal_and_skips_the_layout_pass(monkeypatch):
+    """WHY: acceptance is decided by the text pass alone, as before blocks existed."""
+    calls = []
+
+    def fake_run(target, args, deadline):
+        calls.append(target.__name__)
+        return {"ok": False, "error": "encrypted", "message": "The PDF is password-protected."}
+
+    monkeypatch.setattr(server, "_run_child", fake_run)
+    assert server.parse_pdf_isolated(b"%PDF", layout=True)["error"] == "encrypted"
+    assert calls == ["_child"]
+
+
+def test_the_handler_asks_for_layout_only_with_the_header(running_server, monkeypatch):
+    """WHY: the orchestrator sends X-Layout: 1 only when [library].chunker is "layout"."""
+    seen = []
+
+    def fake_parse(data, layout=False):
+        seen.append(layout)
+        return {"ok": True, "pages": [{"page": 1, "text": "x"}], "blocks": []}
+
+    monkeypatch.setattr(server, "parse_pdf_isolated", fake_parse)
+    _post(running_server, b"%PDF", {"Content-Type": "application/pdf", "Content-Length": "4"})
+    _post(running_server, b"%PDF", {"Content-Type": "application/pdf", "Content-Length": "4", "X-Layout": "1"})
+    assert seen == [False, True]

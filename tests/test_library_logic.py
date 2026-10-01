@@ -115,3 +115,31 @@ def test_workspace_folder_ids_must_be_a_list_of_strings():
     _refused(_manage("set_workspace_folders", workspace_id="w1", folder_ids=None))
     too_many = [f"fd_{i}" for i in range(int(cfg.library.max_folders) + 1)]
     _refused(_manage("set_workspace_folders", workspace_id="w1", folder_ids=too_many))
+
+
+def test_an_embedding_failure_is_unavailable_and_stores_nothing(monkeypatch):
+    """WHY: the orchestrator resends a batch only on "unavailable" (library_ingest._add_chunks),
+    which must therefore mean "nothing was stored". The embedding runs before any insert, so a
+    failure there opens no write connection at all."""
+    connections: list[str] = []
+
+    class _Conn:
+        async def __aenter__(self):
+            connections.append("open")
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+    async def processing(*args):
+        return "processing"
+
+    async def broken_embed(*args, **kwargs):
+        raise TimeoutError("ollama is slow")
+
+    monkeypatch.setattr(lt, "get_history_connection", lambda: _Conn())
+    monkeypatch.setattr(lt, "_processing_status", processing)
+    monkeypatch.setattr(lt, "embed_texts", broken_embed)
+    result = _manage("add_chunks", document_id="up_1", chunks=[{"ordinal": 0, "page": 1, "text": "hello"}])
+    _refused(result, code="unavailable")
+    assert connections == ["open"], "only the status check opened a connection; nothing was written"

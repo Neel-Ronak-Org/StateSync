@@ -73,7 +73,7 @@ class MCPSession:
     async def __aexit__(self, *_: Any) -> None:
         await self._client.aclose()
 
-    async def call(self, method: str, params: dict[str, Any] | None = None) -> Any:
+    async def call(self, method: str, params: dict[str, Any] | None = None, timeout: float | None = None) -> Any:
         """
         Send a JSON-RPC 2.0 request to the MCP service.
 
@@ -99,7 +99,12 @@ class MCPSession:
             method, self.session_id, self.tenant_id,
         )
 
-        response = await self._client.post("/rpc", json=payload)
+        if timeout is None:
+            response = await self._client.post("/rpc", json=payload)
+        else:
+            response = await self._client.post(
+                "/rpc", json=payload, timeout=httpx.Timeout(timeout, connect=cfg.mcp.connect_timeout_s),
+            )
         response.raise_for_status()
 
         body = response.json()
@@ -432,8 +437,18 @@ async def library_manage(
     action: str,
     **params: Any,
 ) -> dict[str, Any]:
-    """Forward a document-library action to the MCP library.manage tool (Phase 3c)."""
+    """Forward a document-library action to the MCP library.manage tool (Phase 3c).
+
+    add_chunks embeds a whole batch through Ollama before answering, and the MCP waits up to
+    retrieval.embedding_timeout_s for that. The session's default timeout (statement timeout
+    plus overhead, 20 s) is shorter, so a slow batch used to fail here while the MCP was still
+    working. add_chunks therefore waits the embedding timeout plus the network overhead, so
+    the MCP always answers first: with the chunks stored, or with "unavailable" and nothing
+    stored (which library_ingest may retry)."""
+    timeout = (float(cfg.retrieval.embedding_timeout_s) + float(cfg.mcp.network_overhead_s)
+               if action == "add_chunks" else None)
     return await session.call(
         "library.manage",
         {"action": action, "principal_id": principal_id, **{k: v for k, v in params.items() if v is not None}},
+        timeout=timeout,
     )

@@ -367,7 +367,9 @@ async def _add_chunks(tenant_id, principal_id, document_id=None, chunks=None, **
                                     dim=int(cfg.retrieval.embedding_dim))
     except Exception as exc:
         logger.error("library: embedding failed for %s: %s", document_id, exc, exc_info=True)
-        return _fail("invalid", "The embedding service failed.")
+        # "unavailable", not "invalid": nothing was stored, and a slow or busy Ollama is
+        # usually back moments later, so the orchestrator may send the same batch again.
+        return _fail("unavailable", "The embedding service failed.")
     async with get_history_connection() as conn:
         if await _processing_status(conn, tenant_id, principal_id, document_id) != "processing":
             return _fail("invalid", "This document is no longer being processed.")

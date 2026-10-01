@@ -21,6 +21,9 @@ API (HTTP, JSON out):
   GET  /health  -> {"ok": true}
   POST /parse   body = the file's bytes, Content-Type = one of
                 [library].content_types, Content-Length required.
+                Header X-Layout: 1 asks for the PDF layout pass (the orchestrator
+                sends it only when [library].chunker = "layout"); without it a
+                PDF's "blocks" is [] and only its text is read.
                 200 {"ok": true, "pages": [{"page": 1, "text": "..."}, ...],
                      "blocks": [{"page": 1, "kind": "heading", "level": 1, "text": "..."},
                                 {"page": 1, "kind": "paragraph" | "list_item", "text": "..."},
@@ -48,6 +51,20 @@ scanned pages have no text layer (no OCR); a table drawn without ruling lines
 may not be found and then stays narrative text. If block extraction fails for a
 document or page, the pypdf text of that page becomes paragraph blocks, so an
 upload is never refused because of the layout pass alone.
+
+WHY THE LAYOUT PASS IS OPT-IN AND HAS ITS OWN CHILD (2026-10-02). It first ran
+for every PDF, inside the same child as the text pass. On real SEC 10-K filings
+(FinanceBench, docs/eval/external_datasets.md) pdfplumber outgrew the 768 MB
+address-space limit, the child died, and filings that pypdf reads in 5-10 s
+were refused outright -- even with the shipped paragraph chunker, which never
+uses blocks. Now the text pass runs alone, exactly as before blocks existed;
+the layout pass runs only when asked for, in a second child under the same
+limits and the time left of the same parse_timeout_s, and if that child dies
+or runs out of time the blocks fall back to the pages' flat text.
+
+ENCRYPTED PDFs. Many PDFs (SEC filings among them) are encrypted only to set
+permission flags, with an empty user password: every PDF reader opens them
+without asking. Those are read; a PDF that needs a password is still refused.
 
 Only the Python standard library, pypdf and pdfplumber are used.
 """
@@ -78,6 +95,7 @@ _MB = 1024 * 1024
 _PDF = "application/pdf"
 _MARKDOWN = "text/markdown"
 _POLL_S = 0.2
+_DIED_MESSAGE = "The PDF could not be read within the parser's limits."
 
 
 class ParseError(Exception):
@@ -212,6 +230,14 @@ def parse_text_blocks(content_type: str, pages: list[dict[str, Any]]) -> list[di
     return blocks_from_markdown(text) if content_type == _MARKDOWN else blocks_from_text(text)
 
 
+def _opens_without_password(reader: Any) -> bool:
+    """Whether an encrypted PDF opens with the empty user password (permission flags only)."""
+    try:
+        return bool(reader.decrypt(""))  # PasswordType.NOT_DECRYPTED is 0
+    except Exception:  # noqa: BLE001 -- an unsupported or broken encryption is simply "needs a password"
+        return False
+
+
 def parse_pdf(data: bytes) -> list[dict[str, Any]]:
     """Runs INSIDE the limited child process."""
     import io
@@ -221,7 +247,7 @@ def parse_pdf(data: bytes) -> list[dict[str, Any]]:
 
     try:
         reader = PdfReader(io.BytesIO(data), strict=False)
-        if reader.is_encrypted:
+        if reader.is_encrypted and not _opens_without_password(reader):
             raise ParseError("encrypted", "The PDF is password-protected.")
         count = len(reader.pages)
     except ParseError:
@@ -409,7 +435,7 @@ def parse_pdf_blocks(data: bytes, pages: list[dict[str, Any]]) -> list[dict[str,
                 except Exception:  # noqa: BLE001 -- one bad page must not lose the rest
                     logger.warning("page %d layout could not be read; flat text used", number)
                 finally:
-                    page.flush_cache()
+                    page.close()  # frees the page's parsed objects, not only its cache
     except Exception as exc:  # noqa: BLE001 -- the layout pass is an improvement, never a reason to refuse
         logger.warning("layout pass failed (%s); flat text used", type(exc).__name__)
         return _cap_blocks(blocks_from_pages(pages))
@@ -424,7 +450,8 @@ def parse_pdf_blocks(data: bytes, pages: list[dict[str, Any]]) -> list[dict[str,
     return _cap_blocks(blocks)
 
 
-def _child(data: bytes, results: multiprocessing.Queue) -> None:
+def _apply_limits(results: multiprocessing.Queue) -> bool:
+    """Set this child's memory and CPU limits; on failure report it and return False."""
     try:
         memory = LIMITS["parse_memory_mb"] * _MB
         resource.setrlimit(resource.RLIMIT_AS, (memory, memory))
@@ -435,10 +462,25 @@ def _child(data: bytes, results: multiprocessing.Queue) -> None:
         # refuses RLIMIT_AS; the container is Linux, where it works).
         results.put({"ok": False, "error": "limits_unavailable",
                      "message": "The parser could not apply its safety limits, so the file was not read."})
+        return False
+    return True
+
+
+def _layout_child(data: bytes, pages: list[dict[str, Any]], results: multiprocessing.Queue) -> None:
+    """The layout pass, alone in its own limited child (see WHY THE LAYOUT PASS IS OPT-IN)."""
+    if not _apply_limits(results):
         return
     try:
-        pages = parse_pdf(data)
-        results.put({"ok": True, "pages": pages, "blocks": parse_pdf_blocks(data, pages)})
+        results.put({"ok": True, "blocks": parse_pdf_blocks(data, pages)})
+    except BaseException as exc:  # noqa: BLE001 -- MemoryError included; the parent falls back to flat text
+        results.put({"ok": False, "error": type(exc).__name__})
+
+
+def _child(data: bytes, results: multiprocessing.Queue) -> None:
+    if not _apply_limits(results):
+        return
+    try:
+        results.put({"ok": True, "pages": parse_pdf(data)})
     except ParseError as exc:
         results.put({"ok": False, "error": exc.code, "message": exc.message})
     except MemoryError:
@@ -447,13 +489,33 @@ def _child(data: bytes, results: multiprocessing.Queue) -> None:
         results.put({"ok": False, "error": "unreadable", "message": f"The PDF could not be read ({type(exc).__name__})."})
 
 
-def parse_pdf_isolated(data: bytes) -> dict[str, Any]:
-    """Parse in a fresh child process with memory, CPU and wall-clock limits."""
+def parse_pdf_isolated(data: bytes, layout: bool = False) -> dict[str, Any]:
+    """Parse in a fresh child process with memory, CPU and wall-clock limits.
+
+    The text pass decides whether the file is accepted. With layout, a second child
+    then builds the blocks within the time left of the same parse_timeout_s; if it
+    fails in any way the blocks are the pages' flat text, never a refusal."""
+    deadline = time.monotonic() + LIMITS["parse_timeout_s"]
+    outcome = _run_child(_child, (data,), deadline)
+    if not outcome["ok"]:
+        return outcome
+    pages = outcome["pages"]
+    if not layout:
+        return {"ok": True, "pages": pages, "blocks": []}
+    laid_out = _run_child(_layout_child, (data, pages), deadline)
+    if laid_out.get("ok") and isinstance(laid_out.get("blocks"), list):
+        return {"ok": True, "pages": pages, "blocks": laid_out["blocks"]}
+    logger.warning("layout pass failed (%s); flat text used", laid_out.get("error"))
+    return {"ok": True, "pages": pages, "blocks": _cap_blocks(blocks_from_pages(pages))}
+
+
+
+def _run_child(target: Any, args: tuple, deadline: float) -> dict[str, Any]:
+    """Run target(*args, queue) in a fresh spawned child until it reports or the deadline passes."""
     context = multiprocessing.get_context("spawn")
     results: multiprocessing.Queue = context.Queue()
-    child = context.Process(target=_child, args=(data, results), daemon=True)
+    child = context.Process(target=target, args=(*args, results), daemon=True)
     child.start()
-    deadline = time.monotonic() + LIMITS["parse_timeout_s"]
     outcome: dict[str, Any] | None = None
     try:
         # Poll, so a child killed by its own limits (SIGKILL on memory, SIGXCPU
@@ -466,8 +528,7 @@ def parse_pdf_isolated(data: bytes) -> dict[str, Any]:
                     try:
                         outcome = results.get(timeout=_POLL_S)
                     except queue.Empty:
-                        outcome = {"ok": False, "error": "unreadable",
-                                   "message": "The PDF could not be read within the parser's limits."}
+                        outcome = {"ok": False, "error": "unreadable", "message": _DIED_MESSAGE}
         if outcome is None:
             outcome = {"ok": False, "error": "timeout", "message": "Parsing took too long and was stopped."}
     finally:
@@ -522,7 +583,7 @@ class Handler(BaseHTTPRequestHandler):
         data = self.rfile.read(length)
 
         if content_type == _PDF:
-            outcome = parse_pdf_isolated(data)
+            outcome = parse_pdf_isolated(data, layout=self.headers.get("X-Layout") == "1")
         else:
             try:
                 pages = parse_text(data)

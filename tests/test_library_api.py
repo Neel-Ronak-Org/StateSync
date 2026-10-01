@@ -180,6 +180,36 @@ def test_upload_happy_path_is_202_and_starts_ingest(setup):
     assert harness.audit_log[0]["detail"] == "library:start_document folder=fd_1 document=up_1"
 
 
+def test_the_pdf_layout_pass_is_asked_for_only_by_the_layout_chunker(setup, monkeypatch):
+    """WHY: the layout pass is the expensive part of parsing and the paragraph chunker never uses
+    its blocks; run for every PDF it made long SEC filings run out of memory and be refused
+    (docs/eval/external_datasets.md). So the parser is asked for it only in layout mode."""
+    harness, client = setup
+    harness.result = {"ok": True, "document": DOC}
+    real = library_api.cfg
+
+    class _Section:  # the real [library] values, with the chunker overridden (cfg itself is read-only)
+        def __init__(self, chunker: str) -> None:
+            self.chunker = chunker
+
+        def __getattr__(self, name: str):
+            return getattr(real.library, name)
+
+    class _Config:
+        def __init__(self, chunker: str) -> None:
+            self.library = _Section(chunker)
+
+        def __getattr__(self, name: str):
+            return getattr(real, name)
+
+    monkeypatch.setattr(library_api, "cfg", _Config("paragraph"))
+    assert _upload(client).status_code == 202
+    assert "x-layout" not in harness.parser_requests[-1].headers
+    monkeypatch.setattr(library_api, "cfg", _Config("layout"))
+    assert _upload(client).status_code == 202
+    assert harness.parser_requests[-1].headers["x-layout"] == "1"
+
+
 def test_unsupported_type_is_415_before_anything_else(setup):
     harness, client = setup
     response = _upload(client, b"GIF89a", content_type="image/gif")

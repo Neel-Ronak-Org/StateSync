@@ -140,6 +140,63 @@ def test_ingest_failure_result_finishes_failed_without_raising():
     assert fake.calls[-1][1] == {"document_id": "up_1", "status": "failed", "error": "The embedding service failed."}
 
 
+class FlakyEmbedCall(FakeCall):
+    """add_chunks answers "unavailable" (embedding failed, nothing stored) the first `failures` times."""
+
+    def __init__(self, failures: int) -> None:
+        super().__init__()
+        self.failures = failures
+
+    async def __call__(self, action: str, **params):
+        self.calls.append((action, params))
+        if action == "add_chunks" and self.failures > 0:
+            self.failures -= 1
+            return {"ok": False, "error": "unavailable", "message": "The embedding service failed."}
+        return {"ok": True}
+
+
+def _no_sleep(monkeypatch) -> list[float]:
+    delays: list[float] = []
+
+    async def fake_sleep(seconds: float) -> None:
+        delays.append(seconds)
+
+    monkeypatch.setattr(li.asyncio, "sleep", fake_sleep)
+    return delays
+
+
+def test_an_unavailable_embedding_is_retried_and_the_document_still_becomes_ready(monkeypatch):
+    """WHY: on 2026-10-01 a CPU Ollama slowed about 4x for minutes during a long FinanceBench ingest
+    and every document then failed on its first slow batch. "unavailable" means nothing was
+    stored, so the same batch is sent again after a growing pause instead of failing at once."""
+    delays = _no_sleep(monkeypatch)
+    fake = FlakyEmbedCall(failures=int(cfg.library.embed_retries))
+    asyncio.run(li.ingest(fake, "up_1", [{"page": 1, "text": _sentences("p", 3)}]))
+    adds = [c for c in fake.calls if c[0] == "add_chunks"]
+    assert len(adds) == int(cfg.library.embed_retries) + 1
+    assert all(c[1] == adds[0][1] for c in adds), "a retry resends exactly the same batch"
+    assert delays == [float(cfg.library.embed_retry_backoff_s) * n for n in range(1, int(cfg.library.embed_retries) + 1)]
+    assert fake.calls[-1] == ("finish_document", {"document_id": "up_1", "status": "ready"})
+
+
+def test_an_embedding_that_stays_unavailable_fails_the_document_after_the_retries(monkeypatch):
+    """WHY: retries are bounded; an Ollama that stays down must still end in "failed", not hang."""
+    _no_sleep(monkeypatch)
+    fake = FlakyEmbedCall(failures=int(cfg.library.embed_retries) + 1)
+    asyncio.run(li.ingest(fake, "up_1", [{"page": 1, "text": _sentences("p", 3)}]))
+    assert [c[0] for c in fake.calls].count("add_chunks") == int(cfg.library.embed_retries) + 1
+    assert fake.calls[-1][1] == {"document_id": "up_1", "status": "failed", "error": "The embedding service failed."}
+
+
+def test_a_refusal_other_than_unavailable_is_never_retried(monkeypatch):
+    """WHY: only "unavailable" promises that nothing was stored; resending after any other answer
+    could duplicate chunks or repeat a refusal that will not change."""
+    delays = _no_sleep(monkeypatch)
+    fake = FakeCall(fail_on="add_chunks")
+    asyncio.run(li.ingest(fake, "up_1", _many_pages()))
+    assert [c[0] for c in fake.calls] == ["add_chunks", "finish_document"] and delays == []
+
+
 def test_ingest_exception_finishes_failed_without_raising():
     fake = FakeCall(raise_on="add_chunks")
     asyncio.run(li.ingest(fake, "up_1", _many_pages()))
@@ -170,7 +227,7 @@ def test_ingest_tasks_keep_references_until_done():
 
 _LIBRARY_KEYS = ("chunk_chars", "chunk_overlap_chars", "chunk_min_chars", "chunk_max_chars", "chunker",
                  "layout_chunk_chars", "layout_overlap_chars", "table_chunk_max_chars", "table_context_max_chars",
-                 "section_max_chars", "embed_batch")
+                 "section_max_chars", "embed_batch", "embed_retries", "embed_retry_backoff_s")
 
 
 def _config(**overrides) -> SimpleNamespace:
