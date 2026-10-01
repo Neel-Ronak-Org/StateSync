@@ -557,7 +557,7 @@ Order of work (owner, 2026-09-29; cleanup items are **kept for now**, D-v3-13):
 9800de1, shipped flags): **25/30 (83%)** — olist 10/10, logistics SQL 6/8, documents 5/6,
 follow-ups 4/6; routing 30/30; 4,652 input + 356 output tokens and 4.7 model calls per
 question; latency p50 2.6 s, p90 3.5 s; 150,238 tokens for the run. Misses: a percentage
-where the reference returns a fraction (scored strictly, scorer unchanged); a projection
+where the reference divides by a different base (c2g_08: all fulfillments vs delivered ones; an ambiguous question, scorer unchanged; corrected 2026-10-01 from 'fraction'); a projection
 difference; one document retrieval miss; two follow-ups that counted at the wrong grain
 (payment rows instead of orders; reviews duplicated by a join under COUNT(*) — the fan-out
 check covers SUM/AVG only so far).

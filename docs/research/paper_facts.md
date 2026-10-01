@@ -39,7 +39,9 @@
   follow-ups 6): 25/30 correct (83%); olist 10/10, logistics SQL 6/8, docs 5/6, follow-ups 4/6.
 - Routing 30/30. Mean 4.7 model calls and ~5,000 tokens (4,652 in / 356 out) per question.
   Latency p50 2.6 s, p90 3.5 s.
-- The 5 misses: a percentage where the reference returns a fraction (scored strictly); a
+- The 5 misses: an ambiguous denominator in c2g_08 ("what percentage of fulfillments were
+  delivered late": generated SQL divides by all fulfillments, the reference by delivered ones;
+  corrected 2026-10-01 -- an earlier note wrongly said 'fraction vs percentage'); a
   projection difference; one document retrieval miss; two follow-ups that counted at the
   wrong grain (payment rows instead of orders; reviews duplicated by a join under COUNT(*)
   -- the fan-out probe covers SUM/AVG only so far).

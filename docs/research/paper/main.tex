@@ -97,7 +97,7 @@ All & 30 & 25 (83\%) \\
 \end{tabular}
 \end{table}
 
-The five misses were: a percentage where the reference returns a fraction (scored strictly); a projection difference; one document retrieval miss; and two follow-ups that counted at the wrong grain. In the first of these two, payment rows were counted instead of orders. In the second, a join duplicated reviews under \texttt{COUNT(*)}. The fan-out probe covers only SUM and AVG so far, so it would not have flagged the second.
+The five misses were: an ambiguous denominator (``what percentage of fulfillments were delivered late'': the generated SQL divides by all fulfillments, the reference by delivered ones); a projection difference; one document retrieval miss; and two follow-ups that counted at the wrong grain. In the first of these two, payment rows were counted instead of orders. In the second, a join duplicated reviews under \texttt{COUNT(*)}. The fan-out probe covers only SUM and AVG so far, so it would not have flagged the second.
 
 \subsection{Pilot: figure grounding over stored answers}
 We ran figure grounding, with zero model calls, over every stored conversation turn that has executed SQL and an answer: 1,268 turns. Of these, 944 were analysable; 319 had no result columns and 5 had result previews truncated below the row count.
@@ -164,7 +164,7 @@ Any outcome is reportable. A finding that the checks catch few real errors on BI
 \section{Limitations and Threats to Validity}\label{sec:limits}
 \paragraph{Not yet measured.} No result here comes from an external benchmark. We have not measured the precision or recall of any check on known-wrong answers, nor compared any check with model-based confidence. The fan-out probe has not been evaluated, and the metric-reconciliation check named in the protocol is not built.
 \paragraph{In-sample pilot.} The grounding checker was corrected on the data it was then measured on. The pilot also cannot detect wrong answers whose figures are all present in a wrong result, because grounding checks the prose against the result, not the query against the question.
-\paragraph{Small baseline.} The baseline has 30 questions, one run, one SQL model (Groq gpt-oss-120b), and includes a synthetic corpus. Categories hold 6 to 10 questions each, too few for statistical claims. Strict scoring counted a percentage as wrong where the reference returns a fraction.
+\paragraph{Small baseline.} The baseline has 30 questions, one run, one SQL model (Groq gpt-oss-120b), and includes a synthetic corpus. Categories hold 6 to 10 questions each, too few for statistical claims. One miss is a defensible reading of an ambiguous question (which fulfillments form the denominator), scored wrong against a single reference.
 \paragraph{Design bias.} The checks were designed with the StateSync data in view, so BIRD is the out-of-sample test. The fan-out set is built by the authors and will be reported separately and published. Execution-match labels have their own errors, which manual review of disagreements only partly limits. The vendor sources cited are not independent evidence.
 \paragraph{Known coverage gap.} Fan-out under \texttt{COUNT(*)} is not covered yet, as one baseline miss shows.
 
