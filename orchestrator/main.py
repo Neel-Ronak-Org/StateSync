@@ -9,6 +9,7 @@ Endpoints:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import time
@@ -22,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from auth import (AuthError, Principal, RateLimited, RateLimiter, authenticate, init_auth,
+from auth import (AuthError, Principal, RateLimited, RateLimiter, all_principals, authenticate, init_auth,
                   rate_limiter, read_rate_limiter)
 from config_loader import cfg, flags, snapshot_flags
 from graph import graph
@@ -45,6 +46,7 @@ from builder_api import register_build_routes
 from dashboards_api import register_dashboard_routes
 from library_api import call_library, is_connection_dataset, register_library_routes
 from workspaces_api import call_workspaces, register_workspace_routes
+from example_timer import run_forever as run_example_timer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -69,7 +71,18 @@ async def lifespan(app: FastAPI):
     # Eagerly load and validate API principals — fails closed at startup if the
     # secret file is missing, empty, or malformed, preventing unauthenticated deploys.
     init_auth()
+    timer_task = None
+    if str(cfg.example_checks.timer) == "on":
+        # The self-test timer (example_timer.py): re-checks approved examples on a schedule.
+        timer_task = asyncio.create_task(run_example_timer(
+            all_principals, call_workspaces,
+            interval_s=float(cfg.example_checks.timer_interval_s),
+            initial_delay_s=float(cfg.example_checks.timer_initial_delay_s),
+            stale_after_s=float(cfg.example_checks.stale_after_s),
+            max_workspaces=int(cfg.example_checks.timer_max_workspaces)))
     yield
+    if timer_task is not None:
+        timer_task.cancel()
     logger.info("StateSync Orchestrator shutting down.")
 
 

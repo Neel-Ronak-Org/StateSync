@@ -155,6 +155,12 @@ text_slot_max_chars       = 80
 # re-run with no model; a changed result shape or an error flags them for review.
 max_per_check             = 50      # examples re-run per check
 stale_after_s             = 86400   # opening a workspace re-checks when the last check is older
+# The self-test timer (orchestrator/example_timer.py): the same rule, applied on a schedule to
+# every workspace, so one nobody opens is still noticed when its tables change.
+timer                     = "on"    # "on" | "off"
+timer_interval_s          = 3600    # how often the sweep looks for workspaces due a check
+timer_initial_delay_s     = 300     # first sweep after startup (lets the stack settle)
+timer_max_workspaces      = 20      # workspaces checked per sweep, least recently checked first
 
 [spatial]
 provider                  = "digipin"

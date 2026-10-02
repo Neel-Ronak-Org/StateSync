@@ -164,6 +164,12 @@ def init_auth() -> None:
     _PRINCIPALS = load_principals()
 
 
+def all_principals() -> list[Principal]:
+    """Every configured principal (for background work done on each one's behalf, such as the
+    self-test timer); empty before init_auth()."""
+    return list((_PRINCIPALS or {}).values())
+
+
 def authenticate(authorization_header: str | None) -> Principal:
     """
     Authenticate a request using its Authorization header.
