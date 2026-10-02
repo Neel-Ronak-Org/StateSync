@@ -97,6 +97,9 @@ SHIPPED_DEFAULTS: dict[tuple[str, str], str] = {
     # the question's dataset. "off" never abstains; "on" answers "not found" without a model call.
     ("pipeline", "doc_scope"): "all",
     ("pipeline", "doc_abstain"): "off",
+    # RAG v3 (docs/specs/rag_v3.md): cross-encoder re-ranking and search-query rewriting, both off.
+    ("pipeline", "rerank"): "off",
+    ("pipeline", "query_rewrite"): "off",
     # RAG v2 (docs/specs/rag_v2.md): how an upload is cut into chunks. "paragraph" is
     # today's flat-page chunker; "layout" cuts by heading and keeps tables whole.
     ("library", "chunker"): "paragraph",

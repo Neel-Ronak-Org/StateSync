@@ -48,8 +48,8 @@ def _run(monkeypatch, flags: dict, target_schema: str | None = "olist") -> list[
     calls: list[dict] = []
 
     async def fake_search(session, query_text, top_k=None, document_ids=None, mode=None, dataset=None,
-                          scope=None):
-        calls.append({"top_k": top_k, "document_ids": document_ids, "mode": mode, "dataset": dataset,
+                          scope=None, rerank=None):
+        calls.append({"top_k": top_k, "document_ids": document_ids, "mode": mode, "dataset": dataset, "rerank": rerank,
                       "scope": scope})
         return {"matches": [{"chunk_id": "c1", "document_id": "doc_a", "content_md": "x", "score": 0.5}]}
 

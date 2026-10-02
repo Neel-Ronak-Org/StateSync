@@ -66,10 +66,12 @@ from __future__ import annotations
 
 import logging
 import math
+import os
 import re
 import time
 from typing import Any
 
+import httpx
 import psycopg
 
 from config_loader import cfg
@@ -220,6 +222,8 @@ def _check_hybrid_gate(sql: str) -> tuple[str | None, str | None]:
 
 # ── A4.6 vector.semantic_search ─────────────────────────────────────────────
 _MODES = ("dense", "hybrid")
+_RERANKERS = ("off", "minilm", "bge")
+_RERANKER_URL = os.environ.get("RERANKER_URL", "http://reranker:8096")
 _DENSE_LISTS = ("separate", "merged")
 _SCOPES = ("all", "dataset")
 
@@ -256,6 +260,7 @@ async def semantic_search(
     mode: str | None = None,
     dataset: str | None = None,
     scope: str | None = None,
+    rerank: str | None = None,
 ) -> dict[str, Any]:
     top_k_max = cfg.retrieval.semantic_top_k_max
     if top_k is not None and not (1 <= top_k <= top_k_max):
@@ -263,10 +268,51 @@ async def semantic_search(
     effective_mode = mode if mode is not None else cfg.retrieval.mode
     if effective_mode not in _MODES:
         raise ValueError(f"mode must be one of {list(_MODES)}, got {effective_mode!r}")
+    effective_rerank = rerank if rerank is not None else "off"
+    if effective_rerank not in _RERANKERS:
+        raise ValueError(f"rerank must be one of {list(_RERANKERS)}, got {effective_rerank!r}")
     prefixes = _scope_prefixes(scope, dataset)
-
-    tenant_id = get_tenant_id()
     effective_top_k = top_k if top_k is not None else cfg.retrieval.semantic_top_k
+    if effective_rerank == "off":
+        return await _retrieve(query_text, effective_top_k, document_ids, effective_mode, prefixes, scope)
+    # Re-ranking (docs/specs/rag_v3.md): fetch rerank_candidates by the configured mode, let the
+    # cross-encoder re-score them, return the top_k in its order.
+    fetch_k = max(effective_top_k, int(cfg.retrieval.rerank_candidates))
+    result = await _retrieve(query_text, fetch_k, document_ids, effective_mode, prefixes, scope)
+    ranked, info = await _rerank(effective_rerank, query_text, result["matches"])
+    return {**result, "matches": ranked[:effective_top_k], "rerank": info}
+
+
+async def _rerank(model: str, query_text: str, matches: list[dict]) -> tuple[list[dict], dict[str, Any]]:
+    """(matches in re-ranker order with rerank_score, info). Any failure keeps the original order:
+    a re-ranker problem degrades ranking quality, it never fails a search."""
+    if not matches:
+        return matches, {"model": model, "applied": False, "reason": "no candidates"}
+    started = time.monotonic()
+    try:
+        async with httpx.AsyncClient(timeout=float(cfg.retrieval.rerank_timeout_s)) as client:
+            reply = await client.post(_RERANKER_URL.rstrip("/") + "/rerank", json={
+                "model": model, "query": query_text, "passages": [m["content_md"] or "" for m in matches]})
+        body = reply.json()
+        scores = body.get("scores") if reply.status_code == 200 and body.get("ok") else None
+        if not isinstance(scores, list) or len(scores) != len(matches):
+            raise ValueError(f"reranker answered {reply.status_code}: {body.get('error') or 'bad scores'}")
+    except Exception as exc:  # noqa: BLE001 -- fall back, logged
+        logger.warning("vector.semantic_search: rerank with %s failed (%s); original order kept", model, exc)
+        return matches, {"model": model, "applied": False, "reason": type(exc).__name__,
+                         "ms": round((time.monotonic() - started) * 1000)}
+    ranked = sorted(({**m, "rerank_score": float(sc)} for m, sc in zip(matches, scores, strict=True)),
+                    key=lambda m: m["rerank_score"], reverse=True)
+    return ranked, {"model": model, "applied": True, "candidates": len(matches),
+                    "ms": round((time.monotonic() - started) * 1000)}
+
+
+async def _retrieve(
+    query_text: str, effective_top_k: int, document_ids: list[str] | None, effective_mode: str,
+    prefixes: list[str] | None, scope: str | None,
+) -> dict[str, Any]:
+    """The first-stage search (dense or hybrid), exactly as before re-ranking existed."""
+    tenant_id = get_tenant_id()
 
     vector = await embed_text(
         query_text,

@@ -236,6 +236,8 @@ number_grounding                = "on"       # "off" | "on": trace every figure 
 retrieval_mode                  = "dense"    # "dense" | "hybrid": keyword (BM25) leg fused with the dense search by reciprocal rank fusion (docs/specs/rag_v2.md Phase D)
 doc_scope                       = "all"      # "all" | "dataset": sample-corpus documents limited to the question's dataset (prefixes: retrieval.dataset_document_prefixes in statesync.toml); uploads unaffected (Phase E)
 doc_abstain                     = "off"      # "off" | "on": the docs route answers "not found" without a model call when nothing relevant was retrieved (Phase E; thresholds: retrieval.abstain_min_* in statesync.toml)
+rerank                          = "off"      # "off" | "minilm" | "bge": re-score the top candidates with a cross-encoder (reranker service; docs/specs/rag_v3.md)
+query_rewrite                   = "off"      # "off" | "llm": the docs route searches with a short rewrite of the question from the normaliser model (docs/specs/rag_v3.md)
 
 [tenancy]
 enforced                        = false  # D6; threading is mandatory even when false

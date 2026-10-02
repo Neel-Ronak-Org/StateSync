@@ -120,7 +120,7 @@ class _Search:
         self.calls: list[dict] = []
 
     async def __call__(self, session, query_text, top_k=None, document_ids=None, mode=None, dataset=None,
-                       scope=None):
+                       scope=None, rerank=None):
         self.calls.append({"document_ids": document_ids, "mode": mode, "dataset": dataset, "scope": scope})
         if document_ids is not None:
             return {"matches": [{"chunk_id": "c2", "document_id": "doc_a", "content_md": "second", "score": 0.4}]}

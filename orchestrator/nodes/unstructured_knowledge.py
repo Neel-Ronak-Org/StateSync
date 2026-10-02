@@ -40,6 +40,7 @@ from typing import Any
 from classifiers.error_classifier import classify_error
 from config_loader import cfg
 from llm.provider import get_agent_llm
+from query_rewrite import rewrite_for_search
 from mcp_client import (
     MCPSession, data_run_select, schema_list_tables,
     vector_hybrid_select, vector_semantic_search,
@@ -143,7 +144,7 @@ def should_abstain(
 
 async def _semantic_search_expanded(
     session: MCPSession, query_text: str, top_k: int, mode: str | None = None, dataset: str | None = None,
-    scope: str | None = None, abstain: bool = False,
+    scope: str | None = None, abstain: bool = False, rerank: str | None = None,
 ) -> tuple[list[dict], dict[str, Any]]:
     """
     Two-round retrieval: first an unrestricted semantic_search to find which
@@ -160,7 +161,8 @@ async def _semantic_search_expanded(
     and unanswerable questions) and abstained. With abstain on and should_abstain true on those
     two scores, the second round is skipped and matches is empty (Phase E).
     """
-    first = await vector_semantic_search(session, query_text, top_k=top_k, mode=mode, dataset=dataset, scope=scope)
+    first = await vector_semantic_search(session, query_text, top_k=top_k, mode=mode, dataset=dataset, scope=scope,
+                                         rerank=rerank)
     matches = first.get("matches", [])
     meta: dict[str, Any] = {
         "best_dense_score": first.get("best_dense_score"),
@@ -187,7 +189,7 @@ async def _semantic_search_expanded(
 
     expanded = await vector_semantic_search(
         session, query_text, top_k=cfg.retrieval.semantic_top_k_max, document_ids=doc_order,
-        mode=mode, dataset=dataset, scope=scope,
+        mode=mode, dataset=dataset, scope=scope, rerank=rerank,
     )
     by_chunk_id = {m["chunk_id"]: m for m in expanded.get("matches", [])}
     for m in matches:
@@ -382,6 +384,9 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
     dataset: str | None = state_dict.get("target_schema")
     doc_scope: str = flags_snapshot.get("pipeline.doc_scope", "all")
     abstain_on: bool = flags_snapshot.get("pipeline.doc_abstain", "off") == "on"
+    # RAG v3 (docs/specs/rag_v3.md): cross-encoder re-ranking, and searching with a rewrite.
+    rerank: str = flags_snapshot.get("pipeline.rerank", "off")
+    rewrite_on: bool = flags_snapshot.get("pipeline.query_rewrite", "off") == "llm"
 
     start_ms = int(time.monotonic() * 1000)
     tokens_in_total = tokens_out_total = llm_calls_total = trajectory_steps = 0
@@ -393,9 +398,15 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
                           workspace_id=state_dict.get("workspace_id"),
                           dataset=state_dict.get("target_schema")) as session:
         if route == "docs":
+            search_text = query_text
+            if rewrite_on:
+                search_text, usage = await rewrite_for_search(query_text)
+                tokens_in_total += usage["tokens_in"]
+                tokens_out_total += usage["tokens_out"]
+                llm_calls_total += usage["llm_calls"]
             matches, meta = await _semantic_search_expanded(
-                session, query_text, cfg.retrieval.semantic_top_k, retrieval_mode, dataset,
-                doc_scope, abstain_on,
+                session, search_text, cfg.retrieval.semantic_top_k, retrieval_mode, dataset,
+                doc_scope, abstain_on, rerank,
             )
             trajectory_steps += 1 if meta["abstained"] else 2  # the expanded call is a second round-trip
             elapsed_ms = int(time.monotonic() * 1000) - start_ms
@@ -443,7 +454,7 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
         else:
             matches, meta = await _semantic_search_expanded(
                 session, doc_subtask, cfg.retrieval.semantic_top_k, retrieval_mode, dataset,
-                doc_scope, abstain_on,
+                doc_scope, abstain_on, rerank,
             )
             # Nothing relevant: the doc retrievals are dropped and the answer is built from the SQL
             # result alone, with no fixed message (the SQL half may well be the whole answer).

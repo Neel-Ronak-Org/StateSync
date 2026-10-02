@@ -192,9 +192,11 @@ async def vector_semantic_search(
     mode: str | None = None,
     dataset: str | None = None,
     scope: str | None = None,
+    rerank: str | None = None,
 ) -> dict[str, Any]:
     """A4.6 vector.semantic_search. mode ("dense" | "hybrid"), dataset and scope ("dataset") are sent
-    only when given; scope "all" is the server's default and is not sent, so the shipped request is unchanged."""
+    only when given; scope "all" and rerank "off" are the server's defaults and are not sent, so the
+    shipped request is unchanged."""
     params: dict[str, Any] = {"query_text": query_text}
     if top_k is not None:
         params["top_k"] = top_k
@@ -206,6 +208,8 @@ async def vector_semantic_search(
         params["dataset"] = dataset
     if scope is not None and scope != "all":
         params["scope"] = scope
+    if rerank is not None and rerank != "off":
+        params["rerank"] = rerank
     return await session.call("vector.semantic_search", params)
 
 

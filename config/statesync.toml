@@ -227,7 +227,7 @@ sslmodes                    = ["disable", "prefer", "require", "verify-ca", "ver
 # migration 024). Uploads are parsed by the isolated `parser` service, chunked
 # by the orchestrator and embedded by the MCP.
 max_upload_bytes            = 20971520   # 20 MiB, per file, checked by the orchestrator AND the parser
-max_pages                   = 300        # a PDF with more pages is refused
+max_pages                   = 600        # a PDF with more pages is refused. 600 (was 300; owner, 2026-10-02): 6 of FinanceBench's 84 real filings run 304-549 pages; each reads in under 8 s and stays under max_chars
 max_chars                   = 2000000    # extracted text per file
 parse_timeout_s             = 60         # the parser's child process is killed after this
 parse_memory_mb             = 768        # address-space limit of that child process
@@ -384,6 +384,13 @@ bm25_max_df_ratio         = 0.5
 # its measured effect (the final_* runs in docs/eval/retrieval_v2_report.md) is on the set that
 # motivated it. best_dense_score is the same in both. Restart mcp after changing it.
 hybrid_dense_lists        = "separate"  # "separate" | "merged"
+# Re-ranking (docs/specs/rag_v3.md; pipeline.rerank, shipped "off"). With a re-ranker on, the search
+# fetches this many candidates, the reranker service re-scores them with a cross-encoder, and the top_k
+# come back in its order. Fixed before measuring; not tuned.
+rerank_candidates         = 30
+rerank_timeout_s          = 20       # mcp -> reranker HTTP timeout; on timeout or error the un-reranked order is used
+query_rewrite_max_tokens  = 200      # pipeline.query_rewrite = "llm": room for the normaliser model's one-line search query (reasoning models spend some first)
+query_rewrite_max_chars   = 300      # a longer reply is not a search query: the original question is searched instead
 # Abstention (docs/specs/rag_v2.md Phase E; pipeline.doc_abstain = "on"). The docs route gives up,
 # without a model call, when the FIRST retrieval round's best dense cosine is below abstain_min_dense
 # AND its best BM25 score is below abstain_min_keyword (a missing score counts as below). The fused
@@ -566,3 +573,12 @@ groq_reasoning_headroom_tokens  = 1024
 # Set to the LOWEST tier in use (Flash = 5). Raise to 15 when every configured
 # model is Flash-Lite. A wrong value here costs throughput, never correctness.
 gemini_rpm                = 5
+
+# The passage re-ranker service (reranker/server.py, docs/specs/rag_v3.md).
+[reranker]
+threads                   = 4        # torch CPU threads
+batch                     = 8        # passages per forward pass
+max_tokens                = 512      # query + passage, truncated on the passage side (both models are trained at 512)
+max_passages              = 64       # per request
+max_query_chars           = 4000
+max_request_bytes         = 2000000

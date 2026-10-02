@@ -14,6 +14,10 @@ networks:
   parser_net:
     driver: bridge
     internal: true
+  # The re-ranker's network (docs/specs/rag_v3.md): internal, shared only with the MCP.
+  reranker_net:
+    driver: bridge
+    internal: true
 
 # ─── Volumes ─────────────────────────────────────────────────────────────────
 volumes:
@@ -127,7 +131,9 @@ services:
     networks:
       - db_net
       - app_net
+      - reranker_net
     environment:
+      - RERANKER_URL=http://reranker:8096
       - MCP_HOST=0.0.0.0
       - MCP_PORT=8080
       - POSTGRES_DSN=postgresql://statesync_reader:READER_PLACEHOLDER@postgres:5432/statesync
@@ -226,6 +232,31 @@ services:
     security_opt:
       - no-new-privileges:true
     mem_limit: 1g
+    pids_limit: 64
+
+  # ── re-ranker ──────────────────────────────────────────────────────────────
+  # Cross-encoder passage re-ranking (reranker/server.py, docs/specs/rag_v3.md). Reached only
+  # by the MCP over reranker_net; no internet, no database, models baked in at build time.
+  reranker:
+    build:
+      context: ./reranker
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - reranker_net
+    environment:
+      - CONFIG_DIR=/app/config
+      - RERANKER_PORT=8096
+    volumes:
+      - ./config:/app/config:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 4g
     pids_limit: 64
 
   # ── 6. frontend ────────────────────────────────────────────────────────────

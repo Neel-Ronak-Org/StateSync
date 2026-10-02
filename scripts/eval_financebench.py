@@ -549,7 +549,44 @@ def search_params(args: argparse.Namespace) -> dict[str, Any]:
     extra: dict[str, Any] = {"mode": args.mode}
     if args.scope == "uploads":
         extra.update(scope="dataset", dataset=LIVE_DATASET)
+    if getattr(args, "rerank", "off") != "off":  # docs/specs/rag_v3.md
+        extra["rerank"] = args.rerank
     return extra
+
+
+# Inside the orchestrator container: the product's own rewrite (orchestrator/query_rewrite.py) for each
+# question, so the measured rewrite is exactly what the docs route would search with.
+_REWRITE_SNIPPET = r"""
+import asyncio, json, sys, time
+sys.path.insert(0, "/app")
+from query_rewrite import rewrite_for_search
+req = json.load(sys.stdin)
+out = {}
+async def go():
+    for item in req["items"]:
+        query, usage = await rewrite_for_search(item["text"])
+        out[item["id"]] = {"query": query, **usage}
+        time.sleep(req["spacing_s"])
+asyncio.run(go())
+print(json.dumps(out))
+"""
+REWRITE_CACHE = REPO_ROOT / "docs" / "eval" / "financebench_rewrites.json"
+REWRITE_SPACING_S = 2.5  # Groq free tier: 30 requests/minute
+
+
+def rewrites(questions: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """The rewritten search query per question, cached in docs/eval so a re-run makes no model calls."""
+    cache = json.loads(REWRITE_CACHE.read_text()) if REWRITE_CACHE.exists() else {}
+    todo = [{"id": q["financebench_id"], "text": q["question"]} for q in questions if q["financebench_id"] not in cache]
+    if todo:
+        out = subprocess.run(["docker", "exec", "-i", ORCHESTRATOR, "python", "-c", _REWRITE_SNIPPET],
+                             input=json.dumps({"items": todo, "spacing_s": REWRITE_SPACING_S}),
+                             capture_output=True, text=True, timeout=RUN_TIMEOUT_S)
+        if out.returncode:
+            raise RuntimeError(f"the rewrite run failed inside {ORCHESTRATOR}: {out.stderr.strip()[-500:]}")
+        cache.update(json.loads(out.stdout))
+        REWRITE_CACHE.write_text(json.dumps(cache, indent=1))
+    return cache
 
 
 def score_rows(questions: list[dict[str, Any]], answers: dict[str, dict[str, Any]], name_by_id: dict[str, str],
@@ -609,7 +646,9 @@ def cmd_query(args: argparse.Namespace) -> int:
         if status != HTTPStatus.OK:
             raise RuntimeError(f"could not link the folder: {status} {body}")
         extra = search_params(args)
-        items = [{"id": q["financebench_id"], "text": q["question"], "extra": extra, "workspace": workspace_id} for q in questions]
+        rewritten = rewrites(questions) if args.rewrite == "llm" else {}
+        items = [{"id": q["financebench_id"], "text": rewritten.get(q["financebench_id"], {}).get("query", q["question"]),
+                  "extra": extra, "workspace": workspace_id} for q in questions]
         answers = run_questions(items)
     finally:
         if workspace_id:
@@ -624,6 +663,7 @@ def cmd_query(args: argparse.Namespace) -> int:
     rows, errors = score_rows(questions, answers, name_by_id, ready)
     result = {"label": args.label, "created": _now(), "fixture_sha256": digest, "top_k": TOP_K,
               "params": {"chunker": args.chunker, "mode": args.mode, "scope": args.scope, "dataset": LIVE_DATASET if args.scope == "uploads" else None,
+                         "rerank": args.rerank, "rewrite": args.rewrite,
                          "hybrid_dense_lists": config["hybrid_dense_lists"], "container_config": config,
                          "ingest_folder": record["folder_name"], "ingest_questions_sha256": record.get("questions_sha256"),
                          "filings_ready": len(ready), "filings_in_record": len(record["documents"]), "status_drift_since_ingest": drift,
@@ -678,6 +718,8 @@ def main() -> int:
     p_query.add_argument("--mode", choices=("dense", "hybrid"), required=True)
     p_query.add_argument("--scope", choices=("uploads", "all"), required=True)
     p_query.add_argument("--label", required=True)
+    p_query.add_argument("--rerank", choices=("off", "minilm", "bge"), default="off", help="docs/specs/rag_v3.md")
+    p_query.add_argument("--rewrite", choices=("off", "llm"), default="off", help="docs/specs/rag_v3.md")
     p_query.add_argument("--overwrite", action="store_true", help="replace an existing saved run with this label")
     p_clean = sub.add_parser("cleanup", help="delete an ingest's folder and check nothing is left")
     p_clean.add_argument("--chunker", choices=CHUNKERS, required=True)
