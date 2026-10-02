@@ -77,6 +77,8 @@ def register_build_routes(
             listed = await call_workspaces(principal, "list")
         except Exception as exc:
             logger.error("workspace lookup for a build failed: %s", exc, exc_info=True)
+            if not requested:   # the knowledge is optional: build without it
+                return None
             raise HTTPException(status_code=503, detail="Workspace service unavailable. Try again shortly.") from None
         workspace, error = pick_workspace(listed.get("workspaces") or [], schema, requested)
         if error == "not_found":

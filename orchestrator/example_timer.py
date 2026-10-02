@@ -42,7 +42,13 @@ def check_age_s(workspace: dict[str, Any], now: datetime) -> float | None:
     checked_at = health.get("checked_at")
     if not checked_at:
         return float("inf")
-    return (now - datetime.fromisoformat(checked_at)).total_seconds()
+    try:
+        when = datetime.fromisoformat(checked_at)
+    except ValueError:
+        return float("inf")   # unreadable: check it rather than skip it forever
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return (now - when).total_seconds()
 
 
 def due(workspaces: list[dict[str, Any]], now: datetime, stale_after_s: float) -> list[tuple[float, dict[str, Any]]]:

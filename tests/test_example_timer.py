@@ -71,3 +71,10 @@ def test_one_failing_principal_does_not_stop_the_sweep():
 
     out = asyncio.run(et.sweep([a, b], call, DAY, max_workspaces=5, now=NOW))
     assert out["errors"] == 1 and [c["workspace_id"] for c in out["checked"]] == ["b1"]
+
+
+def test_a_naive_or_unreadable_timestamp_never_aborts_the_sweep():
+    naive = {"workspace_id": "n", "health": {"ok": 1, "checked_at": "2026-10-01T00:00:00"}}
+    junk = {"workspace_id": "j", "health": {"ok": 1, "checked_at": "yesterday"}}
+    assert et.check_age_s(naive, NOW) == 36 * 3600
+    assert et.check_age_s(junk, NOW) == float("inf")

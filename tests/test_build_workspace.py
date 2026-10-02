@@ -141,3 +141,16 @@ def test_a_wrong_dataset_or_foreign_workspace_is_refused(monkeypatch):
     with TestClient(app) as client:
         assert client.post("/dashboards/d1/build", json={"workspace_id": "w9"}).status_code == 409
         assert client.post("/dashboards/d1/build", json={"workspace_id": "nope"}).status_code == 404
+
+
+def test_a_failed_workspace_lookup_does_not_block_a_build_that_asked_for_none(monkeypatch):
+    app, seen = _app(monkeypatch, [])
+
+    async def broken(principal, action, **params):
+        raise RuntimeError("mcp down")
+    monkeypatch.setattr(builder_api, "call_workspaces", broken)
+    with TestClient(app) as client:
+        assert client.post("/dashboards/d1/build", json={}).status_code == 202
+        _wait_done(client)
+        assert client.post("/dashboards/d1/build", json={"workspace_id": "w1"}).status_code == 503
+    assert set(seen["asked"]) == {None}
