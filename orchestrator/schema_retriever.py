@@ -27,8 +27,8 @@ from typing import Any
 
 from column_profiles import get_profiles
 from config_loader import cfg, flags
-from mcp_client import MCPSession, data_sample_rows, schema_describe_table
-from table_selection import select
+from mcp_client import MCPSession, data_run_select, data_sample_rows, schema_describe_table
+from table_selection import build_value_index, select, text_columns, value_index_sql
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +146,35 @@ class LinkedSchemaRetriever:
     def __init__(self) -> None:
         self._direct = DirectSchemaRetriever()
         self._cache: dict[tuple[str, str], tuple[dict[str, dict], set[str]]] = {}
+        self._values: dict[tuple[str, str], dict[str, Any] | None] = {}
+
+    async def _value_index(self, session: MCPSession, descriptions: dict[str, dict], schema: str | None,
+                           fingerprint: str) -> dict[str, Any] | None:
+        """The v3 value index, built once per (schema, fingerprint) through data.run_select (the
+        Layer 1 gate, a read-only transaction, the statement timeout). A column whose query fails
+        is left out; the index is best-effort and never blocks a question."""
+        limits = cfg.table_selection
+        if str(limits.value_index) != "on":
+            return None
+        key = (schema or "", fingerprint)
+        if key in self._values and fingerprint:
+            return self._values[key]
+        values: dict[tuple[str, str], list[str]] = {}
+        for table, column in text_columns(descriptions, int(limits.value_index_max_columns)):
+            sql = value_index_sql(schema or DEFAULT_SCHEMA, table, column, int(limits.value_index_scan_rows),
+                                  int(limits.value_index_values_per_column))
+            try:
+                result = await data_run_select(session, sql, max_rows=int(limits.value_index_values_per_column))
+            except Exception as exc:  # noqa: BLE001 -- best-effort, see the docstring
+                logger.warning("schema_retriever: value index skipped %s.%s: %s", table, column, exc)
+                continue
+            if result.get("ok"):
+                values[(table, column)] = [str(r.get("v")) for r in result.get("rows") or [] if r.get("v") is not None]
+        index = build_value_index(values, int(limits.value_index_value_chars),
+                                  int(limits.value_index_max_words)) if values else None
+        self._values[key] = index
+        logger.info("schema_retriever: value index for %s: %d columns", schema or DEFAULT_SCHEMA, len(values))
+        return index
 
     async def _catalog(self, session: MCPSession, table_names: list[str], schema: str | None,
                        fingerprint: str) -> tuple[dict[str, dict], set[str]]:
@@ -185,8 +214,11 @@ class LinkedSchemaRetriever:
             raise RuntimeError(f"no table could be described ({len(table_names)} refused)")
         values = await get_profiles(session, schema or DEFAULT_SCHEMA, fingerprint, list(descriptions),
                                     list(descriptions.values()))
+        index = await self._value_index(session, descriptions, schema, fingerprint)
         chosen = select(question, descriptions, values, int(limits.top_tables), int(limits.max_tables_selected),
-                        int(limits.fk_hops) + max(0, attempt), must_include=must_include, empty=empty)
+                        int(limits.fk_hops) + max(0, attempt), must_include=must_include, empty=empty,
+                        value_index=index, value_tables=int(limits.value_tables),
+                        min_value_chars=int(limits.value_min_token_chars))
         parts = [f"(Showing {len(chosen)} of {len(descriptions)} tables: the ones most relevant to this question. "
                  "Other tables exist; use only the tables shown.)"]
         for tname in chosen:

@@ -605,13 +605,12 @@ max_tables_full           = 20       # a schema this small is shown whole, as wi
 top_tables                = 8        # tables ranked by BM25 of the question against each table's card
 max_tables_selected       = 14       # hard cap after adding foreign-key neighbours and approved-example tables
 fk_hops                   = 1        # foreign-key hops added around the top tables (a retry widens by one more)
-# v3 (docs/specs/table_selection.md, "v3 protocol"): the value index and join-path completion.
+# v3 (docs/specs/table_selection.md, "v3 protocol"): the value index.
 value_index               = "on"     # "on" | "off": distinct values of text columns rank the tables that hold them
-value_index_values_per_column = 1000 # most frequent distinct values kept per text column
+value_index_values_per_column = 10000 # most frequent distinct values kept per text column (entity columns are large)
 value_index_scan_rows     = 100000   # rows read per column to find them (bounds the scan on a big table)
 value_index_max_columns   = 500      # text columns indexed per schema at most
 value_index_value_chars   = 100      # a longer value is cut before it is tokenised
+value_index_max_words     = 4        # longer values are prose, not entities, and are not indexed
 value_min_token_chars     = 3        # shorter question words never match a value
-rrf_k                     = 60       # reciprocal rank fusion of the card and value rankings (Cormack et al. 2009)
-path_anchor_tables        = 3        # the best tables whose shortest join paths are completed
-path_max_hops             = 3        # a longer join path between two anchors is not completed
+value_tables              = 2        # value-matched tables added after the top tables (never displacing them)

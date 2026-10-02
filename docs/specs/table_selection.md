@@ -108,3 +108,20 @@ be tuned to it. So:
 - **Constraints.** No model call, no new MCP tool, deterministic; the cap
   (`max_tables_selected` = 14) and `top_tables` stay; only general mechanisms (nothing that
   names a FIBEN table or column).
+
+### v3 development log (dev half only; recorded before the held-out run)
+
+1. **First design** (value index fused with the card ranking by RRF, k = 60, plus join-path
+   completion between the top 3 tables): dev all-gold **19.5%**, against v2's 59.7%. Components
+   measured separately on dev: path completion changed nothing (59.7%); the value ranking alone
+   caused the drop (18.2%).
+2. **Diagnosis on dev:** prose columns (disclosures, descriptions) put ordinary English words in
+   the index; question words the schema already names ("value" inside `haslasttradedvalue`) and
+   numbers matched; the 1,000-value cap cut entity columns (MSFT and IBM fell outside it); and
+   fusion let value matches displace the card ranking's top tables.
+3. **Frozen v3** (general rules, nothing naming a FIBEN table): index only values of at most 4
+   words; skip question words whose first 5 letters occur in a table or column name, and pure
+   numbers; keep up to 10,000 values per column; ADD the best 2 value-matched tables after the
+   top 8 instead of fusing; no path completion (it added nothing). Dev all-gold **72.7%**, gold
+   share 88.6% (v2: 59.7%, 82.9%). Choices tried on dev and recorded: values of ≤2 words also
+   gave 72.7%; adding 1 or 3 tables gave 67.5–72.7%.

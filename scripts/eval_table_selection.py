@@ -37,7 +37,9 @@ import psycopg  # noqa: E402
 from config_loader import cfg  # noqa: E402
 from column_profiles import build_profiles  # noqa: E402
 from schema_retriever import _format_table  # noqa: E402
-from table_selection import select, tables_in_sql  # noqa: E402
+import hashlib  # noqa: E402
+
+from table_selection import build_value_index, select, tables_in_sql, text_columns, value_index_sql  # noqa: E402
 
 DSN = "host=127.0.0.1 port=5434 dbname=fiben user=statesync_reader password=fiben-reader-pass"  # demo-only, demo/fiben_db.sh
 SCHEMA = "fiben"
@@ -81,30 +83,51 @@ def samples(conn, tables: list[str]) -> dict[str, list[dict]]:
     return out
 
 
+def split_of(qid) -> str:
+    """docs/specs/table_selection.md "v3 protocol": dev when sha256(qid) ends in an even hex digit."""
+    return "dev" if int(hashlib.sha256(str(qid).encode()).hexdigest()[-1], 16) % 2 == 0 else "held"
+
+
+def value_index(conn, descriptions: dict[str, dict]) -> dict:
+    """The v3 value index, built from exactly the SQL the app runs (table_selection.value_index_sql)."""
+    sel = cfg.table_selection
+    values = {}
+    for table, column in text_columns(descriptions, int(sel.value_index_max_columns)):
+        sql = value_index_sql(SCHEMA, table, column, int(sel.value_index_scan_rows), int(sel.value_index_values_per_column))
+        values[(table, column)] = [row[0] for row in conn.execute(sql).fetchall()]
+    return build_value_index(values, int(sel.value_index_value_chars), int(sel.value_index_max_words))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(REPO / "docs" / "eval" / "table_selection_fiben.json"))
+    ap.add_argument("--version", choices=("v2", "v3"), default="v2")
+    ap.add_argument("--split", choices=("all", "dev", "held"), default="all")
     args = ap.parse_args()
     from data import DB, load_items  # research/verifier: the runnable FIBEN gold, lower-cased for this port
-    items = load_items(DB())
+    items = [it for it in load_items(DB()) if args.split == "all" or split_of(it["qid"]) == args.split]
     conn = psycopg.connect(DSN, autocommit=True)
     descriptions = describe(conn)
     sampled = samples(conn, list(descriptions))
     values = build_profiles({t: d["columns"] for t, d in descriptions.items()}, sampled)
     empty = {t for t, rows in sampled.items() if not rows}  # what the app's sample_rows calls see
     sel = cfg.table_selection
+    v3 = args.version == "v3"
+    index = value_index(conn, descriptions) if v3 and str(sel.value_index) == "on" else None
+    extra = dict(value_index=index, value_tables=int(sel.value_tables),
+                 min_value_chars=int(sel.value_min_token_chars)) if v3 else {}
     full_chars = len("\n\n".join(_format_table(f"{SCHEMA}.{t}", d) for t, d in descriptions.items()))
     rows = []
     for it in items:
         gold = set(tables_in_sql(it["gold_sql"]))
         chosen = select(it["question"], descriptions, values, int(sel.top_tables), int(sel.max_tables_selected), int(sel.fk_hops),
-                        empty=empty)
+                        empty=empty, **extra)
         shown_chars = len("\n\n".join(_format_table(f"{SCHEMA}.{t}", descriptions[t]) for t in chosen))
         rows.append({"qid": it["qid"], "question": it["question"], "gold_tables": sorted(gold), "selected": chosen,
                      "all_found": gold <= set(chosen), "found_share": len(gold & set(chosen)) / len(gold) if gold else 1.0,
                      "shown": len(chosen), "schema_chars": shown_chars})
     n = len(rows)
-    summary = {"questions": n, "tables_in_schema": len(descriptions), "empty_tables": len(empty), "full_schema_chars": full_chars,
+    summary = {"version": args.version, "split": args.split, "questions": n, "tables_in_schema": len(descriptions), "empty_tables": len(empty), "full_schema_chars": full_chars,
                "all_gold_tables_found": round(sum(r["all_found"] for r in rows) / n, 3),
                "gold_table_share_found": round(sum(r["found_share"] for r in rows) / n, 3),
                "mean_tables_shown": round(sum(r["shown"] for r in rows) / n, 1),

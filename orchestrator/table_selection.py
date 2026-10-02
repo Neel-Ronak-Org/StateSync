@@ -13,6 +13,15 @@ still. Selection here is deterministic and model-free:
   - the top tables, plus their foreign-key neighbours (join paths survive), plus any table a
     matched approved example uses, under a hard cap.
 Small schemas (at most max_tables_full) are shown whole, exactly as before.
+
+v3 (2026-10-02; docs/specs/table_selection.md "v3 protocol", designed on the dev half only):
+  a VALUE INDEX of the most frequent distinct values of each text column (bounded scan, read
+  through the normal SELECT path). A question naming "Microsoft" or "Lugannani" finds the tables
+  holding those values; the few sampled rows on a card rarely contain them. Only entity-like
+  values (a few words) are indexed, only question words the schema does not already name are
+  matched, and words are weighted by rarity across columns. The best value-matched tables are
+  ADDED after the card ranking's top tables; they never displace them (fusing the two rankings
+  did, and lost join tables).
 """
 
 from __future__ import annotations
@@ -81,6 +90,86 @@ def rank(question: str, cards: dict[str, str]) -> list[tuple[str, float]]:
     return sorted(scored, key=lambda x: (-x[1], x[0]))
 
 
+TEXT_TYPES = ("text", "character varying", "varchar", "character", "char", "citext", "name")
+_VALUE_STOPWORDS = frozenset(
+    "the and for with from that this what which who whom how many much are was were have has had "
+    "per each all any its their there here show list give tell total number count between before after "
+    "during into over under more most less least than then when where why does did done been being".split())
+
+
+def text_columns(descriptions: dict[str, dict], max_columns: int) -> list[tuple[str, str]]:
+    """(table, column) of every text column, in table order, at most max_columns."""
+    out = [(t, c["name"]) for t, d in descriptions.items() for c in d.get("columns", [])
+           if str(c.get("type", "")).lower().startswith(TEXT_TYPES)]
+    return out[:max_columns]
+
+
+def value_index_sql(schema: str, table: str, column: str, scan_rows: int, per_column: int) -> str:
+    """The SELECT that reads one column's most frequent values: a bounded scan, then GROUP BY."""
+    q = lambda name: '"' + name.replace('"', '""') + '"'  # noqa: E731 -- identifier quoting
+    return (f"SELECT v, count(*) AS n FROM (SELECT {q(column)}::text AS v FROM {q(schema)}.{q(table)} "
+            f"WHERE {q(column)} IS NOT NULL LIMIT {int(scan_rows)}) s GROUP BY v ORDER BY n DESC, v LIMIT {int(per_column)}")
+
+
+def build_value_index(values: dict[tuple[str, str], list[str]], value_chars: int,
+                      max_words: int = 4) -> dict[str, Any]:  # noqa: literals - default only; callers pass config
+    """{"tables": {token: {table, ...}}, "df": {token: columns}, "columns": N} from
+    {(table, column): [value, ...]}. Tokens are words() of each value, cut at value_chars.
+    Only short, entity-like values are indexed (at most max_words words: a name, a code, a
+    category). Prose (descriptions, disclosures) is ordinary English, and its words would match
+    any question."""
+    tables: dict[str, set[str]] = defaultdict(set)
+    df: Counter = Counter()
+    for (table, _column), vals in values.items():
+        seen: set[str] = set()
+        for v in vals:
+            toks = words(str(v)[:value_chars])
+            if len(toks) <= max_words:
+                seen.update(toks)
+        for tok in seen:
+            tables[tok].add(table)
+            df[tok] += 1
+    return {"tables": dict(tables), "df": dict(df), "columns": len(values)}
+
+
+STEM_CHARS = 5  # noqa: literals - a word's first 5 letters stand for it ("reported" -> "repor"), fixed in the v3 protocol
+
+
+def schema_text(descriptions: dict[str, dict]) -> str:
+    """Every table and column name, lower-cased, space-separated: what the card ranking already
+    matches (including run-together names such as haslasttradedvalue)."""
+    names = [t for t in descriptions] + [c.get("name", "") for d in descriptions.values() for c in d.get("columns", [])]
+    return " ".join(n.lower() for n in names)
+
+
+def names_the_schema(token: str, schema: str) -> bool:
+    """Is a question word already a schema word? Its stem appears inside some table or column
+    name ("value" in haslasttradedvalue, "reported" in financialreport), or it is a number (a
+    filter constant, not an entity)."""
+    return token.isdigit() or token[:STEM_CHARS] in schema
+
+
+def rank_by_values(question: str, index: dict[str, Any] | None, min_chars: int,
+                   schema: str = "") -> list[tuple[str, float]]:
+    """Tables by the summed rarity (idf over indexed columns) of question words found in their
+    values, best first; [] without an index or a match. Words the schema already names
+    (names_the_schema against schema_text) are skipped: the card ranking already uses them, so
+    the value ranking adds only what the schema cannot name, the entities."""
+    if not index or not index.get("columns"):
+        return []
+    n = index["columns"]
+    scores: Counter = Counter()
+    for tok in set(words(question)):
+        if len(tok) < min_chars or tok in _VALUE_STOPWORDS or tok not in index["tables"]:
+            continue
+        if schema and names_the_schema(tok, schema):
+            continue
+        idf = math.log(1 + n / index["df"][tok])
+        for table in index["tables"][tok]:
+            scores[table] += idf
+    return sorted(scores.items(), key=lambda x: (-x[1], x[0]))
+
+
 def fk_graph(descriptions: dict[str, dict]) -> dict[str, set[str]]:
     """Undirected table graph from describe_table foreign keys."""
     graph: dict[str, set[str]] = defaultdict(set)
@@ -95,7 +184,8 @@ def fk_graph(descriptions: dict[str, dict]) -> dict[str, set[str]]:
 
 def select(question: str, descriptions: dict[str, dict], values: dict[str, list[str]] | None,
            top_tables: int, max_selected: int, hops: int, must_include: list[str] | None = None,
-           empty: set[str] | None = None) -> list[str]:
+           empty: set[str] | None = None, value_index: dict[str, Any] | None = None,
+           value_tables: int = 0, min_value_chars: int = 3) -> list[str]:  # noqa: literals - defaults only; callers pass config
     """The tables to show, capped at max_selected:
       1. must_include (approved-example tables);
       2. the top-ranked tables, with empty tables ranked after every table that has rows
@@ -103,7 +193,9 @@ def select(question: str, descriptions: dict[str, dict], values: dict[str, list[
       3. foreign-key neighbours, expanded BEST TABLE FIRST: all of rank 1's neighbours before
          rank 2's, so the best match keeps its join partners when the cap bites.
     Points 2 (empty last) and 3 (best-first order) were changed on 2026-10-02 after the first
-    FIBEN measurement (docs/specs/table_selection.md, "Post-hoc changes")."""
+    FIBEN measurement (docs/specs/table_selection.md, "Post-hoc changes").
+    v3, with a value_index: right after the top tables come up to value_tables tables that hold
+    values the question names (rank_by_values), before the neighbours."""
     empty = empty or set()
     ranked = rank(question, {t: card(t, d, values) for t, d in descriptions.items()})
     ranked = [r for r in ranked if r[0] not in empty] + [r for r in ranked if r[0] in empty]
@@ -111,6 +203,10 @@ def select(question: str, descriptions: dict[str, dict], values: dict[str, list[
     for t, _ in ranked[:top_tables]:
         if t not in chosen:
             chosen.append(t)
+    if value_index and value_tables > 0:
+        by_value = [t for t, _ in rank_by_values(question, value_index, min_value_chars, schema_text(descriptions))
+                    if t in descriptions and t not in empty]
+        chosen.extend(t for t in by_value[:value_tables] if t not in chosen)
     graph = fk_graph(descriptions)
     order = {t: i for i, (t, _) in enumerate(ranked)}
     frontier = list(chosen)

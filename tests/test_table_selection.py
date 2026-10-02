@@ -99,3 +99,47 @@ def test_linked_shows_a_small_schema_whole_like_direct(monkeypatch):
     linked = asyncio.run(sr.LinkedSchemaRetriever().retrieve(None, names, None, question="anything", fingerprint="f"))
     direct = asyncio.run(sr.DirectSchemaRetriever().retrieve(None, names, None))
     assert linked == direct
+
+
+# ── v3: the value index (docs/specs/table_selection.md "v3 protocol") ────────
+
+def test_text_columns_and_the_value_sql_are_bounded_and_quoted():
+    descs = {"Person": {"columns": [{"name": "Name", "type": "character varying(80)"}, {"name": "age", "type": "integer"}]},
+             "city": {"columns": [{"name": "label", "type": "text"}]}}
+    assert ts.text_columns(descs, 10) == [("Person", "Name"), ("city", "label")]
+    assert ts.text_columns(descs, 1) == [("Person", "Name")]
+    sql = ts.value_index_sql("fiben", "Person", "Name", 100, 5)
+    assert 'FROM "fiben"."Person"' in sql and "LIMIT 100" in sql and sql.endswith("LIMIT 5")
+
+
+def test_only_entity_like_values_are_indexed():
+    index = ts.build_value_index({("person", "name"): ["Yakov Lugannani"],
+                                  ("disclosure", "text"): ["whose value was not reported in the period"]}, 100, 4)
+    assert "lugannani" in index["tables"] and "whose" not in index["tables"]
+
+
+def test_a_named_value_ranks_its_table_and_schema_words_numbers_and_stopwords_do_not():
+    index = ts.build_value_index({
+        ("person", "name"): ["Yakov Lugannani", "Luis Statz"],
+        ("corporation", "legalname"): ["Microsoft Corp", "Synopsys Inc"],
+        ("email", "value"): ["yakov.lugannani@x.com"],
+        ("postaladdress", "line"): ["1000 Value Street"],
+    }, 100, 4)
+    ranked = dict(ts.rank_by_values("What positions has Yakov Lugannani held at Synopsys", index, 3))
+    # More of the question's rare words, higher; an email table holding the name ties with person
+    # (values alone cannot tell which table is the subject).
+    assert ranked["person"] == ranked["email"] > ranked["corporation"]
+    schema = ts.schema_text({"listedsecurity": {"columns": [{"name": "haslasttradedvalue"}]}})
+    assert ts.rank_by_values("last traded value above 1000", index, 3, schema) == []
+    assert ts.rank_by_values("how many were there", index, 3) == []
+    assert ts.rank_by_values("anything", None, 3) == []
+
+
+def test_value_tables_are_added_after_the_top_tables_never_displacing_them():
+    index = ts.build_value_index({("person", "haspersonname"): ["Yakov Lugannani"]}, 100, 4)
+    plain = ts.select("last traded value of Yakov Lugannani", _schema(), None, top_tables=1, max_selected=5, hops=0)
+    with_values = ts.select("last traded value of Yakov Lugannani", _schema(), None, top_tables=1, max_selected=5,
+                            hops=0, value_index=index, value_tables=2)
+    assert with_values[:1] == plain[:1] and "person" in with_values
+    assert ts.select("x", _schema(), None, top_tables=1, max_selected=5, hops=0, value_index=index,
+                     value_tables=2, empty={"person"}) == ts.select("x", _schema(), None, top_tables=1, max_selected=5, hops=0)
