@@ -349,7 +349,6 @@ chunk_target_tokens       = 512
 chunk_overlap_tokens      = 64
 semantic_top_k            = 8
 semantic_top_k_max        = 25      # A4.6 vector.semantic_search input bound
-decomposition_max_hops    = 3
 embedding_model           = "mxbai-embed-large"  # E1: same model as memory's, own name per concern (A0.2)
 embedding_dim             = 1024    # must match document_chunks.embedding VECTOR(1024), A5
 embedding_timeout_s       = 30      # mcp -> ollama /api/embeddings HTTP timeout, ingestion + query-time
