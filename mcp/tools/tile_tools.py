@@ -33,6 +33,18 @@ THE SECURITY PROPERTIES, each enforced here rather than trusted from a caller:
 5. Stored results are capped by rows and bytes, the tile count per principal
    is capped, and refresh intervals are bounded (config [tiles]).
 
+6. A pin made in a workspace (workspace_id given) also saves the answer as
+   that workspace's approved example, source "tile" (docs/V3_PLAN.md 5.3:
+   "pinned tiles become approved examples, so the chat and the dashboard
+   agree"). Only when a person asked for it: the question is the stand-alone
+   form the fast path matches, the turn must be a plain database answer
+   (route "sql"; a hybrid turn's SQL answers only part of its question), and
+   the workspace must be the owner's and use the turn's dataset. Build with AI
+   pins without a workspace_id, so a drafted dashboard approves nothing. The
+   example is best-effort: the tile is pinned either way and the result says
+   what happened ("example"). Unpinning keeps the example; a thumbs-down or
+   the workspace's Knowledge tab withdraws it.
+
 Failures are data, not transport errors -- {"ok": False, "error": <code>,
 "message": <text>} -- because the orchestrator's MCP client raises on any
 non-200 response and needs to map these to HTTP statuses. Codes: not_found,
@@ -255,12 +267,12 @@ async def _fingerprint(sql: str, dataset: str | None = None) -> str | None:
 
 async def _load_turn(tenant_id: str, principal_id: str, session_id: str, turn_index: int):
     """The owner's stored turn, or None: (executed_sql, chart, sql_columns, raw_query,
-    rewritten_query, rewrite_applied, target_schema)."""
+    rewritten_query, rewrite_applied, target_schema, route)."""
     async with get_history_connection() as conn:
         cur = await conn.execute(
             """
             SELECT executed_sql, chart, sql_columns, raw_query,
-                   rewritten_query, rewrite_applied, target_schema
+                   rewritten_query, rewrite_applied, target_schema, route
             FROM session_state.conversation_turns
             WHERE tenant_id = %s AND principal_id = %s AND session_id = %s AND turn_index = %s
             """,
@@ -270,7 +282,9 @@ async def _load_turn(tenant_id: str, principal_id: str, session_id: str, turn_in
 
 
 async def _pinnable_sql(tenant_id: str, principal_id: str, session_id: Any, turn_index: Any):
-    """Resolve a turn to (sql, chart, columns, title, fingerprint, target_schema), or a failure dict."""
+    """Resolve a turn to (sql, chart, columns, title, fingerprint, target_schema, route), or a failure dict.
+    The title doubles as the stand-alone question (a follow-up's rewrite), which is what a
+    workspace example is matched on."""
     if not isinstance(session_id, str) or not session_id:
         return _fail("invalid", "session_id is required.")
     if isinstance(turn_index, bool) or not isinstance(turn_index, int):
@@ -278,7 +292,7 @@ async def _pinnable_sql(tenant_id: str, principal_id: str, session_id: Any, turn
     turn = await _load_turn(tenant_id, principal_id, session_id, turn_index)
     if turn is None:
         return _fail("not_found", "No such conversation turn.")
-    sql, chart, columns, raw_query, rewritten_query, rewrite_applied, target_schema = turn
+    sql, chart, columns, raw_query, rewritten_query, rewrite_applied, target_schema, route = turn
     if not sql:
         return _fail("not_pinnable", "Only answers computed from the database can be pinned.")
     rejection = _check_layer1(sql)
@@ -288,7 +302,7 @@ async def _pinnable_sql(tenant_id: str, principal_id: str, session_id: Any, turn
     if fingerprint is None:
         return _fail("not_pinnable", "A table this answer reads no longer exists.")
     return (sql, chart, columns, title_fallback(raw_query, rewritten_query, rewrite_applied),
-            fingerprint, target_schema or DEFAULT_SCHEMA)
+            fingerprint, target_schema or DEFAULT_SCHEMA, route)
 
 
 _VIEW_COLUMNS = """
@@ -491,7 +505,7 @@ async def _target_dashboard(conn, tenant_id, principal_id, dashboard_id, target_
 
 
 async def _pin(tenant_id, principal_id, session_id, turn_index, title, refresh_interval_s,
-               dashboard_id=None, viz=None, layout=None):
+               dashboard_id=None, viz=None, layout=None, workspace_id=None):
     ok_viz, stored_viz = resolve_viz(viz) if viz is not None else (True, None)
     if not ok_viz:
         return _fail("invalid", f"viz must be one of {sorted(VIZ_KINDS)} or {VIZ_AUTO!r}.")
@@ -503,7 +517,7 @@ async def _pin(tenant_id, principal_id, session_id, turn_index, title, refresh_i
     resolved = await _pinnable_sql(tenant_id, principal_id, session_id, turn_index)
     if isinstance(resolved, dict):
         return resolved
-    sql, chart, columns, fallback_title, fingerprint, target_schema = resolved
+    sql, chart, columns, fallback_title, fingerprint, target_schema, route = resolved
     interval = resolve_interval(refresh_interval_s, target_schema)
     if interval is None:
         return _fail("invalid", _interval_message())
@@ -557,7 +571,36 @@ async def _pin(tenant_id, principal_id, session_id, turn_index, title, refresh_i
     logger.info("tiles: pinned %s from session=%s turn=%s to dashboard %s (tenant=%s principal=%s)",
                 tile_id, session_id, turn_index, board, tenant_id, principal_id)
     await _refresh(tenant_id, principal_id, tile_id, force=True)
-    return {"ok": True, "tile": await _view(tenant_id, principal_id, tile_id, with_versions=True)}
+    result: dict[str, Any] = {"ok": True, "tile": await _view(tenant_id, principal_id, tile_id, with_versions=True)}
+    if workspace_id is not None:
+        result["example"] = await _example_from_pin(tenant_id, principal_id, workspace_id, fallback_title,
+                                                    sql, target_schema, route)
+    return result
+
+
+def example_skip_reason(question: str | None, route: str | None) -> str | None:
+    """Why a pinned turn cannot become an approved example, or None if it can (property 6)."""
+    if route != "sql":
+        return "Only a plain database answer becomes an approved example; this one also used documents or no SQL."
+    if not isinstance(question, str) or not question.strip():
+        return "The answer has no question to match on."
+    return None
+
+
+async def _example_from_pin(tenant_id, principal_id, workspace_id, question, sql, target_schema, route):
+    """{"saved": bool, "example_id"?: str, "reason"?: str}; never raises, never undoes the pin."""
+    reason = example_skip_reason(question, route)
+    if reason is not None:
+        return {"saved": False, "reason": reason}
+    from tools.workspace_tools import add_pinned_example  # local: workspace_tools imports the data layer too
+    try:
+        added = await add_pinned_example(tenant_id, principal_id, workspace_id, question, sql, target_schema)
+    except Exception as exc:  # noqa: BLE001 -- the pin already succeeded; the example is best-effort
+        logger.warning("tiles: approved example from pin failed (workspace=%s): %s", workspace_id, exc)
+        return {"saved": False, "reason": "The approved example could not be saved."}
+    if not added.get("ok"):
+        return {"saved": False, "reason": added.get("message") or "The approved example could not be saved."}
+    return {"saved": True, "example_id": added["example_id"]}
 
 
 async def _new_version(tenant_id, principal_id, tile_id, sql, chart, columns, fingerprint,
@@ -602,7 +645,7 @@ async def _replace(tenant_id, principal_id, tile_id, session_id, turn_index):
     resolved = await _pinnable_sql(tenant_id, principal_id, session_id, turn_index)
     if isinstance(resolved, dict):
         return resolved
-    sql, chart, columns, _title, fingerprint, _schema = resolved
+    sql, chart, columns, _title, fingerprint, _schema, _route = resolved
     version = await _new_version(tenant_id, principal_id, tile_id, sql, chart_template(chart),
                                  columns, fingerprint, session_id, turn_index)
     if version is None:
@@ -758,6 +801,7 @@ async def manage(
     dashboard_id: str | None = None,
     viz: str | None = None,
     layout: dict | None = None,
+    workspace_id: str | None = None,
 ) -> dict[str, Any]:
     """tiles.manage -- see the module docstring for the actions and guarantees."""
     tenant_id = get_tenant_id()
@@ -770,7 +814,7 @@ async def manage(
 
     if action == "pin":
         return await _pin(tenant_id, principal_id, session_id, turn_index, title, refresh_interval_s,
-                          dashboard_id=dashboard_id, viz=viz, layout=layout)
+                          dashboard_id=dashboard_id, viz=viz, layout=layout, workspace_id=workspace_id)
     if action == "list":
         return await _list(tenant_id, principal_id, dashboard_id)
     if action == "replace":

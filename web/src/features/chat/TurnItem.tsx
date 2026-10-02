@@ -109,6 +109,7 @@ export function TurnItem({
   const [isPinning, setIsPinning] = useState(false)
   const [showHow, setShowHow] = useState(false)
   const [rated, setRated] = useState(false)
+  const workspaceId = turn.stateTrace?.workspace_id ?? null
   const howId = useId()
   const queryClient = useQueryClient()
 
@@ -142,8 +143,10 @@ export function TurnItem({
       const res = await api.pinTile({
         session_id: sessionId,
         turn_index: turn.turnIndex,
+        workspace_id: workspaceId ?? undefined,
       })
-      toast.success('Pinned to dashboard', {
+      if (res.example?.saved) setRated(true)
+      toast.success(res.example?.saved ? 'Pinned to dashboard and saved as an approved answer' : 'Pinned to dashboard', {
         action: {
           label: 'View',
           onClick: () => {
@@ -166,10 +169,10 @@ export function TurnItem({
   const evidence: Evidence | null =
     turn.stateTrace?.evidence ?? (turn.verifiedExample ? 'verified' : null)
   const chip = evidence ? EVIDENCE_CHIPS[evidence] : null
-  // Thumbs only where an approved answer can be made or withdrawn: a workspace answer that ran SQL.
-  const workspaceId = turn.stateTrace?.workspace_id ?? null
+  // Thumbs only where an approved answer can be made or withdrawn: a workspace answer that ran SQL
+  // and nothing else (a hybrid answer's SQL covers only part of its question).
   const executedSql = turn.stateTrace?.executed_sql ?? null
-  const canRate = Boolean(workspaceId && executedSql)
+  const canRate = Boolean(workspaceId && executedSql && turn.stateTrace?.route === 'sql')
 
   const handleRate = async (correct: boolean) => {
     if (!workspaceId || !executedSql) return

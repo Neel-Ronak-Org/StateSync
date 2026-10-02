@@ -23,6 +23,7 @@ import type {
   LayoutItem,
   LibraryDocument,
   LibraryFolder,
+  PinExampleResult,
   PinTileRequest,
   QueryRequest,
   QueryResponse,
@@ -145,7 +146,8 @@ export const api = {
   tiles: (dashboardId?: string) =>
     apiFetch<{ tiles: Tile[] }>(dashboardId ? `/tiles?dashboard_id=${enc(dashboardId)}` : '/tiles'),
   tile: (tileId: string) => apiFetch<{ tile: Tile }>(`/tiles/${enc(tileId)}`),
-  pinTile: (request: PinTileRequest) => apiFetch<{ tile: Tile }>('/tiles', { method: 'POST', body: request }),
+  pinTile: (request: PinTileRequest) =>
+    apiFetch<{ tile: Tile; example?: PinExampleResult }>('/tiles', { method: 'POST', body: request }),
   refreshTile: (tileId: string) => apiFetch<{ tile: Tile }>(`/tiles/${enc(tileId)}/refresh`, { method: 'POST' }),
   replaceTile: (tileId: string, sessionId: string, turnIndex: number) =>
     apiFetch<{ tile: Tile }>(`/tiles/${enc(tileId)}/replace`, {

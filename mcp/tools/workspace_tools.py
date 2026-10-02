@@ -571,6 +571,21 @@ async def _add_example(tenant_id, principal_id, workspace_id=None, question=None
     return {"ok": True, "example_id": example_id}
 
 
+async def add_pinned_example(tenant_id: str, principal_id: str, workspace_id: Any, question: str, sql: str,
+                             target_schema: str) -> dict[str, Any]:
+    """A pinned tile's answer as an approved example (tile_tools property 6). The workspace must be
+    the owner's AND use the dataset the answer came from: an example for another dataset's tables
+    would be shown to the wrong prompts and fail its check."""
+    async with get_history_connection() as conn:
+        owned = await _owned(conn, tenant_id, principal_id, workspace_id)
+    if owned is None:
+        return _fail("not_found", "No such workspace.")
+    if owned[1] != target_schema:
+        return _fail("invalid", f"This answer is from the {target_schema} dataset; the workspace uses {owned[1]}.")
+    return await _add_example(tenant_id, principal_id, workspace_id=workspace_id, question=question, sql=sql,
+                              source="tile")
+
+
 async def _remove_example(tenant_id, principal_id, workspace_id=None, question=None, **_):
     """Withdraw the approved answer to a question (a thumbs-down on a verified answer)."""
     q = clean_text(question, int(cfg.workspaces.question_max_chars))

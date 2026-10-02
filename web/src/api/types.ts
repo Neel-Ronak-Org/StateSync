@@ -246,6 +246,15 @@ export interface PinTileRequest {
   dashboard_id?: string
   viz?: VizKindName
   layout?: TileLayout
+  /** Pinned in a workspace: the answer also becomes its approved example (tile_tools.py, property 6). */
+  workspace_id?: string
+}
+
+/** What a workspace pin did with the approved example; absent when no workspace was sent. */
+export interface PinExampleResult {
+  saved: boolean
+  example_id?: string
+  reason?: string
 }
 
 export interface UpdateTileRequest {
