@@ -112,6 +112,11 @@ def test_text_columns_and_the_value_sql_are_bounded_and_quoted():
     assert 'FROM "fiben"."Person"' in sql and "LIMIT 100" in sql and sql.endswith("LIMIT 5")
 
 
+def test_the_app_and_the_evaluation_share_one_value_cap():
+    # data.run_select never returns more than the MCP's row cap, so neither may ask for more.
+    assert ts.values_per_column(10000, 5000) == 5000 and ts.values_per_column(100, 5000) == 100
+
+
 def test_only_entity_like_values_are_indexed():
     index = ts.build_value_index({("person", "name"): ["Yakov Lugannani"],
                                   ("disclosure", "text"): ["whose value was not reported in the period"]}, 100, 4)

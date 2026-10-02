@@ -436,6 +436,10 @@ export class MockApi {
 
     if (path === '/auth/session') {
       this.authCalls.push(method)
+      // Like the server: signing in and out require the X-StateSync header.
+      if (method !== 'GET' && request.headers()['x-statesync'] !== '1') {
+        return this.json(route, 403, { detail: 'The X-StateSync header is required.' })
+      }
       if (method === 'POST') {
         const sent = request.postData() ? (JSON.parse(request.postData() as string) as { token?: string }) : {}
         if (sent.token !== TOKEN) return this.json(route, 401, { detail: 'That token is not valid.' })

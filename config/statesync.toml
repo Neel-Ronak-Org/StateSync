@@ -607,10 +607,11 @@ max_tables_selected       = 14       # hard cap after adding foreign-key neighbo
 fk_hops                   = 1        # foreign-key hops added around the top tables (a retry widens by one more)
 # v3 (docs/specs/table_selection.md, "v3 protocol"): the value index.
 value_index               = "on"     # "on" | "off": distinct values of text columns rank the tables that hold them
-value_index_values_per_column = 10000 # most frequent distinct values kept per text column (entity columns are large)
+value_index_values_per_column = 10000 # most frequent distinct values per text column; capped by [mcp] max_rows_hard_cap (5000)
 value_index_scan_rows     = 100000   # rows read per column to find them (bounds the scan on a big table)
 value_index_max_columns   = 500      # text columns indexed per schema at most
 value_index_value_chars   = 100      # a longer value is cut before it is tokenised
 value_index_max_words     = 4        # longer values are prose, not entities, and are not indexed
+value_index_time_budget_s = 20       # building it may delay the first question on a schema by at most this
 value_min_token_chars     = 3        # shorter question words never match a value
 value_tables              = 2        # value-matched tables added after the top tables (never displacing them)

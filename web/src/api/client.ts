@@ -76,10 +76,9 @@ export async function apiFetch<T>(
     /** A raw file body (uploads): sent as is with its own Content-Type and X-Filename. */
     upload?: { file: Blob; contentType: string; filename: string }
     signal?: AbortSignal
-    auth?: boolean
   } = {},
 ): Promise<T> {
-  const { method = 'GET', body, upload, signal, auth = true } = options
+  const { method = 'GET', body, upload, signal } = options
   const headers: Record<string, string> = {}
   if (upload) {
     headers['Content-Type'] = upload.contentType
@@ -88,8 +87,9 @@ export async function apiFetch<T>(
     headers['Content-Type'] = 'application/json'
   }
   // The session is an HttpOnly cookie the browser attaches (credentials: 'include'); the server
-  // accepts it only with this header, which another site cannot send (lib/auth.ts).
-  if (auth) headers[CSRF_HEADER] = '1'
+  // accepts it only with this header, which another site cannot send (lib/auth.ts). Sent on
+  // every request, sign-in and sign-out included (they require it too).
+  headers[CSRF_HEADER] = '1'
 
   let response: Response
   try {
@@ -136,15 +136,15 @@ export async function apiFetch<T>(
 const enc = encodeURIComponent
 
 export const api = {
-  health: () => apiFetch<Health>('/health', { auth: false }),
+  health: () => apiFetch<Health>('/health'),
 
   query: (request: QueryRequest, signal?: AbortSignal) =>
     apiFetch<QueryResponse>('/query', { method: 'POST', body: request, signal }),
 
   /** Exchange the API token for the HttpOnly session cookie; the token is not kept. */
   signIn: (token: string) =>
-    apiFetch<{ principal_id: string }>('/auth/session', { method: 'POST', body: { token }, auth: false }),
-  signOut: () => apiFetch<{ ok: boolean }>('/auth/session', { method: 'DELETE', auth: false }),
+    apiFetch<{ principal_id: string }>('/auth/session', { method: 'POST', body: { token } }),
+  signOut: () => apiFetch<{ ok: boolean }>('/auth/session', { method: 'DELETE' }),
   sessions: () => apiFetch<SessionList>('/sessions'),
   session: (sessionId: string) => apiFetch<SessionDetail>(`/sessions/${enc(sessionId)}`),
   turnRows: (sessionId: string, turnIndex: number) =>

@@ -582,6 +582,18 @@ async def add_pinned_example(tenant_id: str, principal_id: str, workspace_id: An
         return _fail("not_found", "No such workspace.")
     if owned[1] != target_schema:
         return _fail("invalid", f"This answer is from the {target_schema} dataset; the workspace uses {owned[1]}.")
+    # Pinning means "watch this", not "the earlier approval was wrong": an existing approved
+    # answer to the same question is kept unless its SQL is the same (then nothing changes).
+    async with get_history_connection() as conn:
+        existing = await (await conn.execute(
+            "SELECT example_id, sql_text FROM session_state.kb_examples "
+            "WHERE tenant_id = %s AND workspace_id = %s AND question_norm = %s",
+            (tenant_id, workspace_id, normalize_question(clean_text(question, int(cfg.workspaces.question_max_chars)) or "")),
+        )).fetchone()
+    if existing is not None:
+        if existing[1].strip() == (sql or "").strip():
+            return {"ok": True, "example_id": existing[0]}
+        return _fail("exists", "This question already has an approved answer with different SQL; it was kept.")
     return await _add_example(tenant_id, principal_id, workspace_id=workspace_id, question=question, sql=sql,
                               source="tile")
 

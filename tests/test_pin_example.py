@@ -80,6 +80,19 @@ def test_a_saved_example_is_tagged_tile_and_returned(monkeypatch):
     assert seen == {"question": "Top 5 states", "sql": "SELECT 1", "source": "tile", "workspace_id": "w1"}
 
 
+def test_a_pin_never_replaces_a_different_approved_answer(monkeypatch):
+    # Pinning means "watch this", not "the earlier approval (e.g. the setup test) was wrong".
+    async def must_not_add(*a, **k):
+        raise AssertionError("must not replace")
+    monkeypatch.setattr(wt, "_add_example", must_not_add)
+    _patch_owned(monkeypatch, ("w1", "public", "", 0, "ready"), existing=("ex_old", "SELECT 2"))
+    out = asyncio.run(wt.add_pinned_example("t", "p", "w1", "Top 5 states", "SELECT 1", "public"))
+    assert out["ok"] is False and out["error"] == "exists"
+    _patch_owned(monkeypatch, ("w1", "public", "", 0, "ready"), existing=("ex_old", "SELECT 1"))
+    assert asyncio.run(wt.add_pinned_example("t", "p", "w1", "Top 5 states", "SELECT 1 ", "public")) == \
+        {"ok": True, "example_id": "ex_old"}
+
+
 def test_the_workspace_must_use_the_answers_dataset(monkeypatch):
     _patch_owned(monkeypatch, ("w1", "olist", "", 0, "ready"))
     out = asyncio.run(wt.add_pinned_example("t", "p", "w1", "q", "SELECT 1", "public"))
@@ -89,10 +102,18 @@ def test_the_workspace_must_use_the_answers_dataset(monkeypatch):
     assert out["error"] == "not_found"
 
 
-def _patch_owned(monkeypatch, row):
+def _patch_owned(monkeypatch, row, existing=None):
+    class _Cur:
+        async def fetchone(self):
+            return existing
+
+    class _Conn:
+        async def execute(self, *a, **k):
+            return _Cur()
+
     @asynccontextmanager
     async def fake_conn():
-        yield object()
+        yield _Conn()
 
     async def fake_owned(conn, tenant_id, principal_id, workspace_id):
         return row

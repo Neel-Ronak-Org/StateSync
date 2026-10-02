@@ -41,7 +41,7 @@ def test_bearer_wins_and_a_cookie_needs_the_csrf_header():
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
     pytest.importorskip("fastapi")
-    from fastapi import Depends, FastAPI, HTTPException, Request
+    from fastapi import FastAPI, HTTPException, Request
     from fastapi.testclient import TestClient
 
     import session_api
@@ -70,10 +70,16 @@ def client(tmp_path, monkeypatch):
         yield c
 
 
+def test_sign_in_and_out_require_the_csrf_header(client):
+    # Without it another site could sign a visitor into a different account, or out.
+    assert client.post("/auth/session", json={"token": TOKEN}).status_code == 403
+    assert client.delete("/auth/session").status_code == 403
+
+
 def test_sign_in_sets_an_httponly_strict_cookie_and_never_echoes_the_token(client):
-    bad = client.post("/auth/session", json={"token": "nope"})
+    bad = client.post("/auth/session", json={"token": "nope"}, headers={auth.CSRF_HEADER: "1"})
     assert bad.status_code == 401 and auth.SESSION_COOKIE not in bad.cookies
-    ok = client.post("/auth/session", json={"token": TOKEN})
+    ok = client.post("/auth/session", json={"token": TOKEN}, headers={auth.CSRF_HEADER: "1"})
     assert ok.status_code == 200 and ok.json() == {"principal_id": "p1"}
     cookie = ok.headers["set-cookie"].lower()
     assert "httponly" in cookie and "samesite=strict" in cookie and "max-age=" in cookie
@@ -82,9 +88,9 @@ def test_sign_in_sets_an_httponly_strict_cookie_and_never_echoes_the_token(clien
 
 
 def test_whoami_needs_the_csrf_header_with_the_cookie_and_sign_out_clears_it(client):
-    client.post("/auth/session", json={"token": TOKEN})
+    client.post("/auth/session", json={"token": TOKEN}, headers={auth.CSRF_HEADER: "1"})
     assert client.get("/auth/session").status_code == 401                       # cookie alone
     assert client.get("/auth/session", headers={auth.CSRF_HEADER: "1"}).json() == {"principal_id": "p1"}
-    out = client.delete("/auth/session")
+    out = client.delete("/auth/session", headers={auth.CSRF_HEADER: "1"})
     assert out.status_code == 200 and 'max-age=0' in out.headers["set-cookie"].lower()
     assert client.get("/auth/session", headers={auth.CSRF_HEADER: "1"}).status_code == 401

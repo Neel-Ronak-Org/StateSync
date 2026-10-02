@@ -39,7 +39,8 @@ from column_profiles import build_profiles  # noqa: E402
 from schema_retriever import _format_table  # noqa: E402
 import hashlib  # noqa: E402
 
-from table_selection import build_value_index, select, tables_in_sql, text_columns, value_index_sql  # noqa: E402
+from table_selection import (build_value_index, select, tables_in_sql, text_columns, value_index_sql,  # noqa: E402
+                             values_per_column)
 
 DSN = "host=127.0.0.1 port=5434 dbname=fiben user=statesync_reader password=fiben-reader-pass"  # demo-only, demo/fiben_db.sh
 SCHEMA = "fiben"
@@ -92,8 +93,9 @@ def value_index(conn, descriptions: dict[str, dict]) -> dict:
     """The v3 value index, built from exactly the SQL the app runs (table_selection.value_index_sql)."""
     sel = cfg.table_selection
     values = {}
+    per_column = values_per_column(int(sel.value_index_values_per_column), int(cfg.mcp.max_rows_hard_cap))
     for table, column in text_columns(descriptions, int(sel.value_index_max_columns)):
-        sql = value_index_sql(SCHEMA, table, column, int(sel.value_index_scan_rows), int(sel.value_index_values_per_column))
+        sql = value_index_sql(SCHEMA, table, column, int(sel.value_index_scan_rows), per_column)
         values[(table, column)] = [row[0] for row in conn.execute(sql).fetchall()]
     return build_value_index(values, int(sel.value_index_value_chars), int(sel.value_index_max_words))
 

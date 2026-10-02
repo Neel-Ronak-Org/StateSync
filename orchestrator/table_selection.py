@@ -104,6 +104,12 @@ def text_columns(descriptions: dict[str, dict], max_columns: int) -> list[tuple[
     return out[:max_columns]
 
 
+def values_per_column(configured: int, mcp_row_cap: int) -> int:
+    """The values actually kept per column: data.run_select never returns more than the MCP's
+    max_rows_hard_cap, so the offline evaluation must use the same bound as the app."""
+    return max(1, min(int(configured), int(mcp_row_cap)))
+
+
 def value_index_sql(schema: str, table: str, column: str, scan_rows: int, per_column: int) -> str:
     """The SELECT that reads one column's most frequent values: a bounded scan, then GROUP BY."""
     q = lambda name: '"' + name.replace('"', '""') + '"'  # noqa: E731 -- identifier quoting

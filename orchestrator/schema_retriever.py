@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from functools import lru_cache
 
 import httpx
@@ -28,7 +29,7 @@ from typing import Any
 from column_profiles import get_profiles
 from config_loader import cfg, flags
 from mcp_client import MCPSession, data_run_select, data_sample_rows, schema_describe_table
-from table_selection import build_value_index, select, text_columns, value_index_sql
+from table_selection import build_value_index, select, text_columns, value_index_sql, values_per_column
 
 logger = logging.getLogger(__name__)
 
@@ -160,11 +161,18 @@ class LinkedSchemaRetriever:
         if key in self._values and fingerprint:
             return self._values[key]
         values: dict[tuple[str, str], list[str]] = {}
-        for table, column in text_columns(descriptions, int(limits.value_index_max_columns)):
-            sql = value_index_sql(schema or DEFAULT_SCHEMA, table, column, int(limits.value_index_scan_rows),
-                                  int(limits.value_index_values_per_column))
+        per_column = values_per_column(int(limits.value_index_values_per_column), int(cfg.mcp.max_rows_hard_cap))
+        # Built inside the first question on this schema version, so it gets a time budget: the
+        # columns not reached are left out (logged), and the partial index is cached.
+        deadline = time.monotonic() + float(limits.value_index_time_budget_s)
+        columns = text_columns(descriptions, int(limits.value_index_max_columns))
+        for n, (table, column) in enumerate(columns):
+            if time.monotonic() > deadline:
+                logger.warning("schema_retriever: value index time budget spent after %d of %d columns", n, len(columns))
+                break
+            sql = value_index_sql(schema or DEFAULT_SCHEMA, table, column, int(limits.value_index_scan_rows), per_column)
             try:
-                result = await data_run_select(session, sql, max_rows=int(limits.value_index_values_per_column))
+                result = await data_run_select(session, sql, max_rows=per_column)
             except Exception as exc:  # noqa: BLE001 -- best-effort, see the docstring
                 logger.warning("schema_retriever: value index skipped %s.%s: %s", table, column, exc)
                 continue

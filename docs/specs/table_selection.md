@@ -141,3 +141,18 @@ index helps questions that name an entity (a company, a person); it does not fix
 failure, join intermediaries. Still far below the 90% target. The next honest step is a second
 large schema (BIRD, with the owner's permission), not more changes on FIBEN.
 `linked` stays unshipped.
+
+### Found in review after the held-out run (2026-10-02)
+
+- **App and measurement disagreed on the per-column cap.** The app asked `data.run_select` for
+  10,000 values, but the MCP returns at most `max_rows_hard_cap` (5,000); the offline evaluation
+  read 10,000 directly. Both now use `values_per_column()` = min(config, MCP cap) = 5,000. **The
+  held-out numbers above were measured at 10,000 and do not exactly describe the app.** Not
+  re-measured: v3 stays unshipped and the next measurement belongs on a second schema.
+- **The index is a biased sample of large entity columns.** FIBEN's name columns hold 10,000 to
+  50,000 distinct values, most occurring once, so "the most frequent N" is in effect the
+  alphabetically first N. Whether a name is indexed is luck of the alphabet. A real fix (a
+  trigram lookup in the database at question time, or indexing every value) is a design
+  change to make and judge on a second schema, not on FIBEN.
+- **A time budget** (`value_index_time_budget_s`, 20 s) now bounds how long building the index
+  can delay the first question on a schema; columns not reached are left out and logged.

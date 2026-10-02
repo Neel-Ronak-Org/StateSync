@@ -11,7 +11,9 @@ read it and use it from anywhere, for as long as the token lives. In an HttpOnly
 can still USE the session but no script can READ it. The cookie is SameSite=Strict (never sent on
 a cross-site request), Secure when the API is served over HTTPS, scoped to the API's origin, and
 expires after [api] session_cookie_max_age_s. Sign-in attempts are rate-limited per client
-address, and every outcome is audited without the token.
+address, and every outcome is audited without the token. Signing in and out also require the
+X-StateSync header, so another site cannot sign a visitor into a different account or out of
+theirs (a custom header forces a CORS preflight that only the configured origins pass).
 """
 
 from __future__ import annotations
@@ -21,7 +23,7 @@ from typing import Any
 from fastapi import Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict
 
-from auth import SESSION_COOKIE, AuthError, Principal, RateLimited, authenticate, read_rate_limiter
+from auth import CSRF_HEADER, CSRF_VALUE, SESSION_COOKIE, AuthError, Principal, RateLimited, authenticate, read_rate_limiter
 from config_loader import cfg
 
 
@@ -38,10 +40,16 @@ def _set_cookie(response: Response, request: Request, token: str) -> None:
     )
 
 
+def _require_csrf(request: Request) -> None:
+    if request.headers.get(CSRF_HEADER) != CSRF_VALUE:
+        raise HTTPException(status_code=403, detail=f"The {CSRF_HEADER} header is required.")
+
+
 def register_session_routes(app: Any, require_principal: Any, audit: Any) -> None:
 
     @app.post("/auth/session", tags=["auth"])
     async def sign_in(body: SessionRequest, request: Request, response: Response) -> dict[str, Any]:
+        _require_csrf(request)
         client_ip = request.client.host if request.client else "unknown"
         try:
             read_rate_limiter.check(f"signin:{client_ip}")
@@ -64,6 +72,7 @@ def register_session_routes(app: Any, require_principal: Any, audit: Any) -> Non
         return {"principal_id": principal.principal_id}
 
     @app.delete("/auth/session", tags=["auth"])
-    async def sign_out(response: Response) -> dict[str, Any]:
+    async def sign_out(request: Request, response: Response) -> dict[str, Any]:
+        _require_csrf(request)
         response.delete_cookie(SESSION_COOKIE, path="/", httponly=True, samesite="strict")
         return {"ok": True}
