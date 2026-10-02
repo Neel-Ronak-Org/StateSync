@@ -63,18 +63,27 @@ which git ignores.
   model, so the 300 questions take about 1M tokens. That waits for the owner's decision on
   the Groq quota or API credits.
 
-## Not yet fetched: SEC figures for the FinanceBench companies
+## SEC company facts for the FinanceBench companies (fetched 2026-10-02)
 
-The direct link would use the SEC's XBRL "company facts" for the 32 FinanceBench companies
-(data.sec.gov, public). With it, a question such as "3M's FY2018 capital expenditure" could
-be answered from a database and from the 10-K page, and the two answers compared. sec.gov
-refuses requests whose User-Agent does not carry a contact name and email (fair-access
-policy; a request without them got HTTP 403 on 2026-10-02). That waits for the owner to
-choose the contact details.
+- **Source:** the SEC's XBRL "company facts" (`data.sec.gov/api/xbrl/companyfacts/CIK##########.json`)
+  for all 32 FinanceBench companies, plus `www.sec.gov/files/company_tickers.json`. It is
+  public US-government data.
+- **Size:** 124 MB, with 340–918 us-gaap tags per company.
+- **Request header:** sec.gov refuses requests without a contact in the User-Agent. The
+  owner approved using their name and email for this.
+- **CIKs:** company → CIK is in `data/external/sec/financebench_companies.json`. Activision
+  Blizzard (718877) and Foot Locker (850209) are no longer in the ticker list, so their CIKs
+  were entered from EDGAR.
+- **The link works.** 3M's FY2018 `PaymentsToAcquirePropertyPlantAndEquipment` in the 10-K
+  facts is 1,577,000,000, which is exactly FinanceBench's gold answer ($1,577M) for its first
+  question.
+- **Snapshot, not a pinned version.** These files grow with every new filing, so they are a
+  dated snapshot: checksums are in `fixtures/sec_companyfacts_2026-10-02.sha256`. A later
+  fetch will differ.
 
 ## Plan
 
 1. **FinanceBench retrieval** (no model calls): `docs/specs/external_eval.md` Part 1.
 2. **FIBEN text-to-SQL** (needs model calls), loaded as a connected Postgres database
    through the product's own "connect your database" path: Part 2, not yet specified.
-3. **Linked SEC database** and cross-source agreement (needs SEC access): later.
+3. **Linked SEC database** and cross-source agreement: data fetched; not yet specified.
