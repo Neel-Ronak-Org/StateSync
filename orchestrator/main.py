@@ -89,7 +89,7 @@ async def lifespan(app: FastAPI):
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="StateSync Orchestrator",
-    description="Multi-agent analytics API for ONDC network data.",
+    description="Text-to-SQL and document analytics API (StateSync).",
     version="0.1.0-phase-b",
     lifespan=lifespan,
 )

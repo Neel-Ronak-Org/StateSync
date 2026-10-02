@@ -1,6 +1,6 @@
 """
 mcp/main.py
-MCP service — JSON-RPC 2.0 server exposing the 9 Phase-B + C1 + E1 tools.
+MCP service — JSON-RPC 2.0 server exposing the tools below (20, the mcp.tool_ceiling).
 
 Tools exposed (A4):
   schema.list_tables      (A4.1)
