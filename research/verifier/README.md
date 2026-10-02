@@ -91,3 +91,55 @@ and how many of those are actually wrong. Also latency per check.
      equals a distinct gold column; every gold aggregate column is matched.
    - `correct_strict`, the exact match, is kept and reported beside it.
    - Seeing those three candidates did not involve any verifier.
+
+2. **2026-10-02, generator context, before any verifier was scored.** With the schema alone,
+   the LLMs got almost every test question wrong: 2 of 45 runnable for gpt-oss-120b and 2 of
+   42 for qwen3.8-27b, under the relaxed label. That leaves too few positives to measure a
+   verifier, since always answering "wrong" would score 95%.
+   - The primary `test_llm` set now gives the generator what a StateSync workspace gives it:
+     FIBEN's declared foreign keys among the shown tables, 2 sample values per text column, and
+     3 approved examples. The examples are the train questions sharing the most tables, mirroring
+     a workspace's approved examples.
+   - The bare-prompt sets (`test_llm_*.jsonl`) are kept as a secondary, near-all-wrong condition.
+
+3. **2026-10-02, a second training variant, declared before any verifier was scored.**
+   - Variant A (pre-registered) trains on gold SQL plus mutations.
+   - Variant B adds qwen3.8-27b's own rich-context SQL for the train questions, each labelled by
+     running it (`train_llm_qwen3.8-27b_rich.jsonl`). A question's own group is never among its
+     prompt examples.
+   - Both are trained and scored with the same recipe. The A-against-B comparison on
+     `test_llm` is the central result: does training on synthetic mistakes teach real ones?
+
+## Results: first run (2026-10-02, FIBEN, one schema)
+
+AUROC, with the bootstrap 95% interval in brackets. Full metrics are in
+`results/metrics_2026-10-02.jsonl`. `test_llm` uses the rich context (deviation 2): 46
+candidates per generator, 37% and 35% correct.
+
+| signal | test_mut (481) | real gpt-oss (46) | real Qwen (46) |
+|---|---|---|---|
+| non-empty result | 0.62 | 0.59 | 0.63 |
+| Laya zero-shot | 0.63 | 0.62 [0.43, 0.79] | 0.73 [0.57, 0.88] |
+| A, RLCD (mutants) | **0.86** [0.83, 0.90] | 0.52 [0.34, 0.69] | 0.60 [0.42, 0.76] |
+| A, CE only | **0.86** [0.82, 0.89] | 0.53 [0.37, 0.70] | 0.73 [0.57, 0.87] |
+| B, RLCD (mutants + 83 real Qwen) | 0.82 [0.79, 0.86] | 0.60 [0.43, 0.77] | **0.79** [0.64, 0.90] |
+| LLM judge (gpt-oss-120b) | not run | 0.66 [0.50, 0.81] | 8/46 judged; Groq daily limit |
+
+What the run shows:
+
+- **Mutants teach mutant detection.** Trained on mutants, the verifier is strong on mutants
+  (0.86). On real LLM errors it is at chance on gpt-oss and below zero-shot on Qwen.
+  Pre-registered expectation confirmed.
+- **The gain is not purely shortcut learning.** Within a single mutation type, AUROC stays
+  0.74–0.88, so the model learns something about whether a small edit changes the result. Real
+  errors are a different kind: wrong tables, invented values, misread columns.
+- **Real candidates help on the generator they come from.** Adding 83 real Qwen candidates
+  (7% of training) lifts the Qwen test set from 0.60 to 0.79, the best of any signal, and the
+  gpt-oss test set only from 0.52 to 0.60. That matches the generator-specific outcome
+  anticipated before the run.
+- **RLCD is no better than plain cross-entropy here.** It does worse on real Qwen errors
+  (0.60 against 0.73).
+- **Calibration is poor.** Temperatures of 5.6, 3.6 and 10.0 (the clamp limit) were fitted on a
+  mutant calibration slice, and ECE is 0.16–0.31. No threshold yet supports a "verified" label.
+- **Small samples.** Every `test_llm` interval spans about 0.3, so no difference between the
+  signals on real errors is statistically clear yet.

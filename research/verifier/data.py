@@ -239,7 +239,7 @@ def label(db: DB, item: dict[str, Any], sql: str) -> dict[str, Any] | None:
     if out is None:
         return None
     columns, rows = out
-    strict = result_key(rows) == item["gold_key"]
+    strict = [list(t) for t in result_key(rows)] == [list(t) for t in item["gold_key"]]  # JSON round trip turns tuples into lists
     relaxed = strict or relaxed_correct(item["gold_columns"], item["gold_cols"], columns, rows)
     return {"qid": item["qid"], "question": item["question"], "sql": sql, "result": summarise(columns, rows),
             "correct": relaxed, "correct_strict": strict, "rows": len(rows)}

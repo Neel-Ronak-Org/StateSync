@@ -29,7 +29,7 @@ from laya.common import QTYPES, build_model, build_sequence, collate_items, prop
 
 HERE = Path(__file__).resolve().parent
 MODEL_ID, SUBFOLDER, REVISION = "convaiinnovations/laya", "typed-decisions", "55cf4c4ebb4ebe31b2550e8bdf3bd21b99753851"
-MICRO_BATCH, GRAD_ACCUM, GROUP_SIZE = 8, 8, 4
+MICRO_BATCH, GRAD_ACCUM, GROUP_SIZE = 4, 16, 4  # effective batch 64 as in the recipe; micro-batch 4 fits beside Docker in 24 GB
 LR_ENCODER, LR_HEAD = 2.5e-5, 1.0e-4
 SIGMA_START, SIGMA_END = 0.4, 0.1
 CALIB_SHARE, SEED = 0.1, 20261002
@@ -115,6 +115,8 @@ def balance(rows: list[dict]) -> None:
 
 def train(args) -> None:
     rows = [json.loads(l) for l in open(HERE / "out" / "train.jsonl")]
+    for extra in args.extra or []:  # README addition 3, variant B: the generator's own labelled candidates
+        rows += [{**r, "source": r.get("source", "llm")} for r in (json.loads(l) for l in open(HERE / extra)) if r.get("runs", True)]
     # Calibration slice by QUESTION, so no question's candidates are on both sides.
     qids = sorted({r["qid"] for r in rows})
     random.Random(SEED).shuffle(qids)
@@ -124,6 +126,8 @@ def train(args) -> None:
     balance(train_rows)
     torch.manual_seed(SEED)
     model, cfg, tok = load_model(base_checkpoint())
+    if hasattr(model.encoder, "gradient_checkpointing_enable"):
+        model.encoder.gradient_checkpointing_enable()  # activations recomputed in backward: far less GPU memory
     items, dropped = to_items(train_rows, tok, cfg)
     calib, _ = to_items(calib_rows, tok, cfg)
     print(f"{len(train_rows)} train rows -> {len(items)} sequences ({dropped} dropped: markers cut); "
@@ -146,7 +150,9 @@ def train(args) -> None:
             if step % GRAD_ACCUM == 0 or start + MICRO_BATCH >= len(items):
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 opt.step(), sched.step(), opt.zero_grad(set_to_none=True)
-            if step % 50 == 0:
+                if DEVICE.type == "mps":
+                    torch.mps.empty_cache()  # variable sequence lengths otherwise grow the MPS cache to ~19 GB (measured)
+            if step % 25 == 0:
                 print(f"epoch {epoch + 1}/{args.epochs} step {step} loss {loss.item() * GRAD_ACCUM:.4f} "
                       f"{step * MICRO_BATCH / (time.time() - t0):.1f} seq/s", flush=True)
     print(f"trained {step} steps in {time.time() - t0:.0f} s", flush=True)
@@ -217,6 +223,7 @@ def main() -> None:
     t = sub.add_parser("train")
     t.add_argument("--loss", choices=("rlcd", "ce"), default="rlcd")
     t.add_argument("--epochs", type=int, default=4)
+    t.add_argument("--extra", nargs="*", help="more labelled candidate files to train on (variant B)")
     t.add_argument("--out", required=True)
     s = sub.add_parser("score")
     s.add_argument("--model", required=True)
