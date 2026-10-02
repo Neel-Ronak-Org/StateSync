@@ -21,13 +21,8 @@ COPY . .
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-# Hard caps — sourced from statesync.toml values at compose time
-ENV SAMPLE_ROWS_HARD_CAP=20
-ENV MAX_ROWS_HARD_CAP=5000
-ENV MAX_ROWS_DEFAULT=1000
-ENV MAX_SQL_LENGTH=8000
-ENV STATEMENT_TIMEOUT_MS=15000
-ENV SESSION_IDLE_TIMEOUT_MS=60000
+# No limits are baked in here: row caps, SQL length and timeouts are read from
+# config/statesync.toml ([mcp], [sql]); baked ENV copies used to shadow it.
 # TOOL_CEILING is deliberately NOT set here: mcp/main.py reads mcp.tool_ceiling
 # from config/statesync.toml. A baked copy silently overrode the config once.
 

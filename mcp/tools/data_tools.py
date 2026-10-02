@@ -63,11 +63,12 @@ _REJECTED_STATEMENT_TYPES = {
     "ExplainStmt",
 }
 
-# Hard caps (loaded from env — values come from config/statesync.toml via compose)
-_SAMPLE_ROWS_HARD_CAP: int = int(os.environ.get("SAMPLE_ROWS_HARD_CAP", "20"))
-_MAX_ROWS_HARD_CAP:    int = int(os.environ.get("MAX_ROWS_HARD_CAP", "5000"))
-_MAX_ROWS_DEFAULT:     int = int(os.environ.get("MAX_ROWS_DEFAULT", "1000"))
-_MAX_SQL_LENGTH:       int = int(os.environ.get("MAX_SQL_LENGTH", "8000"))
+# Hard caps, from config/statesync.toml (the single source; until 2026-10-02 these were
+# Dockerfile ENV values that merely repeated the config and could drift from it).
+_SAMPLE_ROWS_HARD_CAP: int = int(_cfg.mcp.sample_rows_hard_cap)
+_MAX_ROWS_HARD_CAP:    int = int(_cfg.mcp.max_rows_hard_cap)
+_MAX_ROWS_DEFAULT:     int = int(_cfg.mcp.max_rows_default)
+_MAX_SQL_LENGTH:       int = int(_cfg.sql.max_sql_length)
 
 
 # Functions SQL from the model may never call, on any dataset: file I/O,

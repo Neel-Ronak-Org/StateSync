@@ -41,12 +41,10 @@ from config_loader import cfg
 
 logger = logging.getLogger(__name__)
 
-# ── Config (loaded from env vars set by docker-compose, not from literals) ────
-# The actual values come from config/statesync.toml via the MCP startup.
-# We read them from environment variables here because the MCP service uses
-# its own copy of the config loader.
-_statement_timeout_ms: int = int(os.environ.get("STATEMENT_TIMEOUT_MS", "15000"))
-_session_idle_timeout_ms: int = int(os.environ.get("SESSION_IDLE_TIMEOUT_MS", "60000"))
+# ── Config: config/statesync.toml [mcp], the single source (these were Dockerfile ENV
+# values repeating the config until 2026-10-02) ─────────────────────────────────
+_statement_timeout_ms: int = int(cfg.mcp.statement_timeout_ms)
+_session_idle_timeout_ms: int = int(cfg.mcp.session_idle_timeout_ms)
 _pool: AsyncConnectionPool | None = None
 
 
