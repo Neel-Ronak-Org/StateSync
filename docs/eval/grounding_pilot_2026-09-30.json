@@ -1,0 +1,140 @@
+{
+ "until": "2026-09-30T05:45:20Z",
+ "turns_read": 1290,
+ "stats": {
+  "skipped_no_columns": 319,
+  "answers": 944,
+  "figures": 1939,
+  "unmatched_figures": 48,
+  "answers_with_figures": 856,
+  "answers_flagged": 8,
+  "skipped_preview_truncated": 5,
+  "after_cutoff": 22
+ },
+ "traced_share": 0.9752,
+ "flagged_share": 0.0085,
+ "kinds": {
+  "aggregate": 65,
+  "cell": 1399,
+  "text": 61,
+  "question": 366,
+  "unmatched": 48
+ },
+ "per_schema": {
+  "null": 775,
+  "olist": 70,
+  "public": 44,
+  "live": 54,
+  "cn_a241f0fa5c274952": 1
+ },
+ "per_schema_flagged": {
+  "null": 7,
+  "public": 1
+ },
+ "flagged": [
+  {
+   "question": "and how many of those were delivered?",
+   "unmatched": [
+    "550",
+    "58.73%",
+    "550",
+    "100"
+   ],
+   "route": "sql",
+   "schema": null
+  },
+  {
+   "question": "and what kind of disputes?",
+   "unmatched": [
+    "90"
+   ],
+   "route": "sql",
+   "schema": null
+  },
+  {
+   "question": "And were they resolved?",
+   "unmatched": [
+    "7",
+    "7",
+    "7",
+    "3",
+    "7",
+    "1",
+    "7",
+    "3",
+    "7",
+    "2",
+    "7",
+    "3",
+    "7",
+    "2",
+    "7",
+    "202"
+   ],
+   "route": "sql",
+   "schema": null
+  },
+  {
+   "question": "How many of those were delivered?",
+   "unmatched": [
+    "99,441",
+    "97.0%"
+   ],
+   "route": "sql",
+   "schema": null
+  },
+  {
+   "question": "How many of those were delivered?",
+   "unmatched": [
+    "99,441",
+    "97.0%"
+   ],
+   "route": "sql",
+   "schema": null
+  },
+  {
+   "question": "How many of those were delivered?",
+   "unmatched": [
+    "99,441",
+    "97.0%"
+   ],
+   "route": "sql",
+   "schema": null
+  },
+  {
+   "question": "Which logistics providers have fulfillments that took longer than their committed transit ",
+   "unmatched": [
+    "1",
+    "99%",
+    "97%",
+    "93%",
+    "90%",
+    "3",
+    "99%",
+    "97%",
+    "93%",
+    "93%",
+    "5",
+    "99%",
+    "97%",
+    "91%",
+    "90%",
+    "7",
+    "99%",
+    "95%",
+    "93%",
+    "84%"
+   ],
+   "route": "hybrid",
+   "schema": null
+  },
+  {
+   "question": "And the reason?",
+   "unmatched": [
+    "227"
+   ],
+   "route": "sql",
+   "schema": "public"
+  }
+ ]
+}

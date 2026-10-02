@@ -61,6 +61,9 @@
 - No figure contradicting its data was found in the 944 answers.
 - CAVEAT: in-sample -- the defects were found and fixed on the same data. Out-of-sample
   evaluation is future work (BIRD Mini-Dev).
+- Reproduce: `python3 scripts/grounding_pilot.py --until 2026-09-30T05:45:20Z` gives exactly
+  these numbers from the live store (report: `docs/eval/grounding_pilot_2026-09-30.json`;
+  re-checked 2026-10-02 against the original snapshot too).
 - Also found live: numbered-list markers ("1.", "2.") read as figures; fixed before the pilot.
 
 ## Related work (verified to exist; cite exactly these)
