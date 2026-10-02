@@ -80,10 +80,23 @@ which git ignores.
 - **Snapshot, not a pinned version.** These files grow with every new filing, so they are a
   dated snapshot: checksums are in `fixtures/sec_companyfacts_2026-10-02.sha256`. A later
   fetch will differ.
+- **As a database:** `demo/sec_db.sh` loads the snapshot into a local Postgres
+  (`statesync-sec-db`, 127.0.0.1:5435, database `sec`, read-only user `statesync_reader`).
+  Schema `sec` contains:
+  - `companies` (32 rows);
+  - `facts` (883,340 rows: every reported value, restatements included);
+  - `metric_tags`: 21 metric names over us-gaap tags;
+  - the views `annual_metrics` (10-K values **as first reported**, which match the filing
+    documents) and `annual_metrics_restated` (the latest 10-K wins).
+
+  Both views return 3M's FY2018 capex as 1,577,000,000. They differ where a later filing
+  restated a value: 3M's 2022 revenue is 34,229M as reported and 26,161M restated, after the
+  Solventum spin-off. A database-against-document check must therefore use the as-reported
+  view, or it will flag restatements as disagreements.
 
 ## Plan
 
 1. **FinanceBench retrieval** (no model calls): `docs/specs/external_eval.md` Part 1.
 2. **FIBEN text-to-SQL** (needs model calls), loaded as a connected Postgres database
    through the product's own "connect your database" path: Part 2, not yet specified.
-3. **Linked SEC database** and cross-source agreement: data fetched; not yet specified.
+3. **Linked SEC database** and cross-source agreement: database built (`demo/sec_db.sh`); the study is not yet specified.
