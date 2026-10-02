@@ -57,7 +57,8 @@ POLICY_QUESTION = "How many days does Acme take to issue a refund after inspecti
 _MCP_SNIPPET = """
 import json, sys, urllib.request
 req = json.load(sys.stdin)
-headers = {"Content-Type": "application/json", "X-Tenant-ID": req["tenant"]}
+headers = {"Content-Type": "application/json", "X-Tenant-ID": req["tenant"],
+           "Authorization": "Bearer " + open("/run/secrets/mcp_token").read().strip()}  # mcp/service_auth.py
 if req.get("workspace"):
     headers["X-Workspace-ID"] = req["workspace"]
 body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": req["method"], "params": req["params"]}).encode()

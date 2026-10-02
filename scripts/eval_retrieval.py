@@ -94,7 +94,8 @@ req = json.load(sys.stdin)
 
 
 def call(item):
-    headers = {"Content-Type": "application/json", "X-Tenant-ID": req["tenant"]}
+    headers = {"Content-Type": "application/json", "X-Tenant-ID": req["tenant"],
+           "Authorization": "Bearer " + open("/run/secrets/mcp_token").read().strip()}  # mcp/service_auth.py
     if item.get("workspace"):
         headers["X-Workspace-ID"] = item["workspace"]
     params = {"query_text": item["text"], "top_k": req["top_k"]}

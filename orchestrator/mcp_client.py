@@ -11,9 +11,11 @@ with a populated error field — it does not raise a transport-level fault.
 
 from __future__ import annotations
 
+import functools
 import logging
 import os
 import uuid
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -22,6 +24,25 @@ from config_loader import cfg
 logger = logging.getLogger(__name__)
 
 # ── Session ───────────────────────────────────────────────────────────────────
+MCP_TOKEN_FILE_ENV = "MCP_TOKEN_FILE"
+MCP_TOKEN_FILE_DEFAULT = "/run/secrets/mcp_token"
+
+
+@functools.lru_cache(maxsize=1)
+def service_token() -> str:
+    """The shared secret the MCP requires on every /rpc call (mcp/service_auth.py). Read once
+    from the Docker secret; a missing file raises here, at the first MCP call, rather than
+    sending requests the MCP will refuse."""
+    path = os.environ.get(MCP_TOKEN_FILE_ENV, MCP_TOKEN_FILE_DEFAULT)
+    try:
+        token = Path(path).read_text().strip()
+    except OSError as exc:
+        raise RuntimeError(f"No MCP service token at {path}; mount the mcp_token secret.") from exc
+    if not token:
+        raise RuntimeError(f"The MCP service token at {path} is empty.")
+    return token
+
+
 class MCPSession:
     """
     Represents a session context with the MCP service.
@@ -60,6 +81,7 @@ class MCPSession:
                 connect=cfg.mcp.connect_timeout_s,
             ),
             headers={
+                "Authorization": f"Bearer {service_token()}",
                 "X-Tenant-ID": tenant_id,
                 "X-Session-ID": self.session_id,
                 "Content-Type": "application/json",

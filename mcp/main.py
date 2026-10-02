@@ -25,6 +25,9 @@ Tools exposed (A4):
 Per A4: tenant_id is bound at session establishment from the X-Tenant-ID header.
 It is not a tool parameter — it is injected server-side by session middleware.
 
+Only the orchestrator may call /rpc: every request must carry the shared service
+token (service_auth.py), checked before the headers above are trusted. /health is open.
+
 Per A4.4: A failed query returns ok: false — it does NOT raise a transport-level
 fault. JSON-RPC errors are reserved for protocol failures only.
 """
@@ -45,6 +48,7 @@ from db import init_pool, close_pool, get_connection, init_history_pool, close_h
 from embeddings import close_embeddings_client
 from fingerprint import verify_fingerprint_at_startup
 from qdrant_store import init_qdrant, close_qdrant
+from service_auth import ServiceTokenMissing, authorized, load_token
 from session import (set_session, enforce_tenancy_policy,
                      TenancyPolicyNotImplemented, TenantNotAllowed,
                      TenancyAcknowledgementMissing)
@@ -70,6 +74,12 @@ logger = logging.getLogger(__name__)
 # ── Lifespan ──────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Fail closed (service_auth.py rule 2): no token, no server.
+    try:
+        app.state.service_token = load_token()
+    except ServiceTokenMissing as exc:
+        logger.critical("%s", exc)
+        raise
     await init_pool()
     await init_history_pool()
 
@@ -165,6 +175,13 @@ async def rpc_handler(request: Request) -> JSONResponse:
     into the session context before any tool runs. Agents cannot forge it
     because it comes from the session context, not from params.
     """
+    # Only the orchestrator: the identity headers below are trusted only from a
+    # caller holding the service token (service_auth.py).
+    if not authorized(request.headers.get("Authorization"), getattr(request.app.state, "service_token", "")):
+        logger.warning("Refused an /rpc call without a valid service token from %s",
+                       request.client.host if request.client else "unknown")
+        return JSONResponse(_jsonrpc_error(None, -32001, "Unauthorized."), status_code=401)
+
     # Establish session context from headers (A0.6)
     tenant_id = request.headers.get("X-Tenant-ID", "")
     session_id = request.headers.get("X-Session-ID", "")

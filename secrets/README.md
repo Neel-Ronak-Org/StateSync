@@ -31,6 +31,12 @@ echo "sk-ant-..." > secrets/anthropic_api_key
 # (mcp/connections.py, migration 026). Mounted into the mcp container only.
 # Never regenerate it once connections exist: their passwords become unreadable.
 python3 scripts/make_connection_key.py
+
+# Shared secret between the orchestrator and the MCP (mcp/service_auth.py).
+# Mounted into those two containers only; the MCP refuses to start without it
+# and refuses every /rpc call that does not carry it. Rotate by writing a new
+# value and recreating both services together.
+openssl rand -hex 32 > secrets/mcp_token
 ```
 
 ### In production:

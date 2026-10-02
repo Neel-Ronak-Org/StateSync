@@ -148,6 +148,9 @@ services:
       # Encrypts the passwords of the owner's own databases (mcp/connections.py).
       # Held by the MCP only. Create it with scripts/make_connection_key.py.
       - connection_key
+      # The shared secret every /rpc call must carry (mcp/service_auth.py). Held by
+      # the MCP and the orchestrator only; the MCP will not start without it.
+      - mcp_token
     depends_on:
       postgres:
         condition: service_healthy
@@ -197,6 +200,7 @@ services:
       - gemini_api_key
       - groq_api_key
       - api_principals
+      - mcp_token       # sent on every MCP call (orchestrator/mcp_client.py)
     depends_on:
       mcp:
         condition: service_healthy
@@ -390,5 +394,7 @@ secrets:
     file: ./secrets/connection_key
   groq_api_key:
     file: ./secrets/groq_api_key
+  mcp_token:
+    file: ./secrets/mcp_token
   api_principals:
     file: ./secrets/api_principals.json

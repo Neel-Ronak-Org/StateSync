@@ -91,7 +91,8 @@ import json, sys, urllib.request
 req = json.load(sys.stdin)
 body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": req["method"], "params": req["params"]}).encode()
 r = urllib.request.Request("http://mcp:8080/rpc", data=body, method="POST",
-                           headers={"Content-Type": "application/json", "X-Tenant-ID": req["tenant"]})
+                           headers={"Content-Type": "application/json", "X-Tenant-ID": req["tenant"],
+           "Authorization": "Bearer " + open("/run/secrets/mcp_token").read().strip()}  # mcp/service_auth.py)
 print(urllib.request.urlopen(r, timeout=60).read().decode())
 """
 
