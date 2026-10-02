@@ -243,23 +243,16 @@ def test_without_the_state_field_the_synthesizer_still_calls_the_model(monkeypat
 
 # ── the hybrid (SQL + documents) route ──────────────────────────────────────
 def _hybrid(monkeypatch, flags: dict, best_dense, best_keyword):
+    """The documents half of the hybrid route (hybrid_docs_node), run after the SQL agent produced
+    a result with no seller_id/provider_id column, so the two-round semantic search runs."""
     search = _Search(best_dense, best_keyword)
-
-    async def decompose(query_text):
-        return "sql part", "doc part", 1, 1
-
-    async def run_sql(session, question, state_dict=None):
-        # no seller_id/provider_id column: the doc half uses the two-round semantic search
-        return "SELECT 1", [{"n": 7}], ["n"], None, 1, 1, 1, 1
-
     monkeypatch.setattr(uk, "MCPSession", _Session)
     monkeypatch.setattr(uk, "vector_semantic_search", search)
-    monkeypatch.setattr(uk, "_decompose", decompose)
-    monkeypatch.setattr(uk, "_run_sql_subtask", run_sql)
     monkeypatch.setattr(uk, "cfg", _Cfg())
     state = {"route": "hybrid", "normalized_query": "q", "tenant_id": "t", "target_schema": "public",
-             "flags_snapshot": flags}
-    return search, asyncio.run(uk.unstructured_knowledge_node(state))
+             "flags_snapshot": flags, "subtasks": ["sql part", "doc part"],
+             "executed_sql": "SELECT 1", "sql_rows": [{"n": 7}], "sql_columns": ["n"]}
+    return search, asyncio.run(uk.hybrid_docs_node(state))
 
 
 def test_hybrid_route_drops_the_document_retrievals_and_continues_normally(monkeypatch):
@@ -267,8 +260,9 @@ def test_hybrid_route_drops_the_document_retrievals_and_continues_normally(monke
     assert len(search.calls) == 1                                    # the expanded round was skipped
     assert update["retrievals"] == []
     assert "doc_abstained" not in update                             # stays False: no fixed message
-    assert update["executed_sql"] == "SELECT 1" and update["sql_rows"] == [{"n": 7}]
-    assert update["metrics"]["llm_calls"] == 2                       # decomposer + SQL, as ever
+    assert "executed_sql" not in update and "sql_rows" not in update  # the SQL agent owns those now
+    assert update["metrics"]["llm_calls"] == 0                       # the decomposer ran in hybrid_plan_node
+    update = {**update, "executed_sql": "SELECT 1", "sql_rows": [{"n": 7}], "sql_columns": ["n"]}
 
     # the synthesizer then answers from the SQL result through the model, not with the fixed message
     prompts = []

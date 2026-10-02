@@ -234,6 +234,15 @@ def _parse_referenced_tables(sql: str) -> list[str]:
     return found
 
 
+def question_for(state_dict: dict[str, Any]) -> str:
+    """The question this agent answers. On the hybrid route (graph.py) it is only the SQL part of a
+    compound question, subtasks[0] from hybrid_plan_node, answered with everything a data-only
+    question gets (workspace knowledge, fast path, templates, the correction loop)."""
+    if state_dict.get("route") == "hybrid" and state_dict.get("subtasks"):
+        return str(state_dict["subtasks"][0])
+    return state_dict.get("normalized_query") or state_dict.get("raw_query", "")
+
+
 def _example_tables(ws_ctx: dict[str, Any] | None) -> list[str]:
     """Tables the workspace's matched approved examples read: always shown by table selection
     (docs/specs/table_selection.md), because an approved query is the strongest relevance signal."""
@@ -577,7 +586,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     A3 and appends an ErrorRecord; the graph edge (not this function)
     decides whether to loop back.
     """
-    raw_query: str = state_dict.get("normalized_query") or state_dict.get("raw_query", "")
+    raw_query: str = question_for(state_dict)
     tenant_id: str = state_dict["tenant_id"]
     query_id: str = state_dict.get("query_id", "")
     session_id: str = state_dict.get("session_id", "")
