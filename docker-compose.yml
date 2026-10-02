@@ -106,7 +106,7 @@ services:
   # B-V3 (orchestrator cannot reach postgres) is unaffected — ollama does not
   # route between the two networks.
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.32.9   # pinned 2026-10-03 (the image already running; tagged locally, not pulled)
     restart: unless-stopped
     networks:
       - db_net

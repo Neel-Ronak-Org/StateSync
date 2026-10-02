@@ -69,3 +69,11 @@ def test_no_dockerfile_uses_a_floating_base_or_uv_image():
             assert not image.endswith(":latest") and ":" in image, f"{dockerfile}: floating image {image}"
             if re.match(r"(python|node|nginx):", image):
                 assert re.match(r"\w+:\d+\.\d+\.\d+-", image), f"{dockerfile}: unpinned patch version {image}"
+
+
+def test_compose_images_are_pinned():
+    """Third-party images in docker-compose.yml name a version, never 'latest'. Our own images
+    (statesync-*) are built from Dockerfiles pinned above (postgres's by digest)."""
+    compose = (REPO / "docker-compose.yml").read_text()
+    images = [i for i in re.findall(r"^\s*image:\s*(\S+)", compose, re.M) if not i.startswith("statesync-")]
+    assert images and all(":" in i and not i.endswith(":latest") for i in images), images
