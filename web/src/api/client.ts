@@ -175,10 +175,10 @@ export const api = {
       method: 'PUT',
       body: { items },
     }),
-  buildDashboard: (dashboardId: string, goal?: string) =>
+  buildDashboard: (dashboardId: string, goal?: string, workspaceId?: string) =>
     apiFetch<{ job: BuildJob }>(`/dashboards/${enc(dashboardId)}/build`, {
       method: 'POST',
-      body: goal ? { goal } : {},
+      body: { ...(goal ? { goal } : {}), ...(workspaceId ? { workspace_id: workspaceId } : {}) },
     }),
   buildStatus: (dashboardId: string) =>
     apiFetch<{ job: BuildJob | null }>(`/dashboards/${enc(dashboardId)}/build`),

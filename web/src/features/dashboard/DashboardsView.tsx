@@ -151,7 +151,10 @@ export function DashboardsView({
     else if (view.length > 0) target = await boards.create(name || 'AI insights')
     if (!target) return
     setDismissedJob(null)
-    await build.start(target.dashboard_id, goal || undefined)
+    // The open workspace's approved knowledge guides the build when it is on this dataset.
+    const workspace = workspaces?.find((w) => w.workspace_id === activeWorkspaceId)
+    const workspaceId = workspace && workspace.target_schema === target.target_schema ? workspace.workspace_id : undefined
+    await build.start(target.dashboard_id, goal || undefined, workspaceId)
   }
 
   const job = build.job && build.job.job_id !== dismissedJob ? build.job : null
