@@ -81,6 +81,7 @@ READY_WAIT_S = 120
 HTTP_TIMEOUT_S = 120
 RPC_TIMEOUT_S = 60
 RUN_TIMEOUT_S = 1800
+RERANK_RPC_TIMEOUT_S = 180  # noqa: literals - a re-ranked search waits on the cross-encoder (docs/specs/rag_v3.md)
 EXCERPT_CHARS = 160
 FOLDER_PREFIX = "eval-retrieval-"
 WORKSPACE_DATASET = "olist"
@@ -332,15 +333,19 @@ def extra_params(args: argparse.Namespace, question: dict[str, Any]) -> dict[str
     if args.scope:
         extra["scope"] = args.scope
         extra["dataset"] = WORKSPACE_DATASET if question["corpus"] == "upload" else question["dataset"]
+    if getattr(args, "rerank", "off") != "off":
+        extra["rerank"] = args.rerank   # docs/specs/rag_v3.md: forwarded only when on
     return extra
 
 
 def run_questions(questions: list[dict], workspace_id: str, args: argparse.Namespace) -> dict[str, dict]:
     items = [{"id": q["id"], "text": q["question"], "extra": extra_params(args, q),
               "workspace": workspace_id if q["corpus"] == "upload" else None} for q in questions]
-    payload = {"url": MCP_RPC_URL, "tenant": TENANT, "top_k": TOP_K, "timeout_s": RPC_TIMEOUT_S, "items": items}
+    rpc_timeout = RERANK_RPC_TIMEOUT_S if getattr(args, "rerank", "off") != "off" else RPC_TIMEOUT_S
+    payload = {"url": MCP_RPC_URL, "tenant": TENANT, "top_k": TOP_K, "timeout_s": rpc_timeout, "items": items}
     out = subprocess.run(["docker", "exec", "-i", ORCHESTRATOR, "python", "-c", _CONTAINER_SNIPPET],
-                         input=json.dumps(payload), capture_output=True, text=True, timeout=RUN_TIMEOUT_S)
+                         input=json.dumps(payload), capture_output=True, text=True,
+                         timeout=max(RUN_TIMEOUT_S, rpc_timeout * (len(items) + 1)))
     if out.returncode:
         raise RuntimeError(f"the search run failed inside {ORCHESTRATOR}: {out.stderr.strip()[-500:]}")
     return json.loads(out.stdout)
@@ -413,7 +418,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         rows.append(row)
     return {"label": args.label, "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "fixture_sha256": hashlib.sha256(fixture_bytes).hexdigest(), "top_k": TOP_K,
-            "params": {"mode": args.mode, "scope": args.scope}, "errors": errors,
+            "params": {"mode": args.mode, "scope": args.scope, "rerank": args.rerank}, "errors": errors,
             "summary": summarise_groups(rows), "questions": rows}
 
 
@@ -427,6 +432,8 @@ def main() -> int:
     parser.add_argument("--compare", nargs=2, metavar=("A", "B"), help="print two saved runs side by side")
     parser.add_argument("--mode", choices=("dense", "hybrid"), help="forwarded to vector.semantic_search only when given")
     parser.add_argument("--scope", choices=("all", "dataset"), help="forwarded to vector.semantic_search only when given")
+    parser.add_argument("--rerank", choices=("off", "minilm", "bge"), default="off",
+                        help="docs/specs/rag_v3.md: forwarded to vector.semantic_search only when not off")
     parser.add_argument("--overwrite", action="store_true", help="replace an existing saved run with this label")
     args = parser.parse_args()
 
