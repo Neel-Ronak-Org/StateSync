@@ -99,4 +99,4 @@ which git ignores.
 1. **FinanceBench retrieval** (no model calls): `docs/specs/external_eval.md` Part 1.
 2. **FIBEN text-to-SQL** (needs model calls), loaded as a connected Postgres database
    through the product's own "connect your database" path: Part 2, not yet specified.
-3. **Linked SEC database** and cross-source agreement: database built (`demo/sec_db.sh`); the study is not yet specified.
+3. **Linked SEC database** and cross-source agreement: database built (`demo/sec_db.sh`); study pre-registered in `docs/specs/sec_crosscheck.md` (needs model calls).
