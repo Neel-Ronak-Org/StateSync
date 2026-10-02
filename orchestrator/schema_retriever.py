@@ -23,12 +23,16 @@ from functools import lru_cache
 import httpx
 from typing import Protocol, runtime_checkable
 
-from config_loader import flags
-from mcp_client import MCPSession, schema_describe_table
+from typing import Any
+
+from column_profiles import get_profiles
+from config_loader import cfg, flags
+from mcp_client import MCPSession, data_sample_rows, schema_describe_table
+from table_selection import select
 
 logger = logging.getLogger(__name__)
 
-_VALID_PROVIDERS = frozenset({"direct"})
+_VALID_PROVIDERS = frozenset({"direct", "linked"})
 
 # The schema the agent is pointed at. "public" is A5's application schema and
 # the shipped default; "olist" is the real-data corpus (migration 007). Only
@@ -45,9 +49,12 @@ def target_schema() -> str:
 class SchemaRetriever(Protocol):
     async def retrieve(
         self, session: MCPSession, table_names: list[str],
-        schema: str | None = None,
+        schema: str | None = None, **context: Any,
     ) -> tuple[str, list[dict]]:
         """
+        `context` (keyword-only, optional): question, attempt, must_include, fingerprint, used by
+        the "linked" provider to select tables (docs/specs/table_selection.md); "direct" ignores it.
+
         `schema` selects the corpus (None = target_schema()); the Protocol
         omitted it while its only implementation required it (audit 007
         F-007-5), so a second implementation written to the Protocol would
@@ -99,7 +106,7 @@ class DirectSchemaRetriever:
 
     async def retrieve(
         self, session: MCPSession, table_names: list[str],
-        schema: str | None = None,
+        schema: str | None = None, **_context: Any,
     ) -> tuple[str, list[dict]]:
         schema_parts: list[str] = []
         descriptions: list[dict] = []
@@ -128,6 +135,68 @@ class DirectSchemaRetriever:
         return "\n\n".join(schema_parts), descriptions
 
 
+class LinkedSchemaRetriever:
+    """Table selection for large schemas (docs/specs/table_selection.md, orchestrator/table_selection.py).
+
+    A schema of at most [table_selection].max_tables_full tables, or a call without a question, is
+    shown whole through DirectSchemaRetriever. A larger one is described once per (schema,
+    fingerprint), each table checked for rows with a one-row sample, and per question only the
+    selected tables are shown, with a note that more exist."""
+
+    def __init__(self) -> None:
+        self._direct = DirectSchemaRetriever()
+        self._cache: dict[tuple[str, str], tuple[dict[str, dict], set[str]]] = {}
+
+    async def _catalog(self, session: MCPSession, table_names: list[str], schema: str | None,
+                       fingerprint: str) -> tuple[dict[str, dict], set[str]]:
+        key = (schema or "", fingerprint)
+        if key in self._cache and fingerprint:
+            return self._cache[key]
+        descriptions: dict[str, dict] = {}
+        empty: set[str] = set()
+        for tname in table_names:
+            try:
+                desc = await schema_describe_table(session, tname, schema)
+            except httpx.HTTPStatusError as exc:
+                logger.warning("schema_retriever: describe_table(%s) refused (%s); skipped", tname,
+                               exc.response.status_code)
+                continue
+            descriptions[tname] = desc
+            first = [c["name"] for c in desc.get("columns", [])[:1]]
+            try:
+                sample = await data_sample_rows(session, tname, columns=first or None, limit=1, schema=schema)
+                if not sample.get("rows"):
+                    empty.add(tname)
+            except httpx.HTTPStatusError:
+                pass  # unknown emptiness: treat as non-empty
+        self._cache[key] = (descriptions, empty)
+        return descriptions, empty
+
+    async def retrieve(
+        self, session: MCPSession, table_names: list[str], schema: str | None = None, *,
+        question: str | None = None, attempt: int = 0, must_include: list[str] | None = None,
+        fingerprint: str = "", **_context: Any,
+    ) -> tuple[str, list[dict]]:
+        limits = cfg.table_selection
+        if not question or len(table_names) <= int(limits.max_tables_full):
+            return await self._direct.retrieve(session, table_names, schema)
+        descriptions, empty = await self._catalog(session, table_names, schema, fingerprint)
+        if not descriptions:
+            raise RuntimeError(f"no table could be described ({len(table_names)} refused)")
+        values = await get_profiles(session, schema or DEFAULT_SCHEMA, fingerprint, list(descriptions),
+                                    list(descriptions.values()))
+        chosen = select(question, descriptions, values, int(limits.top_tables), int(limits.max_tables_selected),
+                        int(limits.fk_hops) + max(0, attempt), must_include=must_include, empty=empty)
+        parts = [f"(Showing {len(chosen)} of {len(descriptions)} tables: the ones most relevant to this question. "
+                 "Other tables exist; use only the tables shown.)"]
+        for tname in chosen:
+            label = tname if not schema or schema == DEFAULT_SCHEMA else f"{schema}.{tname}"
+            parts.append(_format_table(label, descriptions[tname]))
+        logger.info("schema_retriever: linked selection %d of %d tables (attempt %d): %s",
+                    len(chosen), len(descriptions), attempt, ", ".join(chosen))
+        return "\n\n".join(parts), [descriptions[t] for t in chosen]
+
+
 @lru_cache(maxsize=1)
 def get_schema_retriever() -> "SchemaRetriever":
     provider: str = str(flags.schema_retriever.provider)
@@ -137,4 +206,4 @@ def get_schema_retriever() -> "SchemaRetriever":
             f"{sorted(_VALID_PROVIDERS)}. Check config/flags.toml [schema_retriever] provider."
         )
     logger.info("SchemaRetriever resolved: provider=%s", provider)
-    return DirectSchemaRetriever()
+    return LinkedSchemaRetriever() if provider == "linked" else DirectSchemaRetriever()

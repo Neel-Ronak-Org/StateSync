@@ -81,6 +81,7 @@ from column_profiles import format_profiles, get_profiles
 from config_loader import cfg
 from classifiers.error_classifier import classify_error
 from llm.provider import get_agent_llm
+from table_selection import tables_in_sql
 from mcp_client import MCPSession, data_run_select, data_sample_rows, schema_describe_table, schema_list_tables, workspaces_manage
 from memory_store import get_trajectory_store
 from schema_retriever import get_schema_retriever, target_schema
@@ -230,6 +231,17 @@ def _parse_referenced_tables(sql: str) -> list[str]:
                 found.append(name)
 
     _RangeVarCollector()(tree)
+    return found
+
+
+def _example_tables(ws_ctx: dict[str, Any] | None) -> list[str]:
+    """Tables the workspace's matched approved examples read: always shown by table selection
+    (docs/specs/table_selection.md), because an approved query is the strongest relevance signal."""
+    found: list[str] = []
+    for ex in (ws_ctx or {}).get("examples") or []:
+        for t in tables_in_sql(str(ex.get("sql") or "")):
+            if t not in found:
+                found.append(t)
     return found
 
 
@@ -667,7 +679,9 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                     context_block += "\n\n" + ws_block
             else:
                 retriever = get_schema_retriever()
-                schema_context, table_descriptions = await retriever.retrieve(session, table_names, _schema)
+                schema_context, table_descriptions = await retriever.retrieve(
+                    session, table_names, _schema, question=raw_query, attempt=attempt,
+                    must_include=_example_tables(ws_ctx), fingerprint=schema_fingerprint)
                 trajectory_steps += len(table_names)
                 context_block = f"Schema:\n{schema_context}"
                 if ws_block:
@@ -744,7 +758,9 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             # no memory re-consultation, no interrogation (already in state
             # from attempt 0, if any -- not re-sampled).
             retriever = get_schema_retriever()
-            schema_context, table_descriptions = await retriever.retrieve(session, table_names, _schema)
+            schema_context, table_descriptions = await retriever.retrieve(
+                session, table_names, _schema, question=raw_query, attempt=attempt,
+                must_include=_example_tables(ws_ctx), fingerprint=schema_fingerprint)
             trajectory_steps += len(table_names)
             context_block = f"Schema:\n{schema_context}"
             if ws_block:

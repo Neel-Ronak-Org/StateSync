@@ -69,6 +69,10 @@ for line in open(sys.argv[1], encoding="utf-8", errors="replace"):
       -c "\\copy fiben.${table} FROM STDIN WITH (FORMAT csv)"
 done
 
+# FIBEN's own foreign keys, as metadata (NOT VALID); see demo/fiben_fks.py.
+"$PY" "${REPO_ROOT}/demo/fiben_fks.py" "${SRC}/FIBEN.sql" | docker exec -i "$NAME" psql -q -U postgres -d fiben
+echo "foreign keys: $(docker exec "$NAME" psql -At -U postgres -d fiben -c "SELECT count(*) FROM pg_constraint c JOIN pg_namespace n ON n.oid = c.connamespace WHERE n.nspname = 'fiben' AND c.contype = 'f'")"
+
 docker exec -i "$NAME" psql -q -v ON_ERROR_STOP=1 -U postgres -d fiben <<'SQL'
 CREATE ROLE statesync_reader LOGIN PASSWORD 'fiben-reader-pass';
 ALTER ROLE statesync_reader SET default_transaction_read_only = on;

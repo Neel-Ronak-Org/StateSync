@@ -156,7 +156,7 @@ class _FakeLLM:
 
 
 class _FakeRetriever:
-    async def retrieve(self, session, table_names, schema=None):
+    async def retrieve(self, session, table_names, schema=None, **_context):
         return "TABLE orders:\n    status text NULL", DESCS
 
 
