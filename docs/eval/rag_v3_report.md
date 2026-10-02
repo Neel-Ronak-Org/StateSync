@@ -56,4 +56,26 @@ a minute to it. The ship rule says latency does not veto; it does decide how bge
 
 - `fb3_bge_rewrite` (query rewriting) needs Groq quota.
 - The layout ingest and `fb3_layout_dense` / `fb3_layout_bge` (an 8-hour ingest, then the runs).
-- In-house 110-question set, dense against bge: below.
+
+## In-house set (110 questions, 100 answerable; `retrieval_v2_v3_paragraph_{dense,bge}.json`)
+
+The dense run reproduces the RAG v2 baseline exactly (hit@1 60.0%, hit@5 77.0%, hit@10 79.0%, MRR 0.670),
+so the stack measured is the one the earlier report described.
+
+| run | hit@1 | hit@5 | hit@10 | MRR@10 | ID hit@1 | ID hit@10 | p50 |
+|---|---|---|---|---|---|---|---|
+| dense | 60.0% | 77.0% | 79.0% | 0.670 | 13.3% | 30.0% | 0.16 s |
+| bge | 67.0% | 78.0% | 83.0% | 0.721 | 23.3% | 43.3% | 12.0 s |
+
+- Paired: hit@1 bge alone 11, dense alone 4 (p = 0.12); hit@5 5 against 4 (p = 1.0). The direction matches
+  FinanceBench, but this set is too small to show it on its own.
+- By category, hit@1: fact 81% → 100%, definition 71% → 100%, ID 13% → 23%, table 85% → 85%,
+  paraphrase 60% → 50% (10 questions).
+- **The rank-2 ID question** (`retrieval_v2_report.md`, "Two RRF ties"): those ties arise in hybrid mode,
+  which these dense runs do not use. In dense mode bge lifts ID rank 1 from 13% to 23%, but ID hit@10 is
+  only 43%: dense retrieval often does not return the ID document at all, and a re-ranker can only
+  re-order the 30 candidates it is given. The natural next run is hybrid + bge (keyword recall, then
+  re-ranking), which would also settle the ties. It is not part of this pre-registration and would be
+  specified before it is run.
+- Unanswerable questions: the first-stage top-1 cosine is unchanged by design (re-ranking happens after
+  it), so abstention is not affected.
