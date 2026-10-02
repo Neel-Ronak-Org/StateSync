@@ -12,8 +12,8 @@
   verified (owner-approved SQL run as is) > compiled (a template derived from approved SQL:
   literals become typed slots via the Postgres parser, values filled in code, no SQL-model
   call) > checked (new SQL, deterministic checks on, no caveat) > unchecked.
-- Deterministic answer checks (orchestrator/answer_checks.py): join fan-out probe (for SUM/AVG
-  over a join, compare COUNT(key) with COUNT(DISTINCT key) on the joined rows; a mismatch
+- Deterministic answer checks (orchestrator/answer_checks.py): join fan-out probe (for SUM/AVG/COUNT(col)
+  over a join, and COUNT(*) when every joined table repeats; compare COUNT(key) with COUNT(DISTINCT key) on the joined rows; a mismatch
   means rows were repeated), result truncated at the row limit, NULL-heavy aggregates.
 - Figure grounding (orchestrator/number_grounding.py), no model: every number in the prose is
   matched, within the rounding its own digits imply ("1.2M" = 1.15M–1.25M), to a result cell
@@ -44,7 +44,9 @@
   corrected 2026-10-01 -- an earlier note wrongly said 'fraction vs percentage'); a
   projection difference; one document retrieval miss; two follow-ups that counted at the
   wrong grain (payment rows instead of orders; reviews duplicated by a join under COUNT(*)
-  -- the fan-out probe covers SUM/AVG only so far).
+  -- the fan-out probe then covered SUM/AVG only. Since 2026-10-02 it also covers COUNT(col),
+  and COUNT(*) only when every joined table repeats; a reviews-under-COUNT(*) case where the
+  other joined table is unique in the join is still NOT caught, by design).
 
 ## Pilot: figure grounding over stored answers (2026-09-30; zero model calls)
 - Data: every stored conversation turn with executed SQL and an answer (1,268); 944

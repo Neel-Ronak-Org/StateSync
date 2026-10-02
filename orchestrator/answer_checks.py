@@ -9,6 +9,16 @@ returns a plausible, confidently wrong figure. No model can be trusted to notice
 it is found the mechanical way: count the joined rows, count the distinct keys of the
 aggregated table inside the same join, and compare.
 
+COUNT (added 2026-10-02):
+  - COUNT(alias.col) without DISTINCT counts rows of alias's table, exactly like SUM, so it
+    gets the same probe.
+  - COUNT(*) counts JOINED rows. That is right whenever some joined table's rows are unique
+    in the join (counting order items through orders is legitimate), so it is flagged only
+    when EVERY joined table repeats: then it counts combinations, not rows of any table.
+  - Not caught, by design: COUNT(*) that counts the wrong table's rows ("how many customers"
+    answered by counting their orders). Which table the question meant is semantic; a guess
+    would be a false accusation.
+
 Everything that parses SQL is pure and never raises; the small async runners swallow and
 log any failure and skip the check, because a check must never turn a working answer into
 a failed one. Non-blocking caveats (truncation, all-NULL result) are pure functions of the
@@ -40,7 +50,7 @@ except ImportError:  # pragma: no cover -- dependency is pinned in pyproject.tom
 # outside an identifier position, so it cannot collide with anything in the original.
 KEY_PLACEHOLDER = "<KEY>"
 
-_FANOUT_AGGREGATES = frozenset({"sum", "avg"})
+_FANOUT_AGGREGATES = frozenset({"sum", "avg", "count"})
 _SIMPLE_IDENT = re.compile(r"[a-z_][a-z0-9_$]*")
 
 
@@ -50,6 +60,8 @@ class Probe:
     table: str          # schema-qualified when the SQL (or default_schema) says which schema
     alias: str          # the name the SQL uses for it (the table name when unaliased)
     count_sql: str      # COUNT query text with KEY_PLACEHOLDER where the key column goes
+    label: str = "SUM/AVG"   # the aggregates over this table's columns, for the message
+    star: bool = False       # a COUNT(*) probe: it matters only if EVERY joined table repeats
 
     def count_sql_for(self, key: str) -> str:
         return self.count_sql.replace(KEY_PLACEHOLDER, _quote_ident(key))
@@ -93,12 +105,13 @@ def _has_join(node: Any) -> bool:
 
 
 class _Scan(Visitor):
-    """Finds sum/avg calls with a plain column argument, and anything that makes the
-    statement too complicated to reason about (sub-selects)."""
+    """Finds sum/avg/count calls with a plain column argument, COUNT(*), and anything that
+    makes the statement too complicated to reason about (sub-selects)."""
 
     def __init__(self) -> None:
         super().__init__()
-        self.aggregates: list[Any] = []
+        self.aggregates: list[tuple[str, Any]] = []   # (function name, ColumnRef)
+        self.count_star = False
         self.complex = False
 
     def visit_SubLink(self, ancestors, node):  # noqa: N802 -- pglast visitor naming
@@ -108,15 +121,19 @@ class _Scan(Visitor):
         name = getattr(node.funcname[-1], "sval", "").lower() if node.funcname else ""
         if name not in _FANOUT_AGGREGATES or node.agg_distinct or node.over is not None:
             return
+        if name == "count" and node.agg_star:
+            self.count_star = True
+            return
         args = node.args or ()
         if len(args) == 1 and isinstance(args[0], pglast.ast.ColumnRef):
-            self.aggregates.append(args[0])
+            self.aggregates.append((name, args[0]))
 
 
 def fanout_probe(sql: str, default_schema: str | None = None) -> list[Probe] | None:
-    """Probes for a single SELECT with a JOIN and SUM/AVG over a column of some joined
-    table; None whenever the statement is outside that shape (conservative on purpose:
-    a wrong "fan-out" verdict costs a needless retry, a missed one costs nothing new)."""
+    """Probes for a single SELECT with a JOIN and SUM/AVG/COUNT over a column of some joined
+    table, or COUNT(*) (one star probe per joined table); None whenever the statement is
+    outside that shape (conservative on purpose: a wrong "fan-out" verdict costs a needless
+    retry, a missed one costs nothing new)."""
     if not _PGLAST_AVAILABLE or not sql or not sql.strip():
         return None
     try:
@@ -140,35 +157,41 @@ def fanout_probe(sql: str, default_schema: str | None = None) -> list[Probe] | N
         if scan.complex:
             return None
 
-        aliases: list[str] = []
-        for ref in scan.aggregates:
+        functions: dict[str, set[str]] = {}
+        for name, ref in scan.aggregates:
             fields = [getattr(f, "sval", None) for f in ref.fields]
             # Only alias.column: an unqualified column in a join cannot be assigned to one
             # table without the schema, and guessing would be a false accusation.
-            if len(fields) == 2 and all(fields) and fields[0] in tables and fields[0] not in aliases:
-                aliases.append(fields[0])
-        if not aliases:
+            if len(fields) == 2 and all(fields) and fields[0] in tables:
+                functions.setdefault(fields[0], set()).add(name)
+        aliases = list(functions)
+        if not aliases and not scan.count_star:
             return None
 
         from_sql = ", ".join(RawStream()(item) for item in stmt.fromClause)
         where_sql = f" WHERE {RawStream()(stmt.whereClause)}" if stmt.whereClause is not None else ""
-        return [
-            Probe(
-                table=tables[alias],
-                alias=alias,
-                # COUNT(key), not COUNT(*): rows NULL-extended by an outer join
-                # are not rows of this table, so they must not look like repeats.
-                count_sql=(
-                    f"SELECT COUNT({_quote_ident(alias)}.{KEY_PLACEHOLDER}) AS n, "
+        def count_sql(alias: str) -> str:
+            # COUNT(key), not COUNT(*): rows NULL-extended by an outer join
+            # are not rows of this table, so they must not look like repeats.
+            return (f"SELECT COUNT({_quote_ident(alias)}.{KEY_PLACEHOLDER}) AS n, "
                     f"COUNT(DISTINCT {_quote_ident(alias)}.{KEY_PLACEHOLDER}) AS d "
-                    f"FROM {from_sql}{where_sql}"
-                ),
-            )
-            for alias in aliases
-        ]
+                    f"FROM {from_sql}{where_sql}")
+
+        probes = [Probe(table=tables[alias], alias=alias, count_sql=count_sql(alias),
+                        label=_label(functions[alias])) for alias in aliases]
+        if scan.count_star:
+            probes += [Probe(table=table, alias=alias, count_sql=count_sql(alias), label="COUNT(*)", star=True)
+                       for alias, table in tables.items()]
+        return probes
     except Exception as exc:
         logger.warning("answer_checks: fanout_probe skipped: %s", exc)
         return None
+
+
+def _label(functions: set[str]) -> str:
+    """'SUM/AVG' (unchanged wording), 'COUNT', or 'SUM/AVG/COUNT' for the message."""
+    parts = (["SUM/AVG"] if functions & {"sum", "avg"} else []) + (["COUNT"] if "count" in functions else [])
+    return "/".join(parts)
 
 
 # -- key discovery and the fan-out check (async) -------------------------------
@@ -229,31 +252,54 @@ async def check_fanout(
     table_columns: dict[str, list[str]],
     default_schema: str | None = None,
 ) -> Finding | None:
-    """A Finding when the joined rows outnumber the distinct keys of an aggregated
-    table. table_columns maps a table (schema-qualified or bare) to its column names."""
+    """A Finding when the joined rows outnumber the distinct keys of an aggregated table, or,
+    for COUNT(*), when EVERY joined table repeats. table_columns maps a table (schema-qualified
+    or bare) to its column names."""
     try:
-        probes = fanout_probe(sql, default_schema)
-        for probe in probes or []:
-            columns = table_columns.get(probe.table) or table_columns.get(probe.table.split(".")[-1]) or []
-            key = await find_single_column_key(session, probe.table, columns, fingerprint)
-            if key is None:
-                continue
-            result = await data_run_select(session, probe.count_sql_for(key), max_rows=1)
-            rows = result.get("rows") or []
-            if not (result.get("ok") and rows):
-                continue
-            n, d = int(rows[0]["n"]), int(rows[0]["d"])
-            if n > d:
+        probes = fanout_probe(sql, default_schema) or []
+        for probe in (p for p in probes if not p.star):
+            measured = await _measure(session, probe, table_columns, fingerprint)
+            if measured is not None and measured[1] > measured[2]:
+                key, n, d = measured
                 return Finding(
                     table=probe.table, key=key, n=n, d=d,
                     message=(
                         f"Joining repeats rows of {probe.table} ({n:,} joined rows for {d:,} "
-                        f"distinct {key}), so SUM/AVG over its columns count some values more than once."
+                        f"distinct {key}), so {probe.label} over its columns count some values more than once."
+                    ),
+                )
+        stars = [p for p in probes if p.star]
+        if stars:
+            measured_all = [(p, await _measure(session, p, table_columns, fingerprint)) for p in stars]
+            # Every table needs a proven key and must repeat; one unique table means COUNT(*)
+            # counts that table's rows, which may be exactly what was asked.
+            if all(m is not None and m[1] > m[2] for _, m in measured_all):
+                first, (key, n, d) = measured_all[0]
+                details = "; ".join(f"{p.table}: {m[2]:,} distinct {m[0]}" for p, m in measured_all)
+                return Finding(
+                    table=first.table, key=key, n=n, d=d,
+                    message=(
+                        f"COUNT(*) over this join counts {n:,} combinations of rows, and every joined table "
+                        f"repeats ({details}), so it is not a count of any one table's rows."
                     ),
                 )
     except Exception as exc:
         logger.warning("answer_checks: check_fanout skipped: %s", exc)
     return None
+
+
+async def _measure(session: MCPSession, probe: Probe, table_columns: dict[str, list[str]],
+                   fingerprint: str) -> tuple[str, int, int] | None:
+    """(key, joined rows, distinct keys) for one probe; None without a provable key or a result."""
+    columns = table_columns.get(probe.table) or table_columns.get(probe.table.split(".")[-1]) or []
+    key = await find_single_column_key(session, probe.table, columns, fingerprint)
+    if key is None:
+        return None
+    result = await data_run_select(session, probe.count_sql_for(key), max_rows=1)
+    rows = result.get("rows") or []
+    if not (result.get("ok") and rows):
+        return None
+    return key, int(rows[0]["n"]), int(rows[0]["d"])
 
 
 # -- non-blocking caveats (pure) -----------------------------------------------

@@ -46,7 +46,8 @@ def _parts(count_sql: str) -> tuple[str, str | None]:
 
 @pytest.mark.parametrize("sql", [
     "SELECT SUM(o.amount) FROM live.orders o",
-    "SELECT c.state, COUNT(*) FROM live.orders o JOIN live.customers c ON c.customer_id = o.customer_id GROUP BY c.state",
+    "SELECT c.state, COUNT(DISTINCT o.order_id) FROM live.orders o JOIN live.customers c ON c.customer_id = o.customer_id GROUP BY c.state",
+    "SELECT COUNT(*) FROM live.orders o",
     "WITH x AS (SELECT * FROM live.orders) SELECT SUM(o.amount) FROM x o JOIN live.customers c ON c.customer_id = o.customer_id",
     "SELECT SUM(o.amount) FROM live.orders o JOIN live.customers c ON c.customer_id = o.customer_id "
     "UNION SELECT SUM(o.amount) FROM live.orders o JOIN live.customers c ON c.customer_id = o.customer_id",
@@ -92,6 +93,68 @@ def test_fanout_probe_default_schema_and_multiple_tables():
     sql = "SELECT SUM(o.a), AVG(c.b) FROM orders o JOIN customers c ON c.id = o.cid"
     probes = ac.fanout_probe(sql, "live")
     assert [p.table for p in probes] == ["live.orders", "live.customers"]
+
+
+# -- COUNT (2026-10-02) ----------------------------------------------------------
+# COUNT(col) counts one table's rows like SUM; COUNT(*) counts joined rows and is flagged only
+# when every joined table repeats (otherwise it counts the unique table's rows, maybe on purpose).
+
+STAR_SQL = ("SELECT c.state, COUNT(*) FROM live.orders o JOIN live.customers c "
+            "ON c.customer_id = o.customer_id GROUP BY c.state")
+
+
+def test_count_star_gets_one_star_probe_per_joined_table():
+    probes = ac.fanout_probe(STAR_SQL)
+    assert [(p.table, p.alias, p.star, p.label) for p in probes] == [
+        ("live.orders", "o", True, "COUNT(*)"), ("live.customers", "c", True, "COUNT(*)")]
+
+
+def test_count_of_a_column_is_probed_like_sum():
+    sql = "SELECT c.state, COUNT(o.order_id), SUM(o.amount) FROM live.orders o JOIN live.customers c ON c.customer_id = o.customer_id GROUP BY c.state"
+    probes = ac.fanout_probe(sql)
+    assert [(p.alias, p.label, p.star) for p in probes] == [("o", "SUM/AVG/COUNT", False)]
+
+
+def _counts(per_alias: dict[str, tuple[int, int]], keyless: set[str] = frozenset()):
+    async def fake(session, sql, max_rows=None):
+        if "AS is_unique" in sql:
+            return {"ok": True, "rows": [{"is_unique": not any(t in sql for t in keyless)}]}
+        alias = sql.split("COUNT(")[1].split(".")[0]
+        n, d = per_alias[alias]
+        return {"ok": True, "rows": [{"n": n, "d": d}]}
+    return fake
+
+
+COLS = {"live.orders": ["order_id"], "live.customers": ["customer_id"]}
+
+
+def _check(sql, fake):
+    with patch.object(ac, "data_run_select", fake):
+        ac.clear_cache()
+        try:
+            return asyncio.run(ac.check_fanout(None, sql, "fp", COLS))
+        finally:
+            ac.clear_cache()
+
+
+def test_count_star_is_fine_when_one_table_is_unique_in_the_join():
+    assert _check(STAR_SQL, _counts({"o": (1000, 1000), "c": (1000, 400)})) is None
+
+
+def test_count_star_is_flagged_when_every_table_repeats():
+    found = _check(STAR_SQL, _counts({"o": (1500, 1000), "c": (1500, 400)}))
+    assert found is not None and found.message.startswith("COUNT(*) over this join counts 1,500 combinations")
+    assert "live.customers: 400 distinct customer_id" in found.message
+
+
+def test_count_star_is_not_flagged_without_a_key_for_every_table():
+    assert _check(STAR_SQL, _counts({"o": (1500, 1000), "c": (1500, 400)}, keyless={"customers"})) is None
+
+
+def test_count_of_a_repeated_table_says_count():
+    sql = "SELECT c.state, COUNT(o.order_id) FROM live.orders o JOIN live.customers c ON c.customer_id = o.customer_id GROUP BY c.state"
+    found = _check(sql, _counts({"o": (1204, 1000)}))
+    assert found.message.endswith("so COUNT over its columns count some values more than once.")
 
 
 # -- find_single_column_key ---------------------------------------------------
