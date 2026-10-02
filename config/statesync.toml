@@ -246,13 +246,16 @@ heading_size_ratio          = 1.15       # a line this much larger than the body
 heading_max_chars           = 120        # a longer line is never a heading
 heading_bold_max_words      = 12         # a bold line of at most this many words is a heading
 paragraph_gap_ratio         = 1.5        # line pitch above this many line heights starts a new paragraph
-chunker                     = "paragraph"  # "paragraph" (flat pages, shipped) | "layout" (headings, tables, breadcrumbs)
+chunker                     = "layout"  # "paragraph" (flat pages, shipped) | "layout" (headings, tables, breadcrumbs)
 layout_chunk_chars          = 1200       # layout chunker: text body budget (breadcrumb and overlap come on top)
 layout_overlap_chars        = 150        # layout chunker: tail of the previous chunk, same section and page only
-table_chunk_max_chars       = 2400       # layout chunker: a larger table is split by rows, header repeated
+table_chunk_max_chars       = 700        # layout chunker: a larger table is split by rows, header repeated. 700 (was 2400, 2026-10-02):
+                                         # mxbai-embed-large reads at most 512 tokens and silently drops the rest; Markdown tables run
+                                         # ~2 chars/token (1,000 chars = 497 tokens, 1,200 = 512 = truncated), so 700 + a 300-char lead-in
+                                         # + the breadcrumb stays near 450 tokens. Prose runs ~5 chars/token (1,400 chars = 278).
 table_context_max_chars     = 300        # layout chunker: the paragraph before a table rides along if this short
 section_max_chars           = 300        # the MCP refuses a longer section path
-embed_batch                 = 24         # chunks per MCP call (one Ollama batch each; stays inside the MCP timeout)
+embed_batch                 = 8          # chunks per MCP call (one Ollama batch each). 8 (was 24, 2026-10-02): ~3 s on this CPU, so a 30 s embedding timeout survives a ~10x slowdown; layout chunks with tables run to 2,400 chars + breadcrumb
 embed_retries               = 2          # an add_chunks batch the MCP answers "unavailable" (embedding failed, nothing stored) is sent again this often
 embed_retry_backoff_s       = 5          # seconds before retry n is n times this (a CPU Ollama slowed 4x for minutes on 2026-10-01)
 max_folders                 = 50         # per account
