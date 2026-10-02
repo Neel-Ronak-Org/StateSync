@@ -264,9 +264,11 @@ All tools are JSON-RPC 2.0 methods on the `mcp` service. All accept an implicit 
 
 ### A4.2 `schema.describe_table`
 
+> Amended 2026-10-02: table and column names may be mixed case (a customer's own database may use `OrderItems`). Still letters, digits and underscores only, so a name never carries a quote; it is double-quoted wherever spliced into SQL.
+
 ```json
 { "input": { "type":"object", "required":["table"], "additionalProperties": false,
-    "properties": { "table": {"type":"string","pattern":"^[a-z_][a-z0-9_]{0,62}$"} } },
+    "properties": { "table": {"type":"string","pattern":"^[A-Za-z_][A-Za-z0-9_]{0,62}$"} } },
   "output": { "type":"object", "required":["table","columns","foreign_keys","fingerprint"],
     "properties": {
       "table": {"type":"string"},
@@ -288,7 +290,7 @@ All tools are JSON-RPC 2.0 methods on the `mcp` service. All accept an implicit 
 ```json
 { "input": { "type":"object", "required":["table"], "additionalProperties": false,
     "properties": {
-      "table":   {"type":"string","pattern":"^[a-z_][a-z0-9_]{0,62}$"},
+      "table":   {"type":"string","pattern":"^[A-Za-z_][A-Za-z0-9_]{0,62}$"},
       "columns": {"type":"array","items":{"type":"string"},"maxItems":12},
       "limit":   {"type":"integer","minimum":1,"maximum":20,"default":5} } },
   "output": { "type":"object","required":["rows","truncated"],

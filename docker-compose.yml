@@ -271,7 +271,9 @@ services:
     networks:
       - app_net
     ports:
-      - "3000:80"
+      # localhost only (2026-10-02): the API this UI calls is bound to 127.0.0.1 in the override, so
+      # serving the page on every interface only exposed it to the local network, never usefully.
+      - "127.0.0.1:3000:80"
     environment:
       # Consumed by the BROWSER, not by this container. entrypoint.sh bakes it
       # into app.js, which runs on the user's machine, so it must be an address

@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from typing import Any
 
 from collections.abc import AsyncIterator
@@ -22,6 +23,13 @@ from db import get_connection
 from fingerprint import compute_fingerprint
 
 logger = logging.getLogger(__name__)
+
+# A table or column name the MCP accepts (Build Spec A4.2). Upper case is allowed (2026-10-02):
+# a customer's own database may have "OrderItems", e.g. one migrated from Db2 or Oracle, and the
+# FIBEN trial (docs/eval/external_datasets.md) failed on exactly that. Only letters, digits and
+# underscores, so a name can never carry a quote: where a name is spliced into SQL it is
+# double-quoted, which keeps its case and cannot be broken out of.
+IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,62}$")
 
 # A5's application schema. Everything defaults to it, so every existing caller
 # is byte-for-byte unaffected by the `schema` parameter added below.
@@ -194,9 +202,8 @@ async def describe_table(table: str, schema: str = DEFAULT_SCHEMA) -> dict[str, 
             "fingerprint": str
         }
     """
-    # Input validation: table name must match the pattern in A4.2
-    import re
-    if not re.match(r'^[a-z_][a-z0-9_]{0,62}$', table):
+    # Input validation: the A4.2 identifier pattern (IDENTIFIER below).
+    if not IDENTIFIER.match(table):
         raise ValueError(f"Invalid table name: {table!r}")
     async with source(schema) as (conn, schema):
         # Columns

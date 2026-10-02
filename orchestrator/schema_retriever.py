@@ -17,7 +17,10 @@ it is still the path taken on a memory miss or with memory.enabled = false.
 from __future__ import annotations
 
 import logging
+import re
 from functools import lru_cache
+
+import httpx
 from typing import Protocol, runtime_checkable
 
 from config_loader import flags
@@ -59,16 +62,31 @@ class SchemaRetriever(Protocol):
         ...
 
 
+_PLAIN_IDENT = re.compile(r"[a-z_][a-z0-9_]*")
+
+
+def sql_ident(name: str) -> str:
+    """A name as SQL must write it: as is when lower-case, else double-quoted. Postgres folds an
+    unquoted name to lower case, so a model shown `OrderItems` would write a query that fails."""
+    return name if _PLAIN_IDENT.fullmatch(name) else f'"{name}"'
+
+
 def _format_table(tname: str, desc: dict) -> str:
+    if "." in tname:
+        schema_part, table_part = tname.split(".", 1)
+        tname = f"{schema_part}.{sql_ident(table_part)}"
+    else:
+        tname = sql_ident(tname)
     col_lines = []
     for col in desc.get("columns", []):
         nullable = "NULL" if col.get("nullable") else "NOT NULL"
         comment = f"  -- {col['comment']}" if col.get("comment") else ""
-        col_lines.append(f"    {col['name']} {col['type']} {nullable}{comment}")
+        col_lines.append(f"    {sql_ident(col['name'])} {col['type']} {nullable}{comment}")
     fk_lines = []
     for fk in desc.get("foreign_keys", []):
         fk_lines.append(
-            f"    FK: {tname}.{fk['column']} -> {fk['references_table']}.{fk['references_column']}"
+            f"    FK: {tname}.{sql_ident(fk['column'])} -> {sql_ident(fk['references_table'])}."
+            f"{sql_ident(fk['references_column'])}"
         )
     return (
         f"TABLE {tname}:\n" + "\n".join(col_lines) +
@@ -85,8 +103,17 @@ class DirectSchemaRetriever:
     ) -> tuple[str, list[dict]]:
         schema_parts: list[str] = []
         descriptions: list[dict] = []
+        skipped: list[str] = []
         for tname in table_names:
-            desc = await schema_describe_table(session, tname, schema)
+            try:
+                desc = await schema_describe_table(session, tname, schema)
+            except httpx.HTTPStatusError as exc:
+                # One table the MCP refuses (an odd name, dropped meanwhile) must not sink the
+                # question: it used to surface as "service unavailable". Skip it, keep the rest.
+                logger.warning("schema_retriever: describe_table(%s) refused (%s); skipped", tname,
+                               exc.response.status_code)
+                skipped.append(tname)
+                continue
             descriptions.append(desc)
             # QUALIFY the name when the corpus is not the default schema.
             # Without this the agent is handed "TABLE orders:" and writes
@@ -96,6 +123,8 @@ class DirectSchemaRetriever:
             # Olist run before the qualification was added.
             label = tname if not schema or schema == DEFAULT_SCHEMA else f"{schema}.{tname}"
             schema_parts.append(_format_table(label, desc))
+        if skipped and not descriptions:
+            raise RuntimeError(f"no table could be described ({len(skipped)} refused)")
         return "\n\n".join(schema_parts), descriptions
 
 

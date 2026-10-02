@@ -293,8 +293,8 @@ async def sample_rows(
     Hard-capped at SAMPLE_ROWS_HARD_CAP rows server-side (A4.3 spec).
     limit defaults to cfg.mcp.sample_rows_default_limit when not provided.
     """
-    import re as _re
-    if not _re.match(r'^[a-z_][a-z0-9_]{0,62}$', table):
+    from tools.schema_tools import IDENTIFIER
+    if not IDENTIFIER.match(table):
         raise ValueError(f"Invalid table name: {table!r}")
     # Schema qualification. `orders` exists in BOTH public (A5 synthetic) and
     # olist (real), with DIFFERENT columns -- so an unqualified sample silently
@@ -315,7 +315,7 @@ async def sample_rows(
     if columns:
         # Validate column names before interpolating into SQL
         for col in columns:
-            if not _re.match(r'^[a-z_][a-z0-9_]{0,62}$', col):
+            if not IDENTIFIER.match(col):
                 raise ValueError(f"Invalid column name: {col!r}")
         col_list = ", ".join(f'"{c}"' for c in columns[:_cfg.mcp.sample_rows_max_columns])
     else:
