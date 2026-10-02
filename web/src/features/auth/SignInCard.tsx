@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Brand } from '@/features/shell/Brand'
-import { clearToken, setToken } from '@/lib/auth'
+import { clearSignedIn, markSignedIn } from '@/lib/auth'
 
 interface SignInCardProps {
   onSuccess: () => void
@@ -36,14 +36,15 @@ export function SignInCard({
     setErrorMessage(null)
     onAttemptStart?.()
 
-    // Store token so apiFetch includes it in Authorization header.
-    setToken(trimmed)
-
     try {
-      await api.sessions()
+      // The server checks the token and sets an HttpOnly session cookie; the token itself is
+      // not stored anywhere in the browser.
+      const session = await api.signIn(trimmed)
+      markSignedIn(session.principal_id)
+      setTokenInput('')
       onSuccess()
     } catch (err) {
-      clearToken()
+      clearSignedIn()
       if (err instanceof ApiError && err.status === 401) {
         setErrorMessage('That token was not accepted. Check it and try again.')
       } else if (err instanceof ApiError) {

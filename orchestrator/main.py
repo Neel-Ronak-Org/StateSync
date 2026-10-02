@@ -23,8 +23,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from auth import (AuthError, Principal, RateLimited, RateLimiter, all_principals, authenticate, init_auth,
-                  rate_limiter, read_rate_limiter)
+from auth import (CSRF_HEADER, SESSION_COOKIE, AuthError, Principal, RateLimited, RateLimiter, all_principals,
+                  authenticate, credential_header, init_auth, rate_limiter, read_rate_limiter)
 from config_loader import cfg, flags, snapshot_flags
 from graph import graph
 from llm.provider import LLM_READINESS, validate_llm_config
@@ -46,6 +46,7 @@ from builder_api import register_build_routes
 from dashboards_api import register_dashboard_routes
 from library_api import call_library, is_connection_dataset, register_library_routes
 from workspaces_api import call_workspaces, register_workspace_routes
+from session_api import register_session_routes
 from example_timer import run_forever as run_example_timer
 
 logging.basicConfig(
@@ -99,13 +100,15 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(cfg.api.cors_allowed_origins),
-    allow_credentials=False,
+    # Credentials: the web app's HttpOnly session cookie (auth.py, session_api.py). Safe only
+    # because the origins are an explicit list, never a wildcard.
+    allow_credentials=True,
     # PATCH and DELETE for the /tiles routes (rename, unpin); PUT for the
     # /workspaces knowledge routes (Phase 3). Without them the browser
     # preflight refuses those calls from the web UI's origin, which no
     # server-side test can see (found auditing Phase 1).
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["Authorization", "Content-Type", "X-Filename"],
+    allow_headers=["Authorization", "Content-Type", "X-Filename", CSRF_HEADER],
     # Browsers hide every non-safelisted response header from cross-origin
     # JavaScript unless it is exposed. Without this the web UI could never read
     # Retry-After on a 429 and could only say "try again shortly" (the old UI
@@ -186,7 +189,8 @@ async def _authenticate_and_limit(request: Request, limiter: RateLimiter) -> Pri
     route = request.url.path
 
     try:
-        principal = authenticate(request.headers.get("Authorization"))
+        principal = authenticate(credential_header(request.headers.get("Authorization"),
+                                                   request.cookies.get(SESSION_COOKIE), request.headers.get(CSRF_HEADER)))
     except AuthError as exc:
         await _audit(
             "anonymous",
@@ -760,6 +764,7 @@ async def run_query(
     )
 
 
+register_session_routes(app, require_principal=require_principal, audit=_audit)
 register_tile_routes(app, require_principal=require_principal, audit=_audit)
 register_dashboard_routes(app, require_principal=require_principal, audit=_audit)
 register_workspace_routes(app, require_principal=require_principal, audit=_audit,

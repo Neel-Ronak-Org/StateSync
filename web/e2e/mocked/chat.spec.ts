@@ -31,6 +31,35 @@ test.describe('sign-in', () => {
     await expect(page.getByRole('heading', { name: 'Sign in to StateSync' })).toBeVisible()
   })
 
+  test('the token is exchanged for a session and kept nowhere in the browser', async ({ page }) => {
+    // 2026-10-02: an HttpOnly cookie replaces the localStorage token (orchestrator/session_api.py).
+    const api = await openApp(page, { signedIn: false, hash: '#/ask' })
+    const seen: Record<string, string>[] = []
+    page.on('request', (req) => {
+      if (req.url().endsWith('/sessions')) seen.push(req.headers())
+    })
+    await page.getByLabel('API token').fill(TOKEN)
+    await page.getByRole('button', { name: 'Sign in' }).click()
+    await expect(page.getByLabel('Ask a question')).toBeVisible()
+    expect(api.authCalls).toEqual(['POST'])
+    const stored = await page.evaluate(() => JSON.stringify([{ ...localStorage }, { ...sessionStorage }]))
+    expect(stored).not.toContain(TOKEN)
+    await expect.poll(() => seen.length).toBeGreaterThan(0)
+    expect(seen.every((h) => h['x-statesync'] === '1' && !h['authorization'])).toBe(true)
+
+    await page.getByRole('button', { name: 'Sign out' }).click()
+    await expect.poll(() => api.authCalls).toEqual(['POST', 'DELETE'])
+  })
+
+  test('a token left by an older version is exchanged once and deleted', async ({ page }) => {
+    const api = await openApp(page, { signedIn: false, hash: '#/ask' })
+    await page.evaluate((token) => localStorage.setItem('statesync.token', token), TOKEN)
+    await page.reload()
+    await expect(page.getByLabel('Ask a question')).toBeVisible()
+    expect(api.authCalls).toEqual(['POST'])
+    expect(await page.evaluate(() => localStorage.getItem('statesync.token'))).toBeNull()
+  })
+
   test('a 401 mid-session returns to sign-in and says why', async ({ page }) => {
     const api = await openApp(page, { hash: '#/ask' })
     api.failNext('/query', 401, 'Missing or invalid bearer token.')

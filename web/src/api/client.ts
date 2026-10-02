@@ -1,7 +1,8 @@
 /**
  * The only way the app talks to the orchestrator.
  *
- * - Adds the bearer token; never puts it anywhere but the Authorization header.
+ * - Sends the HttpOnly session cookie (credentials: 'include') with the X-StateSync header the
+ *   server requires alongside it; the app never holds the API token after sign-in (lib/auth.ts).
  * - Turns every failure into an ApiError whose message is safe to show: the
  *   server's `detail` (plain text by design) or a fixed sentence. Raw
  *   exception text from fetch never reaches the UI.
@@ -37,7 +38,7 @@ import type {
   Workspace,
 } from '@/api/types'
 import { ORCHESTRATOR_URL } from '@/config'
-import { announceAuthExpired, getToken } from '@/lib/auth'
+import { announceAuthExpired, CSRF_HEADER } from '@/lib/auth'
 
 export class ApiError extends Error {
   readonly status: number
@@ -86,8 +87,9 @@ export async function apiFetch<T>(
   } else if (body !== undefined) {
     headers['Content-Type'] = 'application/json'
   }
-  const token = auth ? getToken() : null
-  if (token) headers.Authorization = `Bearer ${token}`
+  // The session is an HttpOnly cookie the browser attaches (credentials: 'include'); the server
+  // accepts it only with this header, which another site cannot send (lib/auth.ts).
+  if (auth) headers[CSRF_HEADER] = '1'
 
   let response: Response
   try {
@@ -96,6 +98,7 @@ export async function apiFetch<T>(
       headers,
       body: upload ? upload.file : body === undefined ? undefined : JSON.stringify(body),
       signal,
+      credentials: 'include',
     })
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') throw err
@@ -138,6 +141,10 @@ export const api = {
   query: (request: QueryRequest, signal?: AbortSignal) =>
     apiFetch<QueryResponse>('/query', { method: 'POST', body: request, signal }),
 
+  /** Exchange the API token for the HttpOnly session cookie; the token is not kept. */
+  signIn: (token: string) =>
+    apiFetch<{ principal_id: string }>('/auth/session', { method: 'POST', body: { token }, auth: false }),
+  signOut: () => apiFetch<{ ok: boolean }>('/auth/session', { method: 'DELETE', auth: false }),
   sessions: () => apiFetch<SessionList>('/sessions'),
   session: (sessionId: string) => apiFetch<SessionDetail>(`/sessions/${enc(sessionId)}`),
   turnRows: (sessionId: string, turnIndex: number) =>

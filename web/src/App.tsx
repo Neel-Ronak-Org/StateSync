@@ -16,7 +16,7 @@ import { useWorkspaces } from '@/features/workspaces/useWorkspaces'
 import { WorkspaceDetail } from '@/features/workspaces/WorkspaceDetail'
 import { WorkspacesView } from '@/features/workspaces/WorkspacesView'
 import { useHealth } from '@/hooks/useHealth'
-import { AUTH_EXPIRED_EVENT, clearToken, getToken } from '@/lib/auth'
+import { AUTH_EXPIRED_EVENT, clearSignedIn, isSignedIn, markSignedIn, takeLegacyToken } from '@/lib/auth'
 import { hashFor, routeFromHash, workspaceIdFromHash, type AppRoute } from '@/lib/route'
 import { KEYS, readStored, writeStored } from '@/lib/storage'
 
@@ -26,7 +26,10 @@ function getStoredDevMode(): boolean {
 
 export default function App() {
   const queryClient = useQueryClient()
-  const [token, setTokenState] = useState<string | null>(getToken)
+  const [signedIn, setSignedIn] = useState<boolean>(isSignedIn)
+  // A token an older version left in localStorage: exchanged for a session cookie once, then gone.
+  const [legacyToken] = useState<string | null>(takeLegacyToken)
+  const [migrating, setMigrating] = useState<boolean>(Boolean(legacyToken))
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null)
   const isSubmittingSignInRef = useRef(false)
 
@@ -58,13 +61,28 @@ export default function App() {
     const handleAuthExpired = () => {
       // While the sign-in form is submitting, its own 401 message wins.
       if (isSubmittingSignInRef.current) return
-      clearToken()
-      setTokenState(null)
+      clearSignedIn()
+      setSignedIn(false)
       setSessionExpiredMessage('Your session expired or the token is invalid. Sign in again.')
     }
     window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired)
     return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired)
   }, [])
+
+  useEffect(() => {
+    if (!legacyToken) return
+    api
+      .signIn(legacyToken)
+      .then((session) => {
+        markSignedIn(session.principal_id)
+        setSignedIn(true)
+      })
+      .catch(() => {
+        clearSignedIn()
+        setSignedIn(false)
+      })
+      .finally(() => setMigrating(false))
+  }, [legacyToken])
 
   const { data: health } = useHealth()
   const availableSchemas = useMemo(() => health?.available_schemas ?? ['public'], [health])
@@ -76,7 +94,7 @@ export default function App() {
     deleteWorkspace,
     isLoading: workspacesLoading,
     isLoaded: workspacesLoaded,
-  } = useWorkspaces(Boolean(token))
+  } = useWorkspaces(signedIn)
 
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(() =>
     readStored(KEYS.workspace),
@@ -143,9 +161,9 @@ export default function App() {
   })
 
   const sessionsQuery = useQuery({
-    queryKey: ['sessions', token],
+    queryKey: ['sessions', signedIn],
     queryFn: () => api.sessions(),
-    enabled: Boolean(token),
+    enabled: signedIn,
   })
   const sessions = sessionsQuery.data?.sessions ?? []
 
@@ -201,8 +219,10 @@ export default function App() {
   }
 
   const handleSignOut = () => {
-    clearToken()
-    setTokenState(null)
+    // Clear the HttpOnly cookie server-side; signed out locally either way.
+    void api.signOut().catch(() => undefined)
+    clearSignedIn()
+    setSignedIn(false)
     setSessionExpiredMessage(null)
   }
 
@@ -223,11 +243,13 @@ export default function App() {
     toast.success('Conversation deleted')
   }
 
-  if (!token) {
+  if (migrating) return null
+
+  if (!signedIn) {
     return (
       <SignInCard
         onSuccess={() => {
-          setTokenState(getToken())
+          setSignedIn(true)
           setSessionExpiredMessage(null)
           queryClient.invalidateQueries()
         }}

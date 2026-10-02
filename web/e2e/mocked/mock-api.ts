@@ -241,6 +241,10 @@ export class MockApi {
   /** The user's own databases (Phase 3c slice 6a): mock-connections.ts. */
   readonly connections = new ConnectionsMock()
   private failures = new Map<string, { status: number; detail: string; headers?: Record<string, string> }>()
+  /** The browser session (orchestrator/session_api.py): set by POST /auth/session, cleared by DELETE. */
+  sessionActive = false
+  /** Every /auth/session call, to check the token is sent there and nowhere else. */
+  readonly authCalls: string[] = []
   storedRowsLimit: number | null = null
   nextChart: Record<string, unknown> | null = null
   /** 'short' mimics pipeline.synth_style=short: /query returns no chart and says so in state_trace. */
@@ -378,11 +382,18 @@ export class MockApi {
     return new Date(this.clock).toISOString()
   }
 
+  /** Like the orchestrator's CORS: the app's own origin (never '*') and credentials, because the
+   *  session is a cookie (orchestrator/session_api.py). A wildcard would make the browser refuse. */
+  private cors(route: Route): Record<string, string> {
+    const origin = route.request().headers()['origin'] ?? 'http://localhost:3000'
+    return { 'access-control-allow-origin': origin, 'access-control-allow-credentials': 'true', vary: 'Origin' }
+  }
+
   private json(route: Route, status: number, body: unknown, headers: Record<string, string> = {}) {
     return route.fulfill({
       status,
       contentType: 'application/json',
-      headers: { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'Retry-After', ...headers },
+      headers: { ...this.cors(route), 'access-control-expose-headers': 'Retry-After', ...headers },
       body: JSON.stringify(body),
     })
   }
@@ -397,9 +408,9 @@ export class MockApi {
       return route.fulfill({
         status: 204,
         headers: {
-          'access-control-allow-origin': '*',
+          ...this.cors(route),
           'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE',
-          'access-control-allow-headers': 'authorization, content-type, x-filename',
+          'access-control-allow-headers': 'authorization, content-type, x-filename, x-statesync',
         },
       })
     }
@@ -423,9 +434,27 @@ export class MockApi {
       return this.json(route, failure.status, { detail: failure.detail }, failure.headers)
     }
 
-    if (request.headers()['authorization'] !== `Bearer ${TOKEN}`) {
+    if (path === '/auth/session') {
+      this.authCalls.push(method)
+      if (method === 'POST') {
+        const sent = request.postData() ? (JSON.parse(request.postData() as string) as { token?: string }) : {}
+        if (sent.token !== TOKEN) return this.json(route, 401, { detail: 'That token is not valid.' })
+        this.sessionActive = true
+        return this.json(route, 200, { principal_id: 'p_test' })
+      }
+      if (method === 'DELETE') {
+        this.sessionActive = false
+        return this.json(route, 200, { ok: true })
+      }
+    }
+
+    // Like the server: a bearer header, or the session cookie WITH the X-StateSync header.
+    const headers = request.headers()
+    const viaSession = this.sessionActive && headers['x-statesync'] === '1'
+    if (headers['authorization'] !== `Bearer ${TOKEN}` && !viaSession) {
       return this.json(route, 401, { detail: 'Missing or invalid bearer token.' })
     }
+    if (path === '/auth/session' && method === 'GET') return this.json(route, 200, { principal_id: 'p_test' })
 
     // An upload's body is the raw file, not JSON.
     const isUpload = method === 'POST' && /^\/library\/folders\/[^/]+\/documents$/.test(path)

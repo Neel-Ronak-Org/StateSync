@@ -149,7 +149,7 @@ The demo flips target_schema to olist and restores shipped state afterwards, ver
 
 - Bearer tokens have no expiry; revocation means editing the secret and restarting.
 
-- The frontend keeps its token in localStorage, readable by any script achieving XSS.
+- The web app no longer stores the token: sign-in exchanges it for an HttpOnly, SameSite=Strict session cookie (7 days; cookie requests must also carry an `X-StateSync` header). Open the app at http://localhost:3000, the same host as the API, or the cookie is not sent. The token itself still never expires.
 
 - session_state.audit_log has a 180-day retention policy (`audit_retention_days`), but it is enforced only when an operator runs `scripts/prune_audit_log.py` (dry run by default); nothing prunes it automatically. Full stored result rows have a 30-day TTL and a 1 MiB/turn cap, pruned on write and forceable with scripts/prune_turn_rows.py.
 
