@@ -1,21 +1,14 @@
-FROM python:3.12-slim
+FROM python:3.12.14-slim
 
 # Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /usr/local/bin/uv
 
 WORKDIR /app
 
-COPY pyproject.toml ./
-RUN uv pip install --system --no-cache \
-    "fastapi>=0.111.0" \
-    "uvicorn[standard]>=0.30.0" \
-    "psycopg[binary]>=3.1.0" \
-    "psycopg-pool>=3.2.0" \
-    "pglast>=6.2" \
-    "pydantic>=2.7.0" \
-    "httpx>=0.27.0" \
-    "qdrant-client>=1.9.0,<1.10.0" \
-    "cryptography>=42"
+# Exact versions from the lock (pyproject.toml declares the compatible ranges; the lock is what
+# runs). The old inline list was a second, unpinned copy of pyproject's dependencies.
+COPY pyproject.toml requirements.lock ./
+RUN uv pip install --system --no-cache -r requirements.lock
 
 COPY . .
 

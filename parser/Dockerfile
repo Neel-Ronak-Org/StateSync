@@ -1,8 +1,10 @@
-FROM python:3.12-slim
+FROM python:3.12.14-slim
 
 # The upload parser (parser/server.py): standard library, pypdf (flat page text)
-# and pdfplumber (layout blocks; pinned to the version scripts/ingest.py uses).
-RUN pip install --no-cache-dir "pypdf>=6.1,<7" "pdfplumber==0.11.10" \
+# and pdfplumber (layout blocks; pinned to the version scripts/ingest.py uses). Exact versions
+# of everything in requirements.lock (frozen from the running image, 2026-10-02).
+COPY requirements.lock /tmp/requirements.lock
+RUN pip install --no-cache-dir -r /tmp/requirements.lock \
  && useradd --system --uid 10001 --no-create-home parser
 
 WORKDIR /app

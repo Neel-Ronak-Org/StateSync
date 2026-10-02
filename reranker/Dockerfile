@@ -1,10 +1,11 @@
-FROM python:3.12-slim
+FROM python:3.12.14-slim
 
 # The passage re-ranker (reranker/server.py, docs/specs/rag_v3.md): CPU PyTorch, transformers,
 # and two cross-encoders baked in at pinned revisions (owner-approved 2026-10-02). The running
 # container has no internet: everything it loads is in this image.
-RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu "torch==2.14.1" \
- && pip install --no-cache-dir "transformers==5.18.0" "huggingface_hub>=0.30" "safetensors>=0.4" "sentencepiece" \
+# Exact versions of everything in requirements.lock (frozen from the running image, 2026-10-02).
+COPY requirements.lock /tmp/requirements.lock
+RUN pip install --no-cache-dir -r /tmp/requirements.lock \
  && useradd --system --uid 10002 --no-create-home reranker
 
 # BAAI/bge-reranker-v2-m3 (Apache-2.0) and cross-encoder/ms-marco-MiniLM-L-6-v2 (Apache-2.0).

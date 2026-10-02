@@ -3,16 +3,17 @@ name = "statesync-mcp"
 version = "0.1.0"
 description = "StateSync MCP Tool Server"
 requires-python = ">=3.12"
+# Compatible ranges; the exact versions an image installs are in requirements.lock.
 dependencies = [
-    "fastapi>=0.111.0",
-    "uvicorn[standard]>=0.30.0",
-    "psycopg[binary]>=3.1.0",
-    "psycopg-pool>=3.2.0",
-    "pglast>=6.2",
-    "pydantic>=2.7.0",
-    "httpx>=0.27.0",
+    "fastapi>=0.141.1,<0.143",
+    "uvicorn[standard]>=0.52.3,<0.55",
+    "psycopg[binary]>=3.3.6,<4",
+    "psycopg-pool>=3.3.3,<4",
+    "pglast>=8.4,<9",
+    "pydantic>=2.13.4,<3",
+    "httpx>=0.28.1,<0.29",
     "qdrant-client>=1.9.0,<1.10.0",
-    "cryptography>=42",
+    "cryptography>=50.0.1,<51",
 ]
 
 [build-system]
