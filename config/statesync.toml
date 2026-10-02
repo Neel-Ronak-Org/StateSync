@@ -13,6 +13,9 @@ internal_schemas          = ["session_state", "workspace_docs", "search", "live_
 # supervisor never sees MCP methods (D1 decoupled routing from MCP), so this
 # guards API sprawl, not model accuracy. 16 in use after tiles.manage.
 tool_ceiling              = 20
+# The only MCP methods the evaluator's own token may call (mcp/service_auth.py rule 5);
+# it may not pass `dataset` either, so it never reaches a connected database.
+evaluator_methods         = ["data.run_select"]
 statement_timeout_ms      = 15000
 max_rows_default          = 1000
 max_rows_hard_cap         = 5000

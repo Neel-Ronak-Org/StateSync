@@ -42,6 +42,7 @@ import json
 import sys
 import urllib.request
 from pathlib import Path
+import mcp_auth  # noqa: E402 -- scripts/mcp_auth.py: the MCP service token
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT = REPO_ROOT / "fixtures" / "golden" / "multi_turn.json"
@@ -57,7 +58,7 @@ def run(sql: str) -> dict:
         data=json.dumps({"jsonrpc": "2.0", "id": "1", "method": "data.run_select",
                          "params": {"sql": sql}}).encode(),
         headers={"Content-Type": "application/json",
-                 "X-Tenant-ID": "t_capstone_default",
+                 "X-Tenant-ID": "t_capstone_default", "Authorization": mcp_auth.header(),
                  "X-Session-ID": "gen-multiturn-fixture"}, method="POST")
     with urllib.request.urlopen(req, timeout=120) as r:
         return json.loads(r.read()).get("result", {})

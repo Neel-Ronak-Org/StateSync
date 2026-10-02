@@ -37,6 +37,13 @@ python3 scripts/make_connection_key.py
 # and refuses every /rpc call that does not carry it. Rotate by writing a new
 # value and recreating both services together.
 openssl rand -hex 32 > secrets/mcp_token
+
+# The evaluator's own credentials (it is off by default, but compose needs the files).
+# Its MCP token may only run gold SELECTs on built-in datasets; its API principal is
+# registered with the orchestrator (restart the orchestrator after adding it).
+openssl rand -hex 32 > secrets/mcp_token_evaluator
+python3 scripts/gen_api_principal.py --principal-id p_evaluator --append \
+    --token-file secrets/api_token_evaluator > /dev/null
 ```
 
 ### In production:

@@ -70,6 +70,8 @@ RUBRIC_PATH = REPO_ROOT / "fixtures" / "rubrics" / "faithfulness.json"
 RUBRIC_V2_PATH = REPO_ROOT / "fixtures" / "rubrics" / "faithfulness_v2.json"
 REPORT_PATH = REPO_ROOT / "docs" / "bench_grounding_report.json"
 
+import mcp_auth  # noqa: E402 -- scripts/mcp_auth.py: the MCP service token
+
 MCP_URL = "http://localhost:8080"
 TENANT = "t_capstone_default"
 
@@ -112,7 +114,7 @@ def mcp_get_passage(chunk_id: str) -> dict | None:
     })
     result = subprocess.run(
         ["curl", "-s", "-X", "POST", f"{MCP_URL}/rpc",
-         "-H", "Content-Type: application/json", "-H", f"X-Tenant-ID: {TENANT}",
+         "-H", "Content-Type: application/json", "-H", f"X-Tenant-ID: {TENANT}", *mcp_auth.curl_header_args(),
          "-H", "X-Session-ID: bench-grounding", "-d", payload],
         capture_output=True, text=True, check=True,
     )
@@ -147,7 +149,7 @@ def mcp_run_select(sql: str) -> dict | None:
     })
     result = subprocess.run(
         ["curl", "-s", "-X", "POST", f"{MCP_URL}/rpc",
-         "-H", "Content-Type: application/json", "-H", f"X-Tenant-ID: {TENANT}",
+         "-H", "Content-Type: application/json", "-H", f"X-Tenant-ID: {TENANT}", *mcp_auth.curl_header_args(),
          "-H", "X-Session-ID: bench-grounding", "-d", payload],
         capture_output=True, text=True, check=True,
     )

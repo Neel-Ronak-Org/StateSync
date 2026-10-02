@@ -36,7 +36,7 @@ docker compose stop       # stops everything, keeps all data; start again with t
 ## First-time setup (a clean machine)
 
 1. **Prerequisites:** Docker Desktop with Compose v2; Python 3.12+ for the operator scripts; a Groq API key (the model provider, `config/flags.toml`). Embeddings run in the `ollama` container: `docker compose up -d ollama && docker compose exec ollama ollama pull mxbai-embed-large`.
-2. **Secrets** (`secrets/` is gitignored): `pg_migrator_password`, `pg_reader_password`, `pg_history_password`, `pg_simulator_password` (any random strings), `groq_api_key` (your key), and empty `anthropic_api_key`, `azure_openai_api_key`, `gemini_api_key` files (the orchestrator mounts all provider keys). Also `mcp_token` (`openssl rand -hex 32 > secrets/mcp_token`; the MCP will not start without it) and `connection_key` (`python3 scripts/make_connection_key.py`; never regenerate it once databases are connected). See `secrets/README.md`.
+2. **Secrets** (`secrets/` is gitignored): `pg_migrator_password`, `pg_reader_password`, `pg_history_password`, `pg_simulator_password` (any random strings), `groq_api_key` (your key), and empty `anthropic_api_key`, `azure_openai_api_key`, `gemini_api_key` files (the orchestrator mounts all provider keys). Also `mcp_token` (`openssl rand -hex 32 > secrets/mcp_token`; the MCP will not start without it), the evaluator's `mcp_token_evaluator` and `api_token_evaluator` (commands in `secrets/README.md`), and `connection_key` (`python3 scripts/make_connection_key.py`; never regenerate it once databases are connected). See `secrets/README.md`.
 3. **Build and start:** `docker compose build` then the start command above.
 4. **Migrations:** `bash scripts/migrate.sh` runs 001, 002 and 004; apply 005 onward in order with `docker exec -i postgres psql -U statesync_migrator -d statesync < migrations/NNN.sql`. After 020, set the simulator's password: `printf "ALTER ROLE statesync_simulator PASSWORD '%s';" "$(cat secrets/pg_simulator_password)" | docker exec -i postgres psql -U statesync_migrator -d statesync`.
 5. **An API principal:** `python3 scripts/gen_api_principal.py` (writes `secrets/api_principals.json` and `secrets/api_token_dev`), then `docker compose restart orchestrator`.
@@ -60,7 +60,7 @@ The stack consists of 10 services in `docker-compose.yml`:
 
 - `orchestrator`: LangGraph multi-agent pipeline on port 8090. Resides on `app_net`.
 
-- `evaluator`: Continuous evaluation engine and metrics service on port 8095 (its own container). Resides on `app_net`. Kept off: it spends model quota, and it does not hold the MCP service token.
+- `evaluator`: Continuous evaluation engine and metrics service on port 8095 (its own container). Resides on `app_net`. Kept off: it spends model quota. It has its own API principal and an MCP token restricted to gold SELECTs.
 
 - `frontend`: the React web app (`web/`) served by nginx on port 3000 under a strict CSP (scripts from the app only, no `eval`). Resides on `app_net`.
 

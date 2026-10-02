@@ -151,6 +151,8 @@ services:
       # The shared secret every /rpc call must carry (mcp/service_auth.py). Held by
       # the MCP and the orchestrator only; the MCP will not start without it.
       - mcp_token
+      # The evaluator's own, restricted token (data.run_select on built-in datasets only).
+      - mcp_token_evaluator
     depends_on:
       postgres:
         condition: service_healthy
@@ -315,6 +317,11 @@ services:
       - CONFIG_DIR=/app/config
       - FIXTURES_DIR=/app/fixtures
       - EVAL_DB_PATH=/app/data/eval_history.db
+    # Its own credentials, never the orchestrator's: an API principal for /query, and an
+    # MCP token that may only run gold SELECTs (mcp/service_auth.py rule 5).
+    secrets:
+      - api_token_evaluator
+      - mcp_token_evaluator
     volumes:
       - ./config:/app/config:ro
       - ./fixtures:/app/fixtures:ro
@@ -396,5 +403,9 @@ secrets:
     file: ./secrets/groq_api_key
   mcp_token:
     file: ./secrets/mcp_token
+  mcp_token_evaluator:
+    file: ./secrets/mcp_token_evaluator
+  api_token_evaluator:
+    file: ./secrets/api_token_evaluator
   api_principals:
     file: ./secrets/api_principals.json

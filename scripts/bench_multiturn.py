@@ -66,6 +66,7 @@ os.environ.setdefault("CONFIG_DIR", str(REPO_ROOT / "config"))
 from shipped_flags import (require_shipped_flags, add_flag_guard_argument,  # noqa: E402
                            FlagStateError)
 from config_loader import cfg  # noqa: E402
+import mcp_auth  # noqa: E402 -- scripts/mcp_auth.py: the MCP service token
 
 FIXTURE_PATH = REPO_ROOT / "fixtures" / "golden" / "multi_turn.json"
 DEFAULT_URL = "http://localhost:8090"

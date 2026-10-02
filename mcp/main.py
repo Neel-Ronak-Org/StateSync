@@ -48,7 +48,7 @@ from db import init_pool, close_pool, get_connection, init_history_pool, close_h
 from embeddings import close_embeddings_client
 from fingerprint import verify_fingerprint_at_startup
 from qdrant_store import init_qdrant, close_qdrant
-from service_auth import ServiceTokenMissing, authorized, load_token
+from service_auth import ServiceTokenMissing, identify, load_callers
 from session import (set_session, enforce_tenancy_policy,
                      TenancyPolicyNotImplemented, TenantNotAllowed,
                      TenancyAcknowledgementMissing)
@@ -76,7 +76,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # Fail closed (service_auth.py rule 2): no token, no server.
     try:
-        app.state.service_token = load_token()
+        app.state.service_callers = load_callers(list(cfg.mcp.evaluator_methods))
     except ServiceTokenMissing as exc:
         logger.critical("%s", exc)
         raise
@@ -180,7 +180,8 @@ async def rpc_handler(request: Request) -> JSONResponse:
     """
     # Only the orchestrator: the identity headers below are trusted only from a
     # caller holding the service token (service_auth.py).
-    if not authorized(request.headers.get("Authorization"), getattr(request.app.state, "service_token", "")):
+    caller = identify(request.headers.get("Authorization"), getattr(request.app.state, "service_callers", []))
+    if caller is None:
         logger.warning("Refused an /rpc call without a valid service token from %s",
                        request.client.host if request.client else "unknown")
         return JSONResponse(_jsonrpc_error(None, RPC_UNAUTHORIZED, "Unauthorized."), status_code=401)
@@ -248,6 +249,13 @@ async def rpc_handler(request: Request) -> JSONResponse:
             _jsonrpc_error(request_id, -32601, f"Method not found: {method!r}"),
             status_code=404,
         )
+
+    # Least privilege per caller (service_auth.py rule 5): the evaluator may run gold SELECTs
+    # on the built-in datasets and nothing else.
+    if not caller.permits(method, params):
+        logger.warning("Refused %r for the %s caller (not in its allowed methods or parameters).", method, caller.name)
+        return JSONResponse(_jsonrpc_error(request_id, RPC_UNAUTHORIZED, "Not permitted for this caller."),
+                            status_code=403)
 
     handler = _REGISTERED_TOOLS[method]
 
