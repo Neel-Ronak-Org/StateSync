@@ -125,3 +125,19 @@ be tuned to it. So:
    top 8 instead of fusing; no path completion (it added nothing). Dev all-gold **72.7%**, gold
    share 88.6% (v2: 59.7%, 82.9%). Choices tried on dev and recorded: values of ≤2 words also
    gave 72.7%; adding 1 or 3 tables gave 67.5–72.7%.
+
+### v3 held-out result (measured once, 2026-10-02; v3 frozen in eb93fda)
+
+76 held-out FIBEN questions (`docs/eval/table_selection_fiben_v2_heldout.json`, `_v3_heldout.json`):
+
+| | all gold tables found | gold-table share | tables shown | schema chars |
+|---|---|---|---|---|
+| v2 | 57.9% | 78.9% | 14.0 | 4,869 |
+| v3 | **60.5%** | **81.8%** | 14.0 | 4,956 |
+
+**Reading.** +2.6 points (2 of 76 questions) on held-out against +13.0 on dev: most of the dev
+gain did not transfer, so v3 was fitted to dev even though every rule is general. The value
+index helps questions that name an entity (a company, a person); it does not fix the main
+failure, join intermediaries. Still far below the 90% target. The next honest step is a second
+large schema (BIRD, with the owner's permission), not more changes on FIBEN.
+`linked` stays unshipped.
