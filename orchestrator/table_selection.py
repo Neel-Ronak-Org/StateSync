@@ -24,7 +24,7 @@ from typing import Any
 
 _WORD = re.compile(r"[A-Za-z]+|\d+")
 _CAMEL = re.compile(r"[A-Z]+(?=[A-Z][a-z])|[A-Z]?[a-z]+|[A-Z]+|\d+")
-NGRAM, NGRAM_MIN_WORD = 4, 4
+NGRAM, NGRAM_MIN_WORD = 4, 4  # noqa: literals - character 4-grams, fixed in docs/specs/table_selection.md before measuring
 K1, B = 1.2, 0.75  # noqa: literals - BM25's textbook constants, as the RAG keyword leg (Robertson & Zaragoza)
 
 
