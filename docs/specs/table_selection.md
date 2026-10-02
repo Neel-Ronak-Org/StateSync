@@ -91,3 +91,20 @@ to a few relevant tables first ("schema linking").
    still need measuring:
    - the workspace's approved-example tables, which are always included;
    - retry widening.
+
+## v3 protocol (pre-registered 2026-10-02, before any v3 code or per-question look at the split)
+
+v2 is at 60% all-gold recall against the 90% target, and further changes chosen on FIBEN would
+be tuned to it. So:
+- **Split.** A FIBEN question is **dev** when the SHA-256 of its `qid` (as a string) ends in an
+  even hex digit, **held-out** otherwise. v3 is designed by looking only at dev questions.
+- **Held-out is measured once,** after v3 is frozen and committed, with v2 measured on the
+  same split for comparison. The held-out number is the one reported. A second run after
+  any change is reported as a deviation.
+- **Caveat stated up front.** v1 and v2 were shaped by the whole set in aggregate (the
+  "join intermediaries" diagnosis), so held-out is not pristine: it is free of per-question
+  tuning, not of all influence. A second large schema (BIRD, once downloaded with the owner's
+  permission) is still the real test.
+- **Constraints.** No model call, no new MCP tool, deterministic; the cap
+  (`max_tables_selected` = 14) and `top_tables` stay; only general mechanisms (nothing that
+  names a FIBEN table or column).
