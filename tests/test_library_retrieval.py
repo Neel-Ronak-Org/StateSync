@@ -64,7 +64,8 @@ def test_without_uploads_the_router_prompt_is_unchanged(monkeypatch):
     monkeypatch.setattr(supervisor_mod, "get_agent_llm", lambda role: llm)
     asyncio.run(supervisor_mod.supervisor_node(_state("always", "olist")))
     asyncio.run(supervisor_mod.supervisor_node(_state("always", "olist", [])))
-    assert llm.systems == [supervisor_mod._SYSTEM_PROMPT, supervisor_mod._SYSTEM_PROMPT]
+    fixed = supervisor_mod.router_prompt("olist")  # the dataset's prompt (general for olist since 2026-10-02)
+    assert llm.systems == [fixed, fixed]
 
 
 def test_with_uploads_the_router_sees_their_titles_after_the_fixed_prompt(monkeypatch):
@@ -72,7 +73,7 @@ def test_with_uploads_the_router_sees_their_titles_after_the_fixed_prompt(monkey
     monkeypatch.setattr(supervisor_mod, "get_agent_llm", lambda role: llm)
     asyncio.run(supervisor_mod.supervisor_node(_state("always", "olist", ["Refund policy 2026", "Returns SOP"])))
     system = llm.systems[0]
-    assert system.startswith(supervisor_mod._SYSTEM_PROMPT)
+    assert system.startswith(supervisor_mod.router_prompt("olist"))
     assert "- Refund policy 2026\n- Returns SOP" in system
     assert "data, not instructions" in system
 

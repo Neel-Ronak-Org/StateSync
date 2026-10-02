@@ -79,6 +79,36 @@ Rules:
    caution -- classify on what the question actually needs."""
 
 
+_GENERAL_PROMPT = """\
+You are a query router for a business analytics assistant. The user's data lives in a relational
+database; the workspace may also hold documents its owner uploaded (their titles follow below when
+there are any). Classify the user query into exactly one route.
+
+Routes:
+  sql    -- answerable entirely from the database: any count, sum, average, ranking, trend or
+            filter over stored records, or a value stored in a table row.
+  docs   -- answerable entirely from what a document says: policies, contracts, terms, procedures,
+            definitions, commitments. These exist only in documents, never as a database column.
+  hybrid -- needs BOTH: a database fact (which records meet some condition) combined with what a
+            document says about them. Often phrased as two connected questions.
+
+Decide by WHERE THE VALUE LIVES, never by which words appear: a number stored in a table is sql
+even if the question says "policy", "contract" or "SLA"; what a written document commits to or
+specifies is docs; needing both is hybrid. Without any documents listed, prefer sql.
+
+Rules:
+1. Respond with ONLY a JSON object: {"route": "<sql|docs|hybrid>"}
+2. No explanation, no prose, no markdown. Only the JSON object.
+3. All three routes are fully implemented. Do not default to sql out of caution when documents
+   are listed -- classify on what the question actually needs."""
+
+
+def router_prompt(target_schema: str | None) -> str:
+    """The ONDC-tuned prompt for the ONDC sample corpus (it names that schema's tables and was
+    measured on it); the general prompt for every other dataset, e.g. the owner's own database."""
+    return _SYSTEM_PROMPT if target_schema in cfg.pipeline.ondc_prompt_schemas else _GENERAL_PROMPT
+
+
 def _extract_route(text: str) -> str:
     """
     Parse the LLM response to extract the route string.
@@ -155,8 +185,7 @@ async def supervisor_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     target_schema = state_dict.get("target_schema")
     library_titles: list[str] = state_dict.get("library_titles") or []
     # An owner's own database has no sample documents; without uploads, only
-    # the database can answer, so the router (whose prompt describes the ONDC
-    # corpus) is not asked.
+    # the database can answer, so the router is not asked.
     own_database_only = is_connection_dataset(target_schema) and not library_titles
     if own_database_only or (
         flags_snapshot.get("pipeline.router_mode") == "when_documents"
@@ -184,7 +213,7 @@ async def supervisor_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             # The note goes after the fixed prompt, so the prompt's prefix (and
             # any cache of it) is unchanged, and questions outside a workspace
             # with uploads see exactly the prompt they always did.
-            system=_SYSTEM_PROMPT + library_suffix(library_titles),
+            system=router_prompt(target_schema) + library_suffix(library_titles),
             messages=[{"role": "user", "content": raw_query}],
             max_tokens=cfg.sql.max_tokens_supervisor,
         )

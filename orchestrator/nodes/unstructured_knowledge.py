@@ -227,10 +227,39 @@ def _extract_party_ids(rows: list[dict], columns: list[str]) -> list[str]:
     return []
 
 
-async def _decompose(query_text: str) -> tuple[str, str, int, int]:
+_GENERAL_DECOMPOSER_PROMPT = """\
+You are decomposing a compound question for a business analytics assistant into two independent
+sub-questions: one answerable from the structured database, and one answerable from documents
+(policies, contracts, terms, procedures).
+
+Rules:
+1. Respond with ONLY a JSON object: {"sql_subtask": "<string>", "doc_subtask": "<string>"}
+2. sql_subtask and doc_subtask are QUESTIONS IN ENGLISH, phrased like the original question --
+   never SQL, never a table or column name. A separate step writes the SQL from sql_subtask.
+3. sql_subtask asks only for structured facts or records (which rows meet some condition), and
+   asks for the identifying ID or name of each record when the question concerns specific
+   entities -- but NEVER for a figure that only a document states (a penalty, a policy limit, a
+   contract clause). Those belong in doc_subtask only.
+4. doc_subtask asks for whatever document-derived information the compound question needs.
+5. Preserve entity names, IDs, dates and amounts from the original question in both sub-questions
+   where relevant -- do not translate or paraphrase them away.
+6. No explanation outside the JSON object.
+
+Example. Input: "Which customers were refunded more than 500 last month, and what does our refund
+policy say about large refunds?"
+Output: {"sql_subtask": "Which customers received refunds totalling more than 500 last month? Include
+the customer ID.", "doc_subtask": "What does the refund policy say about large refunds?"}"""
+
+
+def decomposer_prompt(target_schema: str | None) -> str:
+    """The ONDC-tuned decomposer prompt for the ONDC sample corpus; the general one otherwise."""
+    return _DECOMPOSER_SYSTEM_PROMPT if target_schema in cfg.pipeline.ondc_prompt_schemas else _GENERAL_DECOMPOSER_PROMPT
+
+
+async def _decompose(query_text: str, target_schema: str | None = None) -> tuple[str, str, int, int]:
     llm = get_agent_llm("decomposer")
     result = await llm.complete(
-        system=_DECOMPOSER_SYSTEM_PROMPT,
+        system=decomposer_prompt(target_schema),
         messages=[{"role": "user", "content": query_text}],
         max_tokens=cfg.sql.max_tokens_decomposer,
     )
@@ -320,7 +349,7 @@ async def hybrid_plan_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     start_ms = int(time.monotonic() * 1000)
     tokens_in = tokens_out = llm_calls = 0
     if bool(flags_snapshot.get("retrieval.hybrid_decomposition.enabled", True)):
-        sql_subtask, doc_subtask, tokens_in, tokens_out = await _decompose(query_text)
+        sql_subtask, doc_subtask, tokens_in, tokens_out = await _decompose(query_text, state_dict.get("target_schema"))
         llm_calls = 1
     else:
         sql_subtask = doc_subtask = query_text

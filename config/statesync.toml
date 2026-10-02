@@ -122,6 +122,10 @@ synthetic_schemas         = ["public", "olist", "live"]
 # pipeline.router_mode = "when_documents": sources (schemas) that have documents;
 # questions on any other source go straight to SQL without the router call.
 document_schemas          = ["public", "olist"]
+# The router and hybrid-decomposer prompts written for (and measured on) the ONDC sample corpus are
+# used only for these datasets; every other dataset (olist, a workspace on the owner's own database)
+# gets the general prompts in nodes/supervisor.py and nodes/unstructured_knowledge.py (2026-10-02).
+ondc_prompt_schemas       = ["public"]
 # pipeline.sql_draft_mode = "profiles": example values per text column, sampled once per
 # schema fingerprint and cached, replace the draft call and live sampling.
 profile_sample_rows       = 50

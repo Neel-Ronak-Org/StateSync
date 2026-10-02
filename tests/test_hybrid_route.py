@@ -68,7 +68,7 @@ def test_the_sql_agent_answers_only_the_sql_part_on_the_hybrid_route():
 def test_the_plan_node_splits_or_passes_the_question_whole(monkeypatch):
     uk = pytest.importorskip("nodes.unstructured_knowledge")
 
-    async def decompose(text):
+    async def decompose(text, target_schema=None):
         return "sql part", "doc part", 3, 4
 
     monkeypatch.setattr(uk, "_decompose", decompose)
@@ -77,3 +77,13 @@ def test_the_plan_node_splits_or_passes_the_question_whole(monkeypatch):
     off = asyncio.run(uk.hybrid_plan_node({"normalized_query": "q",
                                            "flags_snapshot": {"retrieval.hybrid_decomposition.enabled": False}}))
     assert off["subtasks"] == ["q", "q"] and off["metrics"]["llm_calls"] == 0
+
+
+def test_the_ondc_prompts_are_used_only_for_the_ondc_corpus():
+    """WHY: the router and decomposer prompts name the ONDC demo's tables and documents; for the
+    owner's own database or olist they mislead the model, so those get the general prompts."""
+    sup = pytest.importorskip("nodes.supervisor")
+    uk = pytest.importorskip("nodes.unstructured_knowledge")
+    assert "ONDC" in sup.router_prompt("public") and "ONDC" in uk.decomposer_prompt("public")
+    for other in ("olist", "cn_0123456789abcdef", None):
+        assert "ONDC" not in sup.router_prompt(other) and "ONDC" not in uk.decomposer_prompt(other)
