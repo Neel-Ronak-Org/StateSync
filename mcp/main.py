@@ -145,6 +145,9 @@ assert len(_REGISTERED_TOOLS) <= TOOL_CEILING, (
 
 
 
+RPC_UNAUTHORIZED = -32001  # noqa: literals - JSON-RPC implementation-defined server error (-32000..-32099)
+
+
 def _serialize_json(obj: Any) -> Any:
     return to_json_safe(obj)
 
@@ -180,7 +183,7 @@ async def rpc_handler(request: Request) -> JSONResponse:
     if not authorized(request.headers.get("Authorization"), getattr(request.app.state, "service_token", "")):
         logger.warning("Refused an /rpc call without a valid service token from %s",
                        request.client.host if request.client else "unknown")
-        return JSONResponse(_jsonrpc_error(None, -32001, "Unauthorized."), status_code=401)
+        return JSONResponse(_jsonrpc_error(None, RPC_UNAUTHORIZED, "Unauthorized."), status_code=401)
 
     # Establish session context from headers (A0.6)
     tenant_id = request.headers.get("X-Tenant-ID", "")
