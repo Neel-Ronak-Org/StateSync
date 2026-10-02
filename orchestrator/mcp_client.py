@@ -210,6 +210,11 @@ async def vector_semantic_search(
         params["scope"] = scope
     if rerank is not None and rerank != "off":
         params["rerank"] = rerank
+        # A re-ranked search waits on the cross-encoder; the session's 20 s default would time it out
+        # and lose the re-ranking. Wait the MCP's own budget: embedding + re-ranking + overhead.
+        timeout = (float(cfg.retrieval.embedding_timeout_s) + float(cfg.retrieval.rerank_timeout_s)
+                   + float(cfg.mcp.network_overhead_s))
+        return await session.call("vector.semantic_search", params, timeout=timeout)
     return await session.call("vector.semantic_search", params)
 
 

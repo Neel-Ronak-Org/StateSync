@@ -128,9 +128,19 @@ def test_the_client_sends_rerank_only_when_it_is_on():
             sent.append(params)
             return {"matches": []}
 
-    asyncio.run(vector_semantic_search(_S(), "q", rerank="off"))
-    asyncio.run(vector_semantic_search(_S(), "q", rerank="bge"))
+    timeouts = []
+
+    class _T(_S):
+        async def call(self, method, params, timeout=None):
+            timeouts.append(timeout)
+            return await super().call(method, params)
+
+    asyncio.run(vector_semantic_search(_T(), "q", rerank="off"))
+    asyncio.run(vector_semantic_search(_T(), "q", rerank="bge"))
     assert "rerank" not in sent[0] and sent[1]["rerank"] == "bge"
+    # the re-ranked search waits longer than the cross-encoder may take, so it is not cut off at 20 s
+    from config_loader import cfg
+    assert timeouts[0] is None and timeouts[1] > float(cfg.retrieval.rerank_timeout_s)
 
 
 def test_clean_rewrite_keeps_one_line_and_falls_back_to_the_question():

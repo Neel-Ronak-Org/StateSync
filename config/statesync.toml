@@ -388,7 +388,7 @@ hybrid_dense_lists        = "separate"  # "separate" | "merged"
 # fetches this many candidates, the reranker service re-scores them with a cross-encoder, and the top_k
 # come back in its order. Fixed before measuring; not tuned.
 rerank_candidates         = 30
-rerank_timeout_s          = 20       # mcp -> reranker HTTP timeout; on timeout or error the un-reranked order is used
+rerank_timeout_s          = 120      # mcp -> reranker HTTP timeout; on timeout or error the un-reranked order is used. 120 (owner: accuracy over latency): bge on the Docker CPU took 50-57 s for 30 candidates under load
 query_rewrite_max_tokens  = 200      # pipeline.query_rewrite = "llm": room for the normaliser model's one-line search query (reasoning models spend some first)
 query_rewrite_max_chars   = 300      # a longer reply is not a search query: the original question is searched instead
 # Abstention (docs/specs/rag_v2.md Phase E; pipeline.doc_abstain = "on"). The docs route gives up,

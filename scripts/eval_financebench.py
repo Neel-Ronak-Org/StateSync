@@ -534,11 +534,15 @@ def cmd_ingest(args: argparse.Namespace) -> int:
 
 # ── query ─────────────────────────────────────────────────────────────────────
 
-def run_questions(items: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+RERANK_RPC_TIMEOUT_S = 180  # a re-ranked search waits on the cross-encoder (config [retrieval].rerank_timeout_s is 120)
+
+
+def run_questions(items: list[dict[str, Any]], timeout_s: float = RPC_TIMEOUT_S) -> dict[str, dict[str, Any]]:
     """The searches inside the orchestrator container (eval_retrieval's snippet): one warm-up call, then each question timed."""
-    payload = {"url": MCP_RPC_URL, "tenant": TENANT, "top_k": TOP_K, "timeout_s": RPC_TIMEOUT_S, "items": items}
+    payload = {"url": MCP_RPC_URL, "tenant": TENANT, "top_k": TOP_K, "timeout_s": timeout_s, "items": items}
     out = subprocess.run(["docker", "exec", "-i", ORCHESTRATOR, "python", "-c", _CONTAINER_SNIPPET],
-                         input=json.dumps(payload), capture_output=True, text=True, timeout=RUN_TIMEOUT_S)
+                         input=json.dumps(payload), capture_output=True, text=True,
+                         timeout=max(RUN_TIMEOUT_S, timeout_s * (len(items) + 1)))  # +1: the warm-up call
     if out.returncode:
         raise RuntimeError(f"the search run failed inside {ORCHESTRATOR}: {out.stderr.strip()[-500:]}")
     return json.loads(out.stdout)
@@ -649,7 +653,7 @@ def cmd_query(args: argparse.Namespace) -> int:
         rewritten = rewrites(questions) if args.rewrite == "llm" else {}
         items = [{"id": q["financebench_id"], "text": rewritten.get(q["financebench_id"], {}).get("query", q["question"]),
                   "extra": extra, "workspace": workspace_id} for q in questions]
-        answers = run_questions(items)
+        answers = run_questions(items, RERANK_RPC_TIMEOUT_S if args.rerank != "off" else RPC_TIMEOUT_S)
     finally:
         if workspace_id:
             status, _ = API("DELETE", f"/workspaces/{workspace_id}", token)

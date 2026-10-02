@@ -52,8 +52,12 @@ Then the layout ingest: `fb3_layout_dense` and `fb3_layout_bge`. That gives the 
 comparison left open by the paused benchmark.
 
 - **Primary comparison:** run 1 against run 3, on page hit@5 and MRR@10.
-- **Secondary:** every other pair, plus p50/p90 latency. A re-ranker only ships if it improves
-  page hit@5 by at least 5 points with p50 latency under 1.5 s per search.
+- **Secondary:** every other pair, plus p50/p90 latency.
+- **Ship rule (owner decision, 2026-10-02, before any result):** accuracy over latency. A re-ranker
+  is recommended if it improves page hit@5 by at least 5 points. Latency is measured and reported
+  but does not veto. The first measurement on the Docker CPU (contended by an ingest) was 4.9 s for
+  MiniLM and 50–57 s for bge per 30 candidates; it is re-measured uncontended. Faster paths
+  (quantisation, the Mac GPU) are follow-ups, not part of this decision.
 - **Also reported:** the in-house 110-question set (`scripts/eval_retrieval.py`), dense against
   bge.
 - **No tuning.** `rerank_candidates` = 30 and the rewrite prompt are fixed now. No other values
