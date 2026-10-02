@@ -124,6 +124,15 @@ Record the date and model id of every answer.
 
 Any change after a model call is listed in the report with its reason, before the results.
 
+Changes before any model call (2026-10-02):
+- `demo/sec_db.sh` gained two standard balance-sheet metrics, `property_plant_equipment_net`
+  (PropertyPlantAndEquipmentNet) and `accounts_payable` (AccountsPayableCurrent), after reading
+  which line items the 50 questions name. No alternative tags were added for items found
+  missing in Phase 0: that would fit the database to the questions.
+- Phase 0 done (`scripts/eval_sec_crosscheck.py coverage`, committed with its output): 44 of
+  50 questions complete in `annual_metrics` (132 of 140 line items); the 6 others are tagged
+  `not_in_database` and stay in every denominator.
+
 ## 9. Deliverables
 
 - `scripts/eval_sec_crosscheck.py` (subcommands `coverage-template`, `ask --arm sql|docs`,

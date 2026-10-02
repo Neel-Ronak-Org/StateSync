@@ -77,6 +77,7 @@ INSERT INTO sec.metric_tags VALUES
   ('stockholders_equity','StockholdersEquity',1),
   ('cash_and_equivalents','CashAndCashEquivalentsAtCarryingValue',1),
   ('inventory','InventoryNet',1), ('accounts_receivable','AccountsReceivableNetCurrent',1),
+  ('property_plant_equipment_net','PropertyPlantAndEquipmentNet',1), ('accounts_payable','AccountsPayableCurrent',1),
   ('long_term_debt','LongTermDebt',1), ('long_term_debt','LongTermDebtNoncurrent',2);
 
 CREATE VIEW sec.annual_facts AS
