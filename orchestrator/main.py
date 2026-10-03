@@ -33,11 +33,12 @@ from failures import user_facing_failure
 from evidence import evidence_tier
 from number_grounding import caveat as grounding_caveat
 from number_grounding import ground
+import repair_loop
 from sql_explain import explain_sql
 from mcp_client import (MCPSession, audit_record, history_append_turn,
                         history_check_session, history_get_recent_turns,
                         history_get_turn_rows, history_list_sessions, history_delete_session)
-from nodes.synthesizer import build_citations
+from nodes.synthesizer import build_citations, synthesizer_node
 from schema_retriever import target_schema
 from schemas.synthesizer_output import safe_synthesizer_output
 from state import StateSyncState
@@ -467,6 +468,14 @@ async def answer_question(
             )
         )
         final_state: StateSyncState = StateSyncState(**raw_final) if isinstance(raw_final, dict) else raw_final
+        # The flag-and-repair loop (repair_loop.py; off when shipped). Inside the recording
+        # window so its one extra model call is counted with the others.
+        repair_record = None
+        variant = str(final_state.flags_snapshot.get("pipeline.repair_loop", "off"))
+        if variant != "off" and final_state.flags_snapshot.get("pipeline.number_grounding") == "on":
+            update, repair_record = await repair_loop.repair(final_state.model_dump(), variant, synthesizer_node)
+            if update:
+                final_state = final_state.model_copy(update=update)
     except Exception as exc:
         logger.error("Graph execution failed: %s", exc, exc_info=True)
         await _audit(
@@ -514,6 +523,7 @@ async def answer_question(
                                   final_state.flags_snapshot, caveats,
                                   final_state.compiled_template),
         "number_grounding": grounding,
+        "repair": repair_record,
         "route":       final_state.route,
         "executed_sql": final_state.executed_sql,
         # executed_sql is null when a statement was rejected before execution,

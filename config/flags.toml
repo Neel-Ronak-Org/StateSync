@@ -271,6 +271,7 @@ synth_style                     = "full"     # "full" | "short": <= 3 sentences,
 answer_checks                   = "off"      # "off" | "on": deterministic checks after the SQL runs (join fan-out, date coverage, truncation, empty aggregates)
 templates                       = "off"      # "off" | "on": answer from a template of an approved query when only the values differ (the "compiled" tier)
 number_grounding                = "on"       # "off" | "on": trace every figure in the prose to a result cell, total, the question or a cited passage; unmatched figures become a caveat (never changes SQL or rows)
+repair_loop                     = "off"      # "off" | "evidence" | "plain": one repair attempt when figure grounding (or a join fan-out) flags an answer; "plain" withholds the evidence (study control). repair_loop.py, docs/research/evidence_tiers_study.md RQ4
 retrieval_mode                  = "dense"    # "dense" | "hybrid": keyword (BM25) leg fused with the dense search by reciprocal rank fusion (docs/specs/rag_v2.md Phase D)
 doc_scope                       = "all"      # "all" | "dataset": sample-corpus documents limited to the question's dataset (prefixes: retrieval.dataset_document_prefixes in statesync.toml); uploads unaffected (Phase E)
 doc_abstain                     = "off"      # "off" | "on": the docs route answers "not found" without a model call when nothing relevant was retrieved (Phase E; thresholds: retrieval.abstain_min_* in statesync.toml)

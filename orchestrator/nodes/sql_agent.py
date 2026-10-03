@@ -76,6 +76,7 @@ import time
 from typing import Any
 
 import answer_checks
+import repair_loop
 import templates as sql_templates
 from column_profiles import format_profiles, get_profiles
 from config_loader import cfg
@@ -983,7 +984,10 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 "attempt": attempt,
                 "category": "join_cardinality",
                 "engine_code": None,
-                "message": fanout_finding.message,
+                # The repair loop's control (repair_loop.py): "plain" withholds the evidence.
+                "message": (repair_loop.PLAIN_SQL_MESSAGE
+                            if flags_snapshot.get("pipeline.repair_loop", "off") == "plain"
+                            else fanout_finding.message),
                 "offending_sql": candidate_sql,
                 "remediation_hint": (
                     "Aggregate the joined table in a subquery before joining, or aggregate at the "

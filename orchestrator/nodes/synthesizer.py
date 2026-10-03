@@ -621,6 +621,10 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         context_parts.append("No data was retrieved for this question.")
 
     user_message = f"Question: {raw_query}\n\nData context:\n" + "\n\n".join(context_parts)
+    # The repair loop's single second attempt (repair_loop.py): the previous answer and what failed.
+    if state_dict.get("repair_note") and state_dict.get("previous_answer"):
+        user_message += (f"\n\nYour previous answer was:\n{state_dict['previous_answer']}\n\n"
+                         f"{state_dict['repair_note']}")
 
     llm = get_agent_llm("synthesizer")
 
