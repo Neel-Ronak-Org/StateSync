@@ -4,10 +4,25 @@ scripts/eval_bird.py
 BIRD Mini-Dev runs for the study in docs/research/evidence_tiers_study.md (RQ1-RQ4).
 
     python3 scripts/eval_bird.py sample [--n 100]          fix the pilot sample (no model calls)
+    python3 scripts/eval_bird.py heldout                   fix the held-out set, protocol v2 §3 (no model calls)
+    python3 scripts/eval_bird.py crosscheck                do the SQLite and PostgreSQL copies agree? (no model calls)
     python3 scripts/eval_bird.py setup                     one connection + workspace per BIRD database
-    python3 scripts/eval_bird.py ask --label L [--spacing S]   ask the sample through /query (model calls)
-    python3 scripts/eval_bird.py score --label L           execution match against gold + every signal
+    python3 scripts/eval_bird.py ask --label L [--sample heldout] [--spacing S]   ask through /query (model calls)
+    python3 scripts/eval_bird.py score --label L           execution match against gold + every signal (v1)
+    python3 scripts/eval_bird.py score --label L --labels v2 [--gold-sqlite FILE]   protocol v2 labels
     python3 scripts/eval_bird.py judge --label L --endpoint E --model M   an LLM judge on each answer
+
+Protocol v2 (docs/research/evidence_tiers_study.md, 2026-10-03, after the pilot) adds, before any
+held-out run:
+- The held-out set: every unique question not in the pilot, minus CROSS_ENGINE_EXCLUDED.
+- Labels v2: the gold is a SQLite file (the corrected annotations, or BIRD's own SQLite gold) run
+  on BIRD's SQLite databases; the prediction runs on PostgreSQL; numbers compared to SIG_DIGITS
+  significant digits (`norm_v2`). `crosscheck` is the validation of that comparison.
+- An answer label (`answer_label`): the text states every cell of a small gold result.
+- Signals v2 (`signals`): truncation, NULL-heavy, grounding before repair, "any data check"
+  (v1's composite included the tier and SQL retries), empty result and refusal (REFUSAL).
+- `ask` records the caveats; judges see the answer as written before any repair.
+The v1 paths (pilot sample, original gold, 6 decimals) are unchanged so the pilot reproduces.
 
 Fixed before any run (2026-10-03):
 - Sample: stratified by difficulty in BIRD's proportions, seed SAMPLE_SEED, written to
@@ -68,6 +83,24 @@ PREVIEW_ROWS = 10              # noqa: literals - rows a judge sees
 JUDGE_MAX_TOKENS = 400         # noqa: literals - a short JSON verdict (plus reasoning headroom from the adapter)
 _CN = re.compile(r'"?cn_[0-9a-f]{16}"?\.')
 
+# Protocol v2 (§3, §5), fixed 2026-10-03 before any held-out run.
+HELDOUT = EVAL / "bird_heldout_sample.json"
+SQLITE_QUESTIONS = BIRD / "mini_dev_sqlite.json"
+SQLITE_DBS = BIRD / "dev_databases"
+CROSSCHECK = EVAL / "bird_crossengine_check.json"
+MAX_ROWS = 1000                # noqa: literals - [mcp] max_rows_default, the row cap the pipeline runs with
+SIG_DIGITS = 5                 # noqa: literals - v2 number comparison (REAL vs double differ in the 6th digit)
+ANSWER_REL_TOL = 0.005         # noqa: literals - "agrees to 3 significant digits" for the answer label
+ANSWER_LABEL_MAX_CELLS = 4     # noqa: literals - larger gold results get no answer label
+# The SQLite and PostgreSQL copies' ORIGINAL golds disagree on these (bird_crossengine_check.json).
+CROSS_ENGINE_EXCLUDED = frozenset({532, 533, 563, 565, 683, 788, 1482})
+# "The text says it cannot answer", read in the first sentence only: a long answer that says
+# "I can't list all 660 rows here" is a disclosure, not a refusal.
+REFUSAL = re.compile(r"\b(?:can(?:no|'|’)t|unable to)\s+(?:determine|compute|answer|identify|list|provide|"
+                     r"calculate|find|tell|say)\b", re.IGNORECASE)
+TRUNCATION_CAVEAT = "Showing the first"        # answer_checks.truncation_caveat
+NULL_CAVEAT = "No matching data"               # answer_checks.null_aggregate_caveat
+
 JUDGE_SYSTEM = (
     "You check answers from a text-to-SQL system on a PostgreSQL database. You are given the user's "
     "question (with an optional hint), the database's tables and columns, the SQL the system ran, the "
@@ -122,6 +155,90 @@ def cmd_sample(n: int) -> int:
     return 0
 
 
+def heldout_ids(qs: list[dict], pilot: list[int]) -> list[int]:
+    """Protocol v2 §3: every unique question not in the pilot and not cross-engine excluded."""
+    return sorted({q["question_id"] for q in qs} - set(pilot) - CROSS_ENGINE_EXCLUDED)
+
+
+def cmd_heldout() -> int:
+    if HELDOUT.exists():
+        print(f"{HELDOUT} exists; the held-out set is fixed")
+        return 1
+    qs = questions()
+    ids = heldout_ids(qs, json.loads(SAMPLE.read_text())["question_ids"])
+    by_id = {q["question_id"]: q for q in qs}
+    record = {"created": datetime.now(timezone.utc).isoformat(timespec="seconds"), "protocol": "v2", "n": len(ids),
+              "questions_sha256": sha256(QUESTIONS), "excluded_pilot": sha256(SAMPLE),
+              "excluded_cross_engine": sorted(CROSS_ENGINE_EXCLUDED),
+              "difficulty": dict(collections.Counter(by_id[i]["difficulty"] for i in ids)),
+              "databases": dict(collections.Counter(by_id[i]["db_id"] for i in ids)), "question_ids": ids}
+    HELDOUT.write_text(json.dumps(record, indent=1) + "\n")
+    print(json.dumps({k: v for k, v in record.items() if k != "question_ids"}, indent=1))
+    return 0
+
+
+def norm_v2(value: Any) -> Any:
+    """Labels v2: numbers (and numeric text) to SIG_DIGITS significant digits, ints as floats, dates as
+    ISO text, so the same value read from SQLite and from PostgreSQL compares equal."""
+    if isinstance(value, bool) or value is None:
+        return value
+    if isinstance(value, (int, float, Decimal)):
+        return float(f"{float(value):.{SIG_DIGITS}g}")
+    if isinstance(value, datetime):
+        return value.isoformat(sep=" ")
+    if hasattr(value, "isoformat"):            # date, time
+        return value.isoformat()
+    if isinstance(value, str):
+        try:
+            return float(f"{float(value):.{SIG_DIGITS}g}")
+        except ValueError:
+            return value
+    return value
+
+
+def run_sqlite(db: str, sql: str) -> list[tuple] | None:
+    import sqlite3
+    try:
+        conn = sqlite3.connect(f"file:{SQLITE_DBS / db / (db + '.sqlite')}?mode=ro", uri=True)
+        try:
+            return [tuple(r) for r in conn.execute(sql).fetchall()]
+        finally:
+            conn.close()
+    except Exception:  # noqa: BLE001 -- a gold that fails is recorded as such by the caller
+        return None
+
+
+def bird_connection() -> Any:
+    import psycopg  # the research venv; the host's Python lacks it
+    return psycopg.connect(f"host=127.0.0.1 port=5436 dbname=bird user=statesync_reader password={BIRD_CONNECTION['password']}",
+                           autocommit=True)
+
+
+def cmd_crosscheck() -> int:
+    """Each copy's ORIGINAL gold on its own engine, compared under norm_v2 (and exactly, under _norm)."""
+    pg = {q["question_id"]: q for q in questions()}
+    sq = {q["question_id"]: q for q in json.loads(SQLITE_QUESTIONS.read_text())}
+    conn = bird_connection()
+    agree_exact = agree = 0
+    differ = []
+    for qid in sorted(pg):
+        s = run_sqlite(pg[qid]["db_id"], sq[qid]["SQL"]) if qid in sq else None
+        p = _run(conn, pg[qid]["db_id"], pg[qid]["SQL"])
+        if s is not None and p is not None and rows_match(s, p):
+            agree_exact += 1
+        if s is not None and p is not None and rows_match(s, p, norm_v2):
+            agree += 1
+        else:
+            differ.append({"question_id": qid, "sqlite_failed": s is None, "postgres_failed": p is None,
+                           "sqlite_rows": len(s or []), "postgres_rows": len(p or [])})
+    record = {"checked": len(pg), "agree_exact": agree_exact, "agree_v2": agree, "differ": differ,
+              "questions_sha256": sha256(QUESTIONS), "sqlite_questions_sha256": sha256(SQLITE_QUESTIONS)}
+    CROSSCHECK.write_text(json.dumps(record, indent=1) + "\n")
+    print(json.dumps({k: v for k, v in record.items() if k != "differ"}, indent=1))
+    print("differ:", [d["question_id"] for d in differ])
+    return 0
+
+
 # ── the API (setup, ask) ─────────────────────────────────────────────────────────
 
 def api(method: str, path: str, body: dict | None = None, timeout: float = 120) -> tuple[int, dict]:
@@ -173,15 +290,17 @@ def answers_path(label: str) -> Path:
     return EVAL / f"bird_answers_{label}.json"
 
 
-def cmd_ask(label: str, spacing_s: float, limit: int | None) -> int:
-    sample = json.loads(SAMPLE.read_text())
+def cmd_ask(label: str, spacing_s: float, limit: int | None, sample_name: str = "pilot") -> int:
+    sample = json.loads((HELDOUT if sample_name == "heldout" else SAMPLE).read_text())
     if sample["questions_sha256"] != sha256(QUESTIONS):
         print("the question file changed since the sample was fixed")
         return 1
     setup = json.loads(SETUP.read_text())
     by_id = {q["question_id"]: q for q in questions()}
     out = answers_path(label)
-    done = json.loads(out.read_text()) if out.exists() else {"label": label, "sample_sha256": sha256(SAMPLE), "answers": {}}
+    sample_file = HELDOUT if sample_name == "heldout" else SAMPLE
+    done = json.loads(out.read_text()) if out.exists() else {"label": label, "sample": sample_name,
+                                                             "sample_sha256": sha256(sample_file), "answers": {}}
     import tomllib   # the flags the orchestrator was started with (shipped_flags.py checks they are current)
     done.setdefault("pipeline_flags", tomllib.loads((REPO / "config" / "flags.toml").read_text())["pipeline"])
     errors, asked = 0, 0
@@ -201,6 +320,7 @@ def cmd_ask(label: str, spacing_s: float, limit: int | None) -> int:
                   "evidence": trace.get("evidence"), "number_grounding": trace.get("number_grounding"),
                   "repair": trace.get("repair"), "errors": trace.get("errors"), "attempt": trace.get("attempt"),
                   "sql_rows_count": trace.get("sql_rows_count"), "calls": trace.get("calls"), "metrics": trace.get("metrics"),
+                  "caveats": trace.get("caveats"),
                   "latency_ms": body.get("latency_ms") or round((time.monotonic() - t0) * 1000),
                   "asked_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
         asked += 1
@@ -227,20 +347,23 @@ def _norm(value: Any) -> Any:
     return value
 
 
-def rows_match(predicted: list[tuple] | None, gold: list[tuple]) -> bool:
-    """BIRD's rule: the SETS of result rows are equal."""
+def rows_match(predicted: list[tuple] | None, gold: list[tuple], norm: Any = None) -> bool:
+    """BIRD's rule: the SETS of result rows are equal (values under `norm`; v1's _norm by default)."""
+    norm = norm or _norm
     if predicted is None:
         return False
-    return {tuple(_norm(v) for v in r) for r in predicted} == {tuple(_norm(v) for v in r) for r in gold}
+    return {tuple(norm(v) for v in r) for r in predicted} == {tuple(norm(v) for v in r) for r in gold}
 
 
-def rows_match_relaxed(predicted: list[tuple] | None, gold: list[tuple], max_columns: int = 8) -> bool:  # noqa: literals - bound on the column search
+def rows_match_relaxed(predicted: list[tuple] | None, gold: list[tuple], max_columns: int = 8,  # noqa: literals - bound on the column search
+                       norm: Any = None) -> bool:
     """Column order and extra predicted columns ignored: some choice of distinct predicted columns,
     one per gold column, gives the same SET of rows as the gold (protocol change, 2026-10-03)."""
     from itertools import permutations
+    norm = norm or _norm
     if predicted is None:
         return False
-    if rows_match(predicted, gold):
+    if rows_match(predicted, gold, norm):
         return True
     if not gold:
         return not predicted
@@ -248,8 +371,8 @@ def rows_match_relaxed(predicted: list[tuple] | None, gold: list[tuple], max_col
     width = len(predicted[0]) if predicted else 0
     if width < k or width > max_columns:
         return False
-    target = {tuple(_norm(v) for v in r) for r in gold}
-    return any({tuple(_norm(r[i]) for i in cols) for r in predicted} == target for cols in permutations(range(width), k))
+    target = {tuple(norm(v) for v in r) for r in gold}
+    return any({tuple(norm(r[i]) for i in cols) for r in predicted} == target for cols in permutations(range(width), k))
 
 
 def unqualify(sql: str) -> str:
@@ -267,12 +390,26 @@ def _run(conn: Any, schema: str, sql: str) -> list[tuple] | None:
         return None
 
 
-def signals(a: dict) -> dict[str, Any]:
-    """Each warning the pipeline raised for one answer (True = 'this may be wrong')."""
+def text_before_repair(a: dict) -> str:
+    """The answer as first written: arm (a) of the repair loop (protocol v2 §4)."""
+    return (a.get("repair") or {}).get("previous_answer") or a.get("answer_text") or ""
+
+
+def refused(text: str) -> bool:
+    """The text's first sentence says it cannot answer (REFUSAL)."""
+    first = re.split(r"(?<=[.!?])\s|\n", (text or "").strip(), maxsplit=1)[0]
+    return bool(REFUSAL.search(first))
+
+
+def signals(a: dict, pred_rows: list[tuple] | None = None) -> dict[str, Any]:
+    """Each warning for one answer (True = 'this may be wrong'). The first seven are v1's (the pilot's
+    report used them); the rest are protocol v2's. NULL-heavy comes from the recorded caveats, or, for
+    answers asked before caveats were recorded, from the re-executed rows (`pred_rows`)."""
     grounding = a.get("number_grounding") or {}
     errs = a.get("errors") or []
     repair = a.get("repair") or {}
-    return {
+    caveats = a.get("caveats")
+    v1 = {
         "no_sql": not a.get("executed_sql"),
         "tier_unchecked": a.get("evidence") in (None, "unchecked"),
         "fanout_retry": any(e.get("category") == "join_cardinality" for e in errs if isinstance(e, dict)),
@@ -281,6 +418,55 @@ def signals(a: dict) -> dict[str, Any]:
         "repair_still_flagged": repair.get("outcome") == "still_flagged",
         "any_sql_retry": bool(errs),
     }
+    rows_count = a.get("sql_rows_count")
+    truncation = (any(TRUNCATION_CAVEAT in c for c in caveats) if caveats is not None else False) or rows_count == MAX_ROWS
+    if caveats is not None:
+        null_heavy = any(NULL_CAVEAT in c for c in caveats)
+    else:
+        null_heavy = bool(pred_rows) and all(v is None for r in pred_rows for v in r)
+    grounding_before = v1["repair_triggered"] or v1["grounding_unmatched"]
+    v2 = {
+        "truncation": truncation,
+        "null_heavy": null_heavy,
+        "grounding_before_repair": grounding_before,
+        "any_data_check": v1["fanout_retry"] or truncation or null_heavy or grounding_before,
+        "empty_result": bool(a.get("executed_sql")) and rows_count == 0,
+        "refusal": refused(text_before_repair(a)),
+    }
+    return {**v1, **v2}
+
+
+def answer_label(text: str, gold: list[tuple] | None) -> bool | None:
+    """Protocol v2 answer label: does the text state every cell of a gold result of at most
+    ANSWER_LABEL_MAX_CELLS cells? Numbers agree within ANSWER_REL_TOL (or the rounding the text's
+    own digits imply; a fraction may be written as a percent); text cells are matched ignoring case;
+    a text whose first sentence refuses is wrong. None when the gold is larger, empty, or holds a NULL
+    (no label)."""
+    sys.path.insert(0, str(REPO / "orchestrator"))
+    from number_grounding import extract_mentions
+    if not gold or sum(len(r) for r in gold) > ANSWER_LABEL_MAX_CELLS:
+        return None
+    cells = [v for r in gold for v in r]
+    if any(v is None for v in cells):
+        return None
+    if refused(text):            # a refusal that lists candidates is still not an answer (pilot q1389)
+        return False
+    mentions = extract_mentions(text or "")
+    low = (text or "").lower()
+    for v in cells:
+        number = None if isinstance(v, bool) else (float(v) if isinstance(v, (int, float, Decimal)) else None)
+        if number is None and isinstance(v, str):
+            try:
+                number = float(v.replace(",", ""))
+            except ValueError:
+                number = None
+        if number is not None:
+            targets = [number, number * 100]          # noqa: literals - a fraction written as a percent
+            if not any(abs(m.value - t) <= max(m.tolerance, ANSWER_REL_TOL * abs(t)) for m in mentions for t in targets):
+                return False
+        elif str(v).strip().lower() not in low:
+            return False
+    return True
 
 
 def cmd_score(label: str, gold_file: Path | None) -> int:
@@ -317,6 +503,56 @@ def cmd_score(label: str, gold_file: Path | None) -> int:
     report["repair_outcomes"] = dict(collections.Counter(r["repair_outcome"] for r in rows if r["repair_outcome"]))
     report["mean_llm_calls"] = round(sum(r["llm_calls"] for r in rows) / n, 2) if n else None
     out = EVAL / f"bird_scores_{label}.json"
+    out.write_text(json.dumps({"report": report, "rows": rows}, indent=1) + "\n")
+    print(json.dumps(report, indent=1))
+    return 0
+
+
+def cmd_score_v2(label: str, gold_sqlite: Path | None) -> int:
+    """Protocol v2 labels: the SQLite gold (the corrected annotations when given, else BIRD's own SQLite
+    gold) on SQLite, the prediction on PostgreSQL, compared under norm_v2; the answer label before
+    and after any repair; every v1 and v2 signal. Cross-engine-excluded questions are kept in the file,
+    marked, and left out of the summary."""
+    answers = json.loads(answers_path(label).read_text())["answers"]
+    gold_file = gold_sqlite or SQLITE_QUESTIONS
+    gold_sql = {int(q["question_id"]): q["SQL"] for q in json.loads(gold_file.read_text())}
+    by_id = {q["question_id"]: q for q in questions()}
+    conn = bird_connection()
+    rows = []
+    for qid, a in sorted(answers.items(), key=lambda kv: int(kv[0])):
+        q = by_id[int(qid)]
+        gold = run_sqlite(q["db_id"], gold_sql[int(qid)]) if int(qid) in gold_sql else None
+        pred = _run(conn, q["db_id"], unqualify(a["executed_sql"])) if a.get("executed_sql") else None
+        ok = gold is not None
+        before, after = text_before_repair(a), a.get("answer_text") or ""
+        rows.append({"question_id": int(qid), "difficulty": q["difficulty"], "db_id": q["db_id"],
+                     "excluded": int(qid) in CROSS_ENGINE_EXCLUDED, "gold_failed": not ok,
+                     "correct": ok and rows_match_relaxed(pred, gold, norm=norm_v2),
+                     "correct_strict": ok and rows_match(pred, gold, norm_v2),
+                     "answer_correct_before": answer_label(before, gold) if ok else None,
+                     "answer_correct_after": answer_label(after, gold) if ok else None,
+                     "signals": signals(a, pred), "repair_outcome": (a.get("repair") or {}).get("outcome"),
+                     "llm_calls": len(a.get("calls") or []), "latency_ms": a.get("latency_ms")})
+    kept = [r for r in rows if not r["excluded"] and not r["gold_failed"]]
+    n = len(kept)
+    labelled = [r for r in kept if r["answer_correct_before"] is not None]
+    report: dict[str, Any] = {
+        "label": label, "labels": "v2", "gold_file": str(gold_file.relative_to(REPO)), "gold_sha256": sha256(gold_file),
+        "n": n, "excluded": sum(r["excluded"] for r in rows), "gold_failed": sum(r["gold_failed"] for r in rows),
+        "accuracy": round(sum(r["correct"] for r in kept) / n, 4) if n else None,
+        "accuracy_strict": round(sum(r["correct_strict"] for r in kept) / n, 4) if n else None,
+        "answer_labelled": len(labelled),
+        "answer_accuracy_before": round(sum(bool(r["answer_correct_before"]) for r in labelled) / len(labelled), 4) if labelled else None,
+        "answer_accuracy_after": round(sum(bool(r["answer_correct_after"]) for r in labelled) / len(labelled), 4) if labelled else None,
+        "signals": {}}
+    wrong = [r for r in kept if not r["correct"]]
+    for name in kept[0]["signals"] if kept else []:
+        flagged = [r for r in kept if r["signals"][name]]
+        tp = sum(not r["correct"] for r in flagged)
+        report["signals"][name] = {"flagged": len(flagged), "precision": round(tp / len(flagged), 4) if flagged else None,
+                                   "recall": round(tp / len(wrong), 4) if wrong else None,
+                                   "false_alarm_rate": round((len(flagged) - tp) / max(1, n - len(wrong)), 4)}
+    out = EVAL / f"bird_scores_{label}_v2_{'corrected' if gold_sqlite else 'original'}.json"
     out.write_text(json.dumps({"report": report, "rows": rows}, indent=1) + "\n")
     print(json.dumps(report, indent=1))
     return 0
@@ -391,7 +627,7 @@ def cmd_judge(label: str, endpoint: str, model: str, spacing_s: float, limit: in
         q = by_id[int(qid)]
         schemas.setdefault(q["db_id"], schema_text(q["db_id"]))
         prompt = (f"Question: {question_text(q)}\n\nTables:\n{schemas[q['db_id']]}\n\nSQL:\n{a.get('executed_sql') or '(none)'}\n\n"
-                  f"First rows of the result:\n{preview(q['db_id'], a.get('executed_sql'))}\n\nAnswer:\n{a.get('answer_text') or ''}")
+                  f"First rows of the result:\n{preview(q['db_id'], a.get('executed_sql'))}\n\nAnswer:\n{text_before_repair(a)}")
         items.append({"id": qid, "prompt": prompt})
     req = {"endpoint": endpoint, "model": model, "system": JUDGE_SYSTEM, "max_tokens": JUDGE_MAX_TOKENS,
            "spacing_s": spacing_s, "items": items}
@@ -416,14 +652,19 @@ def main() -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("sample")
     p.add_argument("--n", type=int, default=DEFAULT_N)
+    sub.add_parser("heldout")
+    sub.add_parser("crosscheck")
     sub.add_parser("setup")
     p = sub.add_parser("ask")
     p.add_argument("--label", required=True)
+    p.add_argument("--sample", choices=["pilot", "heldout"], default="pilot")
     p.add_argument("--spacing", type=float, default=45.0)
     p.add_argument("--limit", type=int, help="ask at most this many new questions (a daily quota)")
     p = sub.add_parser("score")
     p.add_argument("--label", required=True)
-    p.add_argument("--gold", type=Path, help="a second gold file (e.g. the corrected labels)")
+    p.add_argument("--gold", type=Path, help="v1: a second PostgreSQL gold file")
+    p.add_argument("--labels", choices=["v1", "v2"], default="v1")
+    p.add_argument("--gold-sqlite", type=Path, help="v2: the corrected annotations (SQLite); default BIRD's own SQLite gold")
     p = sub.add_parser("judge")
     p.add_argument("--label", required=True)
     p.add_argument("--endpoint", required=True)
@@ -433,12 +674,16 @@ def main() -> int:
     args = ap.parse_args()
     if args.cmd == "sample":
         return cmd_sample(args.n)
+    if args.cmd == "heldout":
+        return cmd_heldout()
+    if args.cmd == "crosscheck":
+        return cmd_crosscheck()
     if args.cmd == "setup":
         return cmd_setup()
     if args.cmd == "ask":
-        return cmd_ask(args.label, args.spacing, args.limit)
+        return cmd_ask(args.label, args.spacing, args.limit, args.sample)
     if args.cmd == "score":
-        return cmd_score(args.label, args.gold)
+        return cmd_score_v2(args.label, args.gold_sqlite) if args.labels == "v2" else cmd_score(args.label, args.gold)
     return cmd_judge(args.label, args.endpoint, args.model, args.spacing, args.limit)
 
 

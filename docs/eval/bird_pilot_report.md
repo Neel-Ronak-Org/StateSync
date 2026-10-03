@@ -91,8 +91,10 @@ tells the model to apply it "unless the question explicitly asks for all rows". 
 (37, 82, 1107, 1389) also returned several rows for a "the one" question, but their first row
 differs from the gold, so they are counted as wrong.
 
-**3. The SQL prompt is domain-specific.** It describes "a logistics data analytics system (ONDC
-network)" and timestamp rules for that data.
+**3. (Withdrawn after checking the code.)** An earlier draft of this revision said the SQL prompt
+described a logistics network. It did not: `datasets.frame_prompt` replaces that framing for
+connected databases, and every BIRD question ran in one. Only a generic timestamp rule remains, with
+no observed effect.
 
 **4. All 7 figure-grounding flags were pipeline artifacts, not wrong figures:**
 - the synthesizer's "first 50 rows" disclosure (50 is `synthesizer_preview_rows`): 327, 518, 766,
@@ -100,7 +102,9 @@ network)" and timestamp rules for that data.
 - parenthesised list numbers "(1) (2) (3)": 28 and 518;
 - a correct derived remainder, "remaining 610" = 660 − 50: 145.
 
-The repair loop's 3 "fixes" removed these artifacts; none corrected an error.
+The repair loop's 3 "fixes" removed these artifacts; none corrected an error. Re-grounding the
+100 answers (text before repair, rows re-executed) reproduces exactly these 7 flags under the
+shipped grounding, and gives 0 under grounding v2 (fix F3).
 
 **5. Seven answers say they cannot answer** ("I cannot determine…"): six labelled wrong, one labelled
 right (518). The SQL label ignores what the user actually reads.
@@ -137,10 +141,31 @@ count questions inspected, it used COUNT(DISTINCT); the double counting was in B
 
 ## What the pilot does show
 
-- **Harness faults that create label noise:** the LIMIT rule, the domain prompt, and grounding
-  artifacts (fixes F1–F3 in protocol v2).
+- **Harness faults:** the LIMIT rule (fix F1 in protocol v2) and grounding artifacts (fix F3).
 - **The original labels are too noisy to use;** the corrected annotations are needed.
 - **Text and SQL can disagree,** so an answer-level label is needed for grounding and repair.
 - **On this sample, the data checks rarely fire on BIRD,** which limits how many wrong answers they
   can catch whatever the labels. Protocol v2 reports this as an expectation, not a confirmed
   prediction.
+
+## Dev re-analysis with the v2 tooling (exploratory)
+
+Files: `bird_scores_pilot_gpt5mini_v2_original.json` and `bird_analysis_v2_pilot_gpt5mini_v2_original.json`.
+
+**Setup:**
+- BIRD's own SQLite gold run on SQLite (not yet the corrected labels);
+- pilot answers as recorded;
+- 98 questions after the cross-engine exclusions.
+
+**Results:**
+- **Accuracy:** 56.1% relaxed. The cross-engine scorer reproduces the PostgreSQL labels.
+- **At the same flag rate (vs the Gemini judge):** all CIs include 0.
+  - the data checks catch 6 wrong answers against the judge's expected 8.5 (CI −5.6 to 0.9);
+  - truncation: 3 vs 3.1;
+  - refusal: 5 vs 5.4.
+- **H2:** ordering by the checks, then the judge, does not lower the judge's AURC (gain 0.005, CI
+  −0.022 to 0.035).
+- **Answer label:** labels 74 answers.
+
+These are dev numbers, measured with the shipped grounding and the original gold. They check that
+the tooling works; they are not results.

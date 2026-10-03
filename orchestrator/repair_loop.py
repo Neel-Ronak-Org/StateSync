@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from typing import Any, Awaitable, Callable
 
+from config_loader import cfg
 from number_grounding import ground
 
 VARIANTS = frozenset({"off", "evidence", "plain"})
@@ -36,6 +37,17 @@ def evidence_note(unmatched: list[str]) -> str:
             "(or that the question itself states). If a figure must be computed, show the inputs.")
 
 
+def grounding_options(flags_snapshot: dict[str, Any], n_rows: int) -> dict[str, Any]:
+    """Keyword arguments for number_grounding.ground under [pipeline] grounding_version. v2 is told
+    how many rows the answer writer saw: the synthesizer shows the first synth_short_preview_rows
+    (short style) or synthesizer_preview_rows (full style) rows, as nodes/synthesizer.py does."""
+    if flags_snapshot.get("pipeline.grounding_version", "v1") != "v2":
+        return {}
+    short = flags_snapshot.get("pipeline.synth_style", "full") == "short"
+    preview = int(cfg.pipeline.synth_short_preview_rows if short else cfg.sql.synthesizer_preview_rows)
+    return {"version": 2, "shown_rows": min(n_rows, preview)}
+
+
 def note_for(variant: str, unmatched: list[str]) -> str:
     return evidence_note(unmatched) if variant == "evidence" else PLAIN_NOTE
 
@@ -48,7 +60,9 @@ async def repair(state: dict[str, Any], variant: str,
         return None, None
     question = state.get("normalized_query") or state.get("raw_query", "")
     passages = [r.get("content", "") for r in state.get("retrievals") or [] if isinstance(r, dict)]
-    before = ground(state["answer_text"], state.get("sql_rows") or [], state.get("sql_columns") or [], question, passages)
+    rows = state.get("sql_rows") or []
+    options = grounding_options(state.get("flags_snapshot") or {}, len(rows))
+    before = ground(state["answer_text"], rows, state.get("sql_columns") or [], question, passages, **options)
     if not before["unmatched"]:
         return None, None
     record: dict[str, Any] = {"trigger": "figure_grounding", "variant": variant, "unmatched_before": before["unmatched"],
@@ -56,7 +70,7 @@ async def repair(state: dict[str, Any], variant: str,
     out = await synthesize({**state, "repair_note": note_for(variant, before["unmatched"]),
                             "previous_answer": state["answer_text"]})
     new_text = (out or {}).get("answer_text") or ""
-    after = ground(new_text, state.get("sql_rows") or [], state.get("sql_columns") or [], question, passages) if new_text else None
+    after = ground(new_text, rows, state.get("sql_columns") or [], question, passages, **options) if new_text else None
     if after is not None and not after["unmatched"]:
         record.update(outcome="fixed", unmatched_after=[])
         update = {"answer_text": new_text}

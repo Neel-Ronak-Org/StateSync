@@ -50,10 +50,13 @@ BIRD, where the gold query fixes the intent; it is out of scope.
 - **H2 (BIRD held-out).** Ordering answers by "any data check fired", then by judge risk, gives a
   lower area under the risk–coverage curve (AURC) than the judge alone.
 - **H3 (BIRD held-out).** Figure grounding flags fewer than 5% of answers whose text is correct
-  (answer label).
+  (answer label). It is always reported with grounding's flag count and recall: a check that never
+  fires passes H3 trivially, and grounding v2 flagged 0 of 100 dev answers.
 - **H4 (BIRD held-out).** Among answers the checks flag, the repair turns more wrong answers right
   than right answers wrong (answer label), and it raises answer-level accuracy over all questions
-  by at least 2 points.
+  by at least 2 points. *Precondition:* at least 10 repairs are triggered. On dev, grounding v2
+  flags 0 of 100 answers, so the loop may trigger too rarely on BIRD. If it does, H4 is reported
+  as untestable there, not as failed or passed.
 
 Expected from the pilot, so reported but **not** counted as confirmed predictions: on BIRD the data
 checks fire on fewer than 20% of answers and catch fewer than 20% of the wrong ones.
@@ -74,7 +77,7 @@ checks fire on fewer than 20% of answers and catch fewer than 20% of the wrong o
      compared (§5). No gold query is translated by hand.
    - **Cross-engine check (run 2026-10-03, before any corrected label was seen):** each copy's
      ORIGINAL gold, run on its own engine, gives the same result on 491 of 498 questions with
-     numbers compared to 5 significant digits (484 exactly; the rest differ only in REAL-vs-double
+     numbers compared to 5 significant digits (475 under v1's 6-decimal comparison; the rest differ only in REAL-vs-double
      rounding). The 7 that differ in substance (532, 533, 563, 565, 683, 788, 1482; 532 and 565 are
      pilot questions) are excluded.
    - The original PostgreSQL gold is kept as a sensitivity analysis.
@@ -104,11 +107,15 @@ without it):
 - **F1. Row cap.** The cap is applied when the query runs, instead of telling the model to "apply
   LIMIT 1000". The instruction replaced the LIMIT 1 of "which is the highest" questions: 97 of 100
   pilot queries ended in LIMIT 1000.
-- **F2. Domain-neutral SQL prompt.** The shipped prompt describes a logistics network and
-  timestamp rules for that data.
-- **F3. Figure grounding v2.** The pipeline's own disclosure figures (rows shown, total rows,
-  remaining = total − shown) and parenthesised list numbers "(1)" are traced. All 7 pilot
-  grounding flags came from these, none from a wrong figure.
+- **F3. Figure grounding v2** (`[pipeline] grounding_version = "v2"`). It traces how many rows the
+  answer writer was shown ("the first 50 rows") and remainders of it, and skips inline enumerators
+  "(1) (2)". All 7 pilot grounding flags came from these, none from a wrong figure.
+  - Dev check: re-grounding the 100 pilot answers (text before repair, rows re-executed) gives
+    exactly the 7 recorded flags under v1, and 0 under v2.
+- **No F2.** A domain-neutral SQL prompt was planned, on the belief that the pilot's prompt
+  described a logistics network. It did not: `datasets.frame_prompt` already replaces that framing
+  for connected databases, and every BIRD question ran in one. Only the timestamp rule is generic
+  to all datasets; nothing in the pilot shows it caused an error, so it is left alone.
 
 **Signals**, each giving a yes/no warning; the judge and self-consistency also give a score:
 
@@ -145,7 +152,13 @@ without it):
 **Answer label** (H3, H4): does the text state the gold result?
 - Automatic rule for gold results of at most 4 cells: every gold cell appears in the text.
   Numbers count when they agree to 3 significant digits, using `number_grounding`'s figure
-  extraction; strings are matched ignoring case. Larger results get no answer label.
+  extraction; strings are matched ignoring case. A text whose first sentence says it cannot
+  answer is labelled wrong, even if it lists the right value among candidates (pilot q1389;
+  pilot-informed). Larger results get no answer label.
+- Dev check (original gold, pilot): the answer and SQL labels agree on 67 of 74 labelled answers.
+  Two of the 7 disagreements are scorer false negatives that the answer label gets right (a name
+  in one column vs two). Others are answers that list many candidates including the gold one;
+  that is why the blind manual validation decides whether the automatic rule is kept.
 - Validated before use against a blind manual label of 60 random answers. If the two agree on
   fewer than 90%, every answer label is manual.
 
@@ -248,7 +261,7 @@ gpt-oss-120b runs on Groq's free tier. Recompute from the pilot's token counts b
 ## 9. Schedule
 
 1. **Freeze:**
-   - fixes F1–F3 behind flags;
+   - fixes F1 and F3 behind flags;
    - the harness: record caveats, the cross-engine scorer, the analysis per §6;
    - tests;
    - verify on the dev questions only.
@@ -309,7 +322,7 @@ only on held-out data.
     - tier and reconciliation become case-study only.
 11. **Dropped:** verbalised confidence and the logistic combination (scope and sample size).
 12. **System:** GPT-5 mini (already used in the pilot, for speed); gpt-oss-120b as the
-    robustness model; dev fixes F1–F3.
+    robustness model; dev fixes F1 and F3 (F2 withdrawn: its premise was wrong).
 13. **Statistics:** four confirmatory tests with Holm correction; stratified bootstrap with 2,000
     resamples; run-to-run variation measured.
 

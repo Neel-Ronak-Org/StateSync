@@ -154,6 +154,22 @@ Rules:
    already explained.
 8. Return ONLY the SQL query text — no markdown, no explanation, no comments."""
 
+# [pipeline] sql_row_cap. "prompt" (shipped) asks the model for LIMIT max_rows; in the BIRD pilot
+# that instruction also replaced the LIMIT 1 of "which is the highest" questions (97 of 100 queries
+# ended in LIMIT 1000; docs/eval/bird_pilot_report.md). "executor" leaves the cap to data.run_select,
+# which never returns more than max_rows rows whatever the SQL says.
+_PROMPT_LIMIT_RULE = "Apply LIMIT {max_rows} unless the question explicitly asks for all rows."
+_EXECUTOR_LIMIT_RULE = ('Use LIMIT only when the question asks for a number of results ("the highest", '
+                        '"the top 5"); the system itself caps how many rows are returned.')
+
+
+def sql_system_prompt(template: str, max_rows: int, schema: Any, flags_snapshot: dict[str, Any]) -> str:
+    """The SQL writer's system prompt: the row-cap rule the flags choose, then the dataset's framing."""
+    if flags_snapshot.get("pipeline.sql_row_cap", "prompt") == "executor":
+        template = template.replace(_PROMPT_LIMIT_RULE, _EXECUTOR_LIMIT_RULE)
+    return frame_prompt(template.format(max_rows=max_rows), schema)
+
+
 _SUMMARIZER_SYSTEM_PROMPT = """\
 You are documenting how a PostgreSQL query was constructed, so the navigation
 strategy can be reused for future similar-but-different questions against the
@@ -735,8 +751,8 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                     draft_sql: str = state_dict.get("debug_candidate_sql") or ""
                     if not draft_sql:
                         draft_result = await get_agent_llm("sql").complete(
-                            system=frame_prompt(_SYSTEM_PROMPT.format(max_rows=cfg.mcp.max_rows_default),
-                                                _schema) + ws_suffix,
+                            system=sql_system_prompt(_SYSTEM_PROMPT, cfg.mcp.max_rows_default,
+                                                     _schema, flags_snapshot) + ws_suffix,
                             messages=[{"role": "user", "content": (
                                 f"{context_block}\n\nQuestion: {raw_query}\n\n"
                                 f"Write a single PostgreSQL SELECT query to answer this question."
@@ -855,13 +871,13 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         else:
             llm = get_agent_llm("sql")
             if attempt == 0:
-                system_prompt = frame_prompt(_SYSTEM_PROMPT.format(max_rows=max_rows), _schema) + ws_suffix
+                system_prompt = sql_system_prompt(_SYSTEM_PROMPT, max_rows, _schema, flags_snapshot) + ws_suffix
                 user_message = (
                     f"{context_block}\n\nQuestion: {raw_query}\n\n"
                     f"Write a single PostgreSQL SELECT query to answer this question."
                 )
             else:
-                system_prompt = frame_prompt(_CORRECTION_SYSTEM_PROMPT.format(max_rows=max_rows), _schema) + ws_suffix
+                system_prompt = sql_system_prompt(_CORRECTION_SYSTEM_PROMPT, max_rows, _schema, flags_snapshot) + ws_suffix
                 error_history_text = _format_error_history(existing_errors)
                 # Error history first, schema second: the fix is the most
                 # important, actionable content, and leading with it reads

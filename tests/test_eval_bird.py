@@ -71,3 +71,67 @@ def test_relaxed_match_ignores_column_order_and_extra_columns():
     assert eb.rows_match_relaxed(extra, gold)
     assert not eb.rows_match_relaxed([("2607 Myrtle Street", "Oakland", "CA", "94607")], gold)
     assert not eb.rows_match_relaxed([("2125 Jefferson Avenue", "Berkeley")], gold)   # a gold column missing
+
+
+# ── protocol v2 (docs/research/evidence_tiers_study.md v2, fixed before any held-out run) ──────
+# The held-out set excludes the pilot and the cross-engine disagreements; labels v2 compare a
+# SQLite gold with a PostgreSQL prediction to 5 significant digits; the answer label reads the text;
+# refusal reads only the first sentence; "any data check" is the four checks and nothing else.
+
+def test_heldout_excludes_the_pilot_and_the_cross_engine_disagreements():
+    qs = [{"question_id": i} for i in (1, 2, 3, 532, 788, 900)] + [{"question_id": 3}]   # 3 duplicated, as 137/138
+    assert eb.heldout_ids(qs, pilot=[2]) == [1, 3, 900]
+
+
+def test_norm_v2_makes_sqlite_and_postgres_values_equal():
+    from datetime import date, datetime
+    assert eb.norm_v2(866.25) == eb.norm_v2(866.2500610351562)        # REAL in PostgreSQL vs double in SQLite
+    assert eb.norm_v2(5) == eb.norm_v2(Decimal("5.000")) == eb.norm_v2("5")
+    assert eb.norm_v2(date(2012, 8, 25)) == "2012-08-25"
+    assert eb.norm_v2(datetime(2012, 8, 25, 10, 0)) == "2012-08-25 10:00:00"
+    assert eb.norm_v2(None) is None and eb.norm_v2(True) is True and eb.norm_v2("Ant's") == "Ant's"
+    assert eb.norm_v2(4941) != eb.norm_v2(4890)                       # a real difference stays one
+
+
+def test_v2_matching_tolerates_float_storage_but_v1_is_unchanged():
+    gold, pred = [("Sacha", "Harrison", 866.25)], [("Harrison", "Sacha", 866.2500610351562)]
+    assert not eb.rows_match_relaxed(pred, gold)                       # v1: 6 decimals
+    assert eb.rows_match_relaxed(pred, gold, norm=eb.norm_v2)
+
+
+def test_refusal_reads_the_first_sentence_only():
+    assert eb.refused("I can’t determine which country the oldest driver is from because the results lack ages.")
+    assert eb.refused("I cannot determine the school with the lowest excellence rate.")
+    assert not eb.refused("The query returned 660 rows. I can't list all of them here, so here are the first 50.")
+    assert not eb.refused("No schools found. The percentage cannot be computed from an empty result.")
+
+
+def test_answer_label_reads_the_gold_cells_in_the_text():
+    assert eb.answer_label("Full name: Lance Stroll. Nationality: Canadian.", [("Lance", "Stroll", "Canadian")])
+    assert eb.answer_label("About 44.3% of the schools qualify.", [(44.26229508196721,)])
+    assert eb.answer_label("The share is 20.6%.", [(0.20566810835419985,)])           # a fraction as a percent
+    assert eb.answer_label("140 patients came after 1990.", [(1590,)]) is False
+    assert eb.answer_label("I can’t determine it; candidates: October Speaker, November Speaker.",
+                           [("November Speaker",)]) is False                         # a refusal is not an answer
+    assert eb.answer_label("anything", [(1, 2), (3, 4), (5, 6)]) is None              # more than 4 cells
+    assert eb.answer_label("anything", [(None,)]) is None and eb.answer_label("anything", []) is None
+
+
+def test_v2_signals():
+    base = {"executed_sql": "SELECT 1", "errors": [], "number_grounding": {"unmatched": []}, "evidence": "checked",
+            "answer_text": "There are 9 drivers.", "sql_rows_count": 1, "caveats": []}
+    s = eb.signals(base)
+    assert not any(s[k] for k in ("truncation", "null_heavy", "grounding_before_repair", "any_data_check",
+                                  "empty_result", "refusal"))
+    assert eb.signals({**base, "sql_rows_count": eb.MAX_ROWS})["any_data_check"]
+    assert eb.signals({**base, "caveats": ["No matching data: the result is empty."]})["null_heavy"]
+    # Asked before caveats were recorded: NULL-heavy comes from the re-executed rows.
+    assert eb.signals({**base, "caveats": None}, pred_rows=[(None,)])["null_heavy"]
+    # The tier and SQL retries are not data checks in v2.
+    v = eb.signals({**base, "evidence": "unchecked", "errors": [{"category": "empty_result"}]})
+    assert v["tier_unchecked"] and v["any_sql_retry"] and not v["any_data_check"]
+    # Grounding before repair: the repair may have cleared the flag on the final text.
+    fixed = {**base, "repair": {"outcome": "fixed", "previous_answer": "I cannot determine the total of 12,350."}}
+    v = eb.signals(fixed)
+    assert v["grounding_before_repair"] and v["any_data_check"] and v["refusal"]
+    assert eb.signals({**base, "sql_rows_count": 0})["empty_result"]

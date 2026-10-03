@@ -99,6 +99,8 @@ SHIPPED_DEFAULTS: dict[tuple[str, str], str] = {
     ("pipeline", "doc_abstain"): "off",
     # RAG v3 (docs/specs/rag_v3.md): cross-encoder re-ranking and search-query rewriting, both off.
     ("pipeline", "repair_loop"): "off",   # the study's RQ4 loop; on only in measurement runs
+    ("pipeline", "sql_row_cap"): "prompt",       # study fix F1; "executor" only in measurement runs until measured
+    ("pipeline", "grounding_version"): "v1",     # study fix F3; "v2" only in measurement runs until measured
     ("pipeline", "rerank"): "bge",   # owner decision 2026-10-03 (docs/eval/rag_v3_report.md)
     ("pipeline", "query_rewrite"): "off",
     # RAG v2 (docs/specs/rag_v2.md): how an upload is cut into chunks. "paragraph" is

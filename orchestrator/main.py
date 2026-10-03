@@ -507,7 +507,8 @@ async def answer_question(
     if final_state.flags_snapshot.get("pipeline.number_grounding") == "on" and final_state.answer_text:
         grounding = ground(final_state.answer_text, final_state.sql_rows, final_state.sql_columns,
                            final_state.normalized_query or final_state.raw_query,
-                           [r.content for r in final_state.retrievals])
+                           [r.content for r in final_state.retrievals],
+                           **repair_loop.grounding_options(final_state.flags_snapshot, len(final_state.sql_rows)))
         figure_caveat = grounding_caveat(grounding["unmatched"])
         if figure_caveat:
             caveats.append(figure_caveat)
