@@ -1,7 +1,7 @@
 {
  "created": "2026-10-03T15:15:49+00:00",
  "protocol": "v2 \u00a73.2",
- "status": "draft",
+ "status": "frozen",
  "source_sha256": "2273d7e4bd2f141022fd779aebfd380cb63a10b2cccec92c10df7399b6a4d8e8",
  "risky": 60,
  "control": 33,
@@ -2138,5 +2138,8 @@
     ]
    ]
   }
- ]
+ ],
+ "frozen_at": "2026-10-03T15:53:24+00:00",
+ "review": "Owner reviewed the random 20% sample (19 questions, docs/eval/bird_fanout_review.md) on 2026-10-03: all OK, no changes.",
+ "questions_sha256": "d91c700bdd1c3c1ce18b50db7b35b7a83a46dc7ac330891cf6e674d7651045af"
 }
