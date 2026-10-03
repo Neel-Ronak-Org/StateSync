@@ -290,7 +290,10 @@ def answers_path(label: str) -> Path:
     return EVAL / f"bird_answers_{label}.json"
 
 
-def cmd_ask(label: str, spacing_s: float, limit: int | None, sample_name: str = "pilot") -> int:
+def cmd_ask(label: str, spacing_s: float, limit: int | None, sample_name: str = "pilot",
+            only_ids: list[int] | None = None) -> int:
+    """Ask the sample's questions not yet answered under `label`. `only_ids` restricts a run to some of
+    the sample's questions (dev checks of a fix; never a confirmatory run)."""
     sample = json.loads((HELDOUT if sample_name == "heldout" else SAMPLE).read_text())
     if sample["questions_sha256"] != sha256(QUESTIONS):
         print("the question file changed since the sample was fixed")
@@ -305,7 +308,7 @@ def cmd_ask(label: str, spacing_s: float, limit: int | None, sample_name: str = 
     done.setdefault("pipeline_flags", tomllib.loads((REPO / "config" / "flags.toml").read_text())["pipeline"])
     errors, asked = 0, 0
     for qid in sample["question_ids"]:
-        if str(qid) in done["answers"]:
+        if str(qid) in done["answers"] or (only_ids is not None and qid not in only_ids):
             continue
         if limit is not None and asked >= limit:
             break
@@ -658,6 +661,7 @@ def main() -> int:
     p = sub.add_parser("ask")
     p.add_argument("--label", required=True)
     p.add_argument("--sample", choices=["pilot", "heldout"], default="pilot")
+    p.add_argument("--ids", help="comma-separated question ids of the sample (dev checks only)")
     p.add_argument("--spacing", type=float, default=45.0)
     p.add_argument("--limit", type=int, help="ask at most this many new questions (a daily quota)")
     p = sub.add_parser("score")
@@ -681,7 +685,8 @@ def main() -> int:
     if args.cmd == "setup":
         return cmd_setup()
     if args.cmd == "ask":
-        return cmd_ask(args.label, args.spacing, args.limit, args.sample)
+        return cmd_ask(args.label, args.spacing, args.limit, args.sample,
+                       [int(i) for i in args.ids.split(",")] if args.ids else None)
     if args.cmd == "score":
         return cmd_score_v2(args.label, args.gold_sqlite) if args.labels == "v2" else cmd_score(args.label, args.gold)
     return cmd_judge(args.label, args.endpoint, args.model, args.spacing, args.limit)

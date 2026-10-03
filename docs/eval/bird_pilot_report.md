@@ -169,3 +169,13 @@ Files: `bird_scores_pilot_gpt5mini_v2_original.json` and `bird_analysis_v2_pilot
 
 These are dev numbers, measured with the shipped grounding and the original gold. They check that
 the tooling works; they are not results.
+
+**Dev check of fixes F1 and F3** (`bird_answers_dev_f1f3_smoke.json`,
+`bird_scores_dev_f1f3_smoke_v2_original.json`):
+- 12 pilot questions chosen because the faults hit them, asked again with `sql_row_cap = executor`
+  and `grounding_version = v2`.
+- "The one" questions now end in LIMIT 1, and none in LIMIT 1000.
+- Grounding flags fell from 7 to 0, refusals from 6 to 2, and 6 of 12 are right (2 in the pilot).
+- This is a selected subset with run-to-run sampling, so it shows the fixes work, not how much they
+  help.
+- About 56K input and 13K output tokens of GPT-5 mini (roughly $0.04).

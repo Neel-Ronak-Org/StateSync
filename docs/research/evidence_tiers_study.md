@@ -107,6 +107,12 @@ without it):
 - **F1. Row cap.** The cap is applied when the query runs, instead of telling the model to "apply
   LIMIT 1000". The instruction replaced the LIMIT 1 of "which is the highest" questions: 97 of 100
   pilot queries ended in LIMIT 1000.
+  - Dev check, F1 and F3 on: 12 pilot questions chosen because the faults hit them
+    (`bird_answers_dev_f1f3_smoke.json`).
+    - "The one" questions now end in LIMIT 1, and none in LIMIT 1000.
+    - Grounding flags went from 7 to 0, refusals from 6 to 2, and 6 of 12 are right, against 2 in
+      the pilot.
+    - A functional check only: the subset is selected, and the model's sampling varies between runs.
 - **F3. Figure grounding v2** (`[pipeline] grounding_version = "v2"`). It traces how many rows the
   answer writer was shown ("the first 50 rows") and remainders of it, and skips inline enumerators
   "(1) (2)". All 7 pilot grounding flags came from these, none from a wrong figure.
