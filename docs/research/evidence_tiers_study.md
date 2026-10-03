@@ -142,3 +142,10 @@ Weeks: (1) data load + gold execution + fan-out set; (2) pipeline runs + checks;
   which is the version every BIRD run uses. Providers: measurement runs use
   `flags.llm.openai_compat.fallback = "off"`, and every call records the model the server
   says answered (`llm/adapters/openai_compat_adapter.py`).
+- 2026-10-03, after a 3-question smoke run and before the pilot: two correctness labels. "Strict"
+  is BIRD's rule (equal sets of result rows); "relaxed" ignores column order and extra predicted
+  columns (every gold column must be present with the same rows) and is the primary label; both
+  are reported. Reason: a smoke answer had the right schools and numbers but an extra name
+  column, and another the right fields in a different order; BIRD's rule marks both wrong.
+  Pilot: 100 questions, stratified, seed 20261003 (`docs/eval/bird_pilot_sample.json`); BIRD's
+  hint is appended as "Hint: ..."; workspaces carry no drafted knowledge.

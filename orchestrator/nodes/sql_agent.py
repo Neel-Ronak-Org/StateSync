@@ -76,6 +76,7 @@ import time
 from typing import Any
 
 import answer_checks
+import httpx
 import repair_loop
 import templates as sql_templates
 from column_profiles import format_profiles, get_profiles
@@ -233,6 +234,17 @@ def _parse_referenced_tables(sql: str) -> list[str]:
 
     _RangeVarCollector()(tree)
     return found
+
+
+async def _sample_or_skip(session: Any, target: dict, schema: str, query_id: str) -> dict | None:
+    """A sample of the target's columns, or None when the MCP refuses it: samples only help
+    the SQL model, so one refused sample must never fail the question (found on BIRD, 2026-10-03)."""
+    try:
+        return await data_sample_rows(session, target["table"], columns=target["columns"], schema=schema)
+    except httpx.HTTPStatusError as exc:
+        logger.warning("SQL Agent: sample of %s refused (HTTP %s) for query_id=%s; skipped",
+                       target["table"], exc.response.status_code, query_id)
+        return None
 
 
 def question_for(state_dict: dict[str, Any]) -> str:
@@ -750,10 +762,9 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                         referenced_tables=referenced_tables,
                     )
                     for target in targets:
-                        sample_result = await data_sample_rows(
-                            session, target["table"], columns=target["columns"],
-                            schema=_schema,
-                        )
+                        sample_result = await _sample_or_skip(session, target, _schema, query_id)
+                        if sample_result is None:
+                            continue
                         new_interrogation_samples.append({
                             "table": target["table"],
                             "columns_sampled": target["columns_display"],
@@ -791,10 +802,9 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                     cfg.sql.interrogation_max_samples,
                     referenced_tables=_parse_referenced_tables(failed_sql),
                 ):
-                    sample_result = await data_sample_rows(
-                        session, target["table"], columns=target["columns"],
-                        schema=_schema,
-                    )
+                    sample_result = await _sample_or_skip(session, target, _schema, query_id)
+                    if sample_result is None:
+                        continue
                     new_interrogation_samples.append({
                         "table": target["table"],
                         "columns_sampled": target["columns_display"],

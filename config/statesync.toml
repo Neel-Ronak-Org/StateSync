@@ -219,7 +219,7 @@ build_keep_s              = 3600    # finished builds stay readable this long
 [connections]
 # Your own Postgres (docs/V3_PLAN.md Phase 3c slice 6, migration 026,
 # mcp/connections.py). A connection is saved only when its login is read-only.
-max_per_principal           = 10
+max_per_principal           = 20         # was 10; raised 2026-10-03 for BIRD (one connection per database, 11)
 name_max_chars              = 60
 host_max_chars              = 255
 field_max_chars             = 128      # database, user and schema names
@@ -282,7 +282,7 @@ mine_max_chunks             = 400        # passages read when finding definition
 
 [workspaces]
 # Workspaces and their knowledge store (docs/V3_PLAN.md Phase 3, migration 021).
-max_per_principal           = 12
+max_per_principal           = 24         # was 12; raised 2026-10-03 for BIRD (11 workspaces) and the SEC study (2)
 name_max_chars              = 60
 business_context_max_chars  = 4000
 description_max_chars       = 400

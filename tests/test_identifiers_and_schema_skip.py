@@ -80,3 +80,19 @@ def test_a_refused_table_is_skipped_and_only_all_refused_is_an_error(monkeypatch
     assert "TABLE good:" in text and "bad" not in text and len(descs) == 1
     with pytest.raises(RuntimeError):
         asyncio.run(sr.DirectSchemaRetriever().retrieve(None, ["bad"]))
+
+
+def test_a_refused_sample_is_skipped_not_fatal(monkeypatch):
+    # BIRD's column "Academic Year" was refused by data.sample_rows and failed the whole question
+    # (2026-10-03). Samples only help the SQL model, so a refusal is skipped.
+    import asyncio
+    import httpx
+    from nodes import sql_agent
+
+    async def refuse(session, table, columns=None, schema=None):
+        req = httpx.Request("POST", "http://mcp/rpc")
+        raise httpx.HTTPStatusError("422", request=req, response=httpx.Response(422, request=req))
+
+    monkeypatch.setattr(sql_agent, "data_sample_rows", refuse)
+    target = {"table": "frpm", "columns": ["Academic Year"]}
+    assert asyncio.run(sql_agent._sample_or_skip(None, target, "cn_x", "q1")) is None
