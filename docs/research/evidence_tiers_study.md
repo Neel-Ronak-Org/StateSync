@@ -149,7 +149,7 @@ without it):
 | | needed a retry | the SQL agent retried at least once |
 | | refusal | the text says it cannot answer (pattern fixed in `scripts/eval_bird.py` before the held-out run) |
 | Model-based baselines | LLM judge | Gemini 3.8 Flash (primary comparator); gpt-oss-120b; ensemble = mean |
-| | self-consistency | 5 extra samples of the SQL call with the same prompt; risk = share whose result differs from the answer's |
+| | self-consistency | 5 extra samples of the SQL call with the same prompt; risk = share whose result differs from the answer's under the relaxed rule, both ways (failures count as differing) |
 | Combined | checks then judge | answers ordered by "any data check", then by judge risk |
 
 **Repair loop (RQ4):**
@@ -343,6 +343,10 @@ only on held-out data.
     robustness model; dev fixes F1 and F3 (F2 withdrawn: its premise was wrong).
 13. **Statistics:** four confirmatory tests with Holm correction; stratified bootstrap with 2,000
     resamples; run-to-run variation measured.
+14. **Self-consistency compares results with the relaxed rule.** Found on dev q17: five samples
+    returned the answer's 58 schools with other identifier columns, and whole-row comparison called
+    them all different. The label already ignores extra columns, so the baseline uses the same rule.
+    Decided before any held-out question was asked.
 
 **What the pilot did differently from v1** (recorded in `docs/eval/bird_pilot_report.md`):
 - original labels instead of corrected ones;

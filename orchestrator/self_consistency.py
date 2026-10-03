@@ -12,18 +12,22 @@ Measurement only: the answer, its SQL and its rows never change. The samples' to
 this record, not added to the pipeline's metrics, so the pipeline's own cost stays comparable with
 runs that had the flag off (the call recorder still lists every call).
 
-"Same result" = the same SET of rows, each row taken as the sorted multiset of its values (column
-names and order ignored), numbers to SIG_DIGITS significant digits. Stricter than the study's relaxed
-label in one way: a sample that adds a column differs.
+"Same result" = the study's relaxed rule, applied both ways: some choice of distinct columns of the
+wider result, one per column of the narrower, gives the same SET of rows; column names, order and
+extra columns are ignored, numbers compared to SIG_DIGITS significant digits. (A first version
+compared whole rows; on a dev question it called five samples that returned the answer's 58 schools
+with other identifier columns "different", protocol v2 §10.)
 """
 
 from __future__ import annotations
 
 import asyncio
+import itertools
 from decimal import Decimal
 from typing import Any, Awaitable, Callable
 
 SIG_DIGITS = 5  # noqa: literals - as the study's v2 label comparison
+MAX_COLUMN_CHOICES = 10000  # noqa: literals - bound on the column matching; beyond it, compare whole rows
 
 
 def _value(v: Any) -> Any:
@@ -39,16 +43,40 @@ def _value(v: Any) -> Any:
     return str(v)
 
 
-def result_key(rows: list[dict]) -> frozenset[tuple[str, ...]]:
-    """A result as a set of rows, each row as its sorted values (see the module docstring)."""
-    return frozenset(tuple(sorted(repr(_value(v)) for v in row.values())) for row in rows)
+def _columns(rows: list[dict]) -> list[tuple[Any, ...]]:
+    keys = list(rows[0].keys())
+    return [tuple(_value(r.get(k)) for r in rows) for k in keys]
+
+
+def same_result(a: list[dict], b: list[dict]) -> bool:
+    """The same answer under the relaxed rule, either way round (see the module docstring)."""
+    if not a or not b:
+        return not a and not b
+    ca, cb = _columns(a), _columns(b)
+    narrow, wide = (ca, cb) if len(ca) <= len(cb) else (cb, ca)
+    target = set(zip(*narrow))
+    candidates = [[j for j, w in enumerate(wide) if set(w) == set(n)] for n in narrow]
+    if any(not c for c in candidates):
+        return False
+    if _choices(candidates) > MAX_COLUMN_CHOICES:
+        return set(zip(*narrow)) == set(zip(*wide))
+    for choice in itertools.product(*candidates):
+        if len(set(choice)) == len(choice) and set(zip(*(wide[j] for j in choice))) == target:
+            return True
+    return False
+
+
+def _choices(candidates: list[list[int]]) -> int:
+    size = 1
+    for c in candidates:
+        size *= len(c)
+    return size
 
 
 async def sample(complete: Callable[[], Awaitable[Any]], run: Callable[[str], Awaitable[dict]],
                  prepare: Callable[[str], str], answer_rows: list[dict], k: int) -> dict[str, Any]:
     """k samples of the SQL call (concurrently), each run and compared with the answer's rows."""
     replies = await asyncio.gather(*[complete() for _ in range(k)], return_exceptions=True)
-    target = result_key(answer_rows)
     agree = failed = tokens_in = tokens_out = 0
     samples: list[dict[str, Any]] = []
     for reply in replies:
@@ -67,7 +95,7 @@ async def sample(complete: Callable[[], Awaitable[Any]], run: Callable[[str], Aw
             failed += 1
             samples.append({"sql": sql, "ok": False})
             continue
-        same = result_key(result.get("rows") or []) == target
+        same = same_result(result.get("rows") or [], answer_rows)
         agree += int(same)
         samples.append({"sql": sql, "ok": True, "same": same, "rows": len(result.get("rows") or [])})
     return {"k": k, "agree": agree, "failed": failed, "risk": round(1 - agree / k, 4) if k else None,

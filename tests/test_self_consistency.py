@@ -3,8 +3,8 @@ tests/test_self_consistency.py
 The study's self-consistency baseline (orchestrator/self_consistency.py; protocol v2 §4).
 
 WHY THIS EXISTS. Risk = the share of k resampled queries whose result differs from the answer's.
-Pinned: results compare as sets of rows whatever the column names and order, numbers to 5
-significant digits; a sample that errors, fails to run or returns another result counts as
+Pinned: results compare under the study's relaxed rule both ways (column names, order and
+extra columns ignored; sets of rows; numbers to 5 significant digits); a sample that errors, fails to run or returns another result counts as
 differing; samples' tokens are summed into the record; the flag ships at 0 and the state field
 is last-write-wins.
 """
@@ -28,12 +28,16 @@ import self_consistency as sc  # noqa: E402
 ANSWER = [{"driver": "Alain Prost", "n": 9}]
 
 
-def test_results_compare_as_row_sets_ignoring_column_names_and_order():
-    assert sc.result_key(ANSWER) == sc.result_key([{"count": 9.0, "full_name": "Alain Prost"}])
-    assert sc.result_key([{"x": 866.25}]) == sc.result_key([{"y": Decimal("866.2500610351562")}])
-    assert sc.result_key([{"a": 1}, {"a": 2}]) == sc.result_key([{"a": 2}, {"a": 1}, {"a": 2}])
-    assert sc.result_key(ANSWER) != sc.result_key([{"driver": "Alain Prost", "n": 23295}])
-    assert sc.result_key(ANSWER) != sc.result_key([{"id": 117, "driver": "Alain Prost", "n": 9}])   # an added column differs
+def test_results_compare_under_the_relaxed_rule_both_ways():
+    same = sc.same_result
+    assert same(ANSWER, [{"count": 9.0, "full_name": "Alain Prost"}])                 # names and order
+    assert same([{"x": 866.25}], [{"y": Decimal("866.2500610351562")}])                # 5 significant digits
+    assert same([{"a": 1}, {"a": 2}], [{"a": 2}, {"a": 1}, {"a": 2}])                  # sets of rows
+    assert same(ANSWER, [{"id": 117, "driver": "Alain Prost", "n": 9}])                # an extra column, either way
+    assert same([{"id": 117, "driver": "Alain Prost", "n": 9}], ANSWER)
+    assert not same(ANSWER, [{"driver": "Alain Prost", "n": 23295}])                   # another value
+    assert not same([{"a": 1, "b": 2}, {"a": 2, "b": 1}], [{"a": 1, "b": 1}, {"a": 2, "b": 2}])   # columns must pair rows
+    assert same([], []) and not same([], ANSWER)
 
 
 def _run(results: dict[str, dict]):
