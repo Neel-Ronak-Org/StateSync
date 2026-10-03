@@ -1,0 +1,1408 @@
+{
+ "label": "heldout_gpt5mini",
+ "endpoint": "groq",
+ "model": "openai/gpt-oss-120b",
+ "system": "You check answers from a text-to-SQL system on a PostgreSQL database. You are given the user's question (with an optional hint), the database's tables and columns, the SQL the system ran, the first rows of its result and the answer it wrote. Decide whether the result correctly answers the question. Reply with JSON only: {\"p_correct\": <number between 0 and 1>, \"reason\": \"<one sentence>\"}.",
+ "verdicts": [
+  {
+   "id": "5",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts schools with virtual='F' and avg math >400, returning 4, which matches the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 794,
+   "tokens_out": 96,
+   "ms": 966,
+   "p_correct": 1.0
+  },
+  {
+   "id": "11",
+   "text": "{\"p_correct\": 0, \"reason\": \"The system's answer incorrectly claims it cannot determine the schools, while the SQL result already provides the correct list of school codes meeting the enrollment condition.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 950,
+   "tokens_out": 97,
+   "ms": 1165,
+   "p_correct": 0.0
+  },
+  {
+   "id": "12",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly filters schools with SAT excellence > 0.3 and returns the maximum eligible free rate for ages 5-17, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 933,
+   "tokens_out": 92,
+   "ms": 735,
+   "p_correct": 1.0
+  },
+  {
+   "id": "23",
+   "text": "{\"p_correct\": 0.0, \"reason\": \"The system's answer incorrectly claims the result is insufficient, but the query already returns the required school names and full addresses for schools with enrollment differences >30.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1182,
+   "tokens_out": 104,
+   "ms": 705,
+   "p_correct": 0.0
+  },
+  {
+   "id": "24",
+   "text": "{\"p_correct\": 0.0, \"reason\": \"The system's query correctly returns school names meeting both criteria, but the answer incorrectly claims it cannot determine the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 945,
+   "tokens_out": 121,
+   "ms": 1279,
+   "p_correct": 0.0
+  },
+  {
+   "id": "25",
+   "text": "{\"p_correct\": 0.2, \"reason\": \"The SQL checks district\u2011level average math scores instead of each school's average, so the listed schools may not satisfy the required condition.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1125,
+   "tokens_out": 219,
+   "ms": 1232,
+   "p_correct": 0.2
+  },
+  {
+   "id": "26",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists the high schools in Monterey with more than 800 FRPM meals and provides their full communication addresses as returned by the query.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1117,
+   "tokens_out": 63,
+   "ms": 746,
+   "p_correct": 1.0
+  },
+  {
+   "id": "27",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The system's answer incorrectly claims it cannot determine the schools meeting the date criteria, even though the SQL query already filtered them correctly.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1101,
+   "tokens_out": 90,
+   "ms": 702,
+   "p_correct": 0.1
+  },
+  {
+   "id": "31",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result correctly lists the eligible free rates for the 10th and 11th schools by enrollment using the K\u201112 columns.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 974,
+   "tokens_out": 102,
+   "ms": 1622,
+   "p_correct": 1.0
+  },
+  {
+   "id": "32",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer lists the FRPM rates for the top 5 schools with ownership code 66 as returned by the query, which correctly answers the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1022,
+   "tokens_out": 65,
+   "ms": 791,
+   "p_correct": 1.0
+  },
+  {
+   "id": "36",
+   "text": "{\"p_correct\": 0.9, \"reason\": \"The query correctly finds the school with the maximum NumGE1500 and returns the listed administrator(s), matching the question's requirement.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 925,
+   "tokens_out": 166,
+   "ms": 885,
+   "p_correct": 0.9
+  },
+  {
+   "id": "39",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly averages test takers for Fresno schools opened in 1980, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 877,
+   "tokens_out": 88,
+   "ms": 702,
+   "p_correct": 1.0
+  },
+  {
+   "id": "41",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly filters exclusively virtual schools, ranks them by average reading score within each county, and returns those in the top 5, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 902,
+   "tokens_out": 107,
+   "ms": 672,
+   "p_correct": 1.0
+  },
+  {
+   "id": "45",
+   "text": "{\"p_correct\": 0.7, \"reason\": \"The query correctly filters schools managed by Ricci Ulrich and returns the writing score, but it may miss averaging if multiple records exist.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 873,
+   "tokens_out": 116,
+   "ms": 883,
+   "p_correct": 0.7
+  },
+  {
+   "id": "47",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly reports the monthly average as the count of qualifying schools divided by 12, matching the query result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 896,
+   "tokens_out": 106,
+   "ms": 672,
+   "p_correct": 1.0
+  },
+  {
+   "id": "48",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly states that the query returned no data, resulting in a null ratio, which matches the empty result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 879,
+   "tokens_out": 98,
+   "ms": 681,
+   "p_correct": 1.0
+  },
+  {
+   "id": "50",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly selects the 7th highest math average school and returns its name and street address, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 811,
+   "tokens_out": 125,
+   "ms": 782,
+   "p_correct": 1.0
+  },
+  {
+   "id": "72",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly sums Enrollment (Ages 5-17) for 2014-2015 SSS schools in Fremont and the answer reports that total.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 850,
+   "tokens_out": 63,
+   "ms": 580,
+   "p_correct": 1.0
+  },
+  {
+   "id": "79",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly reports that San Diego has the highest count (8) of schools with Virtual = F based on the query result\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 830,
+   "tokens_out": 181,
+   "ms": 898,
+   "p_correct": 1.0
+  },
+  {
+   "id": "85",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result provides the district code and correctly computed Percent Eligible Free (K-12) for the school with administrator named Alusine.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 899,
+   "tokens_out": 88,
+   "ms": 658,
+   "p_correct": 1.0
+  },
+  {
+   "id": "87",
+   "text": "{\"p_correct\": 0.2, \"reason\": \"The query uses wrong columns (soctype/doctype) instead of SOC and DOC codes, likely missing matching schools, so the zero\u2011row answer is probably incorrect.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1051,
+   "tokens_out": 138,
+   "ms": 1114,
+   "p_correct": 0.2
+  },
+  {
+   "id": "89",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly reports the count returned by the query, which matches the question's criteria.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 554,
+   "tokens_out": 99,
+   "ms": 850,
+   "p_correct": 1.0
+  },
+  {
+   "id": "92",
+   "text": "{\"p_correct\": 0.2, \"reason\": \"The query counts districts based on a district-level column a11 rather than computing the female average salary per district, so it likely does not answer the question correctly.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 547,
+   "tokens_out": 161,
+   "ms": 789,
+   "p_correct": 0.2
+  },
+  {
+   "id": "93",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly counts male clients in North Bohemia with a11 > 8000 and returns 0, matching the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 544,
+   "tokens_out": 124,
+   "ms": 675,
+   "p_correct": 1.0
+  },
+  {
+   "id": "94",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result correctly provides the oldest female client's account number and the computed gap between max and min a11 values.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 694,
+   "tokens_out": 120,
+   "ms": 685,
+   "p_correct": 1.0
+  },
+  {
+   "id": "95",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly selects the account of the youngest client, breaking ties by district average salary, and returns account_id 2836 as stated.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 586,
+   "tokens_out": 115,
+   "ms": 927,
+   "p_correct": 1.0
+  },
+  {
+   "id": "98",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly reports that the query returned zero rows, meaning no accounts meet the specified criteria.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 714,
+   "tokens_out": 108,
+   "ms": 664,
+   "p_correct": 1.0
+  },
+  {
+   "id": "100",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts distinct female clients born before 1950 with an account and district a2 = 'Sokolov', matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 595,
+   "tokens_out": 170,
+   "ms": 978,
+   "p_correct": 1.0
+  },
+  {
+   "id": "116",
+   "text": "{\"p_correct\": 0.9, \"reason\": \"The SQL correctly computes the increase rate for the client with the earliest loan on 1993-07-05 using the specified dates, and the result matches the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 823,
+   "tokens_out": 95,
+   "ms": 630,
+   "p_correct": 0.9
+  },
+  {
+   "id": "117",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly calculates the percentage of loan amount with status 'A' and the answer reports that percentage accurately.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 565,
+   "tokens_out": 87,
+   "ms": 753,
+   "p_correct": 1.0
+  },
+  {
+   "id": "118",
+   "text": "{\"p_correct\": 0, \"reason\": \"The system did not provide the requested percentage, indicating a failure rather than a correct answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 720,
+   "tokens_out": 67,
+   "ms": 621,
+   "p_correct": 0.0
+  },
+  {
+   "id": "125",
+   "text": "{\"p_correct\": 0.9, \"reason\": \"The SQL returns loan IDs with status 'D' and computes the district unemployment rate increase correctly, matching the requested information\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1063,
+   "tokens_out": 106,
+   "ms": 813,
+   "p_correct": 0.9
+  },
+  {
+   "id": "128",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result correctly lists the top nine districts by female client count in descending order as requested.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 691,
+   "tokens_out": 70,
+   "ms": 650,
+   "p_correct": 1.0
+  },
+  {
+   "id": "129",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists the district names returned by the query for the top ten non\u2011credit\u2011card withdrawals in January 1996.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 718,
+   "tokens_out": 100,
+   "ms": 693,
+   "p_correct": 1.0
+  },
+  {
+   "id": "136",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly implements the criteria and the count matches the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 604,
+   "tokens_out": 75,
+   "ms": 603,
+   "p_correct": 1.0
+  },
+  {
+   "id": "137",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts distinct accounts with loan status C or D in district a8=1, matching the answer of 217.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 549,
+   "tokens_out": 127,
+   "ms": 748,
+   "p_correct": 1.0
+  },
+  {
+   "id": "138",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly selects the district with the second-highest a15 value and counts male clients, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 551,
+   "tokens_out": 98,
+   "ms": 649,
+   "p_correct": 1.0
+  },
+  {
+   "id": "149",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result correctly lists the non-OWNER account type (DISPONENT) with average income between 8000 and 9000 as required.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 724,
+   "tokens_out": 121,
+   "ms": 795,
+   "p_correct": 1.0
+  },
+  {
+   "id": "152",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly computes the average A15 for districts meeting both conditions, and the answer reports that value.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 615,
+   "tokens_out": 94,
+   "ms": 687,
+   "p_correct": 1.0
+  },
+  {
+   "id": "159",
+   "text": "{\"p_correct\": 0.0, \"reason\": \"The query correctly returns cash withdrawals for client 3356, but the answer incorrectly claims none are present.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 966,
+   "tokens_out": 96,
+   "ms": 715,
+   "p_correct": 0.0
+  },
+  {
+   "id": "168",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly calculates the proportion of female clients in districts where a11 (average salary) exceeds 10000, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 568,
+   "tokens_out": 114,
+   "ms": 729,
+   "p_correct": 1.0
+  },
+  {
+   "id": "169",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly aggregates loan amounts for male owners in 1996 and 1997 and computes the growth rate, matching the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 755,
+   "tokens_out": 80,
+   "ms": 664,
+   "p_correct": 1.0
+  },
+  {
+   "id": "173",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The provided query and answer do not correctly address the asked questions about request frequency and purpose of a 3539 debit\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 579,
+   "tokens_out": 138,
+   "ms": 600,
+   "p_correct": 0.1
+  },
+  {
+   "id": "186",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly computes the percentage of male clients among those with weekly statement frequency, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 612,
+   "tokens_out": 59,
+   "ms": 568,
+   "p_correct": 1.0
+  },
+  {
+   "id": "194",
+   "text": "{\"p_correct\": 0.9, \"reason\": \"The query correctly returns client IDs and ages for gold cards with disp.type='OWNER', matching the request\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1016,
+   "tokens_out": 131,
+   "ms": 726,
+   "p_correct": 0.9
+  },
+  {
+   "id": "195",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly returns the bond_type with the highest count, and the answer matches the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 316,
+   "tokens_out": 72,
+   "ms": 678,
+   "p_correct": 1.0
+  },
+  {
+   "id": "197",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The query over\u2011counts oxygen atoms by joining atoms to each bond row, inflating the average, so the answer is likely incorrect.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 404,
+   "tokens_out": 144,
+   "ms": 752,
+   "p_correct": 0.1
+  },
+  {
+   "id": "198",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly sums single bonds for '+' labeled molecules and divides by the number of such molecules, matching the asked average.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 409,
+   "tokens_out": 90,
+   "ms": 1289,
+   "p_correct": 1.0
+  },
+  {
+   "id": "200",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly selects molecules with label '+' and bond_type '#', and the answer lists the returned IDs accurately.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 370,
+   "tokens_out": 86,
+   "ms": 674,
+   "p_correct": 1.0
+  },
+  {
+   "id": "201",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly calculates the percentage of carbon atoms among all atoms in molecules that contain a double bond, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 433,
+   "tokens_out": 99,
+   "ms": 734,
+   "p_correct": 1.0
+  },
+  {
+   "id": "207",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists the distinct elements returned by the query for double-type bonds.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 367,
+   "tokens_out": 86,
+   "ms": 1152,
+   "p_correct": 1.0
+  },
+  {
+   "id": "208",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly reports the label with the highest count and its count as returned by the query.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 405,
+   "tokens_out": 86,
+   "ms": 670,
+   "p_correct": 1.0
+  },
+  {
+   "id": "213",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query returned '-' as the bond_type and the answer correctly reports that value\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 421,
+   "tokens_out": 74,
+   "ms": 594,
+   "p_correct": 1.0
+  },
+  {
+   "id": "215",
+   "text": "{\"p_correct\": 0.2, \"reason\": \"The query counts all atoms in molecules that have any single bond, not only atoms that are part of a single bond, so the result likely overcounts.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 438,
+   "tokens_out": 109,
+   "ms": 702,
+   "p_correct": 0.2
+  },
+  {
+   "id": "218",
+   "text": "{\"p_correct\": 0, \"reason\": \"The SQL result already gives the percentage of carcinogenic molecules without fluorine (99.34%), but the answer incorrectly treats it as the percentage with fluorine and subtracts from 100.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 474,
+   "tokens_out": 179,
+   "ms": 996,
+   "p_correct": 0.0
+  },
+  {
+   "id": "220",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists the first three alphabetically ordered distinct elements returned by the query.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 323,
+   "tokens_out": 113,
+   "ms": 980,
+   "p_correct": 1.0
+  },
+  {
+   "id": "226",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result correctly computes and reports the double bond percentage as 3.84615% with five decimal places.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 399,
+   "tokens_out": 103,
+   "ms": 943,
+   "p_correct": 1.0
+  },
+  {
+   "id": "227",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly calculates the percentage of '+' labels and the answer reports the same value with three decimal places.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 372,
+   "tokens_out": 81,
+   "ms": 702,
+   "p_correct": 1.0
+  },
+  {
+   "id": "228",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly calculates the percentage of hydrogen atoms for molecule TR206 and the answer formats it as a percentage with four decimal places.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 368,
+   "tokens_out": 154,
+   "ms": 858,
+   "p_correct": 1.0
+  },
+  {
+   "id": "230",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists all distinct elements and the molecule's label as returned by the query.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 404,
+   "tokens_out": 124,
+   "ms": 776,
+   "p_correct": 1.0
+  },
+  {
+   "id": "231",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly reports the bond type with the highest count as returned by the query.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 354,
+   "tokens_out": 80,
+   "ms": 854,
+   "p_correct": 1.0
+  },
+  {
+   "id": "232",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result correctly lists the top three non\u2011carcinogenic molecules with single bonds in alphabetical order.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 429,
+   "tokens_out": 88,
+   "ms": 684,
+   "p_correct": 1.0
+  },
+  {
+   "id": "234",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts distinct bonds involving atom TR009_12 in molecule TR009, and the result matches the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 389,
+   "tokens_out": 88,
+   "ms": 774,
+   "p_correct": 1.0
+  },
+  {
+   "id": "239",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts all bond_id entries where either atom column matches the pattern for atom 19, and the answer reports that count accurately.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 334,
+   "tokens_out": 105,
+   "ms": 645,
+   "p_correct": 1.0
+  },
+  {
+   "id": "240",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists the distinct elements returned by the SQL query for molecule TR004.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 329,
+   "tokens_out": 48,
+   "ms": 1566,
+   "p_correct": 1.0
+  },
+  {
+   "id": "243",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists the bond IDs returned by the query that connect phosphorus and nitrogen atoms.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 518,
+   "tokens_out": 88,
+   "ms": 592,
+   "p_correct": 1.0
+  },
+  {
+   "id": "244",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly returns the label '+' for the molecule with the most double bonds, and the answer correctly interprets '+' as carcinogenic.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 369,
+   "tokens_out": 90,
+   "ms": 660,
+   "p_correct": 1.0
+  },
+  {
+   "id": "245",
+   "text": "{\"p_correct\": 0.9, \"reason\": \"The query correctly computes the average number of bonds for iodine atoms and returns 1, matching the expected answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 407,
+   "tokens_out": 91,
+   "ms": 623,
+   "p_correct": 0.9
+  },
+  {
+   "id": "247",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly selects elements of atoms with no entries in the connected table, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 366,
+   "tokens_out": 86,
+   "ms": 593,
+   "p_correct": 1.0
+  },
+  {
+   "id": "248",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly returns all distinct atom IDs involved in triple bonds for molecule TR041, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 434,
+   "tokens_out": 93,
+   "ms": 1192,
+   "p_correct": 1.0
+  },
+  {
+   "id": "249",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query returns the two element symbols c and h, which correctly answers the question about the elements of the atoms in bond TR144_8_19.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 402,
+   "tokens_out": 111,
+   "ms": 643,
+   "p_correct": 1.0
+  },
+  {
+   "id": "253",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly returns distinct element symbols involved in bonds with bond_type '#', matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 361,
+   "tokens_out": 96,
+   "ms": 675,
+   "p_correct": 1.0
+  },
+  {
+   "id": "255",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly calculates the percentage of single bonds in carcinogenic molecules and the answer matches the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 413,
+   "tokens_out": 108,
+   "ms": 802,
+   "p_correct": 1.0
+  },
+  {
+   "id": "260",
+   "text": "{\"p_correct\": 0.2, \"reason\": \"The SQL only counts phosphorus or bromine atoms, not all atoms in molecules that have a triple bond and contain those elements, so the answer likely undercounts.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 377,
+   "tokens_out": 193,
+   "ms": 814,
+   "p_correct": 0.2
+  },
+  {
+   "id": "263",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query returns 0.0348 which corresponds to 3.48%, matching the answer's statement.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 418,
+   "tokens_out": 114,
+   "ms": 764,
+   "p_correct": 1.0
+  },
+  {
+   "id": "268",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly identifies the two elements (c and o) involved in the specified bond based on the query result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 414,
+   "tokens_out": 102,
+   "ms": 702,
+   "p_correct": 1.0
+  },
+  {
+   "id": "273",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly computes the proportion of chlorine atoms among all atoms in carcinogenic molecules and the answer reports that percentage accurately.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 414,
+   "tokens_out": 142,
+   "ms": 882,
+   "p_correct": 1.0
+  },
+  {
+   "id": "281",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly filters carcinogenic molecules and the 4th atom, then tallies elements as requested.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 503,
+   "tokens_out": 79,
+   "ms": 682,
+   "p_correct": 1.0
+  },
+  {
+   "id": "282",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly reports the hydrogen ratio and label as returned by the query.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 440,
+   "tokens_out": 92,
+   "ms": 702,
+   "p_correct": 1.0
+  },
+  {
+   "id": "340",
+   "text": "{\"p_correct\": 0.0, \"reason\": \"The answer fabricates additional IDs beyond the shown result and does not accurately reflect the actual query output\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1084,
+   "tokens_out": 102,
+   "ms": 783,
+   "p_correct": 0.0
+  },
+  {
+   "id": "341",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The answer includes many IDs not present in the shown result and assumes additional rows without evidence, so it does not correctly reflect the query output\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1043,
+   "tokens_out": 76,
+   "ms": 649,
+   "p_correct": 0.1
+  },
+  {
+   "id": "344",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists the IDs returned by the query that match mythic rarity and banned in gladiator format.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 870,
+   "tokens_out": 72,
+   "ms": 672,
+   "p_correct": 1.0
+  },
+  {
+   "id": "346",
+   "text": "{\"p_correct\": 0, \"reason\": \"The answer lists card ids and artists that do not match the query result shown, so it does not correctly answer the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1352,
+   "tokens_out": 88,
+   "ms": 523,
+   "p_correct": 0.0
+  },
+  {
+   "id": "349",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly reports the card name, artist, and promotional status as returned by the query.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 869,
+   "tokens_out": 99,
+   "ms": 805,
+   "p_correct": 1.0
+  },
+  {
+   "id": "352",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result correctly computes the percentage of records with language 'Chinese Simplified' as per the given formula.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 833,
+   "tokens_out": 129,
+   "ms": 1000,
+   "p_correct": 1.0
+  },
+  {
+   "id": "356",
+   "text": "{\"p_correct\": 1.0, \"reason\": \"The SQL correctly counts cards with power='*' and returns 429, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 753,
+   "tokens_out": 70,
+   "ms": 603,
+   "p_correct": 1.0
+  },
+  {
+   "id": "358",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query returned 'black' for the card's bordercolor, matching the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 776,
+   "tokens_out": 67,
+   "ms": 592,
+   "p_correct": 1.0
+  },
+  {
+   "id": "368",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The query already multiplied by 100, yielding 0.424% but the answer incorrectly treated it as 42.4%\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 842,
+   "tokens_out": 154,
+   "ms": 862,
+   "p_correct": 0.1
+  },
+  {
+   "id": "371",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly computes the percentage of distinct Story Spotlight cards with French language and the answer matches the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 909,
+   "tokens_out": 89,
+   "ms": 640,
+   "p_correct": 1.0
+  },
+  {
+   "id": "377",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts cards with originaltype 'Summon - Angel' whose subtypes differ from 'Angel', and the answer matches the returned count of 3.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 799,
+   "tokens_out": 127,
+   "ms": 776,
+   "p_correct": 1.0
+  },
+  {
+   "id": "383",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts banned cards with a white border, matching the answer of 89.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 814,
+   "tokens_out": 67,
+   "ms": 782,
+   "p_correct": 1.0
+  },
+  {
+   "id": "391",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result rows exactly match the query criteria and the answer lists them correctly.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1475,
+   "tokens_out": 56,
+   "ms": 654,
+   "p_correct": 1.0
+  },
+  {
+   "id": "397",
+   "text": "{\"p_correct\": 0.0, \"reason\": \"The answer lists mana costs not present in the shown result and adds unrelated information, so it does not correctly answer the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1027,
+   "tokens_out": 124,
+   "ms": 766,
+   "p_correct": 0.0
+  },
+  {
+   "id": "405",
+   "text": "{\"p_correct\": 0.6, \"reason\": \"The SQL correctly implements the question, and the answer reflects the query result, though without data verification the count may be uncertain.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 826,
+   "tokens_out": 134,
+   "ms": 790,
+   "p_correct": 0.6
+  },
+  {
+   "id": "407",
+   "text": "{\"p_correct\": 0.2, \"reason\": \"The answer lists many types not present in the shown result and adds unsupported rows, so it does not accurately reflect the query output.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1486,
+   "tokens_out": 201,
+   "ms": 1116,
+   "p_correct": 0.2
+  },
+  {
+   "id": "408",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts unknown-power cards with rulings containing 'triggered ability', matching the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 843,
+   "tokens_out": 77,
+   "ms": 596,
+   "p_correct": 1.0
+  },
+  {
+   "id": "409",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts distinct cards in premodern format with the specified ruling text and side IS NULL, matching the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 892,
+   "tokens_out": 93,
+   "ms": 695,
+   "p_correct": 1.0
+  },
+  {
+   "id": "412",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The query already filters by the specified artist, so the returned French names answer the question, making the assistant's claim incorrect.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 969,
+   "tokens_out": 82,
+   "ms": 746,
+   "p_correct": 0.1
+  },
+  {
+   "id": "414",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists all languages returned by the query for the 180\u2011card Ravnica set.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 874,
+   "tokens_out": 85,
+   "ms": 699,
+   "p_correct": 1.0
+  },
+  {
+   "id": "415",
+   "text": "{\"p_correct\": 0.8, \"reason\": \"The answer correctly interprets the query result as the percentage of commander-legal cards without a content warning\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 919,
+   "tokens_out": 109,
+   "ms": 949,
+   "p_correct": 0.8
+  },
+  {
+   "id": "416",
+   "text": "{\"p_correct\": 0.99, \"reason\": \"The query correctly computes the percentage of power\u2011less cards that have French language entries and the answer matches the result\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 905,
+   "tokens_out": 93,
+   "ms": 695,
+   "p_correct": 0.99
+  },
+  {
+   "id": "422",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL returned French and the answer states French, correctly answering the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 774,
+   "tokens_out": 42,
+   "ms": 970,
+   "p_correct": 1.0
+  },
+  {
+   "id": "424",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result correctly computes the proportion of cards where isTextless = 1 and layout = 'normal'}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 855,
+   "tokens_out": 119,
+   "ms": 588,
+   "p_correct": 1.0
+  },
+  {
+   "id": "427",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists all distinct languages returned by the query for the Archenemy set with code ARC.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 885,
+   "tokens_out": 85,
+   "ms": 649,
+   "p_correct": 1.0
+  },
+  {
+   "id": "440",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query returns Portuguese (Brazil) as the language for 'A Pedra Fellwar', matching the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 798,
+   "tokens_out": 77,
+   "ms": 806,
+   "p_correct": 1.0
+  },
+  {
+   "id": "459",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The answer incorrectly claims the comparison cannot be determined, but the query's ordering shows Serra Angel has the higher converted mana cost among the two cards\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 872,
+   "tokens_out": 127,
+   "ms": 609,
+   "p_correct": 0.1
+  },
+  {
+   "id": "462",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The answer lists multiple translations and includes unrelated values, not a single correct Italian set name\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 857,
+   "tokens_out": 113,
+   "ms": 559,
+   "p_correct": 0.1
+  },
+  {
+   "id": "465",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists the sets returned by the query that match the criteria.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 899,
+   "tokens_out": 87,
+   "ms": 493,
+   "p_correct": 1.0
+  },
+  {
+   "id": "468",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query returned the Simplified Chinese translation for 'Eighth Edition', matching the question\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 852,
+   "tokens_out": 69,
+   "ms": 684,
+   "p_correct": 1.0
+  },
+  {
+   "id": "469",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer lists exactly the sets returned by the query, correctly reflecting cards named 'Angel of Mercy' with non\u2011null mtgocode.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 954,
+   "tokens_out": 92,
+   "ms": 652,
+   "p_correct": 1.0
+  },
+  {
+   "id": "473",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly checks for any set containing Adarkar Valkyrie with isforeignonly=1 and returns NO, matching the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 831,
+   "tokens_out": 103,
+   "ms": 972,
+   "p_correct": 1.0
+  },
+  {
+   "id": "474",
+   "text": "{\"p_correct\": 0.2, \"reason\": \"The answer follows the query but the query uses basesetsize < 10, which likely misinterprets 'under 100' and thus may not correctly answer the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 876,
+   "tokens_out": 166,
+   "ms": 797,
+   "p_correct": 0.2
+  },
+  {
+   "id": "477",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result correctly lists the artists from the given list who have cards in Coldsnap, matching the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 865,
+   "tokens_out": 94,
+   "ms": 843,
+   "p_correct": 1.0
+  },
+  {
+   "id": "484",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The answer lists cards not present in the query result and omits others, indicating it does not correctly reflect the returned rows.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1090,
+   "tokens_out": 138,
+   "ms": 788,
+   "p_correct": 0.1
+  },
+  {
+   "id": "486",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly calculates the percentage of cards in Coldsnap with convertedManaCost = 7 and the answer matches the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 902,
+   "tokens_out": 101,
+   "ms": 673,
+   "p_correct": 1.0
+  },
+  {
+   "id": "487",
+   "text": "{\"p_correct\": 0.0, \"reason\": \"The answer reports a query failure instead of providing the requested percentage, so it does not correctly answer the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 865,
+   "tokens_out": 80,
+   "ms": 635,
+   "p_correct": 0.0
+  },
+  {
+   "id": "522",
+   "text": "{\"p_correct\": 0.0, \"reason\": \"The answer incorrectly claims lack of status information and does not properly list the banned formats, so it does not correctly answer the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 945,
+   "tokens_out": 157,
+   "ms": 806,
+   "p_correct": 0.0
+  },
+  {
+   "id": "528",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL returns each card name from Hour of Devastation paired with each format where it is legal, which directly answers the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1130,
+   "tokens_out": 87,
+   "ms": 709,
+   "p_correct": 1.0
+  },
+  {
+   "id": "530",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The answer lists many cards and frame versions not present in the query result, indicating it does not correctly reflect the SQL output\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1461,
+   "tokens_out": 99,
+   "ms": 978,
+   "p_correct": 0.1
+  },
+  {
+   "id": "531",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result shows Harlan with reputation 457 and no higher reputation for Jarrod Dixon, correctly indicating Harlan has the higher reputation.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 651,
+   "tokens_out": 108,
+   "ms": 1383,
+   "p_correct": 1.0
+  },
+  {
+   "id": "537",
+   "text": "{\"p_correct\": 0.99, \"reason\": \"The SQL correctly counts posts owned by the user with displayname 'csgillespie', and the result matches the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 611,
+   "tokens_out": 92,
+   "ms": 638,
+   "p_correct": 0.99
+  },
+  {
+   "id": "539",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly retrieves the displayname of the post owner and the result matches the expected answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 637,
+   "tokens_out": 73,
+   "ms": 654,
+   "p_correct": 1.0
+  },
+  {
+   "id": "544",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly retrieves the last editor's display name and returns 'Abhilash', matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 679,
+   "tokens_out": 83,
+   "ms": 773,
+   "p_correct": 1.0
+  },
+  {
+   "id": "547",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts posts with owner age > 65 and score >= 20, and the result matches the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 649,
+   "tokens_out": 55,
+   "ms": 608,
+   "p_correct": 1.0
+  },
+  {
+   "id": "549",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly retrieves the body of the post referenced by the tag's excerptpostid, answering the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 654,
+   "tokens_out": 82,
+   "ms": 746,
+   "p_correct": 1.0
+  },
+  {
+   "id": "555",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly averages the Score of posts owned by the user with displayname 'csgillespie', and the answer matches the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 642,
+   "tokens_out": 95,
+   "ms": 508,
+   "p_correct": 1.0
+  },
+  {
+   "id": "557",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly calculates the percentage of posts with score > 5 owned by users older than 65, and the answer matches the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 707,
+   "tokens_out": 126,
+   "ms": 773,
+   "p_correct": 1.0
+  },
+  {
+   "id": "567",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts posts owned by the user with display name 'Tiago Pasqualini' and returns 2, matching the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 626,
+   "tokens_out": 93,
+   "ms": 647,
+   "p_correct": 1.0
+  },
+  {
+   "id": "568",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly retrieves the display name for vote ID 6347 and returns \\\"George Dontas\\\", matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 607,
+   "tokens_out": 84,
+   "ms": 631,
+   "p_correct": 1.0
+  },
+  {
+   "id": "571",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts the user's posts and votes and returns their ratio, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 746,
+   "tokens_out": 104,
+   "ms": 717,
+   "p_correct": 1.0
+  },
+  {
+   "id": "572",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL returned a viewcount of 60 for the specified title, and the answer correctly reports 60 views.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 645,
+   "tokens_out": 84,
+   "ms": 600,
+   "p_correct": 1.0
+  },
+  {
+   "id": "573",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists the comment texts returned by the query for score = 17.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1214,
+   "tokens_out": 51,
+   "ms": 667,
+   "p_correct": 1.0
+  },
+  {
+   "id": "576",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query returns the displayname of the user who wrote the comment, which matches the requested answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 617,
+   "tokens_out": 92,
+   "ms": 669,
+   "p_correct": 1.0
+  },
+  {
+   "id": "578",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result correctly identifies the user Hendy and their reputation 146 for the given post title.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 665,
+   "tokens_out": 81,
+   "ms": 337,
+   "p_correct": 1.0
+  },
+  {
+   "id": "581",
+   "text": "{\"p_correct\": 0.8, \"reason\": \"The answer accurately reflects the query result, which returned no rows, indicating no owner display name was found for the given post title.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 661,
+   "tokens_out": 136,
+   "ms": 873,
+   "p_correct": 0.8
+  },
+  {
+   "id": "584",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists all edit comments (including blank ones) returned by the query for the specified post title.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 716,
+   "tokens_out": 87,
+   "ms": 737,
+   "p_correct": 1.0
+  },
+  {
+   "id": "587",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The SQL incorrectly filters tags and computes a single overall average view count, and the answer does not provide the correct per\u2011post average view counts as requested.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1666,
+   "tokens_out": 181,
+   "ms": 890,
+   "p_correct": 0.1
+  },
+  {
+   "id": "592",
+   "text": "{\"p_correct\": 0.95, \"reason\": \"The SQL correctly counts distinct users with more than five badge entries, and the answer matches the query result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 637,
+   "tokens_out": 81,
+   "ms": 797,
+   "p_correct": 0.95
+  },
+  {
+   "id": "595",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly filters users with Views >= 100 and exactly one distinct posthistorytypeid, and the answer lists the returned users.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 684,
+   "tokens_out": 89,
+   "ms": 1018,
+   "p_correct": 1.0
+  },
+  {
+   "id": "598",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly computes the percentage difference as defined and the answer reports that value accurately.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 875,
+   "tokens_out": 131,
+   "ms": 860,
+   "p_correct": 1.0
+  }
+ ]
+}
