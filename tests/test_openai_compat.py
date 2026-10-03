@@ -126,3 +126,32 @@ def test_endpoints_read_from_the_real_flags():
     assert oc.endpoint("local_router").base_url.startswith("http://host.docker.internal")
     with pytest.raises(oc.OpenAICompatConfigError):
         oc.endpoint("nope")
+
+
+def test_reasoning_models_get_no_temperature_and_routers_fewer_retries(monkeypatch, tmp_path):
+    # GPT-5 mini rejects 'temperature' (found live through OmniRoute, 2026-10-03), and our retries on
+    # top of a router's own deepen its lockouts.
+    import asyncio
+    from types import SimpleNamespace
+    (tmp_path / "k").write_text("sk-test")
+    monkeypatch.setenv(oc.SECRETS_DIR_ENV, str(tmp_path))
+    ep = oc.Endpoint("router", "http://localhost:1/v1", "k", {}, omit_temperature=("zed-hosted/gpt-5-mini",), max_retries=1)
+    sent = []
+
+    def make(model):
+        a = oc.OpenAICompatAdapter(model, ep)
+
+        async def create(**kw):
+            sent.append(kw)
+            comp = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content="ok"), finish_reason="stop")],
+                                   usage=SimpleNamespace(prompt_tokens=1, completion_tokens=1), model=model)
+            return SimpleNamespace(headers={}, parse=lambda: comp)
+        a._client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(with_raw_response=SimpleNamespace(create=create))))
+        return a
+
+    asyncio.run(make("zed-hosted/gpt-5-mini").complete(system="s", messages=[], max_tokens=5))
+    asyncio.run(make("zed-hosted/gemini-3.8-flash").complete(system="s", messages=[], max_tokens=5))
+    assert "temperature" not in sent[0] and "temperature" in sent[1]
+    assert make("x")._max_retries == 1
+    flags_ep = oc.endpoint("local_router")
+    assert "zed-hosted/gpt-5-mini" in flags_ep.omit_temperature and flags_ep.max_retries == 1

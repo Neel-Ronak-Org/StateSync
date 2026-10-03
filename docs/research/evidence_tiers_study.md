@@ -149,3 +149,10 @@ Weeks: (1) data load + gold execution + fan-out set; (2) pipeline runs + checks;
   column, and another the right fields in a different order; BIRD's rule marks both wrong.
   Pilot: 100 questions, stratified, seed 20261003 (`docs/eval/bird_pilot_sample.json`); BIRD's
   hint is appended as "Hint: ..."; workspaces carry no drafted knowledge.
+- 2026-10-03, before the pilot (owner: speed over the free tier): **pilot models.** SQL and answer
+  writing: GPT-5 mini (Zed-hosted, through a local OmniRoute; fallback off, served model recorded
+  per call; compression off, verified by a verbatim echo). GPT-5 mini rejects a temperature, so it
+  runs at the provider's default sampling: less deterministic than the temperature-0 runs on
+  record. Light roles (normaliser, supervisor, rewriter): Groq qwen3.8-27b. Judges, from other
+  model families than the SQL model: Gemini 3.8 Flash (Zed) and gpt-oss-120b (Groq). Not the shipped
+  configuration (gpt-oss-120b for SQL); pilot results are not comparable with the earlier 25/30.

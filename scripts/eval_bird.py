@@ -373,12 +373,21 @@ def parse_p(text: str) -> float | None:
         return None
 
 
-def cmd_judge(label: str, endpoint: str, model: str, spacing_s: float) -> int:
+def cmd_judge(label: str, endpoint: str, model: str, spacing_s: float, limit: int | None) -> int:
+    """Resumable: verdicts already in the file are kept; at most `limit` new answers per call."""
     answers = json.loads(answers_path(label).read_text())["answers"]
     by_id = {q["question_id"]: q for q in questions()}
+    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", f"{endpoint}_{model}")
+    path = EVAL / f"bird_judge_{label}_{safe}.json"
+    record = json.loads(path.read_text()) if path.exists() else {"label": label, "endpoint": endpoint, "model": model,
+                                                                  "system": JUDGE_SYSTEM, "verdicts": []}
+    done = {v["id"] for v in record["verdicts"] if v.get("p_correct") is not None}
+    record["verdicts"] = [v for v in record["verdicts"] if v["id"] in done]
     schemas: dict[str, str] = {}
     items = []
     for qid, a in sorted(answers.items(), key=lambda kv: int(kv[0])):
+        if qid in done or (limit is not None and len(items) >= limit):
+            continue
         q = by_id[int(qid)]
         schemas.setdefault(q["db_id"], schema_text(q["db_id"]))
         prompt = (f"Question: {question_text(q)}\n\nTables:\n{schemas[q['db_id']]}\n\nSQL:\n{a.get('executed_sql') or '(none)'}\n\n"
@@ -391,15 +400,14 @@ def cmd_judge(label: str, endpoint: str, model: str, spacing_s: float) -> int:
     if out.returncode:
         print(out.stderr[-800:])
         return 1
-    verdicts = json.loads(out.stdout.strip().splitlines()[-1])
+    verdicts = json.loads(out.stdout.strip().splitlines()[-1]) if items else []
     for v in verdicts:
         v["p_correct"] = parse_p(v.get("text", ""))
-    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", f"{endpoint}_{model}")
-    path = EVAL / f"bird_judge_{label}_{safe}.json"
-    path.write_text(json.dumps({"label": label, "endpoint": endpoint, "model": model, "system": JUDGE_SYSTEM,
-                                "verdicts": verdicts}, indent=1) + "\n")
-    ok = sum(v.get("p_correct") is not None for v in verdicts)
-    print(f"{ok}/{len(verdicts)} verdicts parsed; served models: {sorted({v.get('served_model') for v in verdicts if v.get('served_model')})}")
+    record["verdicts"] += verdicts
+    path.write_text(json.dumps(record, indent=1) + "\n")
+    ok = sum(v.get("p_correct") is not None for v in record["verdicts"])
+    print(f"{ok}/{len(answers)} verdicts so far; served models: "
+          f"{sorted({v.get('served_model') for v in record['verdicts'] if v.get('served_model')})}")
     return 0
 
 
@@ -421,6 +429,7 @@ def main() -> int:
     p.add_argument("--endpoint", required=True)
     p.add_argument("--model", required=True)
     p.add_argument("--spacing", type=float, default=5.0)
+    p.add_argument("--limit", type=int, help="judge at most this many new answers (keeps each call short)")
     args = ap.parse_args()
     if args.cmd == "sample":
         return cmd_sample(args.n)
@@ -430,7 +439,7 @@ def main() -> int:
         return cmd_ask(args.label, args.spacing, args.limit)
     if args.cmd == "score":
         return cmd_score(args.label, args.gold)
-    return cmd_judge(args.label, args.endpoint, args.model, args.spacing)
+    return cmd_judge(args.label, args.endpoint, args.model, args.spacing, args.limit)
 
 
 if __name__ == "__main__":

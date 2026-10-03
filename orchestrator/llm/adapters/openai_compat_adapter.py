@@ -54,6 +54,8 @@ class Endpoint:
     base_url: str
     key_secret: str
     reasoning_effort: dict
+    omit_temperature: tuple = ()     # models that reject a temperature (reasoning models)
+    max_retries: int | None = None   # fewer retries for a router that retries itself
 
 
 def check_base_url(url: str) -> str:
@@ -68,9 +70,12 @@ def endpoint(name: str) -> Endpoint:
     if table is None:
         raise OpenAICompatConfigError(f"No [llm.endpoints.{name}] in config/flags.toml.")
     effort = table.get("reasoning_effort", {}) or {}
+    retries = table.get("max_retries")
     return Endpoint(name=name, base_url=check_base_url(str(table.get("base_url", ""))),
                     key_secret=str(table.get("key_secret", "")),
-                    reasoning_effort=effort.as_dict() if hasattr(effort, "as_dict") else dict(effort))
+                    reasoning_effort=effort.as_dict() if hasattr(effort, "as_dict") else dict(effort),
+                    omit_temperature=tuple(table.get("omit_temperature", []) or []),
+                    max_retries=int(retries) if retries is not None else None)
 
 
 def parse_spec(spec: str) -> tuple[str, str]:
@@ -103,6 +108,9 @@ class OpenAICompatAdapter(GroqAdapter):
         self._client = AsyncOpenAI(api_key=self._key(ep), base_url=ep.base_url,
                                    timeout=float(cfg.models.groq_timeout_s), max_retries=0)
         self._reasoning_effort = str(ep.reasoning_effort.get(model, "") or "").strip()
+        self._omit_temperature = model in ep.omit_temperature
+        if ep.max_retries is not None:
+            self._max_retries = ep.max_retries
         logger.info("OpenAICompatAdapter ready (endpoint=%s model=%s).", ep.name, model)
 
     @staticmethod

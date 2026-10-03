@@ -170,7 +170,11 @@ class GroqAdapter:
             budget += int(cfg.models.groq_reasoning_headroom_tokens)
             extra["reasoning_effort"] = self._reasoning_effort
 
-        attempts = int(cfg.models.groq_max_retries) + 1
+        # A subclass may lower retries (a router that retries itself) or omit temperature
+        # (reasoning models that reject it); see openai_compat_adapter.py.
+        attempts = int(getattr(self, "_max_retries", cfg.models.groq_max_retries)) + 1
+        if not getattr(self, "_omit_temperature", False):
+            extra["temperature"] = cfg.models.temperature
         backoff = float(cfg.models.groq_retry_base_delay_s)
         waited_s = 0.0
         retries = 0
@@ -180,7 +184,6 @@ class GroqAdapter:
                 raw = await self._client.chat.completions.with_raw_response.create(
                     model=self.model,
                     max_completion_tokens=budget,
-                    temperature=cfg.models.temperature,
                     messages=[{"role": "system", "content": system}] + messages,
                     **extra,
                 )

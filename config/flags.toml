@@ -13,7 +13,8 @@
 # 2026-09-26: "groq" by owner decision (docs/V3_PLAN.md 0.4). The configured
 # local model was not installed on the dev machine, and v3 demos on a hosted
 # model. "local" still works offline once `ollama pull qwen2.5:7b` is done.
-provider = "groq"           # "local" | "anthropic" | "azure" | "gemini" | "groq"
+provider = "groq"           # "local" | "anthropic" | "azure" | "gemini" | "groq" | "openai_compat"
+# The BIRD pilot (2026-10-03) ran with "openai_compat" (Zed GPT-5 mini via OmniRoute); see docs/eval/bird_pilot_report.md.
 ollama_url = "http://host.docker.internal:11434"
 
 # Azure OpenAI / AI Foundry (BD1 seam, third implementation).
@@ -67,11 +68,15 @@ key_secret = "gemini_api_key"
 [llm.endpoints.local_router]           # e.g. OmniRoute on this machine (compression OFF)
 base_url   = "http://host.docker.internal:20128/v1"
 key_secret = "local_router_api_key"
+max_retries = 1                        # OmniRoute retries and cools down itself; ours on top deepen its lockouts
+omit_temperature = ["zed-hosted/gpt-5-mini", "zed-hosted/gpt-5-nano"]   # reasoning models reject temperature
+[llm.endpoints.local_router.reasoning_effort]
+"zed-hosted/gpt-5-mini" = "low"
 
 [llm.models.openai_compat]
 supervisor        = "groq:qwen/qwen3.8-27b"
-sql               = "groq:openai/gpt-oss-120b"
-synthesizer       = "groq:openai/gpt-oss-120b"
+sql               = "local_router:zed-hosted/gpt-5-mini"
+synthesizer       = "local_router:zed-hosted/gpt-5-mini"
 memory_summarizer = "groq:qwen/qwen3.8-27b"
 normalizer        = "groq:qwen/qwen3.8-27b"
 decomposer        = "groq:qwen/qwen3.8-27b"
