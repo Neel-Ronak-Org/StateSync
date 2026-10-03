@@ -52,6 +52,24 @@ a minute to it. The ship rule says latency does not veto; it does decide how bge
   follow-ups, not part of this decision (spec).
 - `[pipeline] rerank` stays `"off"` until the owner chooses; nothing was changed in the shipped flags.
 
+## bge on the Mac GPU (owner's choice, 2026-10-03)
+
+Docker on macOS cannot reach the GPU, so the same server code and the same model files (copied out of the
+image, same pinned revisions; torch 2.14.1, transformers 5.18.0) run natively with `RERANKER_DEVICE=mps`
+(`scripts/run_reranker_host.sh`, listening on 127.0.0.1 only; the MCP reaches it via
+`host.docker.internal`).
+
+| run | page hit@5 | MRR@10 | p50 per search | p90 |
+|---|---|---|---|---|
+| `fb3_bge` (Docker CPU) | 59.3% | 0.4327 | 30.9 s | 37.3 s |
+| `fb3_bge_mps` (Mac GPU) | 59.3% | 0.4327 | **4.5 s** | **5.7 s** |
+
+- **Identical results:** the gold page's rank is the same for all 150 questions.
+- Re-scoring 30 passages takes 1.4 s on the GPU; the rest of the 4.5 s is the ordinary search path
+  (query embedding, candidate fetch). Native CPU, outside Docker, takes 2.7 s for the same 30 passages:
+  most of the 31 s was the Docker VM's CPU allowance, not the model.
+- A documents answer runs two searches, so bge now adds roughly 9 s to it instead of about a minute.
+
 ## Not yet run
 
 - `fb3_bge_rewrite` (query rewriting) needs Groq quota.

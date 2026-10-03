@@ -26,6 +26,10 @@ services:
       - "127.0.0.1:8080:8080"
     environment:
       - LOG_LEVEL=DEBUG
+      # The re-ranker runs natively on the Mac GPU (scripts/run_reranker_host.sh, 127.0.0.1:8096);
+      # Docker on macOS cannot reach the GPU. If it is not running, search falls back to the
+      # un-reranked order (logged), exactly as when the container is down.
+      - RERANKER_URL=http://host.docker.internal:8096
 
   orchestrator:
     ports:

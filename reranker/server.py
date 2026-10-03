@@ -19,6 +19,12 @@ API (HTTP, JSON):
                  200 {"ok": true, "scores": [float, ...]}   (one per passage, higher = more relevant)
                  4xx {"ok": false, "error": "<code>", "message": "..."}
 Limits come from [reranker] in config/statesync.toml (mounted read-only).
+
+ON THE MAC GPU (owner's choice, 2026-10-03). Docker on macOS cannot reach the GPU, so the same
+server also runs natively (scripts/run_reranker_host.sh) with RERANKER_DEVICE=mps, the same model
+files (copied out of the image, same pinned revisions) and RERANKER_HOST=127.0.0.1, so only this
+machine (and the MCP container, through host.docker.internal) can reach it. In the container the
+defaults are unchanged: CPU, all interfaces of the internal network.
 """
 
 from __future__ import annotations
@@ -44,6 +50,9 @@ _CONFIG_DIR = Path(os.environ.get("CONFIG_DIR", "/app/config"))
 LIMITS: dict[str, Any] = tomllib.loads((_CONFIG_DIR / "statesync.toml").read_text())["reranker"]
 MODEL_DIR = Path(os.environ.get("MODEL_DIR", "/models"))
 MODELS = {"minilm": "ms-marco-MiniLM-L-6-v2", "bge": "bge-reranker-v2-m3"}
+DEVICE = os.environ.get("RERANKER_DEVICE", "cpu")
+if DEVICE == "mps" and not torch.backends.mps.is_available():
+    raise SystemExit("RERANKER_DEVICE=mps but the Mac GPU (MPS) is not available")
 
 torch.set_num_threads(int(LIMITS["threads"]))
 _loaded: dict[str, tuple[Any, Any]] = {}
@@ -54,9 +63,9 @@ def load_models() -> None:
     for name, folder in MODELS.items():
         path = MODEL_DIR / folder
         tok = AutoTokenizer.from_pretrained(path)
-        model = AutoModelForSequenceClassification.from_pretrained(path).eval()
+        model = AutoModelForSequenceClassification.from_pretrained(path).eval().to(DEVICE)
         _loaded[name] = (tok, model)
-        logger.info("loaded %s from %s", name, path)
+        logger.info("loaded %s from %s on %s", name, path, DEVICE)
 
 
 @torch.inference_mode()
@@ -67,8 +76,8 @@ def score(name: str, query: str, passages: list[str]) -> list[float]:
     for start in range(0, len(passages), batch):
         chunk = passages[start:start + batch]
         enc = tok([query] * len(chunk), chunk, padding=True, truncation="only_second",
-                  max_length=int(LIMITS["max_tokens"]), return_tensors="pt")
-        logits = model(**enc).logits
+                  max_length=int(LIMITS["max_tokens"]), return_tensors="pt").to(DEVICE)
+        logits = model(**enc).logits.cpu()
         scores.extend(logits.view(-1).float().tolist() if logits.shape[-1] == 1 else logits[:, -1].float().tolist())
     return scores
 
@@ -135,7 +144,8 @@ class Handler(BaseHTTPRequestHandler):
 def main() -> None:
     load_models()
     port = int(os.environ.get("RERANKER_PORT", "8096"))
-    server = ThreadingHTTPServer(("0.0.0.0", port), Handler)  # noqa: S104 -- internal network only
+    host = os.environ.get("RERANKER_HOST", "0.0.0.0")  # noqa: S104 -- container: internal network only; host run: 127.0.0.1
+    server = ThreadingHTTPServer((host, port), Handler)
     logger.info("reranker listening on %d", port)
     server.serve_forever()
 

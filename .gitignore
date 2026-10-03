@@ -50,3 +50,6 @@ fixtures/documents/olist_review_digests_manifest.json
 # CC BY-NC 4.0 and the filings are ~160 MB; FIBEN data is ~380 MB. Fetch with
 # scripts/fetch_external_eval.sh; checksums are committed instead.
 data/external/
+
+# The re-ranker run natively on the Mac GPU (scripts/run_reranker_host.sh)
+.venv-reranker/
