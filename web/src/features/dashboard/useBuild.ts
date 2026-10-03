@@ -57,9 +57,9 @@ export function useBuild(dashboardId: string | null) {
    * Start a build on `targetId`. Explicit, not the hook's own dashboard: a build
    * that first creates a new dashboard must not start on the one that was open.
    */
-  const start = useCallback(async (targetId: string, goal?: string) => {
+  const start = useCallback(async (targetId: string, goal?: string, workspaceId?: string) => {
     try {
-      const res = await api.buildDashboard(targetId, goal)
+      const res = await api.buildDashboard(targetId, goal, workspaceId)
       announced.current = null
       setWatched((w) => new Set(w).add(res.job.job_id))
       queryClient.setQueryData(['build', targetId], res)

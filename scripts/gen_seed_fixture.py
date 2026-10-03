@@ -17,13 +17,16 @@ import json
 import random
 import string
 import sys
+import tomllib
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from digipin import encode as _digipin_encode
 
-# Seed for reproducibility — matches config.models.seed from Appendix 1
-RNG_SEED = 20260807
+# Seed for reproducibility: config [models] seed (Appendix 1), read from the config so the two
+# cannot drift apart.
+RNG_SEED = int(tomllib.loads((Path(__file__).resolve().parents[1] / "config" / "statesync.toml")
+                             .read_text())["models"]["seed"])
 rng = random.Random(RNG_SEED)
 
 # ── Indian cities with realistic lat/lon ──────────────────────────────────────

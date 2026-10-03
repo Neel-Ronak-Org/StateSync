@@ -1,0 +1,951 @@
+{
+ "chunker": "paragraph",
+ "created": "2026-10-01T19:10:33+00:00",
+ "questions_sha256": "a5a2aa673e573e55675fc3c0f9aa38c1cf59d2abc91edb077534f71f10a71877",
+ "folder_id": "fd_6ea083f5217f42b3",
+ "folder_name": "eval-financebench-paragraph-20261002-004033",
+ "config": {
+  "library": {
+   "chunker": "paragraph",
+   "max_pages": 300,
+   "max_upload_bytes": 20971520,
+   "parse_timeout_s": 60,
+   "blocks_time_budget_s": 25,
+   "processing_stale_s": 1800
+  },
+  "hybrid_dense_lists": "separate",
+  "pipeline": {
+   "retrieval_mode": "dense",
+   "doc_scope": "all",
+   "doc_abstain": "off"
+  }
+ },
+ "documents": [
+  {
+   "doc_name": "3M_2018_10K",
+   "filename": "3M_2018_10K.pdf",
+   "bytes": 1252586,
+   "started_at": "2026-10-01T19:10:33+00:00",
+   "http_status": 422,
+   "upload_seconds": 27.2,
+   "refusal": "{\"detail\": \"The PDF could not be read within the parser's limits.\"}",
+   "ready_seconds": 27.2,
+   "layout_fallback": {
+    "lines": 19,
+    "first_page": 139
+   },
+   "log_lines_total": 20,
+   "log_lines": [
+    "2026-10-01 19:11:00,204 WARNING page 139 layout could not be read; flat text used",
+    "2026-10-01 19:11:00,308 WARNING page 142 layout could not be read; flat text used",
+    "2026-10-01 19:11:00,308 WARNING page 143 layout could not be read; flat text used",
+    "2026-10-01 19:11:00,308 WARNING page 144 layout could not be read; flat text used",
+    "2026-10-01 19:11:00,309 WARNING page 145 layout could not be read; flat text used",
+    "2026-10-01 19:11:00,380 WARNING page 147 layout could not be read; flat text used",
+    "2026-10-01 19:11:00,380 WARNING page 148 layout could not be read; flat text used",
+    "2026-10-01 19:11:00,380 WARNING page 149 layout could not be read; flat text used",
+    "2026-10-01 19:11:00,380 WARNING page 150 layout could not be read; flat text used",
+    "2026-10-01 19:11:00,380 WARNING page 151 layout could not be read; flat text used",
+    "2026-10-01 19:11:00,380 WARNING page 152 layout could not be read; flat text used",
+    "2026-10-01 19:11:00,380 WARNING page 153 layout could not be read; flat text used"
+   ]
+  },
+  {
+   "doc_name": "3M_2022_10K",
+   "filename": "3M_2022_10K.pdf",
+   "bytes": 1655681,
+   "started_at": "2026-10-01T19:11:01+00:00",
+   "http_status": 422,
+   "upload_seconds": 30.2,
+   "refusal": "{\"detail\": \"The PDF could not be read within the parser's limits.\"}",
+   "ready_seconds": 30.2,
+   "layout_fallback": {
+    "lines": 65,
+    "first_page": 187
+   },
+   "log_lines_total": 66,
+   "log_lines": [
+    "2026-10-01 19:11:30,705 WARNING page 187 layout could not be read; flat text used",
+    "2026-10-01 19:11:30,705 WARNING page 188 layout could not be read; flat text used",
+    "2026-10-01 19:11:30,705 WARNING page 189 layout could not be read; flat text used",
+    "2026-10-01 19:11:30,705 WARNING page 190 layout could not be read; flat text used",
+    "2026-10-01 19:11:30,705 WARNING page 191 layout could not be read; flat text used",
+    "2026-10-01 19:11:30,705 WARNING page 192 layout could not be read; flat text used",
+    "2026-10-01 19:11:30,705 WARNING page 193 layout could not be read; flat text used",
+    "2026-10-01 19:11:30,705 WARNING page 194 layout could not be read; flat text used",
+    "2026-10-01 19:11:30,705 WARNING page 195 layout could not be read; flat text used",
+    "2026-10-01 19:11:30,705 WARNING page 196 layout could not be read; flat text used",
+    "2026-10-01 19:11:30,705 WARNING page 197 layout could not be read; flat text used",
+    "2026-10-01 19:11:30,705 WARNING page 198 layout could not be read; flat text used"
+   ]
+  },
+  {
+   "doc_name": "3M_2023Q2_10Q",
+   "filename": "3M_2023Q2_10Q.pdf",
+   "bytes": 5287301,
+   "started_at": "2026-10-01T19:11:31+00:00",
+   "http_status": 202,
+   "upload_seconds": 12.5,
+   "refusal": null,
+   "document_id": "up_f95e980b77e44e9a",
+   "status": "ready",
+   "error": null,
+   "pages": 92,
+   "chunk_count": 391,
+   "ready_seconds": 163.7,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:11:43,827 INFO parsed application/pdf: 5287301 bytes, 92 pages, 1191 blocks",
+    "2026-10-01 19:14:14,097 INFO library_ingest library: up_f95e980b77e44e9a ingested, 92 pages -> 391 chunks in 150.2s"
+   ]
+  },
+  {
+   "doc_name": "ACTIVISIONBLIZZARD_2019_10K",
+   "filename": "ACTIVISIONBLIZZARD_2019_10K.pdf",
+   "bytes": 1274941,
+   "started_at": "2026-10-01T19:14:15+00:00",
+   "http_status": 422,
+   "upload_seconds": 17.9,
+   "refusal": "{\"detail\": \"The PDF could not be read within the parser's limits.\"}",
+   "ready_seconds": 17.9,
+   "layout_fallback": {
+    "lines": 34,
+    "first_page": 164
+   },
+   "log_lines_total": 35,
+   "log_lines": [
+    "2026-10-01 19:14:32,585 WARNING page 164 layout could not be read; flat text used",
+    "2026-10-01 19:14:32,585 WARNING page 165 layout could not be read; flat text used",
+    "2026-10-01 19:14:32,585 WARNING page 166 layout could not be read; flat text used",
+    "2026-10-01 19:14:32,585 WARNING page 167 layout could not be read; flat text used",
+    "2026-10-01 19:14:32,585 WARNING page 168 layout could not be read; flat text used",
+    "2026-10-01 19:14:32,585 WARNING page 169 layout could not be read; flat text used",
+    "2026-10-01 19:14:32,585 WARNING page 170 layout could not be read; flat text used",
+    "2026-10-01 19:14:32,585 WARNING page 171 layout could not be read; flat text used",
+    "2026-10-01 19:14:32,585 WARNING page 172 layout could not be read; flat text used",
+    "2026-10-01 19:14:32,585 WARNING page 173 layout could not be read; flat text used",
+    "2026-10-01 19:14:32,585 WARNING page 174 layout could not be read; flat text used",
+    "2026-10-01 19:14:32,585 WARNING page 175 layout could not be read; flat text used"
+   ]
+  },
+  {
+   "doc_name": "ADOBE_2015_10K",
+   "filename": "ADOBE_2015_10K.pdf",
+   "bytes": 1457725,
+   "started_at": "2026-10-01T19:14:33+00:00",
+   "http_status": 202,
+   "upload_seconds": 8.4,
+   "refusal": null,
+   "document_id": "up_3d76cf6fcc0b45a9",
+   "status": "ready",
+   "error": null,
+   "pages": 116,
+   "chunk_count": 516,
+   "ready_seconds": 266.6,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:14:41,480 INFO parsed application/pdf: 1457725 bytes, 116 pages, 1653 blocks",
+    "2026-10-01 19:18:58,913 INFO library_ingest library: up_3d76cf6fcc0b45a9 ingested, 116 pages -> 516 chunks in 257.4s"
+   ]
+  },
+  {
+   "doc_name": "ADOBE_2016_10K",
+   "filename": "ADOBE_2016_10K.pdf",
+   "bytes": 4171413,
+   "started_at": "2026-10-01T19:18:59+00:00",
+   "http_status": 202,
+   "upload_seconds": 8.6,
+   "refusal": null,
+   "document_id": "up_98fb936ecb1440ff",
+   "status": "failed",
+   "error": "Processing failed unexpectedly.",
+   "pages": 112,
+   "chunk_count": 0,
+   "ready_seconds": 193.8,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:19:08,320 INFO parsed application/pdf: 4171413 bytes, 112 pages, 1705 blocks",
+    "2026-10-01 19:22:12,269 ERROR library_ingest library: ingesting up_98fb936ecb1440ff failed after 183.9s"
+   ]
+  },
+  {
+   "doc_name": "ADOBE_2017_10K",
+   "filename": "ADOBE_2017_10K.pdf",
+   "bytes": 4028448,
+   "started_at": "2026-10-01T19:22:13+00:00",
+   "http_status": 202,
+   "upload_seconds": 14.9,
+   "refusal": null,
+   "document_id": "up_8845e9f8f8d748c2",
+   "status": "ready",
+   "error": null,
+   "pages": 107,
+   "chunk_count": 443,
+   "ready_seconds": 191.2,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:22:28,475 INFO parsed application/pdf: 4028448 bytes, 107 pages, 1668 blocks",
+    "2026-10-01 19:25:23,718 INFO library_ingest library: up_8845e9f8f8d748c2 ingested, 107 pages -> 443 chunks in 175.2s"
+   ]
+  },
+  {
+   "doc_name": "ADOBE_2022_10K",
+   "filename": "ADOBE_2022_10K.pdf",
+   "bytes": 620288,
+   "started_at": "2026-10-01T19:25:24+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.1,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.1,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:25:24,912 INFO refused application/pdf: 620288 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "AES_2022_10K",
+   "filename": "AES_2022_10K.pdf",
+   "bytes": 4479324,
+   "started_at": "2026-10-01T19:25:24+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.1,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.1,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:25:25,101 INFO refused application/pdf: 4479324 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "AMAZON_2017_10K",
+   "filename": "AMAZON_2017_10K.pdf",
+   "bytes": 627047,
+   "started_at": "2026-10-01T19:25:25+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.1,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.1,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:25:25,251 INFO refused application/pdf: 627047 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "AMAZON_2019_10K",
+   "filename": "AMAZON_2019_10K.pdf",
+   "bytes": 619184,
+   "started_at": "2026-10-01T19:25:25+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.1,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.1,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:25:25,397 INFO refused application/pdf: 619184 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "AMCOR_2020_10K",
+   "filename": "AMCOR_2020_10K.pdf",
+   "bytes": 8364895,
+   "started_at": "2026-10-01T19:25:25+00:00",
+   "http_status": 202,
+   "upload_seconds": 10.9,
+   "refusal": null,
+   "document_id": "up_7af2ed90ffa240e8",
+   "status": "failed",
+   "error": "Processing failed unexpectedly.",
+   "pages": 185,
+   "chunk_count": 0,
+   "ready_seconds": 283.7,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:25:36,299 INFO parsed application/pdf: 8364895 bytes, 185 pages, 1833 blocks",
+    "2026-10-01 19:30:09,046 ERROR library_ingest library: ingesting up_7af2ed90ffa240e8 failed after 272.7s"
+   ]
+  },
+  {
+   "doc_name": "AMCOR_2022_8K_dated-2022-07-01",
+   "filename": "AMCOR_2022_8K_dated-2022-07-01.pdf",
+   "bytes": 147921,
+   "started_at": "2026-10-01T19:30:09+00:00",
+   "http_status": 202,
+   "upload_seconds": 2.9,
+   "refusal": null,
+   "document_id": "up_8d1a4b33e12940f6",
+   "status": "failed",
+   "error": "Processing failed unexpectedly.",
+   "pages": 9,
+   "chunk_count": 0,
+   "ready_seconds": 23.6,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:30:12,294 INFO parsed application/pdf: 147921 bytes, 9 pages, 100 blocks",
+    "2026-10-01 19:30:32,351 ERROR library_ingest library: ingesting up_8d1a4b33e12940f6 failed after 20.0s"
+   ]
+  },
+  {
+   "doc_name": "AMCOR_2023Q2_10Q",
+   "filename": "AMCOR_2023Q2_10Q.pdf",
+   "bytes": 455017,
+   "started_at": "2026-10-01T19:30:33+00:00",
+   "http_status": 202,
+   "upload_seconds": 11.2,
+   "refusal": null,
+   "document_id": "up_0e0ffaca0a4146b8",
+   "status": "ready",
+   "error": null,
+   "pages": 57,
+   "chunk_count": 142,
+   "ready_seconds": 87.2,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:30:44,201 INFO parsed application/pdf: 455017 bytes, 57 pages, 525 blocks",
+    "2026-10-01 19:31:59,806 INFO library_ingest library: up_0e0ffaca0a4146b8 ingested, 57 pages -> 142 chunks in 75.6s"
+   ]
+  },
+  {
+   "doc_name": "AMCOR_2023Q4_EARNINGS",
+   "filename": "AMCOR_2023Q4_EARNINGS.pdf",
+   "bytes": 244702,
+   "started_at": "2026-10-01T19:32:00+00:00",
+   "http_status": 202,
+   "upload_seconds": 0.9,
+   "refusal": null,
+   "document_id": "up_22809e7e0c5244c6",
+   "status": "ready",
+   "error": null,
+   "pages": 14,
+   "chunk_count": 47,
+   "ready_seconds": 31.7,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:32:01,297 INFO parsed application/pdf: 244702 bytes, 14 pages, 389 blocks",
+    "2026-10-01 19:32:30,224 INFO library_ingest library: up_22809e7e0c5244c6 ingested, 14 pages -> 47 chunks in 28.9s"
+   ]
+  },
+  {
+   "doc_name": "AMCOR_2023_10K",
+   "filename": "AMCOR_2023_10K.pdf",
+   "bytes": 1108309,
+   "started_at": "2026-10-01T19:32:32+00:00",
+   "http_status": 202,
+   "upload_seconds": 17.5,
+   "refusal": null,
+   "document_id": "up_f0dd0e880e884285",
+   "status": "ready",
+   "error": null,
+   "pages": 156,
+   "chunk_count": 548,
+   "ready_seconds": 239.2,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:32:49,676 INFO parsed application/pdf: 1108309 bytes, 156 pages, 1601 blocks",
+    "2026-10-01 19:36:30,142 INFO library_ingest library: up_f0dd0e880e884285 ingested, 156 pages -> 548 chunks in 220.4s"
+   ]
+  },
+  {
+   "doc_name": "AMD_2015_10K",
+   "filename": "AMD_2015_10K.pdf",
+   "bytes": 2474122,
+   "started_at": "2026-10-01T19:36:31+00:00",
+   "http_status": 422,
+   "upload_seconds": 21.7,
+   "refusal": "{\"detail\": \"The PDF could not be read within the parser's limits.\"}",
+   "ready_seconds": 21.7,
+   "layout_fallback": {
+    "lines": 1,
+    "first_page": null
+   },
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:36:52,689 WARNING layout pass failed (MemoryError); flat text used",
+    "2026-10-01 19:36:53,162 INFO refused application/pdf: 2474122 bytes, unreadable"
+   ]
+  },
+  {
+   "doc_name": "AMD_2022_10K",
+   "filename": "AMD_2022_10K.pdf",
+   "bytes": 5122473,
+   "started_at": "2026-10-01T19:36:53+00:00",
+   "http_status": 202,
+   "upload_seconds": 16.9,
+   "refusal": null,
+   "document_id": "up_ee5784fe5d344694",
+   "status": "ready",
+   "error": null,
+   "pages": 121,
+   "chunk_count": 459,
+   "ready_seconds": 207.5,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:37:10,121 INFO parsed application/pdf: 5122473 bytes, 121 pages, 1598 blocks",
+    "2026-10-01 19:40:20,607 INFO library_ingest library: up_ee5784fe5d344694 ingested, 121 pages -> 459 chunks in 190.4s"
+   ]
+  },
+  {
+   "doc_name": "AMERICANEXPRESS_2022_10K",
+   "filename": "AMERICANEXPRESS_2022_10K.pdf",
+   "bytes": 2436166,
+   "started_at": "2026-10-01T19:40:20+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.1,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.1,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:40:20,989 INFO refused application/pdf: 2436166 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "AMERICANWATERWORKS_2020_10K",
+   "filename": "AMERICANWATERWORKS_2020_10K.pdf",
+   "bytes": 1437123,
+   "started_at": "2026-10-01T19:40:21+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.1,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.1,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:40:21,156 INFO refused application/pdf: 1437123 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "AMERICANWATERWORKS_2021_10K",
+   "filename": "AMERICANWATERWORKS_2021_10K.pdf",
+   "bytes": 1975636,
+   "started_at": "2026-10-01T19:40:21+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.1,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.1,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:40:21,321 INFO refused application/pdf: 1975636 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "AMERICANWATERWORKS_2022_10K",
+   "filename": "AMERICANWATERWORKS_2022_10K.pdf",
+   "bytes": 2729077,
+   "started_at": "2026-10-01T19:40:21+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.1,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.1,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:40:21,491 INFO refused application/pdf: 2729077 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "BESTBUY_2017_10K",
+   "filename": "BESTBUY_2017_10K.pdf",
+   "bytes": 776434,
+   "started_at": "2026-10-01T19:40:21+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.1,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.1,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:40:21,636 INFO refused application/pdf: 776434 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "BESTBUY_2019_10K",
+   "filename": "BESTBUY_2019_10K.pdf",
+   "bytes": 782117,
+   "started_at": "2026-10-01T19:40:21+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.1,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.1,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:40:21,792 INFO refused application/pdf: 782117 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "BESTBUY_2023_10K",
+   "filename": "BESTBUY_2023_10K.pdf",
+   "bytes": 703034,
+   "started_at": "2026-10-01T19:40:21+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.1,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.1,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:40:21,953 INFO refused application/pdf: 703034 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "BESTBUY_2024Q2_10Q",
+   "filename": "BESTBUY_2024Q2_10Q.pdf",
+   "bytes": 442386,
+   "started_at": "2026-10-01T19:40:22+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.1,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.1,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:40:22,098 INFO refused application/pdf: 442386 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "BLOCK_2016_10K",
+   "filename": "BLOCK_2016_10K.pdf",
+   "bytes": 864350,
+   "started_at": "2026-10-01T19:40:22+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.1,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.1,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:40:22,246 INFO refused application/pdf: 864350 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "BLOCK_2020_10K",
+   "filename": "BLOCK_2020_10K.pdf",
+   "bytes": 1159158,
+   "started_at": "2026-10-01T19:40:22+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.1,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.1,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:40:22,415 INFO refused application/pdf: 1159158 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "BOEING_2018_10K",
+   "filename": "BOEING_2018_10K.pdf",
+   "bytes": 967741,
+   "started_at": "2026-10-01T19:40:22+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.1,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.1,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:40:22,565 INFO refused application/pdf: 967741 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "BOEING_2022_10K",
+   "filename": "BOEING_2022_10K.pdf",
+   "bytes": 1366995,
+   "started_at": "2026-10-01T19:40:22+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.1,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.1,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:40:22,718 INFO refused application/pdf: 1366995 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "COCACOLA_2017_10K",
+   "filename": "COCACOLA_2017_10K.pdf",
+   "bytes": 1790599,
+   "started_at": "2026-10-01T19:40:22+00:00",
+   "http_status": 422,
+   "upload_seconds": 26.8,
+   "refusal": "{\"detail\": \"The PDF could not be read within the parser's limits.\"}",
+   "ready_seconds": 26.8,
+   "layout_fallback": {
+    "lines": 77,
+    "first_page": 118
+   },
+   "log_lines_total": 78,
+   "log_lines": [
+    "2026-10-01 19:40:48,891 WARNING page 118 layout could not be read; flat text used",
+    "2026-10-01 19:40:48,891 WARNING page 119 layout could not be read; flat text used",
+    "2026-10-01 19:40:48,891 WARNING page 120 layout could not be read; flat text used",
+    "2026-10-01 19:40:48,891 WARNING page 121 layout could not be read; flat text used",
+    "2026-10-01 19:40:48,892 WARNING page 122 layout could not be read; flat text used",
+    "2026-10-01 19:40:48,892 WARNING page 123 layout could not be read; flat text used",
+    "2026-10-01 19:40:48,892 WARNING page 124 layout could not be read; flat text used",
+    "2026-10-01 19:40:48,892 WARNING page 125 layout could not be read; flat text used",
+    "2026-10-01 19:40:48,892 WARNING page 126 layout could not be read; flat text used",
+    "2026-10-01 19:40:48,892 WARNING page 127 layout could not be read; flat text used",
+    "2026-10-01 19:40:48,892 WARNING page 128 layout could not be read; flat text used",
+    "2026-10-01 19:40:48,893 WARNING page 129 layout could not be read; flat text used"
+   ]
+  },
+  {
+   "doc_name": "COCACOLA_2021_10K",
+   "filename": "COCACOLA_2021_10K.pdf",
+   "bytes": 9762541,
+   "started_at": "2026-10-01T19:40:49+00:00",
+   "http_status": 202,
+   "upload_seconds": 24.1,
+   "refusal": null,
+   "document_id": "up_7684d640307945a0",
+   "status": "ready",
+   "error": null,
+   "pages": 183,
+   "chunk_count": 748,
+   "ready_seconds": 294.5,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:41:13,779 INFO parsed application/pdf: 9762541 bytes, 183 pages, 2170 blocks",
+    "2026-10-01 19:45:43,496 INFO library_ingest library: up_7684d640307945a0 ingested, 183 pages -> 748 chunks in 269.7s"
+   ]
+  },
+  {
+   "doc_name": "COCACOLA_2022_10K",
+   "filename": "COCACOLA_2022_10K.pdf",
+   "bytes": 9485744,
+   "started_at": "2026-10-01T19:45:44+00:00",
+   "http_status": 202,
+   "upload_seconds": 23.2,
+   "refusal": null,
+   "document_id": "up_e174cd97e35f4dee",
+   "status": "failed",
+   "error": "Processing failed unexpectedly.",
+   "pages": 183,
+   "chunk_count": 0,
+   "ready_seconds": 281.2,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:46:07,352 INFO parsed application/pdf: 9485744 bytes, 183 pages, 2029 blocks",
+    "2026-10-01 19:50:24,690 ERROR library_ingest library: ingesting up_e174cd97e35f4dee failed after 257.3s"
+   ]
+  },
+  {
+   "doc_name": "CORNING_2020_10K",
+   "filename": "CORNING_2020_10K.pdf",
+   "bytes": 1180865,
+   "started_at": "2026-10-01T19:50:25+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.4,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.4,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:50:25,915 INFO refused application/pdf: 1180865 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "CORNING_2021_10K",
+   "filename": "CORNING_2021_10K.pdf",
+   "bytes": 1131912,
+   "started_at": "2026-10-01T19:50:26+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.2,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.2,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:50:26,309 INFO refused application/pdf: 1131912 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "CORNING_2022_10K",
+   "filename": "CORNING_2022_10K.pdf",
+   "bytes": 1399926,
+   "started_at": "2026-10-01T19:50:26+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.3,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.3,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:50:26,690 INFO refused application/pdf: 1399926 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "COSTCO_2021_10K",
+   "filename": "COSTCO_2021_10K.pdf",
+   "bytes": 765319,
+   "started_at": "2026-10-01T19:50:26+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.3,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.3,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:50:27,186 INFO refused application/pdf: 765319 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "CVSHEALTH_2018_10K",
+   "filename": "CVSHEALTH_2018_10K.pdf",
+   "bytes": 1868195,
+   "started_at": "2026-10-01T19:50:27+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.3,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.3,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:50:27,572 INFO refused application/pdf: 1868195 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "CVSHEALTH_2022_10K",
+   "filename": "CVSHEALTH_2022_10K.pdf",
+   "bytes": 1898137,
+   "started_at": "2026-10-01T19:50:27+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.4,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.4,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:50:28,167 INFO refused application/pdf: 1898137 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "FOOTLOCKER_2022_8K_dated-2022-05-20",
+   "filename": "FOOTLOCKER_2022_8K_dated-2022-05-20.pdf",
+   "bytes": 116133,
+   "started_at": "2026-10-01T19:50:28+00:00",
+   "http_status": 202,
+   "upload_seconds": 0.9,
+   "refusal": null,
+   "document_id": "up_55081a0787394888",
+   "status": "ready",
+   "error": null,
+   "pages": 4,
+   "chunk_count": 7,
+   "ready_seconds": 11.3,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:50:29,287 INFO parsed application/pdf: 116133 bytes, 4 pages, 49 blocks",
+    "2026-10-01 19:50:38,853 INFO library_ingest library: up_55081a0787394888 ingested, 4 pages -> 7 chunks in 9.5s"
+   ]
+  },
+  {
+   "doc_name": "FOOTLOCKER_2022_8K_dated_2022-08-19",
+   "filename": "FOOTLOCKER_2022_8K_dated_2022-08-19.pdf",
+   "bytes": 316459,
+   "started_at": "2026-10-01T19:50:39+00:00",
+   "http_status": 202,
+   "upload_seconds": 3.6,
+   "refusal": null,
+   "document_id": "up_ac88cdd860874168",
+   "status": "failed",
+   "error": "Processing failed unexpectedly.",
+   "pages": 31,
+   "chunk_count": 0,
+   "ready_seconds": 24.4,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:50:43,422 INFO parsed application/pdf: 316459 bytes, 31 pages, 213 blocks",
+    "2026-10-01 19:51:03,458 ERROR library_ingest library: ingesting up_ac88cdd860874168 failed after 20.0s"
+   ]
+  },
+  {
+   "doc_name": "GENERALMILLS_2019_10K",
+   "filename": "GENERALMILLS_2019_10K.pdf",
+   "bytes": 920782,
+   "started_at": "2026-10-01T19:51:04+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.3,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.3,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:51:04,668 INFO refused application/pdf: 920782 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "GENERALMILLS_2020_10K",
+   "filename": "GENERALMILLS_2020_10K.pdf",
+   "bytes": 2342475,
+   "started_at": "2026-10-01T19:51:04+00:00",
+   "http_status": 202,
+   "upload_seconds": 16.9,
+   "refusal": null,
+   "document_id": "up_48b897ad5f8a44df",
+   "status": "failed",
+   "error": "Processing failed unexpectedly.",
+   "pages": 127,
+   "chunk_count": 0,
+   "ready_seconds": 37.7,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:51:21,727 INFO parsed application/pdf: 2342475 bytes, 127 pages, 1417 blocks",
+    "2026-10-01 19:51:41,755 ERROR library_ingest library: ingesting up_48b897ad5f8a44df failed after 20.0s"
+   ]
+  },
+  {
+   "doc_name": "GENERALMILLS_2022_10K",
+   "filename": "GENERALMILLS_2022_10K.pdf",
+   "bytes": 1083414,
+   "started_at": "2026-10-01T19:51:42+00:00",
+   "http_status": 422,
+   "upload_seconds": 0.3,
+   "refusal": "{\"detail\": \"The PDF is password-protected.\"}",
+   "ready_seconds": 0.3,
+   "layout_fallback": null,
+   "log_lines_total": 1,
+   "log_lines": [
+    "2026-10-01 19:51:42,992 INFO refused application/pdf: 1083414 bytes, encrypted"
+   ]
+  },
+  {
+   "doc_name": "JOHNSON_JOHNSON_2022Q4_EARNINGS",
+   "filename": "JOHNSON_JOHNSON_2022Q4_EARNINGS.pdf",
+   "bytes": 729392,
+   "started_at": "2026-10-01T19:51:43+00:00",
+   "http_status": 202,
+   "upload_seconds": 5.6,
+   "refusal": null,
+   "document_id": "up_a653387aabde469d",
+   "status": "failed",
+   "error": "Processing failed unexpectedly.",
+   "pages": 24,
+   "chunk_count": 0,
+   "ready_seconds": 26.4,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:51:48,778 INFO parsed application/pdf: 729392 bytes, 24 pages, 430 blocks",
+    "2026-10-01 19:52:08,833 ERROR library_ingest library: ingesting up_a653387aabde469d failed after 20.0s"
+   ]
+  },
+  {
+   "doc_name": "JOHNSON_JOHNSON_2022_10K",
+   "filename": "JOHNSON_JOHNSON_2022_10K.pdf",
+   "bytes": 1941368,
+   "started_at": "2026-10-01T19:52:09+00:00",
+   "http_status": 202,
+   "upload_seconds": 28.8,
+   "refusal": null,
+   "document_id": "up_4a1c62038b82462e",
+   "status": "failed",
+   "error": "Processing failed unexpectedly.",
+   "pages": 151,
+   "chunk_count": 0,
+   "ready_seconds": 49.6,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:52:38,592 INFO parsed application/pdf: 1941368 bytes, 151 pages, 1401 blocks",
+    "2026-10-01 19:52:58,659 ERROR library_ingest library: ingesting up_4a1c62038b82462e failed after 20.0s"
+   ]
+  },
+  {
+   "doc_name": "JOHNSON_JOHNSON_2023Q2_EARNINGS",
+   "filename": "JOHNSON_JOHNSON_2023Q2_EARNINGS.pdf",
+   "bytes": 1212840,
+   "started_at": "2026-10-01T19:52:59+00:00",
+   "http_status": 202,
+   "upload_seconds": 6.2,
+   "refusal": null,
+   "document_id": "up_c31e57f2fbdc466e",
+   "status": "failed",
+   "error": "Processing failed unexpectedly.",
+   "pages": 24,
+   "chunk_count": 0,
+   "ready_seconds": 26.9,
+   "layout_fallback": null,
+   "log_lines_total": 2,
+   "log_lines": [
+    "2026-10-01 19:53:05,726 INFO parsed application/pdf: 1212840 bytes, 24 pages, 393 blocks",
+    "2026-10-01 19:53:25,830 ERROR library_ingest library: ingesting up_c31e57f2fbdc466e failed after 20.0s"
+   ]
+  }
+ ],
+ "summary": {
+  "filings": 47,
+  "ready": 9,
+  "refused": 29,
+  "failed_or_stuck": 9,
+  "refused_filings": [
+   "3M_2018_10K",
+   "3M_2022_10K",
+   "ACTIVISIONBLIZZARD_2019_10K",
+   "ADOBE_2022_10K",
+   "AES_2022_10K",
+   "AMAZON_2017_10K",
+   "AMAZON_2019_10K",
+   "AMD_2015_10K",
+   "AMERICANEXPRESS_2022_10K",
+   "AMERICANWATERWORKS_2020_10K",
+   "AMERICANWATERWORKS_2021_10K",
+   "AMERICANWATERWORKS_2022_10K",
+   "BESTBUY_2017_10K",
+   "BESTBUY_2019_10K",
+   "BESTBUY_2023_10K",
+   "BESTBUY_2024Q2_10Q",
+   "BLOCK_2016_10K",
+   "BLOCK_2020_10K",
+   "BOEING_2018_10K",
+   "BOEING_2022_10K",
+   "COCACOLA_2017_10K",
+   "CORNING_2020_10K",
+   "CORNING_2021_10K",
+   "CORNING_2022_10K",
+   "COSTCO_2021_10K",
+   "CVSHEALTH_2018_10K",
+   "CVSHEALTH_2022_10K",
+   "GENERALMILLS_2019_10K",
+   "GENERALMILLS_2022_10K"
+  ],
+  "failed_filings": [
+   "ADOBE_2016_10K",
+   "AMCOR_2020_10K",
+   "AMCOR_2022_8K_dated-2022-07-01",
+   "COCACOLA_2022_10K",
+   "FOOTLOCKER_2022_8K_dated_2022-08-19",
+   "GENERALMILLS_2020_10K",
+   "JOHNSON_JOHNSON_2022Q4_EARNINGS",
+   "JOHNSON_JOHNSON_2022_10K",
+   "JOHNSON_JOHNSON_2023Q2_EARNINGS"
+  ],
+  "chunks": 3301,
+  "pages_ready": 850,
+  "seconds_upload_to_ready": 2568.1,
+  "layout_fallback_filings": []
+ },
+ "finished": "2026-10-01T19:53:26+00:00"
+}

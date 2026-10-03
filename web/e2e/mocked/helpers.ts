@@ -1,26 +1,32 @@
 import { expect, type Page } from '@playwright/test'
 
-import { MockApi, TOKEN } from './mock-api'
+import { MockApi } from './mock-api'
 
-/** Mock the API, and optionally start signed in (token pre-seeded before the app loads). */
-export async function openApp(page: Page, options: { signedIn?: boolean; hash?: string } = {}): Promise<MockApi> {
-  const { signedIn = true, hash = '' } = options
+/** Mock the API, and optionally start signed in (a live session and the app's signed-in marker). */
+export async function openApp(
+  page: Page,
+  options: { signedIn?: boolean; hash?: string; seed?: (api: MockApi) => void } = {},
+): Promise<MockApi> {
+  const { signedIn = true, hash = '', seed } = options
   const api = new MockApi()
+  seed?.(api)
   await api.install(page)
   if (signedIn) {
-    // addInitScript runs on EVERY load, reloads included. Seeding only once per
-    // tab (marker in sessionStorage) keeps "sign out, reload, still signed out"
+    // The session is an HttpOnly cookie server-side (the mock's sessionActive); the app only
+    // keeps a non-secret marker. addInitScript runs on EVERY load, reloads included. Seeding
+    // only once per tab (marker in sessionStorage) keeps "sign out, reload, still signed out"
     // testable without the app needing any test-only behaviour.
-    await page.addInitScript((token) => {
+    api.sessionActive = true
+    await page.addInitScript(() => {
       try {
         if (!window.sessionStorage.getItem('e2e.seeded')) {
-          window.localStorage.setItem('statesync.token', token)
+          window.localStorage.setItem('statesync.signedIn', 'p_test')
           window.sessionStorage.setItem('e2e.seeded', '1')
         }
       } catch {
         /* storage blocked: the app must still load */
       }
-    }, TOKEN)
+    })
   }
   await page.goto(`/${hash}`)
   return api

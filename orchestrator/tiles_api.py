@@ -55,6 +55,9 @@ class PinTileRequest(BaseModel):
     dashboard_id: str | None = None
     viz: str | None = None
     layout: LayoutSlot | None = None
+    # Pinned in a workspace: the answer also becomes that workspace's approved
+    # example (mcp/tools/tile_tools.py, property 6). The MCP checks ownership.
+    workspace_id: str | None = None
 
 
 class ReplaceTileRequest(BaseModel):
@@ -129,6 +132,8 @@ def register_tile_routes(app: Any, require_principal: Any, audit: Any) -> None:
         else:
             effective_tile_id = tile_id or (result.get("tile") or {}).get("tile_id")
             detail = f"tiles:{action} tile={effective_tile_id}"
+            if (result.get("example") or {}).get("saved"):
+                detail = f"{detail} example={result['example']['example_id']}"
 
         await audit(
             principal.principal_id,
@@ -159,9 +164,13 @@ def register_tile_routes(app: Any, require_principal: Any, audit: Any) -> None:
             dashboard_id=body.dashboard_id,
             viz=body.viz,
             layout=body.layout.model_dump() if body.layout else None,
+            workspace_id=body.workspace_id,
         )
         rendered = render_tile(result["tile"], cfg.sql.chart_max_data_rows)
-        return {"tile": rendered}
+        response: dict[str, Any] = {"tile": rendered}
+        if "example" in result:
+            response["example"] = result["example"]
+        return response
 
     @app.get("/tiles", tags=["tiles"])
     async def list_tiles(

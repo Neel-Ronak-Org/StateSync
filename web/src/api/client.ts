@@ -1,7 +1,8 @@
 /**
  * The only way the app talks to the orchestrator.
  *
- * - Adds the bearer token; never puts it anywhere but the Authorization header.
+ * - Sends the HttpOnly session cookie (credentials: 'include') with the X-StateSync header the
+ *   server requires alongside it; the app never holds the API token after sign-in (lib/auth.ts).
  * - Turns every failure into an ApiError whose message is safe to show: the
  *   server's `detail` (plain text by design) or a fixed sentence. Raw
  *   exception text from fetch never reaches the UI.
@@ -11,20 +12,33 @@
 
 import type {
   BuildJob,
+  Connection,
+  ConnectionCheck,
+  NewConnection,
+  CatalogEntry,
+  ExampleCheckResult,
+  ExampleInfo,
   Dashboard,
+  Definition,
   Health,
   LayoutItem,
+  LibraryDocument,
+  LibraryFolder,
+  PinExampleResult,
   PinTileRequest,
   QueryRequest,
   QueryResponse,
   SessionDetail,
   SessionList,
+  SetupJob,
+  SetupRun,
   Tile,
   TurnRows,
   UpdateTileRequest,
+  Workspace,
 } from '@/api/types'
 import { ORCHESTRATOR_URL } from '@/config'
-import { announceAuthExpired, getToken } from '@/lib/auth'
+import { announceAuthExpired, CSRF_HEADER } from '@/lib/auth'
 
 export class ApiError extends Error {
   readonly status: number
@@ -56,21 +70,35 @@ function detailText(body: unknown): string | null {
 
 export async function apiFetch<T>(
   path: string,
-  options: { method?: Method; body?: unknown; signal?: AbortSignal; auth?: boolean } = {},
+  options: {
+    method?: Method
+    body?: unknown
+    /** A raw file body (uploads): sent as is with its own Content-Type and X-Filename. */
+    upload?: { file: Blob; contentType: string; filename: string }
+    signal?: AbortSignal
+  } = {},
 ): Promise<T> {
-  const { method = 'GET', body, signal, auth = true } = options
+  const { method = 'GET', body, upload, signal } = options
   const headers: Record<string, string> = {}
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
-  const token = auth ? getToken() : null
-  if (token) headers.Authorization = `Bearer ${token}`
+  if (upload) {
+    headers['Content-Type'] = upload.contentType
+    headers['X-Filename'] = encodeURIComponent(upload.filename)
+  } else if (body !== undefined) {
+    headers['Content-Type'] = 'application/json'
+  }
+  // The session is an HttpOnly cookie the browser attaches (credentials: 'include'); the server
+  // accepts it only with this header, which another site cannot send (lib/auth.ts). Sent on
+  // every request, sign-in and sign-out included (they require it too).
+  headers[CSRF_HEADER] = '1'
 
   let response: Response
   try {
     response = await fetch(`${ORCHESTRATOR_URL}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: upload ? upload.file : body === undefined ? undefined : JSON.stringify(body),
       signal,
+      credentials: 'include',
     })
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') throw err
@@ -108,11 +136,15 @@ export async function apiFetch<T>(
 const enc = encodeURIComponent
 
 export const api = {
-  health: () => apiFetch<Health>('/health', { auth: false }),
+  health: () => apiFetch<Health>('/health'),
 
   query: (request: QueryRequest, signal?: AbortSignal) =>
     apiFetch<QueryResponse>('/query', { method: 'POST', body: request, signal }),
 
+  /** Exchange the API token for the HttpOnly session cookie; the token is not kept. */
+  signIn: (token: string) =>
+    apiFetch<{ principal_id: string }>('/auth/session', { method: 'POST', body: { token } }),
+  signOut: () => apiFetch<{ ok: boolean }>('/auth/session', { method: 'DELETE' }),
   sessions: () => apiFetch<SessionList>('/sessions'),
   session: (sessionId: string) => apiFetch<SessionDetail>(`/sessions/${enc(sessionId)}`),
   turnRows: (sessionId: string, turnIndex: number) =>
@@ -121,7 +153,8 @@ export const api = {
   tiles: (dashboardId?: string) =>
     apiFetch<{ tiles: Tile[] }>(dashboardId ? `/tiles?dashboard_id=${enc(dashboardId)}` : '/tiles'),
   tile: (tileId: string) => apiFetch<{ tile: Tile }>(`/tiles/${enc(tileId)}`),
-  pinTile: (request: PinTileRequest) => apiFetch<{ tile: Tile }>('/tiles', { method: 'POST', body: request }),
+  pinTile: (request: PinTileRequest) =>
+    apiFetch<{ tile: Tile; example?: PinExampleResult }>('/tiles', { method: 'POST', body: request }),
   refreshTile: (tileId: string) => apiFetch<{ tile: Tile }>(`/tiles/${enc(tileId)}/refresh`, { method: 'POST' }),
   replaceTile: (tileId: string, sessionId: string, turnIndex: number) =>
     apiFetch<{ tile: Tile }>(`/tiles/${enc(tileId)}/replace`, {
@@ -149,11 +182,135 @@ export const api = {
       method: 'PUT',
       body: { items },
     }),
-  buildDashboard: (dashboardId: string, goal?: string) =>
+  buildDashboard: (dashboardId: string, goal?: string, workspaceId?: string) =>
     apiFetch<{ job: BuildJob }>(`/dashboards/${enc(dashboardId)}/build`, {
       method: 'POST',
-      body: goal ? { goal } : {},
+      body: { ...(goal ? { goal } : {}), ...(workspaceId ? { workspace_id: workspaceId } : {}) },
     }),
   buildStatus: (dashboardId: string) =>
     apiFetch<{ job: BuildJob | null }>(`/dashboards/${enc(dashboardId)}/build`),
+
+  workspaces: () => apiFetch<{ workspaces: Workspace[] }>('/workspaces'),
+  createWorkspace: (body: { name: string; target_schema: string; business_context?: string }) =>
+    apiFetch<{ workspace: Workspace }>('/workspaces', { method: 'POST', body }),
+  workspace: (workspaceId: string) =>
+    apiFetch<{ workspace: Workspace }>(`/workspaces/${enc(workspaceId)}`),
+  updateWorkspace: (workspaceId: string, body: { name?: string; business_context?: string }) =>
+    apiFetch<{ workspace: Workspace }>(`/workspaces/${enc(workspaceId)}`, { method: 'PATCH', body }),
+  deleteWorkspace: (workspaceId: string) =>
+    apiFetch<{ deleted: string }>(`/workspaces/${enc(workspaceId)}`, { method: 'DELETE' }),
+
+  workspaceCatalog: (workspaceId: string) =>
+    apiFetch<{ columns: CatalogEntry[] }>(`/workspaces/${enc(workspaceId)}/catalog`),
+  updateDescriptions: (
+    workspaceId: string,
+    items: { table_name: string; column_name: string; description: string | null }[],
+  ) =>
+    apiFetch<{ updated: number }>(`/workspaces/${enc(workspaceId)}/descriptions`, {
+      method: 'PUT',
+      body: { items },
+    }),
+
+  workspaceDefinitions: (workspaceId: string) =>
+    apiFetch<{ definitions: Definition[] }>(`/workspaces/${enc(workspaceId)}/definitions`),
+  updateDefinitions: (
+    workspaceId: string,
+    items: { term: string; definition: string }[],
+  ) =>
+    apiFetch<{ definitions: Definition[] }>(`/workspaces/${enc(workspaceId)}/definitions`, {
+      method: 'PUT',
+      body: { items },
+    }),
+  deleteDefinition: (workspaceId: string, definitionId: string) =>
+    apiFetch<{ deleted: string }>(
+      `/workspaces/${enc(workspaceId)}/definitions/${enc(definitionId)}`,
+      { method: 'DELETE' },
+    ),
+
+  addExample: (workspaceId: string, body: { question: string; sql: string }) =>
+    apiFetch<{ example_id: string }>(`/workspaces/${enc(workspaceId)}/examples`, { method: 'POST', body }),
+  removeExample: (workspaceId: string, question: string) =>
+    apiFetch<{ removed: number }>(`/workspaces/${enc(workspaceId)}/examples`, {
+      method: 'DELETE',
+      body: { question },
+    }),
+
+  workspaceExamples: (workspaceId: string) =>
+    apiFetch<{ examples: ExampleInfo[] }>(`/workspaces/${enc(workspaceId)}/examples`),
+  checkExamples: (workspaceId: string) =>
+    apiFetch<ExampleCheckResult>(`/workspaces/${enc(workspaceId)}/examples/check`, { method: 'POST' }),
+
+  approveWorkspace: (workspaceId: string) =>
+    apiFetch<{ workspace: Workspace; approved_columns: number; approved_definitions: number }>(
+      `/workspaces/${enc(workspaceId)}/approve`,
+      { method: 'POST' },
+    ),
+
+  startDraft: (workspaceId: string) =>
+    apiFetch<{ job: SetupJob }>(`/workspaces/${enc(workspaceId)}/draft`, { method: 'POST' }),
+  draftStatus: (workspaceId: string) =>
+    apiFetch<{ job: SetupJob | null }>(`/workspaces/${enc(workspaceId)}/draft`),
+  startMining: (workspaceId: string) =>
+    apiFetch<{ job: SetupJob }>(`/workspaces/${enc(workspaceId)}/definitions/mine`, { method: 'POST' }),
+  miningStatus: (workspaceId: string) =>
+    apiFetch<{ job: SetupJob | null }>(`/workspaces/${enc(workspaceId)}/definitions/mine`),
+
+  startSetup: (workspaceId: string) =>
+    apiFetch<{ job: SetupJob; graded_by: 'reference' | 'owner' }>(
+      `/workspaces/${enc(workspaceId)}/setup`,
+      { method: 'POST' },
+    ),
+  setupStatus: (workspaceId: string) =>
+    apiFetch<{ run: SetupRun | null; job: SetupJob | null }>(
+      `/workspaces/${enc(workspaceId)}/setup`,
+    ),
+  setResultVerdict: (
+    workspaceId: string,
+    runId: string,
+    position: number,
+    verdict: 'right' | 'wrong',
+  ) =>
+    apiFetch<{ run: SetupRun }>(
+      `/workspaces/${enc(workspaceId)}/setup/${enc(runId)}/results/${enc(String(position))}`,
+      { method: 'PUT', body: { verdict } },
+    ),
+
+  connections: () =>
+    apiFetch<{ connections: Connection[]; available: boolean }>('/library/connections'),
+  createConnection: (body: NewConnection) =>
+    apiFetch<ConnectionCheck>('/library/connections', { method: 'POST', body }),
+  setConnectionSchema: (connectionId: string, schemaName: string) =>
+    apiFetch<{ connection: Connection }>(`/library/connections/${enc(connectionId)}/schema`, {
+      method: 'PUT',
+      body: { schema_name: schemaName },
+    }),
+  testConnection: (connectionId: string) =>
+    apiFetch<ConnectionCheck>(`/library/connections/${enc(connectionId)}/test`, { method: 'POST' }),
+  deleteConnection: (connectionId: string) =>
+    apiFetch<{ deleted: number }>(`/library/connections/${enc(connectionId)}`, { method: 'DELETE' }),
+
+  libraryFolders: () => apiFetch<{ folders: LibraryFolder[] }>('/library/folders'),
+  createFolder: (name: string) =>
+    apiFetch<{ folder: LibraryFolder }>('/library/folders', { method: 'POST', body: { name } }),
+  renameFolder: (folderId: string, name: string) =>
+    apiFetch<{ folder: LibraryFolder }>(`/library/folders/${enc(folderId)}`, { method: 'PATCH', body: { name } }),
+  deleteFolder: (folderId: string) =>
+    apiFetch<{ deleted: number }>(`/library/folders/${enc(folderId)}`, { method: 'DELETE' }),
+  libraryDocuments: (folderId: string) =>
+    apiFetch<{ documents: LibraryDocument[] }>(`/library/documents?folder_id=${enc(folderId)}`),
+  uploadDocument: (folderId: string, file: File, contentType: string) =>
+    apiFetch<{ document: LibraryDocument }>(`/library/folders/${enc(folderId)}/documents`, {
+      method: 'POST',
+      upload: { file, contentType, filename: file.name },
+    }),
+  deleteDocument: (documentId: string) =>
+    apiFetch<{ deleted: number }>(`/library/documents/${enc(documentId)}`, { method: 'DELETE' }),
+
+  workspaceFolders: (workspaceId: string) =>
+    apiFetch<{ folder_ids: string[] }>(`/workspaces/${enc(workspaceId)}/folders`),
+  setWorkspaceFolders: (workspaceId: string, folderIds: string[]) =>
+    apiFetch<{ folder_ids: string[] }>(`/workspaces/${enc(workspaceId)}/folders`, {
+      method: 'PUT',
+      body: { folder_ids: folderIds },
+    }),
 }

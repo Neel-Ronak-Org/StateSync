@@ -20,9 +20,11 @@ Graph structure (Phase B + C2 + D + E1 + cycle 007 Workstream A):
   supervisor_node   (LLM classification: sql | docs | hybrid)
       |
   [routing dispatch] -> sql_agent_node                (route = "sql")
-                     -> unstructured_knowledge_node    (route = "docs" | "hybrid";
-                                                         same node, decomposition
-                                                         gated inside to hybrid only, D7)
+                     -> unstructured_knowledge_node    (route = "docs")
+                     -> hybrid_plan_node               (route = "hybrid": splits the question,
+                                                         then sql_agent_node runs the SQL half
+                                                         with its correction loop, then
+                                                         hybrid_docs_node the documents half)
       |
   sql_agent_node -> [check_result, C2] -> success:            synthesizer_node
                                         -> retriable error:    sql_agent_node (self-loop,
@@ -30,7 +32,8 @@ Graph structure (Phase B + C2 + D + E1 + cycle 007 Workstream A):
                                         -> terminal error, or
                                            retry_max exhausted: error_exit_node -> synthesizer_node
       |
-  docs/hybrid (unstructured_knowledge_node) ------------------> synthesizer_node
+  docs (unstructured_knowledge_node) -------------------------> synthesizer_node
+  hybrid: hybrid_plan_node -> sql_agent_node [C2 loop] -> hybrid_docs_node -> synthesizer_node
       |
   synthesizer_node  (always runs; generates answer_text)
 
@@ -67,7 +70,7 @@ from nodes.normalize import normalize_node
 from nodes.rewrite import rewrite_node
 from nodes.supervisor import supervisor_node
 from nodes.sql_agent import sql_agent_node
-from nodes.unstructured_knowledge import unstructured_knowledge_node
+from nodes.unstructured_knowledge import hybrid_docs_node, hybrid_plan_node, unstructured_knowledge_node
 from nodes.synthesizer import synthesizer_node
 from routing.registry import register, resolve, validate_routing_table
 
@@ -79,7 +82,7 @@ logger = logging.getLogger(__name__)
 # All three routes must be registered before validate_routing_table() is called.
 register("sql", sql_agent_node)
 register("docs", unstructured_knowledge_node)      # Part E1
-register("hybrid", unstructured_knowledge_node)    # Part E1; decomposition gated inside (D7)
+register("hybrid", hybrid_plan_node)               # D7: split, then the SQL agent, then hybrid_docs_node
 
 # Validate at module load time — unresolvable name = startup failure (A8).
 validate_routing_table()
@@ -108,6 +111,11 @@ def _route_after_supervisor(state: StateSyncState) -> str:
     return route
 
 
+def _timeout_retry_max() -> int:
+    """sql.timeout_retry_max as an accessor so tests can lower it (cfg is read-only)."""
+    return int(cfg.sql.timeout_retry_max)
+
+
 # ── Routing condition (called by LangGraph after sql_agent_node) — C2 ─────────
 def _route_after_sql(state: StateSyncState) -> str:
     """
@@ -132,6 +140,16 @@ def _route_after_sql(state: StateSyncState) -> str:
             last_error.category, state.attempt,
         )
         return "terminal"
+
+    if last_error.category == "timeout":
+        timeouts = sum(1 for e in state.errors if e.category == "timeout")
+        if timeouts > _timeout_retry_max():
+            logger.info(
+                "sql_agent timeout retry bound (sql.timeout_retry_max=%d) exceeded "
+                "at attempt=%d — exiting the loop.",
+                _timeout_retry_max(), state.attempt,
+            )
+            return "terminal"
 
     if state.attempt >= cfg.sql.retry_max:
         logger.info(
@@ -213,6 +231,27 @@ async def _hybrid_specialist(state: StateSyncState) -> dict[str, Any]:
     return _merge_with_scratch(state, update, "hybrid")
 
 
+async def _hybrid_docs(state: StateSyncState) -> dict[str, Any]:
+    update = await hybrid_docs_node(state.model_dump())
+    return _merge_with_scratch(state, update, "hybrid_docs")
+
+
+def _after_sql(state: StateSyncState) -> str:
+    """Where the SQL agent's run goes next: the correction-cycle decision (_route_after_sql), with
+    the hybrid route continuing to its documents half instead of straight to the synthesizer."""
+    outcome = _route_after_sql(state)
+    if outcome == "retry":
+        return "retry"
+    if outcome == "terminal":
+        return "terminal"
+    return "hybrid_docs" if state.route == "hybrid" else "success"
+
+
+def _after_error_exit(state: StateSyncState) -> str:
+    """A hybrid question whose SQL half failed still gets its documents half (as before 2026-10-02)."""
+    return "hybrid_docs" if state.route == "hybrid" else "synthesizer"
+
+
 async def _synthesizer(state: StateSyncState) -> dict[str, Any]:
     update = await synthesizer_node(state.model_dump())
     return _merge_with_scratch(state, update, "synthesizer")
@@ -239,6 +278,7 @@ def build_graph() -> StateGraph:
     builder.add_node("sql", _sql_specialist)
     builder.add_node("docs", _docs_specialist)
     builder.add_node("hybrid", _hybrid_specialist)
+    builder.add_node("hybrid_docs", _hybrid_docs)
     builder.add_node("error_exit", _error_exit)
     builder.add_node("synthesizer", _synthesizer)
 
@@ -272,18 +312,25 @@ def build_graph() -> StateGraph:
     # attempt < sql.retry_max before ever returning it.
     builder.add_conditional_edges(
         "sql",
-        _route_after_sql,
+        _after_sql,
         {
-            "success":  "synthesizer",
-            "retry":    "sql",
-            "terminal": "error_exit",
+            "success":     "synthesizer",
+            "retry":       "sql",
+            "terminal":    "error_exit",
+            "hybrid_docs": "hybrid_docs",
         },
     )
-    builder.add_edge("error_exit", "synthesizer")
+    builder.add_conditional_edges(
+        "error_exit",
+        _after_error_exit,
+        {"synthesizer": "synthesizer", "hybrid_docs": "hybrid_docs"},
+    )
 
-    # docs/hybrid never fail (static stub) → synthesizer directly.
-    builder.add_edge("docs",   "synthesizer")
-    builder.add_edge("hybrid", "synthesizer")
+    # docs never fails → synthesizer. hybrid: plan → the SQL agent (with its correction loop) →
+    # hybrid_docs → synthesizer (2026-10-02; it used to run its own single-shot SQL).
+    builder.add_edge("docs",        "synthesizer")
+    builder.add_edge("hybrid",      "sql")
+    builder.add_edge("hybrid_docs", "synthesizer")
 
     # synthesizer → END
     builder.add_edge("synthesizer", END)

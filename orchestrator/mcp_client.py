@@ -11,9 +11,11 @@ with a populated error field — it does not raise a transport-level fault.
 
 from __future__ import annotations
 
+import functools
 import logging
 import os
 import uuid
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -22,6 +24,25 @@ from config_loader import cfg
 logger = logging.getLogger(__name__)
 
 # ── Session ───────────────────────────────────────────────────────────────────
+MCP_TOKEN_FILE_ENV = "MCP_TOKEN_FILE"
+MCP_TOKEN_FILE_DEFAULT = "/run/secrets/mcp_token"
+
+
+@functools.lru_cache(maxsize=1)
+def service_token() -> str:
+    """The shared secret the MCP requires on every /rpc call (mcp/service_auth.py). Read once
+    from the Docker secret; a missing file raises here, at the first MCP call, rather than
+    sending requests the MCP will refuse."""
+    path = os.environ.get(MCP_TOKEN_FILE_ENV, MCP_TOKEN_FILE_DEFAULT)
+    try:
+        token = Path(path).read_text().strip()
+    except OSError as exc:
+        raise RuntimeError(f"No MCP service token at {path}; mount the mcp_token secret.") from exc
+    if not token:
+        raise RuntimeError(f"The MCP service token at {path} is empty.")
+    return token
+
+
 class MCPSession:
     """
     Represents a session context with the MCP service.
@@ -30,8 +51,17 @@ class MCPSession:
     """
 
     def __init__(self, tenant_id: str, base_url: str | None = None,
-                session_id: str | None = None) -> None:
+                session_id: str | None = None, workspace_id: str | None = None,
+                dataset: str | None = None) -> None:
         self.tenant_id = tenant_id
+        # The dataset the question is about. data_run_select sends it, so the
+        # MCP runs the SQL on the right database: ours for a built-in schema,
+        # the owner's for a connected one (mcp/connections.py, cn_... names).
+        self.dataset = dataset
+        # Phase 3: the workspace a question is asked in, carried as
+        # X-Workspace-ID. The MCP checks it against tenant and principal; it
+        # is routing information, not a credential.
+        self.workspace_id = workspace_id
         # Cycle 007 (audit 007 F-007-1): session_id now flows in from the
         # caller -- the conversation's real StateSyncState.session_id -- so
         # X-Session-ID actually identifies the conversation, which is what
@@ -51,9 +81,11 @@ class MCPSession:
                 connect=cfg.mcp.connect_timeout_s,
             ),
             headers={
+                "Authorization": f"Bearer {service_token()}",
                 "X-Tenant-ID": tenant_id,
                 "X-Session-ID": self.session_id,
                 "Content-Type": "application/json",
+                **({"X-Workspace-ID": workspace_id} if workspace_id else {}),
             },
         )
 
@@ -63,7 +95,7 @@ class MCPSession:
     async def __aexit__(self, *_: Any) -> None:
         await self._client.aclose()
 
-    async def call(self, method: str, params: dict[str, Any] | None = None) -> Any:
+    async def call(self, method: str, params: dict[str, Any] | None = None, timeout: float | None = None) -> Any:
         """
         Send a JSON-RPC 2.0 request to the MCP service.
 
@@ -89,7 +121,12 @@ class MCPSession:
             method, self.session_id, self.tenant_id,
         )
 
-        response = await self._client.post("/rpc", json=payload)
+        if timeout is None:
+            response = await self._client.post("/rpc", json=payload)
+        else:
+            response = await self._client.post(
+                "/rpc", json=payload, timeout=httpx.Timeout(timeout, connect=cfg.mcp.connect_timeout_s),
+            )
         response.raise_for_status()
 
         body = response.json()
@@ -164,6 +201,8 @@ async def data_run_select(
     params: dict[str, Any] = {"sql": sql}
     if max_rows is not None:
         params["max_rows"] = max_rows
+    if getattr(session, "dataset", None):
+        params["dataset"] = session.dataset
     return await session.call("data.run_select", params)
 
 
@@ -172,13 +211,32 @@ async def vector_semantic_search(
     query_text: str,
     top_k: int | None = None,
     document_ids: list[str] | None = None,
+    mode: str | None = None,
+    dataset: str | None = None,
+    scope: str | None = None,
+    rerank: str | None = None,
 ) -> dict[str, Any]:
-    """A4.6 vector.semantic_search"""
+    """A4.6 vector.semantic_search. mode ("dense" | "hybrid"), dataset and scope ("dataset") are sent
+    only when given; scope "all" and rerank "off" are the server's defaults and are not sent, so the
+    shipped request is unchanged."""
     params: dict[str, Any] = {"query_text": query_text}
     if top_k is not None:
         params["top_k"] = top_k
     if document_ids is not None:
         params["document_ids"] = document_ids
+    if mode is not None:
+        params["mode"] = mode
+    if dataset is not None:
+        params["dataset"] = dataset
+    if scope is not None and scope != "all":
+        params["scope"] = scope
+    if rerank is not None and rerank != "off":
+        params["rerank"] = rerank
+        # A re-ranked search waits on the cross-encoder; the session's 20 s default would time it out
+        # and lose the re-ranking. Wait the MCP's own budget: embedding + re-ranking + overhead.
+        timeout = (float(cfg.retrieval.embedding_timeout_s) + float(cfg.retrieval.rerank_timeout_s)
+                   + float(cfg.mcp.network_overhead_s))
+        return await session.call("vector.semantic_search", params, timeout=timeout)
     return await session.call("vector.semantic_search", params)
 
 
@@ -389,3 +447,39 @@ async def dashboards_manage(
         {"action": action, "principal_id": principal_id, **{k: v for k, v in params.items() if v is not None}},
     )
 
+
+
+async def workspaces_manage(
+    session: MCPSession,
+    principal_id: str,
+    action: str,
+    **params: Any,
+) -> dict[str, Any]:
+    """Forward a workspace action to the MCP workspaces.manage tool (Phase 3)."""
+    return await session.call(
+        "workspaces.manage",
+        {"action": action, "principal_id": principal_id, **{k: v for k, v in params.items() if v is not None}},
+    )
+
+
+async def library_manage(
+    session: MCPSession,
+    principal_id: str,
+    action: str,
+    **params: Any,
+) -> dict[str, Any]:
+    """Forward a document-library action to the MCP library.manage tool (Phase 3c).
+
+    add_chunks embeds a whole batch through Ollama before answering, and the MCP waits up to
+    retrieval.embedding_timeout_s for that. The session's default timeout (statement timeout
+    plus overhead, 20 s) is shorter, so a slow batch used to fail here while the MCP was still
+    working. add_chunks therefore waits the embedding timeout plus the network overhead, so
+    the MCP always answers first: with the chunks stored, or with "unavailable" and nothing
+    stored (which library_ingest may retry)."""
+    timeout = (float(cfg.retrieval.embedding_timeout_s) + float(cfg.mcp.network_overhead_s)
+               if action == "add_chunks" else None)
+    return await session.call(
+        "library.manage",
+        {"action": action, "principal_id": principal_id, **{k: v for k, v in params.items() if v is not None}},
+        timeout=timeout,
+    )

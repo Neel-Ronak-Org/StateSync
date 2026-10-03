@@ -11,6 +11,10 @@
 
 import type { Page, Route } from '@playwright/test'
 
+import { ConnectionsMock } from './mock-connections'
+import { LibraryMock } from './mock-library'
+import { WorkspaceMock } from './mock-workspaces'
+
 export const TOKEN = 'test-token-for-mocked-suite'
 export const API = 'http://localhost:8090'
 const SCHEMA_URL = 'https://vega.github.io/schema/vega-lite/v5.json'
@@ -174,6 +178,18 @@ export function cannedAnswer(question: string): Canned {
       citations: [{ kind: 'sql', ref: sql }],
     }
   }
+  if (q.includes('refund')) {
+    // An answer from an uploaded document: the server sends its title (Phase 3c slice 5).
+    return {
+      answer: 'Refunds are issued within 7 business days of the return being inspected.',
+      route: 'docs',
+      sql: null,
+      columns: [],
+      rows: [],
+      chart: null,
+      citations: [{ kind: 'chunk', ref: 'up_0123456789abcdef_c00004', page: 3, title: 'Refund policy 2026' }],
+    }
+  }
   if (q.includes('policy') || q.includes('document') || q.includes('sla')) {
     return {
       answer: 'FastShip 3 (LP003) commits to 20 hours for Metro Mumbai at a 99% on-time rate.',
@@ -218,9 +234,27 @@ export class MockApi {
   readonly tiles = new Map<string, Tile>()
   readonly dashboards = new Map<string, Dashboard>()
   readonly jobs = new Map<string, BuildJob>()
+  /** Workspaces (Phase 3): mock-workspaces.ts. */
+  readonly workspaces = new WorkspaceMock()
+  /** The document library (Phase 3c slice 5): mock-library.ts. */
+  readonly library = new LibraryMock()
+  /** The user's own databases (Phase 3c slice 6a): mock-connections.ts. */
+  readonly connections = new ConnectionsMock()
   private failures = new Map<string, { status: number; detail: string; headers?: Record<string, string> }>()
+  /** The browser session (orchestrator/session_api.py): set by POST /auth/session, cleared by DELETE. */
+  sessionActive = false
+  /** Every /auth/session call, to check the token is sent there and nowhere else. */
+  readonly authCalls: string[] = []
   storedRowsLimit: number | null = null
   nextChart: Record<string, unknown> | null = null
+  /** 'short' mimics pipeline.synth_style=short: /query returns no chart and says so in state_trace. */
+  nextSynthStyle: 'full' | 'short' = 'full'
+  /** Caveats the next /query reports in state_trace (pipeline.answer_checks); cleared after use. */
+  nextCaveats: string[] = []
+  /** The figure tracing the next /query reports (pipeline.number_grounding); cleared after use. */
+  nextGrounding: Json | null = null
+  /** When set, the next /query reports this evidence tier instead of the default (verified or unchecked). */
+  nextEvidence: 'verified' | 'compiled' | 'checked' | 'unchecked' | null = null
   /** When set, the next /query answer text is this instead of the canned one. */
   nextAnswer: string | null = null
   liveSchemas: string[] = []
@@ -237,6 +271,9 @@ export class MockApi {
   private jobSeq = 0
 
   constructor(options: { buildPlan?: BuildPlanItem[] } = {}) {
+    this.connections.workspaceIdsFor = (id) =>
+      [...this.workspaces.workspaces.values()].filter((w) => w.target_schema === id).map((w) => w.workspace_id)
+    this.workspaces.extraDataset = (schema) => this.connections.hasDataset(schema)
     if (options.buildPlan) {
       this.buildPlan = options.buildPlan
     }
@@ -345,11 +382,18 @@ export class MockApi {
     return new Date(this.clock).toISOString()
   }
 
+  /** Like the orchestrator's CORS: the app's own origin (never '*') and credentials, because the
+   *  session is a cookie (orchestrator/session_api.py). A wildcard would make the browser refuse. */
+  private cors(route: Route): Record<string, string> {
+    const origin = route.request().headers()['origin'] ?? 'http://localhost:3000'
+    return { 'access-control-allow-origin': origin, 'access-control-allow-credentials': 'true', vary: 'Origin' }
+  }
+
   private json(route: Route, status: number, body: unknown, headers: Record<string, string> = {}) {
     return route.fulfill({
       status,
       contentType: 'application/json',
-      headers: { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'Retry-After', ...headers },
+      headers: { ...this.cors(route), 'access-control-expose-headers': 'Retry-After', ...headers },
       body: JSON.stringify(body),
     })
   }
@@ -364,9 +408,9 @@ export class MockApi {
       return route.fulfill({
         status: 204,
         headers: {
-          'access-control-allow-origin': '*',
+          ...this.cors(route),
           'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE',
-          'access-control-allow-headers': 'authorization, content-type',
+          'access-control-allow-headers': 'authorization, content-type, x-filename, x-statesync',
         },
       })
     }
@@ -390,11 +434,35 @@ export class MockApi {
       return this.json(route, failure.status, { detail: failure.detail }, failure.headers)
     }
 
-    if (request.headers()['authorization'] !== `Bearer ${TOKEN}`) {
-      return this.json(route, 401, { detail: 'Missing or invalid bearer token.' })
+    if (path === '/auth/session') {
+      this.authCalls.push(method)
+      // Like the server: signing in and out require the X-StateSync header.
+      if (method !== 'GET' && request.headers()['x-statesync'] !== '1') {
+        return this.json(route, 403, { detail: 'The X-StateSync header is required.' })
+      }
+      if (method === 'POST') {
+        const sent = request.postData() ? (JSON.parse(request.postData() as string) as { token?: string }) : {}
+        if (sent.token !== TOKEN) return this.json(route, 401, { detail: 'That token is not valid.' })
+        this.sessionActive = true
+        return this.json(route, 200, { principal_id: 'p_test' })
+      }
+      if (method === 'DELETE') {
+        this.sessionActive = false
+        return this.json(route, 200, { ok: true })
+      }
     }
 
-    const body = request.postData() ? (JSON.parse(request.postData() as string) as Record<string, unknown>) : {}
+    // Like the server: a bearer header, or the session cookie WITH the X-StateSync header.
+    const headers = request.headers()
+    const viaSession = this.sessionActive && headers['x-statesync'] === '1'
+    if (headers['authorization'] !== `Bearer ${TOKEN}` && !viaSession) {
+      return this.json(route, 401, { detail: 'Missing or invalid bearer token.' })
+    }
+    if (path === '/auth/session' && method === 'GET') return this.json(route, 200, { principal_id: 'p_test' })
+
+    // An upload's body is the raw file, not JSON.
+    const isUpload = method === 'POST' && /^\/library\/folders\/[^/]+\/documents$/.test(path)
+    const body = !isUpload && request.postData() ? (JSON.parse(request.postData() as string) as Record<string, unknown>) : {}
 
     if (path === '/query' && method === 'POST') return this.query(route, body)
     if (path === '/sessions' && method === 'GET') {
@@ -433,6 +501,20 @@ export class MockApi {
     }
     if (path.startsWith('/dashboards')) return this.dashboardsRoute(route, method, path, url, body)
     if (path.startsWith('/tiles')) return this.tilesRoute(route, method, path, url, body)
+    if (path === '/library/connections' || path.startsWith('/library/connections/')) {
+      return this.connections.handle(route, method, path, body, (r, status, b) => this.json(r, status, b))
+    }
+    if (path.startsWith('/library/')) {
+      return this.library.handle(route, method, path, url.searchParams, body, (r, status, b) => this.json(r, status, b))
+    }
+    const wsFolders = path.match(/^\/workspaces\/([^/]+)\/folders$/)
+    if (wsFolders) {
+      const id = decodeURIComponent(wsFolders[1])
+      return this.library.workspaceFoldersRoute(route, method, id, body, (r, status, b) => this.json(r, status, b), this.workspaces.workspaces.has(id))
+    }
+    if (path === '/workspaces' || path.startsWith('/workspaces/')) {
+      return this.workspaces.handle(route, method, path, body, (r, status, b) => this.json(r, status, b))
+    }
     return this.json(route, 404, { detail: 'Not Found' })
   }
 
@@ -442,7 +524,25 @@ export class MockApi {
     const sessionId = String(body.session_id ?? `srv-${this.queries.length}`)
     const canned = cannedAnswer(question)
     const turns = this.sessions.get(sessionId) ?? []
-    const schema = String(body.schema ?? 'public')
+    let schema = String(body.schema ?? 'public')
+    // A workspace decides the dataset and must exist (orchestrator/main.py).
+    let verifiedExample = false
+    const workspaceId = typeof body.workspace_id === 'string' ? body.workspace_id : null
+    if (workspaceId) {
+      const ws = this.workspaces.workspaces.get(workspaceId)
+      if (!ws) return this.json(route, 404, { detail: 'No such workspace.' })
+      if (body.schema && body.schema !== ws.target_schema) {
+        return this.json(route, 409, {
+          detail: `This workspace uses the ${ws.target_schema} dataset, not ${String(body.schema)}.`,
+        })
+      }
+      schema = ws.target_schema
+      const exact = this.workspaces.exactExample(ws, question)
+      if (exact) {
+        verifiedExample = true
+        canned.sql = exact.sql
+      }
+    }
     const startedOn = turns[0]?.target_schema
     if (startedOn && startedOn !== schema) {
       return this.json(route, 409, {
@@ -457,6 +557,14 @@ export class MockApi {
       canned.chart = this.nextChart
       this.nextChart = null
     }
+    if (this.nextSynthStyle === 'short') canned.chart = null
+    const caveats = this.nextCaveats
+    this.nextCaveats = []
+    const grounding = this.nextGrounding
+    this.nextGrounding = null
+    // The default tier: an approved example ran as is, else new SQL nobody checked; no SQL, no tier.
+    const evidence = this.nextEvidence ?? (canned.sql ? (verifiedExample ? 'verified' : 'unchecked') : null)
+    this.nextEvidence = null
     const turnIndex = turns.length + 1
     const at = this.now()
     turns.push({
@@ -485,12 +593,19 @@ export class MockApi {
       state_trace: {
         query_id: `q-${this.queries.length}`,
         target_schema: schema,
+        workspace_id: workspaceId,
+        verified_example: verifiedExample,
+        evidence,
         route: canned.route,
         executed_sql: canned.sql,
+        ...(canned.sql ? { explanation: 'Counted rows in orders, grouped by order status.' } : {}),
         candidate_sql: canned.sql,
         sql_rows_count: canned.rows.length,
         sql_rows: canned.rows,
         sql_columns: canned.columns,
+        synth_style: this.nextSynthStyle,
+        ...(caveats.length > 0 ? { caveats } : {}),
+        ...(grounding ? { number_grounding: grounding } : {}),
         attempt: 1,
         errors: [],
         metrics: { tokens_in: 5164, tokens_out: 298, llm_calls: 5 },
@@ -503,6 +618,13 @@ export class MockApi {
         context_guessed: false,
         subtasks: [],
         retrievals: [],
+        calls: [
+          { role: 'normalizer', model: 'llama-3.1-8b-instant', tokens_in: 412, tokens_out: 38, cached_tokens: 0, retries: 0, waited_ms: 0, ms: 310, rate_remaining_tokens: 7588 },
+          { role: 'supervisor', model: 'llama-3.1-8b-instant', tokens_in: 655, tokens_out: 22, cached_tokens: 384, retries: 0, waited_ms: 0, ms: 280, rate_remaining_tokens: 6911 },
+          { role: 'sql', model: 'openai/gpt-oss-120b', tokens_in: 2104, tokens_out: 96, cached_tokens: 1024, retries: 0, waited_ms: 0, ms: 1240, rate_remaining_tokens: 4800 },
+          { role: 'sql', model: 'openai/gpt-oss-120b', tokens_in: 1290, tokens_out: 71, cached_tokens: 0, retries: 1, waited_ms: 2000, ms: 3410, rate_remaining_tokens: 3500 },
+          { role: 'synthesizer', model: 'openai/gpt-oss-120b', tokens_in: 703, tokens_out: 71, cached_tokens: 0, retries: 0, waited_ms: 0, ms: 840, rate_remaining_tokens: 2700 },
+        ],
       },
     })
   }

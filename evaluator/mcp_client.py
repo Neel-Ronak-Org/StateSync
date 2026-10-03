@@ -18,8 +18,21 @@ import os
 import uuid
 from typing import Any
 
+from pathlib import Path
+
 import httpx
 from config_loader import cfg
+
+# The evaluator's OWN MCP token (mcp/service_auth.py rule 5): it may call data.run_select on
+# the built-in datasets only. Never the orchestrator's token.
+MCP_TOKEN_FILE = os.environ.get("MCP_EVALUATOR_TOKEN_FILE", "/run/secrets/mcp_token_evaluator")
+
+
+def _service_token() -> str:
+    try:
+        return Path(MCP_TOKEN_FILE).read_text().strip()
+    except OSError as exc:
+        raise RuntimeError(f"No evaluator MCP token at {MCP_TOKEN_FILE}; mount the mcp_token_evaluator secret.") from exc
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +53,7 @@ class MCPSession:
                 connect=cfg.mcp.connect_timeout_s,
             ),
             headers={
+                "Authorization": f"Bearer {_service_token()}",
                 "X-Tenant-ID": tenant_id,
                 "X-Session-ID": self.session_id,
                 "Content-Type": "application/json",

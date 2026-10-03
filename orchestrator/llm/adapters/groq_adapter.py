@@ -47,6 +47,11 @@ logger = logging.getLogger(__name__)
 _PLACEHOLDER_PREFIX = "REPLACE"
 
 
+def _max_total_wait_s() -> float:
+    """models.groq_max_total_wait_s as an accessor so tests can lower it (cfg is read-only)."""
+    return float(cfg.models.groq_max_total_wait_s)
+
+
 class GroqConfigError(RuntimeError):
     """Groq is selected but its key or configuration is unusable.
 
@@ -162,25 +167,39 @@ class GroqAdapter:
 
         attempts = int(cfg.models.groq_max_retries) + 1
         backoff = float(cfg.models.groq_retry_base_delay_s)
+        waited_s = 0.0
+        retries = 0
+        headers: dict = {}
         for attempt in range(attempts):
             try:
-                completion = await self._client.chat.completions.create(
+                raw = await self._client.chat.completions.with_raw_response.create(
                     model=self.model,
                     max_completion_tokens=budget,
                     temperature=cfg.models.temperature,
                     messages=[{"role": "system", "content": system}] + messages,
                     **extra,
                 )
+                headers = raw.headers
+                completion = raw.parse()
                 break
             except (RateLimitError, InternalServerError, APIConnectionError) as exc:
                 if attempt == attempts - 1:
                     raise
                 delay = self._retry_delay(exc, backoff)
+                if waited_s + delay > _max_total_wait_s():
+                    logger.warning(
+                        "Groq gave up after %.1fs of waiting (models.groq_max_total_wait_s=%.1f, "
+                        "model=%s); raising %s.",
+                        waited_s, _max_total_wait_s(), self.model, type(exc).__name__,
+                    )
+                    raise
                 logger.warning(
                     "Groq call failed transiently (%s, attempt %d/%d, model=%s); retrying in %.1fs.",
                     type(exc).__name__, attempt + 1, attempts, self.model, delay,
                 )
                 await asyncio.sleep(delay)
+                waited_s += delay
+                retries += 1
                 backoff *= 2
 
         choice = completion.choices[0]
@@ -193,6 +212,11 @@ class GroqAdapter:
                 budget, self.model,
             )
         usage = completion.usage
+        details = getattr(usage, "prompt_tokens_details", None)
+        try:
+            remaining: int | None = int(headers.get("x-ratelimit-remaining-tokens", ""))
+        except (TypeError, ValueError):
+            remaining = None
         return LLMResponse(
             text=text,
             # completion_tokens includes reasoning tokens: they are billed and
@@ -200,4 +224,8 @@ class GroqAdapter:
             # the accounting. A missing usage block undercounts rather than crashes.
             tokens_in=getattr(usage, "prompt_tokens", 0) or 0,
             tokens_out=getattr(usage, "completion_tokens", 0) or 0,
+            cached_tokens=getattr(details, "cached_tokens", 0) or 0,
+            retries=retries,
+            waited_ms=int(waited_s * 1000),  # noqa: literals - seconds to milliseconds
+            rate_remaining_tokens=remaining,
         )

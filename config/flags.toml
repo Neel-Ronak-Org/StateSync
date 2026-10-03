@@ -221,6 +221,24 @@ enabled                         = true   # D7 cost gate; read at query entry
 [evaluation.vision_scorer]
 enabled                         = false  # D11 stretch; resolved at process start
 
+# Phase 3b lean-pipeline experiments (docs/V3_PLAN.md D-v3-16, scope review).
+# Each ships at today's behaviour; a variant becomes the default only after the
+# Groq baseline (scripts/eval_groq.py) shows accuracy holds and cost falls.
+# Guarded by scripts/shipped_flags.py SHIPPED_DEFAULTS.
+[pipeline]
+language_gate                   = "llm"      # "llm": ask the model every time | "script": only for non-English text
+router_mode                     = "always"   # "always" | "when_documents": skip routing for sources without documents
+sql_draft_mode                  = "llm"      # "llm": draft + live sampling | "profiles": one SQL call with column profiles
+synth_style                     = "full"     # "full" | "short": <= 3 sentences, no chart proposal, numbers formatted by rule
+answer_checks                   = "off"      # "off" | "on": deterministic checks after the SQL runs (join fan-out, date coverage, truncation, empty aggregates)
+templates                       = "off"      # "off" | "on": answer from a template of an approved query when only the values differ (the "compiled" tier)
+number_grounding                = "on"       # "off" | "on": trace every figure in the prose to a result cell, total, the question or a cited passage; unmatched figures become a caveat (never changes SQL or rows)
+retrieval_mode                  = "dense"    # "dense" | "hybrid": keyword (BM25) leg fused with the dense search by reciprocal rank fusion (docs/specs/rag_v2.md Phase D)
+doc_scope                       = "all"      # "all" | "dataset": sample-corpus documents limited to the question's dataset (prefixes: retrieval.dataset_document_prefixes in statesync.toml); uploads unaffected (Phase E)
+doc_abstain                     = "off"      # "off" | "on": the docs route answers "not found" without a model call when nothing relevant was retrieved (Phase E; thresholds: retrieval.abstain_min_* in statesync.toml)
+rerank                          = "off"      # "off" | "minilm" | "bge": re-score the top candidates with a cross-encoder (reranker service; docs/specs/rag_v3.md)
+query_rewrite                   = "off"      # "off" | "llm": the docs route searches with a short rewrite of the question from the normaliser model (docs/specs/rag_v3.md)
+
 [tenancy]
 enforced                        = false  # D6; threading is mandatory even when false
 

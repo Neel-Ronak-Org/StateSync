@@ -55,6 +55,12 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FLAGS_PATH = REPO_ROOT / "config" / "flags.toml"
+# A few shipped switches live in config/statesync.toml, not flags.toml (the layout
+# chunker, docs/specs/rag_v2.md Phase C: [library].chunker; and [retrieval].hybrid_dense_lists, F0). Sections listed here
+# are read from that file with a real TOML parser; every other section is read
+# from flags.toml as before.
+STATESYNC_PATH = REPO_ROOT / "config" / "statesync.toml"
+STATESYNC_SECTIONS = frozenset({"library", "retrieval"})
 ORCHESTRATOR_CONTAINER = "statesync-orchestrator-1"
 
 # The single source of truth. scripts/verify_seams.py's F-V6 imports this
@@ -75,11 +81,48 @@ SHIPPED_DEFAULTS: dict[tuple[str, str], str] = {
     # value is what produced 80d35c8's silent wrong-corpus measurement, and
     # until now nothing guarded it or recorded it in a report's provenance.
     ("schema_retriever", "target_schema"): "public",
+    # Phase 3b lean-pipeline experiments (docs/V3_PLAN.md D-v3-16): each ships
+    # at today's behaviour until the Groq baseline shows a variant holds.
+    ("pipeline", "language_gate"): "llm",
+    ("pipeline", "router_mode"): "always",
+    ("pipeline", "sql_draft_mode"): "llm",
+    ("pipeline", "synth_style"): "full",
+    ("pipeline", "answer_checks"): "off",
+    ("pipeline", "templates"): "off",
+    # Answers you can check: annotation plus a caveat, never a change to SQL or rows.
+    ("pipeline", "number_grounding"): "on",
+    # RAG v2 Phase D: "dense" is today's cosine-only document search; "hybrid" fuses it with BM25.
+    ("pipeline", "retrieval_mode"): "dense",
+    # RAG v2 Phase E: "all" is today's search over every sample document; "dataset" keeps only
+    # the question's dataset. "off" never abstains; "on" answers "not found" without a model call.
+    ("pipeline", "doc_scope"): "all",
+    ("pipeline", "doc_abstain"): "off",
+    # RAG v3 (docs/specs/rag_v3.md): cross-encoder re-ranking and search-query rewriting, both off.
+    ("pipeline", "rerank"): "off",
+    ("pipeline", "query_rewrite"): "off",
+    # RAG v2 (docs/specs/rag_v2.md): how an upload is cut into chunks. "paragraph" is
+    # today's flat-page chunker; "layout" cuts by heading and keeps tables whole.
+    ("library", "chunker"): "paragraph",
+    # RAG v2 F0 (post-hoc): "separate" hands RRF the sample and upload dense lists as two lists
+    # (today's hybrid); "merged" sorts them together by cosine and hands it one. [retrieval] in statesync.toml.
+    ("retrieval", "hybrid_dense_lists"): "separate",
 }
 
 
 class FlagStateError(RuntimeError):
     """Raised when a measurement would run against a non-shipped flag state."""
+
+
+def _statesync_value(section: str, key: str) -> str | None:
+    """A shipped switch from config/statesync.toml as its parsed string; None if it cannot be read."""
+    import tomllib
+    try:
+        value = tomllib.loads(STATESYNC_PATH.read_text()).get(section, {}).get(key)
+    except (OSError, tomllib.TOMLDecodeError):
+        return None
+    if value is None:
+        return None
+    return str(value).lower() if isinstance(value, bool) else str(value)
 
 
 def read_flag_state(flags_text: str | None = None) -> dict[str, str | None]:
@@ -96,6 +139,9 @@ def read_flag_state(flags_text: str | None = None) -> dict[str, str | None]:
         flags_text = FLAGS_PATH.read_text()
     state: dict[str, str | None] = {}
     for section, key in SHIPPED_DEFAULTS:
+        if section in STATESYNC_SECTIONS:
+            state[f"{section}.{key}"] = _statesync_value(section, key)
+            continue
         pattern = (rf"\[{re.escape(section)}\]\s*\n(?:[^\[]*?\n)*\s*"
                    rf"{re.escape(key)}\s*=\s*(true|false|\"[^\"]*\")")
         m = re.search(pattern, flags_text)
@@ -151,13 +197,13 @@ def live_staleness() -> dict[str, object] | None:
     started = _container_started_at()
     if started is None:
         return {"reason": "orchestrator container is not running (or not inspectable)"}
-    mtime = FLAGS_PATH.stat().st_mtime
+    mtime = max(FLAGS_PATH.stat().st_mtime, STATESYNC_PATH.stat().st_mtime)
     if started >= mtime:
         return None
     from datetime import datetime
     return {
-        "reason": "config/flags.toml was modified AFTER the orchestrator started, "
-                  "so the running process may hold superseded flag values "
+        "reason": "config/flags.toml or config/statesync.toml was modified AFTER the orchestrator "
+                  "started, so the running process may hold superseded flag values "
                   "(flags are read at process start, not per query)",
         "flags_mtime": datetime.fromtimestamp(mtime).isoformat(timespec="seconds"),
         "orchestrator_started": datetime.fromtimestamp(started).isoformat(timespec="seconds"),

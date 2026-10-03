@@ -53,6 +53,17 @@ DB_PATH = Path(os.environ.get("EVAL_DB_PATH", "/app/data/eval_history.db"))
 ORCH_URL = os.environ.get("ORCHESTRATOR_URL", "http://orchestrator:8090")
 FIXTURES_DIR = Path(os.environ.get("FIXTURES_DIR", "/app/fixtures"))
 TENANT_ID = str(cfg.tenancy.default_tenant)
+# The evaluator's own API principal (scripts/gen_api_principal.py --principal-id p_evaluator):
+# /query requires a bearer token like any caller, so without it every run was refused (401).
+API_TOKEN_FILE = os.environ.get("EVALUATOR_API_TOKEN_FILE", "/run/secrets/api_token_evaluator")
+
+
+def _api_headers() -> dict[str, str]:
+    try:
+        token = Path(API_TOKEN_FILE).read_text().strip()
+    except OSError as exc:
+        raise RuntimeError(f"No evaluator API token at {API_TOKEN_FILE}; mount the api_token_evaluator secret.") from exc
+    return {"Authorization": f"Bearer {token}"}
 
 _run_lock = asyncio.Lock()
 
@@ -158,7 +169,8 @@ async def run_evaluation(trigger: str) -> dict[str, Any]:
         started = datetime.now(timezone.utc).isoformat()
         logger.info("Evaluation run %s starting (trigger=%s)...", run_id, trigger)
 
-        async with httpx.AsyncClient(timeout=httpx.Timeout(float(cfg.evaluation.query_timeout_s))) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(float(cfg.evaluation.query_timeout_s)),
+                                     headers=_api_headers()) as client:
             execution_result = await _score_execution(client)
             spec_result = await _score_spec(client)
             vision_attempted = await _maybe_run_vision(spec_result)

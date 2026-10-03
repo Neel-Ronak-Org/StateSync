@@ -59,8 +59,12 @@ export function writeJson(key: string, value: unknown, which: Area = 'local'): v
 
 /** Keys in one place, so a rename cannot orphan a value. */
 export const KEYS = {
+  /** Legacy: where older versions kept the API token. Read once, exchanged, deleted (lib/auth.ts). */
   token: 'statesync.token',
+  /** A non-secret signed-in marker (the principal id); the session itself is an HttpOnly cookie. */
+  signedIn: 'statesync.signedIn',
   corpus: 'statesync.corpus',
+  workspace: 'statesync.workspace',
   session: 'statesync.session',
   thread: 'statesync.thread',
   theme: 'statesync.theme',

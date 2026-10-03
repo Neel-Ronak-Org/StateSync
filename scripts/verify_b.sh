@@ -20,6 +20,11 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 ORCH_URL="${ORCHESTRATOR_URL:-http://localhost:8090}"
 MCP_URL="${MCP_URL:-http://localhost:8080}"
+# The MCP refuses /rpc without its service token (mcp/service_auth.py). curl reads the header
+# from a private temp file, so the token never appears in the process list.
+MCP_AUTH_HEADER_FILE="$(mktemp)"
+trap 'rm -f "${MCP_AUTH_HEADER_FILE}"' EXIT
+printf 'Authorization: Bearer %s\n' "$(tr -d '[:space:]' < "${MCP_TOKEN_FILE:-${REPO_ROOT}/secrets/mcp_token}")" > "${MCP_AUTH_HEADER_FILE}"
 STATESYNC_API_TOKEN="${STATESYNC_API_TOKEN:-}"
 if [[ -z "${STATESYNC_API_TOKEN}" && -f "${REPO_ROOT}/secrets/api_token_dev" ]]; then
   STATESYNC_API_TOKEN="$(tr -d '[:space:]' < "${REPO_ROOT}/secrets/api_token_dev")"
@@ -237,6 +242,7 @@ echo "Testing Layer 1 statement gate via data.run_select..."
 RESULT1=$(curl -sf -X POST "${MCP_URL}/rpc" \
   -H "Content-Type: application/json" \
   -H "X-Tenant-ID: t_capstone_default" \
+  -H "@${MCP_AUTH_HEADER_FILE}" \
   -H "X-Session-ID: bv6-test-1" \
   -d '{"jsonrpc":"2.0","id":"t1","method":"data.run_select","params":{"sql":"SELECT 1; DROP TABLE orders;"}}' \
   2>/dev/null || echo '{}')
@@ -252,6 +258,7 @@ fi
 RESULT2=$(curl -sf -X POST "${MCP_URL}/rpc" \
   -H "Content-Type: application/json" \
   -H "X-Tenant-ID: t_capstone_default" \
+  -H "@${MCP_AUTH_HEADER_FILE}" \
   -H "X-Session-ID: bv6-test-2" \
   -d '{"jsonrpc":"2.0","id":"t2","method":"data.run_select","params":{"sql":"WITH x AS (INSERT INTO disputes VALUES ('"'"'d'"'"','"'"'o'"'"',now(),'"'"'c'"'"',null,'"'"'n'"'"') RETURNING 1) SELECT * FROM x"}}' \
   2>/dev/null || echo '{}')
@@ -266,6 +273,7 @@ fi
 RESULT3=$(curl -sf -X POST "${MCP_URL}/rpc" \
   -H "Content-Type: application/json" \
   -H "X-Tenant-ID: t_capstone_default" \
+  -H "@${MCP_AUTH_HEADER_FILE}" \
   -H "X-Session-ID: bv6-test-3" \
   -d '{"jsonrpc":"2.0","id":"t3","method":"data.run_select","params":{"sql":"SELECT * FROM orders LIMIT 5"}}' \
   2>/dev/null || echo '{}')
@@ -283,6 +291,7 @@ echo "Submitting a query with a bad column reference..."
 BAD_SQL_RESPONSE=$(curl -sf -X POST "${MCP_URL}/rpc" \
   -H "Content-Type: application/json" \
   -H "X-Tenant-ID: t_capstone_default" \
+  -H "@${MCP_AUTH_HEADER_FILE}" \
   -H "X-Session-ID: bv7-test" \
   -d '{"jsonrpc":"2.0","id":"v7","method":"data.run_select","params":{"sql":"SELECT s.display_name, AVG(f.delivered_at - f.promised_at) AS delay FROM fulfillments f JOIN sellers s ON f.seller_id = s.seller_id GROUP BY s.display_name"}}' \
   2>/dev/null || echo '{}')

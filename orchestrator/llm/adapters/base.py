@@ -17,6 +17,11 @@ class LLMResponse:
     text: str
     tokens_in: int
     tokens_out: int
+    # Per-call accounting a provider may report; adapters that cannot keep the defaults.
+    cached_tokens: int = 0
+    retries: int = 0
+    waited_ms: int = 0
+    rate_remaining_tokens: int | None = None
 
 
 @runtime_checkable

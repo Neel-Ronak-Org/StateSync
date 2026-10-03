@@ -1,11 +1,12 @@
 # StateSync live-data simulator (docs/V3_PLAN.md Phase 2b, migration 020).
 # Build by explicit service name only: `docker compose build simulator`.
-FROM python:3.12-slim
+FROM python:3.12.14-slim
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /usr/local/bin/uv
 
 WORKDIR /app
-RUN uv pip install --system --no-cache "psycopg[binary]>=3.1.0"
+COPY requirements.lock ./
+RUN uv pip install --system --no-cache -r requirements.lock
 
 COPY model.py main.py ./
 

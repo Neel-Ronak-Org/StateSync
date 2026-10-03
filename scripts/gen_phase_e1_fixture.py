@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+import mcp_auth  # noqa: E402 -- scripts/mcp_auth.py: the MCP service token
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT_PATH = REPO_ROOT / "fixtures" / "golden" / "phase_e1.json"
@@ -42,7 +43,7 @@ def mcp_run_select(sql: str) -> dict:
     result = subprocess.run(
         ["curl", "-s", "-X", "POST", f"{MCP_URL}/rpc",
          "-H", "Content-Type: application/json",
-         "-H", f"X-Tenant-ID: {TENANT}",
+         "-H", f"X-Tenant-ID: {TENANT}", *mcp_auth.curl_header_args(),
          "-H", "X-Session-ID: gen-phase-e1-fixture",
          "-d", payload],
         capture_output=True, text=True, check=True,

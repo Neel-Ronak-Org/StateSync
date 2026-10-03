@@ -1,0 +1,6 @@
+# simulator/requirements.lock: the exact packages the simulator image installs (Docker builds use this, not
+# pyproject ranges). Frozen 2026-10-02 from the running container (python 3.12.14).
+# Regenerate after an intended upgrade: docker compose exec -T simulator pip freeze, minus pip/setuptools.
+psycopg-binary==3.3.6
+psycopg==3.3.6
+typing_extensions==4.16.0

@@ -6,7 +6,7 @@ import ReactGridLayout, { useContainerWidth, verticalCompactor, type EventCallba
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 
-import type { Dashboard } from '@/api/types'
+import type { Dashboard, Workspace } from '@/api/types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -34,6 +34,7 @@ import { TileCard } from '@/features/dashboard/TileCard'
 import { useBuild } from '@/features/dashboard/useBuild'
 import { useDashboards } from '@/features/dashboard/useDashboards'
 import { useTiles } from '@/features/dashboard/useTiles'
+import { useDatasetLabel } from '@/features/library/useConnections'
 import { DatasetPicker } from '@/features/shell/DatasetPicker'
 import { useNow } from '@/hooks/useNow'
 import { formatRelativeTime } from '@/lib/format'
@@ -45,7 +46,10 @@ interface DashboardsViewProps {
   dataset: string
   availableSchemas: string[]
   liveSchemas: string[]
+  workspaces?: Workspace[]
+  activeWorkspaceId?: string | null
   onChangeDataset: (dataset: string) => void
+  onSelectWorkspace?: (workspaceId: string) => void
   devMode: boolean
   onAsk: () => void
 }
@@ -82,11 +86,15 @@ export function DashboardsView({
   dataset,
   availableSchemas,
   liveSchemas,
+  workspaces,
+  activeWorkspaceId,
   onChangeDataset,
+  onSelectWorkspace,
   devMode,
   onAsk,
 }: DashboardsViewProps) {
   const boards = useDashboards(dataset)
+  const datasetLabel = useDatasetLabel([dataset])
   const active = boards.active
   const tiles = useTiles(active?.dashboard_id ?? null)
   const build = useBuild(active?.dashboard_id ?? null)
@@ -143,7 +151,10 @@ export function DashboardsView({
     else if (view.length > 0) target = await boards.create(name || 'AI insights')
     if (!target) return
     setDismissedJob(null)
-    await build.start(target.dashboard_id, goal || undefined)
+    // The open workspace's approved knowledge guides the build when it is on this dataset.
+    const workspace = workspaces?.find((w) => w.workspace_id === activeWorkspaceId)
+    const workspaceId = workspace && workspace.target_schema === target.target_schema ? workspace.workspace_id : undefined
+    await build.start(target.dashboard_id, goal || undefined, workspaceId)
   }
 
   const job = build.job && build.job.job_id !== dismissedJob ? build.job : null
@@ -207,7 +218,15 @@ export function DashboardsView({
 
         <div className="flex shrink-0 items-center gap-2">
           {active && <LiveIndicator live={live} updatedAt={tiles.dataUpdatedAt} />}
-          <DatasetPicker dataset={dataset} available={availableSchemas} live={liveSchemas} onChange={onChangeDataset} />
+          <DatasetPicker
+            dataset={dataset}
+            available={availableSchemas}
+            live={liveSchemas}
+            workspaces={workspaces}
+            activeWorkspaceId={activeWorkspaceId}
+            onSelectDataset={onChangeDataset}
+            onSelectWorkspace={onSelectWorkspace}
+          />
           {active && view.length > 0 && (
             <>
               <Button
@@ -255,7 +274,7 @@ export function DashboardsView({
           </div>
         ) : noDashboards ? (
           <EmptyState
-            title={<>No dashboards for <span className="text-primary">{dataset}</span> yet</>}
+            title={<>No dashboards for <span className="text-primary">{datasetLabel(dataset)}</span> yet</>}
             text="Let the AI plan one from the data, or start empty and pin answers from Ask."
             onBuild={() => setBuildOpen(true)}
             secondary={{ label: 'Start empty', onClick: () => void boards.create('Overview') }}
@@ -323,7 +342,7 @@ export function DashboardsView({
       <BuildDialog
         open={buildOpen}
         onOpenChange={setBuildOpen}
-        dataset={dataset}
+        dataset={datasetLabel(dataset)}
         needsName={Boolean(active && view.length > 0)}
         onBuild={startBuild}
       />

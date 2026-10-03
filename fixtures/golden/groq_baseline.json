@@ -1,0 +1,169 @@
+{
+ "_about": "Fixed 30-question accuracy baseline for the Groq models: small enough to run inside one free-tier day (about 5k tokens per question), stable enough to compare across models and prompt changes. It references existing fixture items by id; no question or answer is copied here. Selection rule (deterministic, in file order, no cherry-picking): the first 5 eligible items of olist.json; the first 5 of olist_hard.json; the first 8 English (lang absent or 'en') items of phase_c2.json excluding c2g_03, c2g_10 and c2g_18 (their reference results are empty, so any empty answer scores correct; docs/open_items.md 'Three unfailable fixture queries'); the first 6 items of phase_e1.json with expected_route 'docs' and non-empty expected_chunk_ids; the first 3 conversations of multi_turn.json whose first two turns both have ground_truth_sql, taking their first 2 turns (6 questions). Eligible SQL items have expected_route 'sql' and a ground_truth_sql. Total 5+5+8+6+6 = 30. All multi_turn conversations are on the olist schema (their SQL is olist-qualified).",
+ "items": [
+  {
+   "source": "olist.json",
+   "id": "ol_001",
+   "schema": "olist",
+   "kind": "sql"
+  },
+  {
+   "source": "olist.json",
+   "id": "ol_002",
+   "schema": "olist",
+   "kind": "sql"
+  },
+  {
+   "source": "olist.json",
+   "id": "ol_003",
+   "schema": "olist",
+   "kind": "sql"
+  },
+  {
+   "source": "olist.json",
+   "id": "ol_004",
+   "schema": "olist",
+   "kind": "sql"
+  },
+  {
+   "source": "olist.json",
+   "id": "ol_005",
+   "schema": "olist",
+   "kind": "sql"
+  },
+  {
+   "source": "olist_hard.json",
+   "id": "oh_j01",
+   "schema": "olist",
+   "kind": "sql"
+  },
+  {
+   "source": "olist_hard.json",
+   "id": "oh_j02",
+   "schema": "olist",
+   "kind": "sql"
+  },
+  {
+   "source": "olist_hard.json",
+   "id": "oh_j03",
+   "schema": "olist",
+   "kind": "sql"
+  },
+  {
+   "source": "olist_hard.json",
+   "id": "oh_j04",
+   "schema": "olist",
+   "kind": "sql"
+  },
+  {
+   "source": "olist_hard.json",
+   "id": "oh_j05",
+   "schema": "olist",
+   "kind": "sql"
+  },
+  {
+   "source": "phase_c2.json",
+   "id": "c2g_01",
+   "schema": "public",
+   "kind": "sql"
+  },
+  {
+   "source": "phase_c2.json",
+   "id": "c2g_02",
+   "schema": "public",
+   "kind": "sql"
+  },
+  {
+   "source": "phase_c2.json",
+   "id": "c2g_04",
+   "schema": "public",
+   "kind": "sql"
+  },
+  {
+   "source": "phase_c2.json",
+   "id": "c2g_05",
+   "schema": "public",
+   "kind": "sql"
+  },
+  {
+   "source": "phase_c2.json",
+   "id": "c2g_06",
+   "schema": "public",
+   "kind": "sql"
+  },
+  {
+   "source": "phase_c2.json",
+   "id": "c2g_07",
+   "schema": "public",
+   "kind": "sql"
+  },
+  {
+   "source": "phase_c2.json",
+   "id": "c2g_08",
+   "schema": "public",
+   "kind": "sql"
+  },
+  {
+   "source": "phase_c2.json",
+   "id": "c2g_09",
+   "schema": "public",
+   "kind": "sql"
+  },
+  {
+   "source": "phase_e1.json",
+   "id": "e1_doc_001",
+   "schema": "public",
+   "kind": "docs"
+  },
+  {
+   "source": "phase_e1.json",
+   "id": "e1_doc_002",
+   "schema": "public",
+   "kind": "docs"
+  },
+  {
+   "source": "phase_e1.json",
+   "id": "e1_doc_003",
+   "schema": "public",
+   "kind": "docs"
+  },
+  {
+   "source": "phase_e1.json",
+   "id": "e1_doc_004",
+   "schema": "public",
+   "kind": "docs"
+  },
+  {
+   "source": "phase_e1.json",
+   "id": "e1_doc_005",
+   "schema": "public",
+   "kind": "docs"
+  },
+  {
+   "source": "phase_e1.json",
+   "id": "e1_doc_006",
+   "schema": "public",
+   "kind": "docs"
+  }
+ ],
+ "conversations": [
+  {
+   "source": "multi_turn.json",
+   "conversation_id": "mt_01",
+   "schema": "olist",
+   "turns": 2
+  },
+  {
+   "source": "multi_turn.json",
+   "conversation_id": "mt_02",
+   "schema": "olist",
+   "turns": 2
+  },
+  {
+   "source": "multi_turn.json",
+   "conversation_id": "mt_03",
+   "schema": "olist",
+   "turns": 2
+  }
+ ]
+}

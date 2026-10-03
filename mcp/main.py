@@ -1,6 +1,6 @@
 """
 mcp/main.py
-MCP service — JSON-RPC 2.0 server exposing the 9 Phase-B + C1 + E1 tools.
+MCP service — JSON-RPC 2.0 server exposing the tools below (20, the mcp.tool_ceiling).
 
 Tools exposed (A4):
   schema.list_tables      (A4.1)
@@ -16,11 +16,17 @@ Tools exposed (A4):
   history.get_recent_turns  (cycle 007, Workstream A)
   history.check_session     (session ownership, docs/V3_PLAN.md 0.2)
   tiles.manage              (dashboard tiles, docs/V3_PLAN.md Phase 1)
+  dashboards.manage         (named dashboards, Phase 2b)
+  workspaces.manage         (workspaces and knowledge store, Phase 3)
+  library.manage            (account document library, Phase 3c slice 5)
   history.get_turn_rows     (full result-set storage)
   audit.record              (per-identity audit log)
 
 Per A4: tenant_id is bound at session establishment from the X-Tenant-ID header.
 It is not a tool parameter — it is injected server-side by session middleware.
+
+Only the orchestrator may call /rpc: every request must carry the shared service
+token (service_auth.py), checked before the headers above are trusted. /health is open.
 
 Per A4.4: A failed query returns ok: false — it does NOT raise a transport-level
 fault. JSON-RPC errors are reserved for protocol failures only.
@@ -42,6 +48,7 @@ from db import init_pool, close_pool, get_connection, init_history_pool, close_h
 from embeddings import close_embeddings_client
 from fingerprint import verify_fingerprint_at_startup
 from qdrant_store import init_qdrant, close_qdrant
+from service_auth import ServiceTokenMissing, identify, load_callers
 from session import (set_session, enforce_tenancy_policy,
                      TenancyPolicyNotImplemented, TenantNotAllowed,
                      TenancyAcknowledgementMissing)
@@ -52,6 +59,9 @@ from tools.memory_tools import get_trajectory, put_trajectory
 from serialization import to_json_safe
 from tools.tile_tools import manage as tiles_manage
 from tools.dashboard_tools import manage as dashboards_manage
+from tools.workspace_tools import manage as workspaces_manage
+from connections import close_all as close_external_connections
+from tools.library_tools import manage as library_manage
 from tools.history_tools import (append_turn, check_session, delete_session, get_recent_turns,
                                  get_turn_rows, list_sessions, record_audit)
 
@@ -64,6 +74,12 @@ logger = logging.getLogger(__name__)
 # ── Lifespan ──────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Fail closed (service_auth.py rule 2): no token, no server.
+    try:
+        app.state.service_callers = load_callers(list(cfg.mcp.evaluator_methods))
+    except ServiceTokenMissing as exc:
+        logger.critical("%s", exc)
+        raise
     await init_pool()
     await init_history_pool()
 
@@ -77,6 +93,7 @@ async def lifespan(app: FastAPI):
     logger.info("MCP service ready. Exposing %d tools.", len(_REGISTERED_TOOLS))
     yield
     await close_qdrant()
+    await close_external_connections()
     await close_embeddings_client()
     await close_pool()
     await close_history_pool()
@@ -114,6 +131,8 @@ _REGISTERED_TOOLS: dict[str, Any] = {
     "history.list_sessions":    list_sessions,
     "tiles.manage":             tiles_manage,
     "dashboards.manage":        dashboards_manage,
+    "workspaces.manage":        workspaces_manage,
+    "library.manage":           library_manage,
     "history.delete_session":   delete_session,
     "audit.record": record_audit,
 }
@@ -124,6 +143,9 @@ assert len(_REGISTERED_TOOLS) <= TOOL_CEILING, (
 )
 
 
+
+
+RPC_UNAUTHORIZED = -32001  # noqa: literals - JSON-RPC implementation-defined server error (-32000..-32099)
 
 
 def _serialize_json(obj: Any) -> Any:
@@ -156,6 +178,14 @@ async def rpc_handler(request: Request) -> JSONResponse:
     into the session context before any tool runs. Agents cannot forge it
     because it comes from the session context, not from params.
     """
+    # Only the orchestrator: the identity headers below are trusted only from a
+    # caller holding the service token (service_auth.py).
+    caller = identify(request.headers.get("Authorization"), getattr(request.app.state, "service_callers", []))
+    if caller is None:
+        logger.warning("Refused an /rpc call without a valid service token from %s",
+                       request.client.host if request.client else "unknown")
+        return JSONResponse(_jsonrpc_error(None, RPC_UNAUTHORIZED, "Unauthorized."), status_code=401)
+
     # Establish session context from headers (A0.6)
     tenant_id = request.headers.get("X-Tenant-ID", "")
     session_id = request.headers.get("X-Session-ID", "")
@@ -166,7 +196,8 @@ async def rpc_handler(request: Request) -> JSONResponse:
             status_code=400,
         )
 
-    set_session(tenant_id=tenant_id, session_id=session_id)
+    set_session(tenant_id=tenant_id, session_id=session_id,
+                workspace_id=request.headers.get("X-Workspace-ID", "") or None)
 
     # Appendix 4 seam: MCP session policy layer for tenancy.enforced (A0.5).
     # No-op while the flag is false (the shipped default, D6); real dispatch
@@ -218,6 +249,13 @@ async def rpc_handler(request: Request) -> JSONResponse:
             _jsonrpc_error(request_id, -32601, f"Method not found: {method!r}"),
             status_code=404,
         )
+
+    # Least privilege per caller (service_auth.py rule 5): the evaluator may run gold SELECTs
+    # on the built-in datasets and nothing else.
+    if not caller.permits(method, params):
+        logger.warning("Refused %r for the %s caller (not in its allowed methods or parameters).", method, caller.name)
+        return JSONResponse(_jsonrpc_error(request_id, RPC_UNAUTHORIZED, "Not permitted for this caller."),
+                            status_code=403)
 
     handler = _REGISTERED_TOOLS[method]
 

@@ -31,6 +31,35 @@ test.describe('sign-in', () => {
     await expect(page.getByRole('heading', { name: 'Sign in to StateSync' })).toBeVisible()
   })
 
+  test('the token is exchanged for a session and kept nowhere in the browser', async ({ page }) => {
+    // 2026-10-02: an HttpOnly cookie replaces the localStorage token (orchestrator/session_api.py).
+    const api = await openApp(page, { signedIn: false, hash: '#/ask' })
+    const seen: Record<string, string>[] = []
+    page.on('request', (req) => {
+      if (req.url().endsWith('/sessions')) seen.push(req.headers())
+    })
+    await page.getByLabel('API token').fill(TOKEN)
+    await page.getByRole('button', { name: 'Sign in' }).click()
+    await expect(page.getByLabel('Ask a question')).toBeVisible()
+    expect(api.authCalls).toEqual(['POST'])
+    const stored = await page.evaluate(() => JSON.stringify([{ ...localStorage }, { ...sessionStorage }]))
+    expect(stored).not.toContain(TOKEN)
+    await expect.poll(() => seen.length).toBeGreaterThan(0)
+    expect(seen.every((h) => h['x-statesync'] === '1' && !h['authorization'])).toBe(true)
+
+    await page.getByRole('button', { name: 'Sign out' }).click()
+    await expect.poll(() => api.authCalls).toEqual(['POST', 'DELETE'])
+  })
+
+  test('a token left by an older version is exchanged once and deleted', async ({ page }) => {
+    const api = await openApp(page, { signedIn: false, hash: '#/ask' })
+    await page.evaluate((token) => localStorage.setItem('statesync.token', token), TOKEN)
+    await page.reload()
+    await expect(page.getByLabel('Ask a question')).toBeVisible()
+    expect(api.authCalls).toEqual(['POST'])
+    expect(await page.evaluate(() => localStorage.getItem('statesync.token'))).toBeNull()
+  })
+
   test('a 401 mid-session returns to sign-in and says why', async ({ page }) => {
     const api = await openApp(page, { hash: '#/ask' })
     api.failNext('/query', 401, 'Missing or invalid bearer token.')
@@ -89,6 +118,22 @@ test.describe('asking', () => {
     expect(chartBox?.width ?? 0).toBeGreaterThan((turnBox?.width ?? Infinity) * 0.6)
   })
 
+  test('short style: the browser draws the chart from the rows, and a single row gets none', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask' })
+    api.nextSynthStyle = 'short'
+    await ask(page, 'Show orders by status as a chart')
+    const multi = page.getByTestId('turn').last()
+    await expect(multi.getByTestId('answer-text')).toHaveText('Delivered orders dominate: 96,478 of 98,210.')
+    await expect(multi.getByTestId('vega-chart').locator('canvas')).toBeVisible()
+    await expect(multi.getByRole('table')).toContainText('delivered')
+
+    await ask(page, 'How many orders are there in total?')
+    const single = page.getByTestId('turn').last()
+    await expect(single.getByTestId('answer-text')).toHaveText('There are 550 orders in total.')
+    await expect(single.getByRole('table')).toContainText('550')
+    await expect(single.getByTestId('vega-chart')).toHaveCount(0)
+  })
+
   test('a chart that fails the safety check is withheld, and the answer still shows', async ({ page }) => {
     await openApp(page, { hash: '#/ask' })
     await ask(page, 'Show the unsafe chart')
@@ -98,12 +143,98 @@ test.describe('asking', () => {
     await expect(turn.locator('canvas')).toHaveCount(0)
   })
 
+  test('each figure in the answer says where it came from; one the result lacks is marked', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask' })
+    api.nextAnswer = 'Delivered orders dominate: 96,478 of 98,210, up 12% on last year.'
+    api.nextGrounding = {
+      figures: [
+        { text: '96,478', start: 27, end: 33, matched: true, source: { kind: 'cell', row: 0, column: 'n' } },
+        { text: '98,210', start: 37, end: 43, matched: true, source: { kind: 'aggregate', aggregate: 'sum', column: 'n' } },
+        { text: '12%', start: 48, end: 51, matched: false, source: null },
+      ],
+      matched: 2,
+      unmatched: ['12%'],
+    }
+    api.nextCaveats = ['The explanation mentions a figure not found in the result (12%); check them against the table.']
+    await ask(page, 'Which order status is most common?')
+    const turn = page.getByTestId('turn').last()
+    const figures = turn.getByTestId('figure')
+    await expect(figures).toHaveCount(3)
+    await expect(figures.nth(0)).toHaveText('96,478')
+    await expect(figures.nth(0)).toHaveAttribute('title', 'From the result: row 1, n')
+    await expect(figures.nth(1)).toHaveAttribute('title', 'Total of n in the result')
+    await expect(figures.nth(2)).toHaveAttribute('data-matched', 'false')
+    await expect(figures.nth(2)).toHaveAttribute('title', /^Not found in the result/)
+    await expect(turn.getByTestId('answer-text')).toHaveText('Delivered orders dominate: 96,478 of 98,210, up 12% on last year.')
+    await expect(turn.getByTestId('answer-caveat')).toContainText('(12%)')
+    await expect(turn.getByTestId('figures-check')).toHaveCount(0)
+  })
+
+  test('when every figure matches, the answer says so', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask' })
+    api.nextAnswer = 'Delivered orders dominate: 96,478 of 98,210.'
+    api.nextGrounding = {
+      figures: [
+        { text: '96,478', start: 27, end: 33, matched: true, source: { kind: 'cell', row: 0, column: 'n' } },
+        { text: '98,210', start: 37, end: 43, matched: true, source: { kind: 'aggregate', aggregate: 'sum', column: 'n' } },
+      ],
+      matched: 2,
+      unmatched: [],
+    }
+    await ask(page, 'Which order status is most common?')
+    const turn = page.getByTestId('turn').last()
+    await expect(turn.getByTestId('figures-check')).toHaveText('All 2 figures in this answer match the result.')
+    await expect(turn.locator('[data-testid="figure"][data-matched="true"]')).toHaveCount(2)
+    await expect(turn.locator('[data-testid="figure"][data-matched="false"]')).toHaveCount(0)
+  })
+
+  test('caveats show under the answer, and nothing shows when there are none', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask' })
+    api.nextCaveats = [
+      'These figures may count some rows more than once (join fan-out).',
+      'Showing the first 1,000 rows; the full result is larger.',
+    ]
+    await ask(page, 'How many orders are there in total?')
+    const withCaveats = page.getByTestId('turn').last()
+    await expect(withCaveats.getByTestId('answer-caveat')).toHaveCount(2)
+    await expect(withCaveats.getByTestId('answer-caveat').first()).toContainText('join fan-out')
+
+    await ask(page, 'How many orders are there in total?')
+    await expect(page.getByTestId('turn').last().getByTestId('answer-text')).toBeVisible()
+    await expect(page.getByTestId('turn').last().getByTestId('answer-caveat')).toHaveCount(0)
+  })
+
+  test('"How I got this" is collapsed under a SQL answer and opens to the explanation; documents have none', async ({ page }) => {
+    await openApp(page, { hash: '#/ask' })
+    await ask(page, 'How many orders are there in total?')
+    const sqlTurn = page.getByTestId('turn').last()
+    const toggle = sqlTurn.getByRole('button', { name: 'How I got this' })
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(sqlTurn.getByTestId('how-i-got-this')).toHaveCount(0)
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(sqlTurn.getByTestId('how-i-got-this')).toContainText('Counted rows')
+
+    await ask(page, 'What does the SLA policy say for LP003?')
+    const docsTurn = page.getByTestId('turn').last()
+    await expect(docsTurn.getByTestId('answer-text')).toBeVisible()
+    await expect(docsTurn.getByRole('button', { name: 'How I got this' })).toHaveCount(0)
+  })
+
   test('a document answer lists its sources and has no table', async ({ page }) => {
     await openApp(page, { hash: '#/ask' })
     await ask(page, 'What does the SLA policy say for LP003?')
     const turn = page.getByTestId('turn').last()
     await expect(turn.getByTestId('citations')).toContainText('SLA annexure LP003')
     await expect(turn.getByRole('table')).toHaveCount(0)
+  })
+
+  test('an answer from an uploaded document cites it by title and page, not by id', async ({ page }) => {
+    await openApp(page, { hash: '#/ask' })
+    await ask(page, 'How fast are refunds issued?')
+    const citations = page.getByTestId('turn').last().getByTestId('citations')
+    await expect(citations).toContainText('Refund policy 2026 p. 3')
+    await expect(citations).not.toContainText('up_0123456789abcdef')
   })
 
   test('the details panel shows the SQL behind an answer', async ({ page }) => {
@@ -248,5 +379,23 @@ test.describe('appearance', () => {
     await page.getByTestId('turn').last().getByRole('button', { name: 'Details' }).click()
     const panel = page.getByRole('dialog', { name: 'Answer details' })
     await expect(panel.getByText('llm_calls')).toBeVisible()
+  })
+
+  test('developer mode lists every model call with a total; off, it is hidden', async ({ page }) => {
+    await openApp(page, { hash: '#/ask' })
+    await ask(page, 'How many orders are there in total?')
+    const details = page.getByTestId('turn').last().getByRole('button', { name: 'Details' })
+    const panel = page.getByRole('dialog', { name: 'Answer details' })
+
+    await details.click()
+    await expect(panel.getByTestId('model-calls')).toHaveCount(0)
+    await page.keyboard.press('Escape')
+
+    await page.getByRole('switch', { name: 'Developer mode' }).click()
+    await details.click()
+    const table = panel.getByTestId('model-calls')
+    await expect(table.getByTestId('model-call')).toHaveCount(5)
+    await expect(table.getByTestId('model-calls-total')).toContainText('5,164')
+    await expect(table.getByText('0.84 s')).toBeVisible()
   })
 })

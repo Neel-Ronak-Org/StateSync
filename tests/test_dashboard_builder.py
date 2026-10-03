@@ -231,3 +231,32 @@ def test_jobs_are_per_principal():
         assert registry.active("p_a") is None and registry.latest("p_a", "d1") is a
 
     asyncio.run(scenario())
+
+
+# ── Workspace knowledge (2026-10-02: Build with AI ignored it) ────────────────
+# A build used neither the owner's definitions nor their approved examples, so a drafted dashboard
+# could compute "revenue" differently from the chat. pick_workspace decides which workspace's
+# knowledge a build uses; a wrong-dataset workspace would mislead both the planner and the SQL agent.
+
+def _w(wid, schema):
+    return {"workspace_id": wid, "target_schema": schema}
+
+
+def test_a_requested_workspace_must_be_the_owners_and_on_the_dataset():
+    owned = [_w("w1", "public"), _w("w2", "olist")]
+    assert db.pick_workspace(owned, "public", "w1") == (owned[0], None)
+    assert db.pick_workspace(owned, "public", "w2") == (None, "mismatch")
+    assert db.pick_workspace(owned, "public", "someone_elses") == (None, "not_found")
+
+
+def test_without_a_request_only_an_unambiguous_workspace_is_used():
+    assert db.pick_workspace([_w("w1", "public"), _w("w2", "olist")], "public", None) == (_w("w1", "public"), None)
+    assert db.pick_workspace([_w("w1", "public"), _w("w3", "public")], "public", None) == (None, None)
+    assert db.pick_workspace([_w("w2", "olist")], "public", None) == (None, None)
+
+
+def test_the_planner_knowledge_section_is_labelled_and_empty_without_knowledge():
+    assert db.planner_knowledge("") == ""
+    assert db.planner_knowledge("Business definitions (approved by the owner):\n  revenue: x").startswith(db.KNOWLEDGE_HEADER)
+    # The prompt still formats (the new rule added no stray braces).
+    db.PLANNER_SYSTEM_PROMPT.format(min_items=1, max_items=2, time_rule="r")

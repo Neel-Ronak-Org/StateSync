@@ -26,10 +26,12 @@ from pydantic import BaseModel, ConfigDict
 from auth import Principal
 from config_loader import cfg
 from dashboard_builder import (HISTORICAL_TIME_RULE, LIVE_TIME_RULE, PLANNER_SYSTEM_PROMPT, BuildJob,
-                               BuildRegistry, PlannedInsight, new_job, parse_plan, run_build,
-                               summarize_schema)
+                               BuildRegistry, PlannedInsight, new_job, parse_plan, pick_workspace,
+                               planner_knowledge, run_build, summarize_schema)
 from llm.provider import get_agent_llm
 from mcp_client import MCPSession, dashboards_manage, schema_describe_table, schema_list_tables, tiles_manage
+from workspace_context import format_context, system_suffix
+from workspaces_api import call_workspaces
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +44,10 @@ class BuildRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     goal: str | None = None
+    # The workspace whose approved knowledge the build uses (descriptions, definitions,
+    # approved examples, business context). Optional: without it, the owner's only
+    # workspace on the dashboard's dataset is used, if there is exactly one.
+    workspace_id: str | None = None
 
 
 def _mcp(principal: Principal) -> MCPSession:
@@ -66,7 +72,37 @@ def register_build_routes(
             raise HTTPException(status_code=503, detail="Dashboard service unavailable. Try again shortly.") from None
         return next((d for d in result.get("dashboards", []) if d.get("dashboard_id") == dashboard_id), None)
 
-    def planner(principal: Principal, schema: str):
+    async def build_workspace(principal: Principal, schema: str, requested: str | None) -> dict | None:
+        try:
+            listed = await call_workspaces(principal, "list")
+        except Exception as exc:
+            logger.error("workspace lookup for a build failed: %s", exc, exc_info=True)
+            if not requested:   # the knowledge is optional: build without it
+                return None
+            raise HTTPException(status_code=503, detail="Workspace service unavailable. Try again shortly.") from None
+        workspace, error = pick_workspace(listed.get("workspaces") or [], schema, requested)
+        if error == "not_found":
+            raise HTTPException(status_code=404, detail="No such workspace.")
+        if error == "mismatch":
+            raise HTTPException(status_code=409, detail=f"That workspace is not on the {schema} dataset.")
+        return workspace
+
+    def planner(principal: Principal, schema: str, workspace_id: str | None):
+        async def knowledge(focus: str, table_names: list[str]) -> tuple[str, str]:
+            """(knowledge block for the message, business-context suffix for the system prompt).
+            Approved knowledge only (the MCP's `context` action); best-effort: a failure plans without it."""
+            if not workspace_id:
+                return "", ""
+            try:
+                ctx = await call_workspaces(principal, "context", workspace_id=workspace_id, question=focus)
+            except Exception as exc:  # noqa: BLE001 -- the plan is still useful without the knowledge
+                logger.warning("workspace knowledge unavailable for a build: %s", exc)
+                return "", ""
+            if not ctx.get("ok"):
+                return "", ""
+            block = format_context(ctx, table_names, int(cfg.workspaces.context_max_chars))
+            return planner_knowledge(block), system_suffix(ctx.get("business_context"))
+
         async def plan(goal: str | None) -> list[PlannedInsight] | str:
             async with _mcp(principal) as session:
                 listing = await schema_list_tables(session, schema)
@@ -82,7 +118,9 @@ def register_build_routes(
                 time_rule=LIVE_TIME_RULE if live else HISTORICAL_TIME_RULE,
             )
             focus = goal or "a general overview of how the business is doing"
-            user = f"{summary}\n\nFocus: {focus}"
+            known, suffix = await knowledge(focus, [t["name"] for t in tables])
+            system += suffix
+            user = f"{summary}\n\n{known}\n\nFocus: {focus}" if known else f"{summary}\n\nFocus: {focus}"
             llm = get_agent_llm("decomposer")
             result: list[PlannedInsight] | str = "The planner did not answer."
             for _ in range(PLANNER_ATTEMPTS):
@@ -115,10 +153,15 @@ def register_build_routes(
 
         goal = (body.goal or "").strip()[: int(cfg.dashboards.goal_max_chars)] or None
         schema = dashboard["target_schema"]
+        workspace = await build_workspace(principal, schema, body.workspace_id)
+        workspace_id = workspace["workspace_id"] if workspace else None
         job = new_job(principal.principal_id, dashboard_id, schema, goal)
 
         async def ask(question: str, session_id: str) -> dict:
-            response = await answer_question(principal, question, session_id, schema, client_ip, route_path=route)
+            # Asked in the workspace: the SQL agent gets its approved knowledge and the
+            # approved-example fast path, exactly as a question typed there would.
+            response = await answer_question(principal, question, session_id, schema, client_ip, route_path=route,
+                                             workspace_id=workspace_id)
             return response.model_dump()
 
         async def pin(session_id: str, turn_index: int, insight: PlannedInsight, slot: dict) -> dict:
@@ -127,7 +170,9 @@ def register_build_routes(
                                           session_id=session_id, turn_index=turn_index, title=insight.title,
                                           dashboard_id=dashboard_id, viz=insight.viz, layout=slot)
 
-        plan = planner(principal, schema)
+        # The pin sends no workspace_id on purpose: a drafted dashboard must not create
+        # approved examples (mcp/tools/tile_tools.py, property 6).
+        plan = planner(principal, schema, workspace_id)
 
         async def work(j: BuildJob) -> None:
             await run_build(j, plan, ask, pin, columns=int(cfg.dashboards.grid_columns))
@@ -137,7 +182,8 @@ def register_build_routes(
 
         registry.start(job, work)
         await audit(principal.principal_id, principal.tenant_id, route, "allowed",
-                    client_ip=client_ip, detail=f"dashboards:build dashboard={dashboard_id} job={job.job_id}")
+                    client_ip=client_ip, detail=f"dashboards:build dashboard={dashboard_id} job={job.job_id}"
+                    + (f" workspace={workspace_id}" if workspace_id else ""))
         return {"job": job.view()}
 
     @app.get("/dashboards/{dashboard_id}/build", tags=["dashboards"])

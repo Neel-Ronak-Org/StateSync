@@ -15,18 +15,15 @@ document is clearly the right one (verified empirically -- see
 docs/phase_e1_log.md). Expanding to sibling chunks of an already-relevant
 document is what makes E1-V2's table-value retrieval reliable.
 
-hybrid route (D7, gated to retrieval.hybrid_decomposition.enabled -- never
-fires on docs or sql, Callout 3): decomposes the compound question into a
-SQL sub-task and a doc sub-task (one LLM call), runs the SQL sub-task as a
-simplified single-shot generation+execution (no memory, no interrogation,
-no correction loop -- those are specifically wired for the pure-sql route's
-graph edges; C2 Scope frames the retry loop as a sql_agent_node concept),
-then runs the doc sub-task. If the SQL sub-task's result exposes a
-seller_id/provider_id column, the doc sub-task is narrowed via
-vector.hybrid_select (a real ss_embed(...) usage, A4.7) to only that
-party's documents -- a genuinely fused SQL+vector query, not two unrelated
-lookups glued together after the fact. Both state.sql_rows/executed_sql and
-state.retrievals get populated; the Synthesizer emits both citation kinds.
+hybrid route (D7; graph.py, rebuilt 2026-10-02): hybrid_plan_node decomposes the
+compound question into a SQL sub-task and a doc sub-task (one LLM call, gated by
+retrieval.hybrid_decomposition.enabled). The SQL sub-task then runs through sql_agent_node -- the
+same agent as a data-only question, with the workspace's approved knowledge, the fast path,
+templates and the correction loop -- instead of the single-shot generation that used to live here.
+hybrid_docs_node runs the doc sub-task last: if the SQL result exposes a seller_id/provider_id
+column, it is narrowed via vector.hybrid_select (a real ss_embed(...) usage, A4.7) to only that
+party's documents; otherwise the two-round semantic search runs. Both state.sql_rows/executed_sql
+and state.retrievals get populated; the Synthesizer emits both citation kinds.
 """
 
 from __future__ import annotations
@@ -37,14 +34,12 @@ import os
 import time
 from typing import Any
 
-from classifiers.error_classifier import classify_error
 from config_loader import cfg
 from llm.provider import get_agent_llm
+from query_rewrite import rewrite_for_search
 from mcp_client import (
-    MCPSession, data_run_select, schema_list_tables,
-    vector_hybrid_select, vector_semantic_search,
+    MCPSession, vector_hybrid_select, vector_semantic_search,
 )
-from schema_retriever import get_schema_retriever, target_schema
 
 logger = logging.getLogger(__name__)
 
@@ -85,38 +80,6 @@ Note sql_subtask asks a plain question about delivery timing (answerable
 from fulfillments' existing delivered_at/promised_at columns) and never
 mentions a penalty -- the penalty question goes to doc_subtask only."""
 
-_SIMPLE_SQL_SYSTEM_PROMPT = """\
-You are a PostgreSQL query generator for a logistics data analytics system \
-(ONDC network), answering a SQL sub-question that is part of a larger \
-hybrid (SQL + document) query.
-
-Rules:
-1. Write exactly one SQL SELECT statement. No semicolons at the end.
-2. Qualify every column with its table alias.
-3. Use only the tables and columns described in the schema below.
-4. If the question concerns specific sellers, include s.seller_id (not just \
-s.display_name) as a selected column, so results can be cross-referenced \
-against seller-specific documents. Do the same (provider_id) for logistics \
-providers. This applies EVEN to a COUNT/SUM/aggregate question -- add
-   seller_id (or provider_id) as a plain SELECT column and GROUP BY it,
-   rather than a bare COUNT(*)/SUM(...) with no other column. Example: for
-   "how many orders has seller S001 placed?", write
-   SELECT seller_id, COUNT(*) FROM orders WHERE seller_id = 'S001' GROUP BY seller_id
-   -- NOT just SELECT COUNT(*) FROM orders WHERE seller_id = 'S001'. The
-   downstream step that finds the right document depends on seeing the ID
-   in your result columns, not just in your WHERE clause.
-5. The schema has no dedicated column or table for qualitative delivery
-   terms like "breached", "delayed", "late", or "on time" -- express them as
-   a comparison between existing columns instead: a delivery is late when
-   fulfillments.delivered_at > fulfillments.promised_at (both columns
-   already exist), or use fulfillments.status ('failed'/'returned') for a
-   failed delivery. Never invent a table or column name to stand in for a
-   concept the schema doesn't have a dedicated field for -- find the closest
-   real comparison instead.
-6. Apply LIMIT {max_rows} unless the question explicitly asks for all rows.
-7. Return ONLY the SQL query text -- no markdown, no explanation, no comments."""
-
-
 def _sql_literal(value: str) -> str:
     """Standard SQL-92 string literal escaping (double embedded quotes).
     Deliberately not reusing psycopg here: the orchestrator holds no
@@ -132,17 +95,48 @@ def _strip_fences(text: str) -> str:
     return text
 
 
-async def _semantic_search_expanded(session: MCPSession, query_text: str, top_k: int) -> list[dict]:
+def should_abstain(
+    best_dense: float | None, best_keyword: float | None, min_dense: float, min_keyword: float,
+) -> bool:
+    """RAG v2 Phase E: nothing relevant was found. True iff the best dense score is missing or
+    below min_dense AND the best keyword score is missing or below min_keyword (strict <, so a
+    score equal to its threshold counts as relevant). A missing score is a leg that found nothing."""
+    return (best_dense is None or best_dense < min_dense) and (best_keyword is None or best_keyword < min_keyword)
+
+
+async def _semantic_search_expanded(
+    session: MCPSession, query_text: str, top_k: int, mode: str | None = None, dataset: str | None = None,
+    scope: str | None = None, abstain: bool = False, rerank: str | None = None,
+) -> tuple[list[dict], dict[str, Any]]:
     """
     Two-round retrieval: first an unrestricted semantic_search to find which
     DOCUMENTS are relevant, then a second call restricted to those documents'
     IDs with a generous top_k, so every chunk of an already-relevant
     document is available (not just whichever single chunk happened to
     embed closest to the question) -- see module docstring for why this
-    matters for table chunks specifically.
+    matters for table chunks specifically. Both rounds use the same retrieval
+    mode (pipeline.retrieval_mode: "dense" or "hybrid") and carry the dataset and the scope
+    (pipeline.doc_scope).
+
+    Returns (matches, meta). meta carries the FIRST round's best_dense_score and
+    best_keyword_score (never the fused score: an RRF score is about the same for answerable
+    and unanswerable questions) and abstained. With abstain on and should_abstain true on those
+    two scores, the second round is skipped and matches is empty (Phase E).
     """
-    first = await vector_semantic_search(session, query_text, top_k=top_k)
+    first = await vector_semantic_search(session, query_text, top_k=top_k, mode=mode, dataset=dataset, scope=scope,
+                                         rerank=rerank)
     matches = first.get("matches", [])
+    meta: dict[str, Any] = {
+        "best_dense_score": first.get("best_dense_score"),
+        "best_keyword_score": first.get("best_keyword_score"),
+        "abstained": False,
+    }
+    if abstain and should_abstain(
+        meta["best_dense_score"], meta["best_keyword_score"],
+        cfg.retrieval.abstain_min_dense, cfg.retrieval.abstain_min_keyword,
+    ):
+        meta["abstained"] = True
+        return [], meta
 
     # Document ranking order = order of first appearance in the score-sorted
     # first call (semantic_search already returns matches best-first).
@@ -153,10 +147,11 @@ async def _semantic_search_expanded(session: MCPSession, query_text: str, top_k:
             seen_docs.add(m["document_id"])
             doc_order.append(m["document_id"])
     if not doc_order:
-        return []
+        return [], meta
 
     expanded = await vector_semantic_search(
         session, query_text, top_k=cfg.retrieval.semantic_top_k_max, document_ids=doc_order,
+        mode=mode, dataset=dataset, scope=scope, rerank=rerank,
     )
     by_chunk_id = {m["chunk_id"]: m for m in expanded.get("matches", [])}
     for m in matches:
@@ -180,7 +175,7 @@ async def _semantic_search_expanded(session: MCPSession, query_text: str, top_k:
     ordered: list[dict] = []
     for doc_id in doc_order:
         ordered.extend(sorted(by_doc.get(doc_id, []), key=lambda c: c["chunk_id"]))
-    return ordered
+    return ordered, meta
 
 
 async def _targeted_doc_search(
@@ -216,6 +211,7 @@ def _to_retrievals(matches: list[dict]) -> list[dict]:
             "provenance": {
                 "document_id": m["document_id"], "chunk_id": m["chunk_id"],
                 "page": m.get("page"), "score": float(m.get("score", 0.0)),
+                "title": m.get("title"), "section": m.get("section"),
             },
         }
         for m in matches
@@ -231,10 +227,39 @@ def _extract_party_ids(rows: list[dict], columns: list[str]) -> list[str]:
     return []
 
 
-async def _decompose(query_text: str) -> tuple[str, str, int, int]:
+_GENERAL_DECOMPOSER_PROMPT = """\
+You are decomposing a compound question for a business analytics assistant into two independent
+sub-questions: one answerable from the structured database, and one answerable from documents
+(policies, contracts, terms, procedures).
+
+Rules:
+1. Respond with ONLY a JSON object: {"sql_subtask": "<string>", "doc_subtask": "<string>"}
+2. sql_subtask and doc_subtask are QUESTIONS IN ENGLISH, phrased like the original question --
+   never SQL, never a table or column name. A separate step writes the SQL from sql_subtask.
+3. sql_subtask asks only for structured facts or records (which rows meet some condition), and
+   asks for the identifying ID or name of each record when the question concerns specific
+   entities -- but NEVER for a figure that only a document states (a penalty, a policy limit, a
+   contract clause). Those belong in doc_subtask only.
+4. doc_subtask asks for whatever document-derived information the compound question needs.
+5. Preserve entity names, IDs, dates and amounts from the original question in both sub-questions
+   where relevant -- do not translate or paraphrase them away.
+6. No explanation outside the JSON object.
+
+Example. Input: "Which customers were refunded more than 500 last month, and what does our refund
+policy say about large refunds?"
+Output: {"sql_subtask": "Which customers received refunds totalling more than 500 last month? Include
+the customer ID.", "doc_subtask": "What does the refund policy say about large refunds?"}"""
+
+
+def decomposer_prompt(target_schema: str | None) -> str:
+    """The ONDC-tuned decomposer prompt for the ONDC sample corpus; the general one otherwise."""
+    return _DECOMPOSER_SYSTEM_PROMPT if target_schema in cfg.pipeline.ondc_prompt_schemas else _GENERAL_DECOMPOSER_PROMPT
+
+
+async def _decompose(query_text: str, target_schema: str | None = None) -> tuple[str, str, int, int]:
     llm = get_agent_llm("decomposer")
     result = await llm.complete(
-        system=_DECOMPOSER_SYSTEM_PROMPT,
+        system=decomposer_prompt(target_schema),
         messages=[{"role": "user", "content": query_text}],
         max_tokens=cfg.sql.max_tokens_decomposer,
     )
@@ -249,92 +274,6 @@ async def _decompose(query_text: str) -> tuple[str, str, int, int]:
     return sql_subtask, doc_subtask, result.tokens_in, result.tokens_out
 
 
-async def _run_sql_subtask(
-    session: MCPSession, question: str, state_dict: dict[str, Any] | None = None,
-) -> tuple[str | None, list[dict], list[str], dict | None, int, int, int, int]:
-    """
-    Simplified single-shot SQL sub-task: full schema, no memory, no
-    interrogation, no correction loop (hybrid's sub-questions are simpler
-    than a standalone sql-route question by construction -- decomposition
-    already isolated the structured-data part). On failure, classifies the
-    error (A3, same classifier sql_agent_node uses) rather than silently
-    returning empty rows -- a failed query and a genuinely empty result are
-    different facts, and collapsing them would let the Synthesizer report a
-    confident "zero results" answer for a query that never actually ran
-    (verified this was happening before this fix: a hallucinated table name
-    produced unknown_table, and the prior code surfaced it as "no sellers
-    breached SLA" -- a fabricated answer, not an honest failure report).
-    Returns (executed_sql, rows, columns, error_or_None, tokens_in,
-    tokens_out, llm_calls, trajectory_steps). error_or_None matches
-    ErrorRecord's shape minus 'attempt' (the caller fills that in).
-
-    Cycle 007 B1 (audit 007 F-007-2): this sub-task used to call
-    schema_list_tables/retrieve with schema=None, which resolves server-side
-    to 'public' regardless of schema_retriever.target_schema -- so under
-    target_schema="olist" this path silently queried the 550-row synthetic
-    corpus while sql_agent_node (the non-hybrid route) correctly queried
-    olist's 99,441 rows, sharing three table names (orders/order_items/
-    sellers) between the two schemas so the wrong-corpus answer was
-    well-formed and silent, not an error. Threading target_schema() through
-    here, the same way sql_agent_node already does (schema_retriever.py's
-    QUALIFY comment), closes that gap. data_run_select itself takes no
-    schema parameter -- it executes whatever SQL text it is given, so no
-    change is needed there; retriever.retrieve()'s qualification of the
-    schema_context (e.g. "TABLE olist.orders:") is what makes the model
-    write schema-qualified FROM clauses, same mechanism sql_agent.py relies
-    on for the exact same reason. The value now arrives per request, so this
-    path must read it from state for the same reason it originally had to read
-    the flag.
-    """
-    if state_dict is None:
-        state_dict = {}
-    trajectory_steps = 0
-    _schema = state_dict.get("target_schema") or target_schema()
-    tables_result = await schema_list_tables(session, _schema)
-    table_names = [t["name"] for t in tables_result.get("tables", [])]
-    trajectory_steps += 1
-
-    retriever = get_schema_retriever()
-    schema_context, _ = await retriever.retrieve(session, table_names, _schema)
-    trajectory_steps += len(table_names)
-
-    llm = get_agent_llm("sql")
-    result = await llm.complete(
-        system=_SIMPLE_SQL_SYSTEM_PROMPT.format(max_rows=cfg.mcp.max_rows_default),
-        messages=[{"role": "user", "content": f"Schema:\n{schema_context}\n\nQuestion: {question}"}],
-        max_tokens=cfg.sql.max_tokens_sql,
-    )
-    candidate_sql = _strip_fences(result.text)
-
-    exec_result = await data_run_select(session, candidate_sql, max_rows=cfg.mcp.max_rows_default)
-    trajectory_steps += 1
-    if exec_result.get("ok"):
-        return (
-            candidate_sql, exec_result["rows"], exec_result["columns"], None,
-            result.tokens_in, result.tokens_out, 1, trajectory_steps,
-        )
-
-    error_obj = exec_result.get("error") or {}
-    category, hint = classify_error(
-        sqlstate=error_obj.get("sqlstate"), message=error_obj.get("message"), empty_result=False,
-    )
-    logger.warning(
-        "Hybrid SQL sub-task failed (no correction loop -- single shot by design): "
-        "category=%s message=%s", category, error_obj.get("message"),
-    )
-    error_record = {
-        "category": category,
-        "engine_code": error_obj.get("sqlstate"),
-        "message": error_obj.get("message", "Unknown error"),
-        "offending_sql": candidate_sql,
-        "remediation_hint": hint,
-    }
-    return (
-        candidate_sql, [], [], error_record,
-        result.tokens_in, result.tokens_out, 1, trajectory_steps,
-    )
-
-
 async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     route: str = state_dict.get("route", "docs")
     query_text: str = state_dict.get("normalized_query") or state_dict.get("raw_query", "")
@@ -343,84 +282,124 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
     session_id: str = state_dict.get("session_id", "")
     flags_snapshot: dict[str, Any] = state_dict.get("flags_snapshot", {})
 
+    # RAG v2 Phase D: "dense" (shipped) or "hybrid" (BM25 fused with dense), and the
+    # dataset the question is about, forwarded to vector.semantic_search. Phase E: the
+    # scope ("all" | "dataset") and whether to abstain when nothing relevant was found.
+    retrieval_mode: str = flags_snapshot.get("pipeline.retrieval_mode", "dense")
+    dataset: str | None = state_dict.get("target_schema")
+    doc_scope: str = flags_snapshot.get("pipeline.doc_scope", "all")
+    abstain_on: bool = flags_snapshot.get("pipeline.doc_abstain", "off") == "on"
+    # RAG v3 (docs/specs/rag_v3.md): cross-encoder re-ranking, and searching with a rewrite.
+    rerank: str = flags_snapshot.get("pipeline.rerank", "off")
+    rewrite_on: bool = flags_snapshot.get("pipeline.query_rewrite", "off") == "llm"
+
     start_ms = int(time.monotonic() * 1000)
     tokens_in_total = tokens_out_total = llm_calls_total = trajectory_steps = 0
     mcp_base_url = os.environ.get("MCP_URL", "http://mcp:8080")
 
-    async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id) as session:
-        if route == "docs":
-            matches = await _semantic_search_expanded(session, query_text, cfg.retrieval.semantic_top_k)
-            trajectory_steps += 2  # the expanded call is a second round-trip
-            elapsed_ms = int(time.monotonic() * 1000) - start_ms
-            logger.info(
-                "UKE docs route: query_id=%s matches=%d elapsed_ms=%d",
-                query_id, len(matches), elapsed_ms,
-            )
-            return {
-                "subtasks": [query_text],
-                "retrievals": _to_retrievals(matches),
-                "metrics": {
-                    "tokens_in": 0, "tokens_out": 0, "llm_calls": 0,
-                    "trajectory_steps": trajectory_steps, "latency_ms": elapsed_ms,
-                },
-            }
-
-        # route == "hybrid" -- decomposition gated to this route only (D7,
-        # Callout 3). Never reached from docs or sql: this node isn't even
-        # registered for those, and sql_agent_node has no decomposition call.
-        decomposition_enabled = bool(flags_snapshot.get("retrieval.hybrid_decomposition.enabled", True))
-        if decomposition_enabled:
-            sql_subtask, doc_subtask, d_ti, d_to = await _decompose(query_text)
-            tokens_in_total += d_ti
-            tokens_out_total += d_to
-            llm_calls_total += 1
-        else:
-            sql_subtask = doc_subtask = query_text
-
-        executed_sql, rows, columns, sql_error, s_ti, s_to, s_calls, s_steps = await _run_sql_subtask(
-            session, sql_subtask, state_dict,
+    # The workspace travels as X-Workspace-ID, so vector.semantic_search also
+    # searches the uploaded documents in the folders the workspace chose.
+    async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id,
+                          workspace_id=state_dict.get("workspace_id"),
+                          dataset=state_dict.get("target_schema")) as session:
+        if route != "docs":
+            # The hybrid route no longer comes here (graph.py: hybrid_plan_node -> the SQL agent ->
+            # hybrid_docs_node); anything else is answered as a documents question rather than failed.
+            logger.warning("unstructured_knowledge_node called with route=%r; treated as docs", route)
+        search_text = query_text
+        if rewrite_on:
+            search_text, usage = await rewrite_for_search(query_text)
+            tokens_in_total += usage["tokens_in"]
+            tokens_out_total += usage["tokens_out"]
+            llm_calls_total += usage["llm_calls"]
+        matches, meta = await _semantic_search_expanded(
+            session, search_text, cfg.retrieval.semantic_top_k, retrieval_mode, dataset,
+            doc_scope, abstain_on, rerank,
         )
-        tokens_in_total += s_ti
-        tokens_out_total += s_to
-        llm_calls_total += s_calls
-        trajectory_steps += s_steps
-
-        party_ids = _extract_party_ids(rows, columns)
-        if party_ids:
-            doc_rows = await _targeted_doc_search(session, doc_subtask, party_ids, cfg.retrieval.semantic_top_k)
-            matches = doc_rows
-            trajectory_steps += 1
-        else:
-            matches = await _semantic_search_expanded(session, doc_subtask, cfg.retrieval.semantic_top_k)
-            trajectory_steps += 2
-
+        trajectory_steps += 1 if meta["abstained"] else 2  # the expanded call is a second round-trip
         elapsed_ms = int(time.monotonic() * 1000) - start_ms
         logger.info(
-            "UKE hybrid route: query_id=%s decomposition=%s party_ids=%s sql_ok=%s sql_rows=%d "
-            "doc_matches=%d llm_calls=%d elapsed_ms=%d",
-            query_id, decomposition_enabled, party_ids, sql_error is None, len(rows), len(matches),
-            llm_calls_total, elapsed_ms,
+            "UKE docs route: query_id=%s matches=%d abstained=%s elapsed_ms=%d",
+            query_id, len(matches), meta["abstained"], elapsed_ms,
         )
         update: dict[str, Any] = {
-            "subtasks": [sql_subtask, doc_subtask],
-            "executed_sql": executed_sql,
-            "candidate_sql": executed_sql,
-            "sql_rows": rows,
-            "sql_columns": columns,
+            "subtasks": [query_text],
             "retrievals": _to_retrievals(matches),
             "metrics": {
-                "tokens_in": tokens_in_total, "tokens_out": tokens_out_total,
-                "llm_calls": llm_calls_total, "trajectory_steps": trajectory_steps,
-                "latency_ms": elapsed_ms,
+                "tokens_in": tokens_in_total, "tokens_out": tokens_out_total, "llm_calls": llm_calls_total,
+                "trajectory_steps": trajectory_steps, "latency_ms": elapsed_ms,
             },
         }
-        if sql_error is not None:
-            # attempt stays 0 (state.attempt's own default): hybrid never
-            # engages the sql-route's correction loop or its conditional
-            # edge, so nothing ever increments it. Appending one error with
-            # attempt=0 is exactly what makes synthesizer_node's existing
-            # `errors[-1] if len(errors) > attempt else None` derivation
-            # detect this as a real failure -- the same typed-field
-            # mechanism the sql route itself relies on, not a scratch key.
-            update["errors"] = [{**sql_error, "attempt": 0}]
+        if meta["abstained"]:
+            update["doc_abstained"] = True
         return update
+
+
+# ── The hybrid route (SQL + documents) ───────────────────────────────────────
+# graph.py runs it as three steps: hybrid_plan_node splits the question; the SQL half goes through
+# sql_agent_node -- the SAME agent as a data-only question, with the workspace's approved knowledge,
+# the fast path, templates and the correction loop -- and hybrid_docs_node then runs the documents
+# half, narrowed to the parties the SQL result names. Until 2026-10-02 the hybrid route ran its own
+# single-shot SQL here with none of those.
+
+async def hybrid_plan_node(state_dict: dict[str, Any]) -> dict[str, Any]:
+    """Split the question into its SQL part and its documents part (subtasks = [sql, docs])."""
+    query_text: str = state_dict.get("normalized_query") or state_dict.get("raw_query", "")
+    flags_snapshot: dict[str, Any] = state_dict.get("flags_snapshot", {})
+    start_ms = int(time.monotonic() * 1000)
+    tokens_in = tokens_out = llm_calls = 0
+    if bool(flags_snapshot.get("retrieval.hybrid_decomposition.enabled", True)):
+        sql_subtask, doc_subtask, tokens_in, tokens_out = await _decompose(query_text, state_dict.get("target_schema"))
+        llm_calls = 1
+    else:
+        sql_subtask = doc_subtask = query_text
+    logger.info("UKE hybrid plan: query_id=%s sql_subtask=%r doc_subtask=%r",
+                state_dict.get("query_id", ""), sql_subtask, doc_subtask)
+    return {
+        "subtasks": [sql_subtask, doc_subtask],
+        "metrics": {"tokens_in": tokens_in, "tokens_out": tokens_out, "llm_calls": llm_calls,
+                    "trajectory_steps": 0, "latency_ms": int(time.monotonic() * 1000) - start_ms},
+    }
+
+
+async def hybrid_docs_node(state_dict: dict[str, Any]) -> dict[str, Any]:
+    """The documents half, after the SQL agent: narrowed to the parties its rows name when it found
+    seller/provider ids, the two-round search otherwise. Writes only retrievals and metrics."""
+    query_text: str = state_dict.get("normalized_query") or state_dict.get("raw_query", "")
+    subtasks: list[str] = state_dict.get("subtasks") or []
+    doc_subtask = subtasks[1] if len(subtasks) > 1 else query_text
+    flags_snapshot: dict[str, Any] = state_dict.get("flags_snapshot", {})
+    retrieval_mode: str = flags_snapshot.get("pipeline.retrieval_mode", "dense")
+    dataset: str | None = state_dict.get("target_schema")
+    doc_scope: str = flags_snapshot.get("pipeline.doc_scope", "all")
+    abstain_on: bool = flags_snapshot.get("pipeline.doc_abstain", "off") == "on"
+    rerank: str = flags_snapshot.get("pipeline.rerank", "off")
+    rows: list[dict] = state_dict.get("sql_rows") or []
+    columns: list[str] = state_dict.get("sql_columns") or []
+    start_ms = int(time.monotonic() * 1000)
+    trajectory_steps = 0
+    mcp_base_url = os.environ.get("MCP_URL", "http://mcp:8080")
+    async with MCPSession(tenant_id=state_dict["tenant_id"], base_url=mcp_base_url,
+                          session_id=state_dict.get("session_id", ""),
+                          workspace_id=state_dict.get("workspace_id"),
+                          dataset=state_dict.get("target_schema")) as session:
+        party_ids = _extract_party_ids(rows, columns)
+        if party_ids:
+            matches = await _targeted_doc_search(session, doc_subtask, party_ids, cfg.retrieval.semantic_top_k)
+            trajectory_steps += 1
+        else:
+            matches, meta = await _semantic_search_expanded(
+                session, doc_subtask, cfg.retrieval.semantic_top_k, retrieval_mode, dataset,
+                doc_scope, abstain_on, rerank,
+            )
+            # Nothing relevant: the doc retrievals are dropped and the answer is built from the SQL
+            # result alone, with no fixed message (the SQL half may well be the whole answer).
+            trajectory_steps += 1 if meta["abstained"] else 2
+    elapsed_ms = int(time.monotonic() * 1000) - start_ms
+    logger.info("UKE hybrid docs: query_id=%s party_ids=%s sql_rows=%d doc_matches=%d elapsed_ms=%d",
+                state_dict.get("query_id", ""), party_ids, len(rows), len(matches), elapsed_ms)
+    return {
+        "retrievals": _to_retrievals(matches),
+        "metrics": {"tokens_in": 0, "tokens_out": 0, "llm_calls": 0,
+                    "trajectory_steps": trajectory_steps, "latency_ms": elapsed_ms},
+    }

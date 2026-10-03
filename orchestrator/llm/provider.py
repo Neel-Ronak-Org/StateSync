@@ -12,7 +12,8 @@ Public API:
 The factory:
   1. Reads flags.llm.provider ("local" | "anthropic" | "azure" | "gemini" | "groq")
   2. Resolves the role → model name from flags.llm.models.<provider>.<role>
-  3. Returns the matching adapter (Ollama, Anthropic, Azure, Gemini or Groq)
+  3. Returns the matching adapter (Ollama, Anthropic, Azure, Gemini or Groq),
+     wrapped in RecordingModel so each call can be shown in the answer's trace
   4. Is cached per (provider, role) — one adapter instance per role per process
 
 Startup behaviour:
@@ -88,27 +89,29 @@ def get_agent_llm(role: str) -> "ChatModel":
         role, provider, model,
     )
 
+    from llm.recording import RecordingModel
+
     if provider == "local":
         from llm.adapters.ollama_adapter import OllamaAdapter
         ollama_url: str = str(flags.llm.ollama_url)
-        return OllamaAdapter(model=model, base_url=ollama_url)
+        return RecordingModel(OllamaAdapter(model=model, base_url=ollama_url), role, model)
 
     if provider == "anthropic":
         from llm.adapters.anthropic_adapter import AnthropicAdapter
-        return AnthropicAdapter(model=model)
+        return RecordingModel(AnthropicAdapter(model=model), role, model)
 
     if provider == "azure":
         # `model` here is an Azure DEPLOYMENT name, not a published model id.
         from llm.adapters.azure_adapter import AzureAdapter
-        return AzureAdapter(model=model)
+        return RecordingModel(AzureAdapter(model=model), role, model)
 
     if provider == "gemini":
         from llm.adapters.gemini_adapter import GeminiAdapter
-        return GeminiAdapter(model=model)
+        return RecordingModel(GeminiAdapter(model=model), role, model)
 
     if provider == "groq":
         from llm.adapters.groq_adapter import GroqAdapter
-        return GroqAdapter(model=model)
+        return RecordingModel(GroqAdapter(model=model), role, model)
 
     raise RuntimeError(
         f"Unknown LLM provider {provider!r}. "

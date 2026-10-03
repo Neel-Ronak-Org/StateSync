@@ -67,13 +67,17 @@ class _Recorder:
     def __init__(self, outcomes):
         self.outcomes = list(outcomes)
         self.calls: list[dict] = []
+        # The adapter calls client.chat.completions.with_raw_response.create.
+        self.with_raw_response = SimpleNamespace(create=self.create)
 
     async def create(self, **kwargs):
+        """An outcome is an exception, a completion, or (completion, headers)."""
         self.calls.append(kwargs)
         outcome = self.outcomes.pop(0)
         if isinstance(outcome, Exception):
             raise outcome
-        return outcome
+        completion, headers = outcome if isinstance(outcome, tuple) else (outcome, {})
+        return SimpleNamespace(headers=headers, parse=lambda: completion)
 
 
 @pytest.fixture
@@ -186,3 +190,46 @@ def test_placeholder_key_is_treated_as_missing(tmp_path, monkeypatch):
 
     with pytest.raises(GroqConfigError):
         GroqAdapter(model=PLAIN_MODEL)
+
+
+def test_reports_cached_tokens_retries_waited_time_and_rate_headroom(key_file, monkeypatch):
+    completion = _completion("ok")
+    completion.usage.prompt_tokens_details = SimpleNamespace(cached_tokens=5)
+    adapter, _, _ = _adapter(
+        PLAIN_MODEL,
+        [_rate_limit("3"), _rate_limit("1.5"), (completion, {"x-ratelimit-remaining-tokens": "6543"})],
+        monkeypatch)
+    result = _complete(adapter)
+
+    assert result.cached_tokens == 5
+    assert result.retries == 2
+    assert result.waited_ms == 4500
+    assert result.rate_remaining_tokens == 6543
+
+
+def test_accounting_defaults_when_provider_reports_nothing(key_file, monkeypatch):
+    adapter, _, _ = _adapter(
+        PLAIN_MODEL, [(_completion("ok"), {"x-ratelimit-remaining-tokens": "n/a"})], monkeypatch)
+    result = _complete(adapter)
+
+    assert (result.cached_tokens, result.retries, result.waited_ms) == (0, 0, 0)
+    assert result.rate_remaining_tokens is None
+
+
+def test_fail_fast_gives_up_when_total_wait_would_exceed_the_cap(key_file, monkeypatch):
+    monkeypatch.setattr(groq_mod, "_max_total_wait_s", lambda: 5.0)  # noqa: literals - seconds cap for the test
+    attempts = int(cfg.models.groq_max_retries) + 1
+    adapter, recorder, sleeps = _adapter(PLAIN_MODEL, [_rate_limit("3")] * attempts, monkeypatch)
+
+    with pytest.raises(openai.RateLimitError):
+        _complete(adapter)
+    # First 3s wait fits under 5s; the second would make 6s, so it stops there.
+    assert sleeps == [3.0]
+    assert len(recorder.calls) == 2
+
+
+def test_default_total_wait_cap_does_not_change_the_retry_schedule(key_file, monkeypatch):
+    adapter, recorder, sleeps = _adapter(PLAIN_MODEL, [_rate_limit("2"), _completion("ok")], monkeypatch)
+
+    assert _complete(adapter).text == "ok"
+    assert sleeps == [2.0]

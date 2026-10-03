@@ -23,13 +23,18 @@ from config_loader import cfg
 class MCPSessionContext:
     tenant_id: str
     session_id: str
+    # The workspace the caller is acting in, from X-Workspace-ID (Phase 3). The
+    # tools that care (workspaces, documents, external connections) validate it
+    # against the tenant and principal themselves; it grants nothing on its own.
+    workspace_id: str | None = None
 
 _current_session: contextvars.ContextVar[MCPSessionContext | None] = (
     contextvars.ContextVar("mcp_session", default=None)
 )
 
 
-def set_session(tenant_id: str, session_id: str | None = None) -> MCPSessionContext:
+def set_session(tenant_id: str, session_id: str | None = None,
+                workspace_id: str | None = None) -> MCPSessionContext:
     """
     Establish a session context for the current async task.
     Called from the FastAPI request middleware before any tool handler runs.
@@ -37,6 +42,7 @@ def set_session(tenant_id: str, session_id: str | None = None) -> MCPSessionCont
     ctx = MCPSessionContext(
         tenant_id=tenant_id,
         session_id=session_id or str(uuid.uuid4()),
+        workspace_id=workspace_id or None,
     )
     _current_session.set(ctx)
     return ctx
@@ -54,6 +60,18 @@ def get_session() -> MCPSessionContext:
             "Ensure set_session() is called in request middleware."
         )
     return ctx
+
+
+def current_tenant_id() -> str | None:
+    """The current tenant, or None outside a request (never raises)."""
+    ctx = _current_session.get()
+    return ctx.tenant_id if ctx else None
+
+
+def get_workspace_id() -> str | None:
+    """The workspace named by the caller, if any (unvalidated here)."""
+    ctx = _current_session.get()
+    return ctx.workspace_id if ctx else None
 
 
 def get_tenant_id() -> str:

@@ -1,43 +1,17 @@
-FROM python:3.12-slim
+FROM python:3.12.14-slim
 
 # Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /usr/local/bin/uv
 
 WORKDIR /app
 
-# Copy dependency manifest first (cache layer)
-COPY pyproject.toml ./
-# The `|| <literal list>` fallback below is a SECOND copy of pyproject.toml's
-# dependencies, and it had already drifted: it was missing `pglast` (imported
-# by sql_agent for interrogation targeting) and, once the Azure adapter landed,
-# `openai`. If the first command ever failed, the fallback would quietly build
-# an image with a DIFFERENT dependency set than the one declared -- and
-# `2>/dev/null` hid the reason it fell back.
-#
-# Not deleted, because the fallback exists for a real uv/pyproject failure mode
-# someone hit here. Made safe instead:
-#   - stderr is no longer discarded, so a fallback says why it happened
-#   - the list is synced with pyproject.toml
-#   - an import check runs AFTER install, so a fallback that produced a
-#     crippled image fails the BUILD instead of shipping
-# That last line is the guard that matters. This repo has twice shipped code
-# that was committed but not running (d5a5d35, 5301b89); this is the same
-# defect one layer down -- declared but not installed.
-RUN uv pip install --system --no-cache -r pyproject.toml || \
-    uv pip install --system --no-cache \
-    "fastapi>=0.111.0" \
-    "uvicorn[standard]>=0.30.0" \
-    "httpx>=0.27.0" \
-    "pydantic>=2.7.0" \
-    "langgraph>=0.1.0" \
-    "langchain-core>=0.2.0" \
-    "anthropic>=0.28.0" \
-    "openai>=1.40.0" \
-    "google-genai>=1.0.0" \
-    "jsonschema>=4.22.0" \
-    "digipin>=2.1.1" \
-    "pglast>=6.2" \
-    "vl-convert-python>=1.6.0"
+# Copy dependency manifests first (cache layer). Exact versions from the lock: pyproject.toml
+# declares the compatible ranges, requirements.lock is what runs (frozen from the running image
+# on 2026-10-02). The former `|| <inline list>` fallback guarded a uv failure parsing
+# pyproject.toml; installing a plain pinned file removes that failure mode, and the import
+# check below still fails the build if anything declared is missing.
+COPY pyproject.toml requirements.lock ./
+RUN uv pip install --system --no-cache -r requirements.lock
 
 # Fail the build, loudly, if any declared runtime dependency is absent.
 RUN python -c "\

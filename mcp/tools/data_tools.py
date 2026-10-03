@@ -33,6 +33,7 @@ from typing import Any
 
 import psycopg
 
+import connections
 from db import get_connection
 from config_loader import cfg as _cfg
 
@@ -62,11 +63,30 @@ _REJECTED_STATEMENT_TYPES = {
     "ExplainStmt",
 }
 
-# Hard caps (loaded from env — values come from config/statesync.toml via compose)
-_SAMPLE_ROWS_HARD_CAP: int = int(os.environ.get("SAMPLE_ROWS_HARD_CAP", "20"))
-_MAX_ROWS_HARD_CAP:    int = int(os.environ.get("MAX_ROWS_HARD_CAP", "5000"))
-_MAX_ROWS_DEFAULT:     int = int(os.environ.get("MAX_ROWS_DEFAULT", "1000"))
-_MAX_SQL_LENGTH:       int = int(os.environ.get("MAX_SQL_LENGTH", "8000"))
+# Hard caps, from config/statesync.toml (the single source; until 2026-10-02 these were
+# Dockerfile ENV values that merely repeated the config and could drift from it).
+_SAMPLE_ROWS_HARD_CAP: int = int(_cfg.mcp.sample_rows_hard_cap)
+_MAX_ROWS_HARD_CAP:    int = int(_cfg.mcp.max_rows_hard_cap)
+_MAX_ROWS_DEFAULT:     int = int(_cfg.mcp.max_rows_default)
+_MAX_SQL_LENGTH:       int = int(_cfg.sql.max_sql_length)
+
+
+# Functions SQL from the model may never call, on any dataset: file I/O,
+# admin/superuser, network (dblink), long sleeps. Ordinary functions (COUNT,
+# AVG, EXTRACT, NOW, string/date/math, ss_embed) stay callable. Applied in Layer
+# 1, so it covers data.run_select, vector.hybrid_select, tile refresh, approved
+# examples and templates alike (until 2026-10-01 it covered hybrid_select only).
+DENIED_FUNCTIONS = frozenset({
+    "pg_read_file", "pg_read_binary_file", "pg_ls_dir", "pg_ls_logdir",
+    "pg_ls_waldir", "pg_ls_tmpdir", "pg_stat_file",
+    "lo_import", "lo_export", "lo_read", "lo_write", "lo_open", "lo_creat",
+    "dblink", "dblink_connect", "dblink_exec", "dblink_connect_u",
+    "pg_sleep", "pg_sleep_for", "pg_sleep_until",
+    "set_config", "pg_reload_conf", "pg_rotate_logfile",
+    "pg_terminate_backend", "pg_cancel_backend",
+    "pg_read_server_files", "pg_write_server_files", "pg_execute_server_program",
+    "pg_promote", "pg_switch_wal", "pg_create_restore_point",
+})
 
 
 class _TableReferenceCollector(Visitor if _PGLAST_AVAILABLE else object):
@@ -83,11 +103,21 @@ class _TableReferenceCollector(Visitor if _PGLAST_AVAILABLE else object):
     def __init__(self) -> None:
         self.tables: set[str] = set()
         self.ctes: set[str] = set()
+        self.schemas: set[str] = set()
+        self.functions: set[str] = set()
+
+    def visit_FuncCall(self, ancestors, node) -> None:  # noqa: N802 — pglast visitor naming
+        names = [getattr(n, "sval", "") for n in (node.funcname or ())]
+        if names:
+            self.functions.add(names[-1].lower())
 
     def visit_RangeVar(self, ancestors, node) -> None:  # noqa: N802 — pglast visitor naming
         relname = getattr(node, "relname", None)
         if relname:
             self.tables.add(relname)
+        schemaname = getattr(node, "schemaname", None)
+        if schemaname:
+            self.schemas.add(schemaname.lower())
 
     def visit_CommonTableExpr(self, ancestors, node) -> None:  # noqa: N802 — pglast visitor naming
         ctename = getattr(node, "ctename", None)
@@ -183,7 +213,33 @@ def _check_layer1(sql: str) -> str | None:
             "This rejection is based on query shape, not content safety."
         )
 
+    denied = sorted(collector.functions & DENIED_FUNCTIONS)
+    if denied:
+        return f"Rejected: function {denied[0]!r} is not permitted."
+
     return None  # accepted
+
+
+def check_internal_schemas(sql: str) -> str | None:
+    """A refusal when SQL for a built-in dataset names one of StateSync's internal schemas.
+
+    Not applied to an owner's own database (connections.py), whose schemas may
+    legitimately be called anything.
+    """
+    if not _PGLAST_AVAILABLE:
+        return None
+    try:
+        parsed = parse_sql(sql)
+    except Exception:  # noqa: BLE001 - Layer 1 reports parse errors itself
+        return None
+    collector = _TableReferenceCollector()
+    for raw in parsed:
+        collector(raw)
+    internal = sorted(collector.schemas & {s.lower() for s in _cfg.mcp.internal_schemas})
+    if internal:
+        return (f"Rejected: this query names {internal[0]!r}, which holds StateSync's own data; "
+                "questions may read only their dataset's tables.")
+    return None
 
 
 def _classify_error(sqlstate: str | None, message: str, rows: list | None) -> dict:
@@ -238,8 +294,8 @@ async def sample_rows(
     Hard-capped at SAMPLE_ROWS_HARD_CAP rows server-side (A4.3 spec).
     limit defaults to cfg.mcp.sample_rows_default_limit when not provided.
     """
-    import re as _re
-    if not _re.match(r'^[a-z_][a-z0-9_]{0,62}$', table):
+    from tools.schema_tools import IDENTIFIER
+    if not IDENTIFIER.match(table):
         raise ValueError(f"Invalid table name: {table!r}")
     # Schema qualification. `orders` exists in BOTH public (A5 synthetic) and
     # olist (real), with DIFFERENT columns -- so an unqualified sample silently
@@ -247,9 +303,9 @@ async def sample_rows(
     # agent believes it is inspecting the real corpus. Validated against the
     # same allowlist the discovery tools use, so this cannot become a way to
     # reach pg_catalog.
-    from tools.schema_tools import ALLOWED_SCHEMAS, DEFAULT_SCHEMA
+    from tools.schema_tools import ALLOWED_SCHEMAS, DEFAULT_SCHEMA, source
     schema = schema or DEFAULT_SCHEMA
-    if schema not in ALLOWED_SCHEMAS:
+    if schema not in ALLOWED_SCHEMAS and not connections.is_token(schema):
         raise ValueError(
             f"Schema {schema!r} is not allowed. Allowed: {sorted(ALLOWED_SCHEMAS)}.")
 
@@ -260,20 +316,18 @@ async def sample_rows(
     if columns:
         # Validate column names before interpolating into SQL
         for col in columns:
-            if not _re.match(r'^[a-z_][a-z0-9_]{0,62}$', col):
+            if not IDENTIFIER.match(col):
                 raise ValueError(f"Invalid column name: {col!r}")
         col_list = ", ".join(f'"{c}"' for c in columns[:_cfg.mcp.sample_rows_max_columns])
     else:
         col_list = "*"
 
-    sql = f'SELECT {col_list} FROM "{schema}"."{table}" LIMIT {effective_limit}'
-
-    # Run through Layer 1 gate (even though we built the SQL, belt-and-suspenders)
-    rejection = _check_layer1(sql)
-    if rejection:
-        raise ValueError(f"Internal gate rejection for sample query: {rejection}")
-
-    async with get_connection() as conn:
+    async with source(schema) as (conn, real_schema):
+        sql = f'SELECT {col_list} FROM {connections.quote_ident(real_schema)}."{table}" LIMIT {effective_limit}'
+        # Run through Layer 1 gate (even though we built the SQL, belt-and-suspenders)
+        rejection = _check_layer1(sql)
+        if rejection:
+            raise ValueError(f"Internal gate rejection for sample query: {rejection}")
         cur = await conn.execute(sql)
         rows = await cur.fetchall()
         col_names = [desc.name for desc in cur.description] if cur.description else []
@@ -289,9 +343,49 @@ async def sample_rows(
 
 
 # ── A4.4 data.run_select ─────────────────────────────────────────────────────
+def _rows_result(cur: Any, rows: list, effective_max: int) -> dict[str, Any]:
+    col_names = [desc.name for desc in cur.description] if cur.description else []
+    return {"ok": True, "columns": col_names, "rows": [dict(zip(col_names, row)) for row in rows[:effective_max]],
+            "row_count": min(len(rows), effective_max), "truncated": len(rows) > effective_max, "error": None}
+
+
+async def _run_external(sql: str, dataset: str, effective_max: int) -> dict[str, Any]:
+    """run_select on the owner's database (mcp/connections.py): map, gate again, run read-only."""
+    try:
+        async with connections.external(dataset) as (conn, real_schema):
+            try:
+                mapped = connections.map_sql(sql, dataset, real_schema)
+            except connections.Refused as exc:
+                return _refused(str(exc))
+            rejection = _check_layer1(mapped)
+            if rejection:
+                return _refused(rejection)
+            try:
+                cur = await conn.execute(mapped)
+                rows = await cur.fetchmany(effective_max + 1)
+            except psycopg.Error as exc:
+                sqlstate = getattr(exc, "sqlstate", None)
+                logger.warning("data.run_select (connected %s): sqlstate=%s message=%s", dataset, sqlstate, exc)
+                return {"ok": False, "columns": [], "rows": [], "row_count": 0, "truncated": False,
+                        "error": {"sqlstate": sqlstate, "message": str(exc)}}
+            result = _rows_result(cur, rows, effective_max)
+            logger.info("data.run_select (connected %s): ok=True rows=%d truncated=%s", dataset,
+                        result["row_count"], result["truncated"])
+            return result
+    except connections.Refused as exc:
+        return {"ok": False, "columns": [], "rows": [], "row_count": 0, "truncated": False,
+                "error": {"sqlstate": None, "message": str(exc)}}
+
+
+def _refused(message: str) -> dict[str, Any]:
+    return {"ok": False, "columns": [], "rows": [], "row_count": 0, "truncated": False,
+            "error": {"sqlstate": None, "message": f"[Layer 1 Gate] {message}"}}
+
+
 async def run_select(
     sql: str,
     max_rows: int = _MAX_ROWS_DEFAULT,
+    dataset: str | None = None,
 ) -> dict[str, Any]:
     """
     A4.4 data.run_select — the only relational execution path.
@@ -318,6 +412,23 @@ async def run_select(
                 "message": f"[Layer 1 Gate] {rejection}",
             },
         }
+
+    # ── Which database (mcp/connections.py, rule 4) ──────────────────────────
+    # A connected dataset's SQL runs on the owner's database, with its cn_
+    # qualifier mapped to the real schema and gated again; SQL for a built-in
+    # dataset may not name a connection at all.
+    try:
+        named, _ = connections.datasets_named(sql)
+    except Exception:  # noqa: BLE001 - Layer 1 already parsed this SQL; never block on a second look
+        named = set()
+    if connections.is_token(dataset):
+        return await _run_external(sql, dataset, effective_max)
+    if named:
+        return _refused("This query names a connected database; ask it in a workspace that uses that database.")
+    internal = check_internal_schemas(sql)
+    if internal:
+        logger.warning("Layer 1 rejected SQL: %s", internal)
+        return _refused(internal)
 
     # ── Layer 2 (enforced in db.get_connection) + Layer 3 (role grants) ──────
     async with get_connection() as conn:

@@ -16,6 +16,11 @@ repeatedly shown small models are not reliable at following "always include
 both kinds" instructions, and a response citing only one kind is a spec
 failure even if the prose mentions both sources. A hybrid query naturally
 gets both kinds this way, without depending on the model remembering to.
+
+RAG v2 Phase E: when the docs route sets state.doc_abstained (nothing relevant was
+retrieved and pipeline.doc_abstain is on), the answer is retrieval.abstain_message, built
+here with no model call -- a model asked to answer from no passages is exactly where an
+unsupported answer comes from.
 """
 
 from __future__ import annotations
@@ -24,6 +29,8 @@ import json
 import logging
 import re
 import time
+from decimal import Decimal
+from numbers import Real
 from typing import Any
 
 from config_loader import cfg
@@ -73,6 +80,141 @@ Rules:
    something, explain in prose that this system answers with data and
    declarative charts only, and does not produce or execute code (D8).
 10. Emit the raw JSON object only. Do not wrap it in markdown code fences."""
+
+
+# The "short" experiment variant (flag pipeline.synth_style): the same rules and
+# JSON shape, but a capped answer, summaries instead of row listings, and NO
+# chart instructions at all. The browser draws the chart from the rows (as the
+# dashboards do) and the full table is shown under the answer, so the tokens
+# spent on chart shapes and on restating rows are pure cost. {max_sentences} is
+# filled from config by _short_system_prompt().
+_SYSTEM_PROMPT_SHORT = """\
+You are a data analytics assistant for an ONDC logistics network. Answer \
+the user's question using only the data context provided below -- SQL \
+query results, retrieved document passages, or both.
+
+Rules:
+1. Be concise and factual. Base your answer only on the provided data --
+   never invent a number or fact that isn't in the context.
+2. If the context includes retrieved document passages, ground every
+   factual claim in them; do not state something as fact unless it traces
+   to a passage or the SQL results.
+3. If the query failed with an error, explain the failure clearly to the user.
+4. Do not mention internal details like table names or SQL syntax unless helpful.
+5. Respond with a JSON object matching this exact schema:
+   {"answer_text": "<string>", "chart": null, "citations": []}
+6. answer_text is at most {max_sentences} sentences. When there are more than 3
+   result rows, summarise them (the extremes, the total, the range) instead of
+   listing rows: the full table is shown under your answer. State units. Follow
+   the formatting hints in the data context.
+7. chart is always null. Leave citations as an empty array -- it is filled in
+   deterministically after your response, not by you.
+8. NEVER include executable code in answer_text -- no Python, matplotlib,
+   JavaScript, shell commands, or any other runnable program text, and no
+   fenced code blocks. If the user asks for code, or asks you to run
+   something, explain in prose that this system answers with data and
+   declarative charts only, and does not produce or execute code (D8).
+9. Emit the raw JSON object only. Do not wrap it in markdown code fences."""
+
+_SECTION_SEP = " › "  # citation title: "{document title} › {section}" for a chunk under a heading
+_PCT_NAME_WORDS = ("rate", "share", "ratio", "pct", "percent", "conversion", "fraction")
+
+
+def _short_system_prompt() -> str:
+    return _SYSTEM_PROMPT_SHORT.replace(
+        "{max_sentences}", str(cfg.pipeline.synth_short_max_sentences)
+    )
+
+
+def _as_number(value: Any) -> float | int | None:
+    """A JSON-ish cell as a number, or None when it is not numeric (bool is not)."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, Decimal):
+        return int(value) if value == value.to_integral_value() else float(value)
+    if isinstance(value, Real):
+        return value  # type: ignore[return-value]
+    return None
+
+
+def _numeric_values(rows: list[dict], column: str) -> list[float | int] | None:
+    """Non-null values of a column when ALL of them are numeric, else None."""
+    values: list[float | int] = []
+    for row in rows:
+        v = row.get(column)
+        if v is None:
+            continue
+        n = _as_number(v)
+        if n is None:
+            return None
+        values.append(n)
+    return values or None
+
+
+def _fmt_num(value: float | int) -> str:
+    if isinstance(value, float):
+        # Rounded so float noise (0.1 + 0.2) does not reach the prompt.
+        value = round(value, 6)  # noqa: literals - display precision of a prompt number
+    return str(value)
+
+
+def column_summary(rows: list[dict], columns: list[str]) -> dict[str, dict[str, float | int]]:
+    """
+    count/min/max/sum per numeric column over ALL rows (not just the preview),
+    computed in code so the model quotes totals and extremes instead of
+    estimating them from a truncated sample.
+    """
+    out: dict[str, dict[str, float | int]] = {}
+    for col in columns:
+        values = _numeric_values(rows, col)
+        if values is None:
+            continue
+        out[col] = {
+            "count": len(values), "min": min(values), "max": max(values), "sum": sum(values),
+        }
+    return out
+
+
+def percentage_hints(rows: list[dict], columns: list[str]) -> list[str]:
+    """
+    A formatting hint for each numeric column that looks like a proportion:
+    every non-null value lies in [0, 1] and the name says rate/share/ratio/...
+    Models otherwise print 0.0453 as-is or as "0.0453%".
+    """
+    hints: list[str] = []
+    for col in columns:
+        if not any(word in col.lower() for word in _PCT_NAME_WORDS):
+            continue
+        values = _numeric_values(rows, col)
+        if values is None:
+            continue
+        if all(0 <= v <= 1 for v in values):  # noqa: literals - the unit interval
+            hints.append(f"Present {col} as a percentage (e.g. 0.0453 → 4.5%).")
+    return hints
+
+
+def format_short_sql_context(sql_rows: list[dict], sql_columns: list[str]) -> str:
+    """The short-style data context for a non-empty SQL result."""
+    preview = sql_rows[:cfg.pipeline.synth_short_preview_rows]
+    rows_text = json.dumps(preview, separators=(",", ":"), default=str)
+    lines = [
+        f"SQL query returned {len(sql_rows)} row(s).",
+        f"Columns: {', '.join(sql_columns)}",
+    ]
+    summary = column_summary(sql_rows, sql_columns)
+    if summary:
+        lines.append(f"Column summary (all {len(sql_rows)} rows):")
+        for col, st in summary.items():
+            lines.append(
+                f"  {col}: count={st['count']} min={_fmt_num(st['min'])} "
+                f"max={_fmt_num(st['max'])} sum={_fmt_num(st['sum'])}"
+            )
+    hints = percentage_hints(sql_rows, sql_columns)
+    if hints:
+        lines.append("Formatting hints:")
+        lines.extend(f"  {h}" for h in hints)
+    lines.append(f"Results (first {len(preview)} rows):\n{rows_text}")
+    return "\n".join(lines)
 
 
 _A7_MARKS = ("bar", "line", "point", "area", "tick", "rect", "arc")
@@ -354,7 +496,10 @@ def build_citations(
 
     for r in retrievals[: cfg.retrieval.citation_max_chunks]:
         prov = r["provenance"]
-        citations.append({"kind": "chunk", "ref": prov["chunk_id"], "page": prov.get("page")})
+        citation = {"kind": "chunk", "ref": prov["chunk_id"], "page": prov.get("page")}
+        if prov.get("title"):
+            citation["title"] = _SECTION_SEP.join(filter(None, (prov["title"], prov.get("section"))))
+        citations.append(citation)
 
     return citations
 
@@ -382,6 +527,28 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     sql_columns: list[str] = state_dict.get("sql_columns", [])
     executed_sql: str | None = state_dict.get("executed_sql")
     retrievals: list[dict] = state_dict.get("retrievals", [])
+    short_style = (
+        state_dict.get("flags_snapshot", {}).get("pipeline.synth_style", "full") == "short"
+    )
+
+    if state_dict.get("doc_abstained"):
+        # RAG v2 Phase E: the docs route found nothing relevant (pipeline.doc_abstain). The answer
+        # is the fixed message: no model call, so nothing to invent; no citations (there is no
+        # passage and no SQL to cite) and no chart. It still goes through the A7 validator, like
+        # every other answer, and it holds no figure for number grounding to trace.
+        start_ms = int(time.monotonic() * 1000)
+        safe_out = safe_synthesizer_output({
+            "answer_text": cfg.retrieval.abstain_message, "chart": None, "citations": [],
+        })
+        logger.info("Synthesizer abstained for query_id=%s (no model call).", query_id)
+        return {
+            "answer_text": safe_out["answer_text"],
+            "vega_spec": None,
+            "metrics": {
+                "tokens_in": 0, "tokens_out": 0, "llm_calls": 0, "trajectory_steps": 1,
+                "latency_ms": int(time.monotonic() * 1000) - start_ms,
+            },
+        }
 
     # Derived from the typed, reliably-accumulated state.errors/state.attempt
     # (same test _route_after_sql uses), NOT a scratch key. A conditional
@@ -419,7 +586,9 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             f"invent a numeric or factual answer that was never computed."
         )
     elif executed_sql:
-        if sql_rows:
+        if sql_rows and short_style:
+            context_parts.append(format_short_sql_context(sql_rows, sql_columns))
+        elif sql_rows:
             rows_preview = sql_rows[:cfg.sql.synthesizer_preview_rows]
             rows_text = json.dumps(rows_preview, indent=2, default=str)  # noqa: literals — JSON display indent
             chartable = is_chartable(sql_rows, sql_columns)
@@ -444,6 +613,10 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     if retrievals:
         context_parts.append(_format_doc_context(retrievals))
 
+    caveats: list[str] = state_dict.get("caveats") or []
+    if caveats:
+        context_parts.append("Caveats (mention them briefly to the user): " + " ".join(caveats))
+
     if not context_parts:
         context_parts.append("No data was retrieved for this question.")
 
@@ -453,7 +626,7 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
 
     try:
         result = await llm.complete(
-            system=_SYSTEM_PROMPT,
+            system=_short_system_prompt() if short_style else _SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_message}],
             max_tokens=cfg.sql.max_tokens_synthesizer,
         )
@@ -506,9 +679,11 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         # the model is never trusted with data.values). Gated on the same
         # deterministic chartability test the prompt was told about, so a
         # model that proposes a chart for a single scalar still gets null.
+        # In the short style the server never draws: the browser builds the
+        # chart from the rows, so a chart the model proposes anyway is dropped.
         parsed["chart"] = (
             build_chart(parsed.get("chart"), sql_rows, sql_columns, query_id)
-            if is_chartable(sql_rows, sql_columns) else None
+            if is_chartable(sql_rows, sql_columns) and not short_style else None
         )
         parsed["citations"] = citations
 

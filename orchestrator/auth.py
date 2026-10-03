@@ -164,6 +164,36 @@ def init_auth() -> None:
     _PRINCIPALS = load_principals()
 
 
+# ── Browser sessions (2026-10-02) ─────────────────────────────────────────────
+# The web app no longer keeps the token where page scripts can read it (localStorage was
+# readable by any XSS). Sign-in exchanges the token for an HttpOnly, SameSite=Strict cookie
+# (session_api.py). A request authenticated by that cookie must also carry CSRF_HEADER: a
+# custom header forces a CORS preflight, which only the configured origins pass, so another
+# site cannot ride the cookie even where SameSite would not stop it. Scripts keep using the
+# Authorization header, which needs neither.
+SESSION_COOKIE = "statesync_session"
+CSRF_HEADER = "X-StateSync"
+CSRF_VALUE = "1"
+
+
+def credential_header(authorization: str | None, cookie: str | None, csrf: str | None) -> str | None:
+    """The 'Bearer <token>' to authenticate: the Authorization header if present, else the session
+    cookie, which counts only with the CSRF header. Raises AuthError for a cookie without it."""
+    if authorization and authorization.strip():
+        return authorization
+    if cookie and cookie.strip():
+        if csrf != CSRF_VALUE:
+            raise AuthError(f"A session cookie must come with the {CSRF_HEADER} header.")
+        return f"Bearer {cookie.strip()}"
+    return None
+
+
+def all_principals() -> list[Principal]:
+    """Every configured principal (for background work done on each one's behalf, such as the
+    self-test timer); empty before init_auth()."""
+    return list((_PRINCIPALS or {}).values())
+
+
 def authenticate(authorization_header: str | None) -> Principal:
     """
     Authenticate a request using its Authorization header.

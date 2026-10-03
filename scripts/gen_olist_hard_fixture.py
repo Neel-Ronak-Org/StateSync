@@ -99,6 +99,7 @@ import re
 import sys
 import urllib.request
 from pathlib import Path
+import mcp_auth  # noqa: E402 -- scripts/mcp_auth.py: the MCP service token
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUT = REPO_ROOT / "fixtures" / "golden" / "olist_hard.json"

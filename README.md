@@ -6,7 +6,7 @@ StateSync is a live analytics dashboard that builds itself, with a chat for aski
 
 **What you see:** a dashboard home (navy by default, light mode too) with KPI cards that show their change, trends, breakdowns, donuts and an insights strip, refreshing every 30 s on the live demo data; "Show as" to redraw any card another way; drag-and-resize layouts and several dashboards per dataset; an Ask page with conversation history.
 
-**Datasets:** `live` (an online shop kept moving by a simulator: orders, deliveries, reviews, web traffic), `olist` (1.5M real Brazilian e-commerce rows, frozen) and `public` (a synthetic logistics network plus policy and SLA documents, frozen for the accuracy tests).
+**Datasets:** `live` (an online shop kept moving by a simulator: orders, deliveries, reviews, web traffic), `olist` (1.5M real Brazilian e-commerce rows, frozen) and `public` (a synthetic logistics network plus policy and SLA documents, frozen for the accuracy tests). A workspace can also use your own Postgres database (connected read-only) and documents you upload to the Library.
 
 ## Quick start (a machine that already has the stack built)
 
@@ -36,7 +36,7 @@ docker compose stop       # stops everything, keeps all data; start again with t
 ## First-time setup (a clean machine)
 
 1. **Prerequisites:** Docker Desktop with Compose v2; Python 3.12+ for the operator scripts; a Groq API key (the model provider, `config/flags.toml`). Embeddings run in the `ollama` container: `docker compose up -d ollama && docker compose exec ollama ollama pull mxbai-embed-large`.
-2. **Secrets** (`secrets/` is gitignored): `pg_migrator_password`, `pg_reader_password`, `pg_history_password`, `pg_simulator_password` (any random strings), `groq_api_key` (your key), and empty `anthropic_api_key`, `azure_openai_api_key`, `gemini_api_key` files (the orchestrator mounts all provider keys).
+2. **Secrets** (`secrets/` is gitignored): `pg_migrator_password`, `pg_reader_password`, `pg_history_password`, `pg_simulator_password` (any random strings), `groq_api_key` (your key), and empty `anthropic_api_key`, `azure_openai_api_key`, `gemini_api_key` files (the orchestrator mounts all provider keys). Also `mcp_token` (`openssl rand -hex 32 > secrets/mcp_token`; the MCP will not start without it), the evaluator's `mcp_token_evaluator` and `api_token_evaluator` (commands in `secrets/README.md`), and `connection_key` (`python3 scripts/make_connection_key.py`; never regenerate it once databases are connected). See `secrets/README.md`.
 3. **Build and start:** `docker compose build` then the start command above.
 4. **Migrations:** `bash scripts/migrate.sh` runs 001, 002 and 004; apply 005 onward in order with `docker exec -i postgres psql -U statesync_migrator -d statesync < migrations/NNN.sql`. After 020, set the simulator's password: `printf "ALTER ROLE statesync_simulator PASSWORD '%s';" "$(cat secrets/pg_simulator_password)" | docker exec -i postgres psql -U statesync_migrator -d statesync`.
 5. **An API principal:** `python3 scripts/gen_api_principal.py` (writes `secrets/api_principals.json` and `secrets/api_token_dev`), then `docker compose restart orchestrator`.
@@ -46,27 +46,35 @@ docker compose stop       # stops everything, keeps all data; start again with t
 
 ## Architecture
 
-The stack consists of 8 services in `docker-compose.yml`:
+The stack consists of 10 services in `docker-compose.yml`:
 
 - `simulator`: keeps the `live` dataset moving (Phase 2b). Writes only to the `live` and `live_sim` schemas, as `statesync_simulator`; `db_net` only.
 
 - `postgres`: PostgreSQL database with PostGIS spatial extensions and pgvector. Resides on `db_net`.
 
-- `mcp`: Model Context Protocol server on port 8080. Sole holder of database credentials. Bridges `db_net` and `app_net`.
+- `mcp`: Model Context Protocol server on port 8080. Sole holder of database credentials. Bridges `db_net` and `app_net`. Accepts calls only with the shared service token the orchestrator sends (`mcp/service_auth.py`).
+
+- `parser`: turns uploaded PDFs into text on port 8095. Isolated on `parser_net`, which reaches nothing else; only the orchestrator can call it.
+
+- `reranker`: the optional passage re-ranker on port 8096 (two cross-encoders baked into the image; switched off by default, `config/flags.toml`). Isolated on `reranker_net`; only the MCP can call it.
 
 - `orchestrator`: LangGraph multi-agent pipeline on port 8090. Resides on `app_net`.
 
-- `evaluator`: Continuous evaluation engine and metrics service on port 8095. Resides on `app_net`.
+- `evaluator`: Continuous evaluation engine and metrics service on port 8095 (its own container). Resides on `app_net`. Kept off: it spends model quota. It has its own API principal and an MCP token restricted to gold SELECTs.
 
 - `frontend`: the React web app (`web/`) served by nginx on port 3000 under a strict CSP (scripts from the app only, no `eval`). Resides on `app_net`.
 
-- `ollama`: Containerized Ollama instance on port 11434 serving `mxbai-embed-large` embeddings to `mcp`. Sits on both networks.
+- `ollama`: Containerized Ollama instance on port 11434 serving `mxbai-embed-large` embeddings to `mcp`. Sits on both networks. Answers come from the hosted model in `config/flags.toml` (Groq), not from Ollama.
 
-- `qdrant`: Vector database on port 6333 storing execution trajectories. Resides on `db_net`.
+- `qdrant`: Vector database on port 6333 for the execution-trajectory memory, which is switched off (it reduced tokens but hurt accuracy). Document search uses pgvector in `postgres`. Resides on `db_net`.
 
-The orchestrator has NO direct database access — every database operation goes through the mcp service over JSON-RPC. `postgres` and `qdrant` reside on an internal network (`db_net`) inaccessible to the orchestrator (`app_net`). The frontend is served on port 3000 and calls the orchestrator cross-origin on port 8090.
+The orchestrator has NO direct database access — every database operation goes through the mcp service over JSON-RPC. `postgres` and `qdrant` reside on an internal network (`db_net`) inaccessible to the orchestrator (`app_net`). The frontend is served on port 3000 and calls the orchestrator cross-origin on port 8090. In development, `docker-compose.override.yml` publishes the frontend, orchestrator, MCP, qdrant and evaluator ports on 127.0.0.1 only.
 
-Three layers on generated SQL (stated plainly, no adjectives):
+Three layers on generated SQL (`mcp/tools/data_tools.py`):
+
+1. **Statement gate:** the SQL is parsed with pglast (PostgreSQL's own parser); anything but a single SELECT, including a data-modifying CTE, is rejected.
+2. **Session guards:** every query runs in a READ ONLY transaction that is always rolled back, with a statement timeout.
+3. **Role grants:** the `statesync_reader` role has SELECT only, so a write that reached the engine would fail (SQLSTATE 42501). The security claim rests on this layer.
 
 - **Layer 1 (Parser Gate):** MCP parses SQL with `pglast`. It rejects multi-statement queries, data-modifying CTEs, anything other than a single read-only `SELECT`, and now also rejects a `SELECT` that reads no real table.
 
@@ -135,19 +143,19 @@ The demo flips target_schema to olist and restores shipped state afterwards, ver
 
 - Accuracy depends heavily on question phrasing; the headline single-turn numbers were measured on questions whose projections and denominators were stated by construction, which removes schema linking and ambiguity resolution from the task.
 
-- The local 7B model is the shipped default and is NOT representative of hosted-model quality.
+- The shipped model is Groq-hosted gpt-oss-120b (`config/flags.toml`); the free tier's daily token limit caps how many questions a day the demo can answer. Numbers measured on the older local 7B model are not representative of it.
 
 - The rate limiter is in-process: a restart clears every window, and N replicas permit N× the rate.
 
 - Bearer tokens have no expiry; revocation means editing the secret and restarting.
 
-- The frontend keeps its token in localStorage, readable by any script achieving XSS.
+- The web app no longer stores the token: sign-in exchanges it for an HttpOnly, SameSite=Strict session cookie (7 days; cookie requests must also carry an `X-StateSync` header). Open the app at http://localhost:3000, the same host as the API, or the cookie is not sent. The token itself still never expires.
 
-- session_state.audit_log has no retention policy and grows without bound. Full stored result rows DO have one (30-day TTL, 1 MiB/turn cap), pruned on write and forceable with scripts/prune_turn_rows.py.
+- session_state.audit_log has a 180-day retention policy (`audit_retention_days`), but it is enforced only when an operator runs `scripts/prune_audit_log.py` (dry run by default); nothing prunes it automatically. Full stored result rows have a 30-day TTL and a 1 MiB/turn cap, pruned on write and forceable with scripts/prune_turn_rows.py.
 
 - Conversation history written before authentication existed is attributed to a sentinel principal and is invisible in the UI by design.
 
-- Point at [`docs/limitations.md`](docs/limitations.md) for the full list and say that it is long on purpose.
+- The full list is in [`docs/limitations.md`](docs/limitations.md); it is long on purpose.
 
 ## Repo map
 

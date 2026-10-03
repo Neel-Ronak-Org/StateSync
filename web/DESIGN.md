@@ -79,7 +79,7 @@ Dark is the default theme; light is kept and equally finished.
 
 - **Rail** `w-16`, `bg-card border-r`, full height. Top: the mark (links to Dashboards).
   Nav icon buttons with tooltips and `aria-current="page"` when active: **"Dashboards"**
-  (`LayoutDashboard`) and **"Ask"** (`MessageSquare`). The active item has a `primary`
+  (`LayoutDashboard`), **"Workspaces"** (`Boxes`), **"Library"** (`Library`) and **"Ask"** (`MessageSquare`). The active item has a `primary`
   pill behind it that slides between items.
 - Rail bottom, top to bottom: the connection status dot (`data-testid="connection-status"`,
   tooltip + sr-only text: "Connected" / "Model unavailable: <detail>" / "Server
@@ -87,10 +87,14 @@ Dark is the default theme; light is kept and equally finished.
   `role="switch"` button with `aria-checked`); **"Theme"** (menu with radio items
   Light / Dark / System); **"Sign out"** (`LogOut`).
 - Below `md` the rail stays (it is already narrow).
-- Routing: hash — `#/dashboards` (default) and `#/ask`. Old links `#/dashboard` and
-  `#/chat` map to them. No router library.
+- Routing: hash — `#/dashboards` (default), `#/workspaces`, `#/workspaces/<id>`,
+  `#/library` and `#/ask`. Old links `#/dashboard` and `#/chat` map to them. No router library.
 - **Dataset picker**: a Select labelled **"Dataset"** in each page header. Options are the
-  API's `available_schemas`; a new browser starts on `live` when it exists.
+  API's `available_schemas`, then a **"Workspaces"** group with my workspaces by name
+  (values `ds:<schema>` / `ws:<id>`). A new browser starts on `live` when it exists.
+  Choosing a workspace makes it active (remembered): its dataset is used everywhere and
+  every question carries its `workspace_id`. Choosing a dataset, or opening a past
+  conversation on another dataset, leaves the workspace. Switching starts a new chat.
 
 ## 5. Sign-in
 
@@ -166,6 +170,104 @@ muted line, **"Build with AI"** (primary) and **"Start empty"**. An empty dashbo
 panel (`data-testid="build-progress"`, `role="status"`): "Building 3 of 8", one row per
 planned insight with its state (queued, running, added, skipped with the reason), and
 cards appear as they are added. It ends with a toast: "Added 7 of 8 insights."
+
+## 6a. Workspaces (docs/V3_PLAN.md Phase 3)
+
+- List (`#/workspaces`): heading **"Workspaces"**, **"New workspace"**; cards
+  (`data-testid="workspace-card"`) with name, dataset, setup state in words (New /
+  Scanned / Drafts to review / Approved, not tested / Tested) and the score "S/T".
+  Empty: **"No workspaces yet"** and one sentence on what a workspace is.
+- **New workspace** dialog: **Name**, **Dataset**, **About your business** (optional);
+  **Cancel** / **Create**; server refusals shown in the dialog. Opens the new workspace.
+  The Dataset select lists the sample datasets, then a group **"Your databases"** with the
+  connected databases that have a schema (label = the connection name, value = its
+  `connection_id`, which is sent as `target_schema`). A workspace on one has
+  `target_schema === connection_id`.
+- Wherever a dataset is shown as text (workspace cards, the Ask empty state and turn badge,
+  Answer details, the conversation list, dashboards) a connection id `cn_<16 hex>` is shown
+  as the connection's name (`datasetLabel`, src/features/library/datasets.ts); never the raw
+  id (an id with no matching connection reads "Your database").
+- Detail (`#/workspaces/<id>`): name, **"Ask in this workspace"**, **"Workspace
+  actions"** → **"Delete workspace"** (confirm). Tabs (`aria-label="Setup steps"`):
+  - **Business**: **About your business**, "Version N", **Save** (each save is a version).
+  - **Knowledge**: **Draft with AI** (progress `data-testid="draft-progress"`, failures
+    shown); one row per table and column (`data-testid="catalog-row"`, `data-table`,
+    `data-column`, `data-approved`) with type, sample values, the editable description
+    ("Description of <table>.<column>") and its source badge (**AI draft** / **Yours**);
+    **Save changes** sends only changed rows. Definitions (`data-testid="definition-row"`)
+    with **Term** / **Definition** / **Add definition** and "Delete definition <term>".
+    Source badges **AI draft** / **From document** / **Yours**. **From your documents**:
+    **Find in documents** (disabled, with a pointer to the Documents tab, until the
+    workspace's folders hold ready documents); progress `data-testid="mine-progress"`
+    "Reading documents… d/t"; then `data-testid="mine-summary"`: "Found N definitions to
+    review below." (or "No new definitions were found.") and how many suggestions were
+    left out because their quoted sentence is not in the document. A definition from a
+    document shows `data-testid="definition-citation"`: the exact sentence in quotes and
+    "<title>, p. N". The owner's own definitions are never replaced.
+    **Approve** (blocked while edits are unsaved) then moves to Test. Only approved
+    knowledge is used when answering; any edit needs approving again.
+  - **Test**: "Graded against reference answers" (olist, public) or "You grade each
+    answer"; **Run the test** (needs approval); ten results (`data-testid="setup-result"`,
+    `data-verdict`) with answer and reason; owner grading via "Mark question N right /
+    wrong"; score `data-testid="setup-score"` "S/T" with **Ready to use** (≥ 8) or
+    **Needs work**; a run that stopped early says why (`role="alert"`).
+  - **Documents**: one checkbox per library folder (`data-testid="workspace-folder"`, the
+    folder name and "N ready"); **Save** (disabled until changed). "Questions in this
+    workspace can search the documents in the folders you choose." **Open library** →
+    `#/library`; an empty library says "Your library is empty." with the same link.
+- Ask: an answer that ran an approved example shows a **Verified** badge
+  (`data-testid="verified-badge"`, tooltip "Answered with a query approved for this
+  workspace.").
+
+## 6b. Library (docs/V3_PLAN.md Phase 3c slice 5, D-v3-17)
+
+- `#/library`: heading **"Library"**, "Documents you upload once and use in any workspace."
+  Two tabs (`aria-label="Library sections"`): **Documents** (default; what follows until
+  "Databases tab") and **Databases**. The chosen tab is local state, not in the address.
+  **New folder** is in the header on the Documents tab only.
+- Folders (`data-testid="folder-item"`, `aria-current` on the selected one) with
+  "N documents"; **New folder** (dialog **Name**, **Cancel** / **Create**, server refusals in
+  the dialog, e.g. a duplicate name). **Folder actions** → **Rename folder** and **Delete
+  folder** (confirm; says how many documents go with it and "Used by N workspaces").
+  No folders: **"No folders yet"**, one sentence, **New folder**.
+- Documents of the selected folder (`data-testid="library-document"`, `data-status`):
+  title, filename, "N pages" (PDFs only), size, relative upload time (absolute in
+  `title`), status **Processing** (spinner) / **Ready** / **Failed** with the reason.
+  "Delete document <title>" (confirm). Empty folder: **"No documents in this folder"**.
+- **Upload** and a drop zone (`data-testid="upload-dropzone"`, "Drop PDF, text or Markdown
+  files here"). The type comes from the extension (.pdf, .txt, .md, .markdown); other
+  files, and files over 20 MB, are refused in the browser and never sent. Files upload
+  one after another; each refusal names its file and does not stop the rest. While any
+  document is Processing the list refreshes every 3 s.
+
+### Databases tab (docs/V3_PLAN.md Phase 3c slice 6a)
+
+- Connect your own Postgres with a read-only login. One sentence: "Connect a Postgres
+  database with a read-only login. StateSync only ever reads it."
+- List (`data-testid="connection-item"`, `data-status` ok / failed): name; `user@host:port/dbname`;
+  status **Ready** / **Failed** with the server's `check_detail` (warnings from the last
+  create or test are shown muted when Ready); the schema, or, until one is chosen, a
+  **Schema** select (`aria-label="Schema for <name>"`) listing the schemas from the last
+  create or test response (with none known: "use Test again to list the schemas");
+  "Used by N workspaces" when non-empty; **Test again**; **Delete connection <name>**
+  (confirm dialog; a server refusal, e.g. "1 workspace uses this connection. Delete it
+  first.", shows in the dialog and it stays open).
+- **Add database** dialog: **Name**, **Host** (hint "For a database on this computer, use
+  host.docker.internal."), **Port** (5432), **Database**, **User**, **Password**, **SSL**
+  (disable, prefer, require, verify-ca, verify-full; default prefer); **Cancel** /
+  **Connect** ("Checking…" while pending). The server's refusal shows in the dialog
+  (`role="alert"`) and the dialog stays open. On success it closes, toasts "Connected", and
+  a login that can read several schemas leaves the new item with the Schema select.
+- The password: `<input type="password" autoComplete="new-password">`, held only in the
+  dialog's state, sent once in the create request (called directly, never through a
+  query or mutation cache), cleared on success, cancel and close. It never appears in the
+  DOM afterwards, a toast, a URL, storage or a log; the server never returns it.
+- A collapsible **"How to create a read-only login"** (`<details>`) with the four-statement
+  SQL in a `<pre>` (text only).
+- Empty: **"No databases yet"**, the sentence, **Add database**. A server without an
+  encryption key (`available: false`) shows "Connecting your own databases is not set up
+  on this server. Run scripts/make_connection_key.py and restart the stack." and hides
+  **Add database**.
 
 ## 7. Ask (chat)
 

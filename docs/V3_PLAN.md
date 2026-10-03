@@ -439,18 +439,190 @@ how you ask for new insights. This phase comes before Phase 3.
 
 ### Phase 3 — Workspaces: setup, knowledge store, uploads
 
-- Workspaces with row-level security, plus the RLS-coverage test.
-- Setup wizard: business form → scan → AI-drafted descriptions and definitions → owner
-  approval → 10-question setup test with a score.
-- Knowledge store and context assembly (§5.1–5.2), filling the existing
-  `SchemaRetriever` slot.
-- Text PDF upload via Docling, in an isolated worker.
-- Connect your own Postgres (self-hosted mode): encrypted credentials, and a check that
-  the role really is read-only.
-- Generalise or retire code tied to the synthetic schema: seven source files (the
-  DIGIPIN spatial resolver, the `_local` script-repair convention, column-specific
-  normaliser rules, domain examples in the supervisor prompt).
-- **Exit:** done-criterion 2 in §7 passes on two different sample databases.
+**Goal:** a person can turn a database into a working, measured workspace in a few
+minutes: describe the business, let StateSync scan and draft, approve, and see a score.
+
+**Design (decided 2026-09-28):**
+
+- **Workspace** = a name, a data source (a sample dataset, or in self-hosted mode an
+  external Postgres connection), the owner's business context (versioned), a knowledge
+  store, its documents, its dashboards, and a setup score. It is owned by one principal
+  in one tenant. Demo datasets (`live`, `olist`, `public`) stay usable without one.
+  Migration 021 adds `workspaces`, `business_context_versions`, `kb_columns`,
+  `kb_definitions`, `kb_examples`, `setup_runs`/`setup_results`, and `workspace_id` on
+  dashboards.
+- **Row-level security is the backstop (§5.5).** Every table in `session_state` and
+  `workspace_docs` gets RLS, with a policy on `tenant_id =
+  current_setting('statesync.tenant_id')`; the MCP sets it at the start of every
+  transaction from the session's tenant. Child tables without their own tenant column
+  are scoped through their parent. The RLS-coverage test fails if any table in those
+  schemas lacks RLS or a policy: statically over the migrations, and live over
+  `pg_class`/`pg_policies`.
+- **Setup wizard**: describe → scan → AI drafts → approve → test.
+  - The scan stores the catalog (tables, columns, types, row counts, fingerprint).
+  - The drafts are table and column descriptions plus definitions of key terms,
+    written from names, sample values and the business context. They are stored as
+    unapproved drafts. Only approved knowledge ever enters a prompt (§5.1).
+  - **The setup test is graded objectively where it can be.** For a sample dataset, the
+    10 questions come from its curated reference set, each with ground-truth SQL, and
+    are scored by BIRD-style execution accuracy (`scorers.ExecutionAccuracyScorer`).
+    This covers `fixtures/golden/olist.json` and `phase_c2.json`, plus a new `live` set.
+  - For an external database, the questions are AI-proposed, and the owner marks each
+    answer right or wrong, with its SQL shown.
+  - Right answers become approved examples for that workspace only. Evaluations run
+    without a workspace, so the benchmark sets are not contaminated.
+- **Context assembly (§5.1)** runs only when a question carries a workspace, so
+  measured behaviour without one is unchanged:
+  - the business context goes into the SQL agent's system prompt, below the fixed rules
+    and labelled as the owner's words;
+  - approved descriptions, the definitions a question mentions, and up to three similar
+    approved examples go into the context block;
+  - **fast path**: a question matching an approved example (normalised text) runs its
+    approved SQL, and the answer is labelled "Verified".
+- **Uploads**: text PDFs are parsed by a new `parser` service on an internal-only
+  network, with no internet, no database credentials, a non-root user, size and page
+  limits, and a timeout.
+  - It uses pypdf, not Docling (D-v3-11): Docling pulls in about 2 GB of layout models
+    that text PDFs do not need.
+  - The MCP chunks and embeds the pages into a new `workspace_docs` schema, not the
+    sample corpus's tables, whose shape the A5 fingerprint pins.
+  - Retrieval searches the workspace's documents alongside the sample corpus.
+- **Own Postgres (self-hosted only, off by default):**
+  - Credentials are encrypted with a key only the MCP holds.
+  - Connecting checks that the role is really read-only (not superuser, no write
+    privilege on any table, read-only transactions work).
+  - The workspace's queries run on that connection behind the same three-layer gate.
+  - The MCP picks the connection from the session's workspace, so the orchestrator
+    still holds no credential.
+- **Synthetic-schema code** (the DIGIPIN resolver, `_local` script repair, the
+  normaliser's column rules, the supervisor's domain examples) is switched on per
+  dataset from config and stays on for `public` only, so its measured behaviour does
+  not change.
+- **MCP methods:** `workspaces.manage` and `docs.manage` bring the count to 20 of 20
+  (D-v3-10).
+
+**Slices:** (1) migration 021 and RLS with its coverage test, and `workspaces.manage`;
+(2) scan, drafts, approval and the setup test (backend, with a live verify script);
+(3) context assembly and the fast path; (4) the web wizard, workspace switching and the
+documents page; (5) the parser service, uploads and retrieval; (6) external Postgres;
+(7) the synthetic-schema switches.
+
+**Progress:** slice 1 ✅ (2026-09-28) — migration 021 applied; RLS on all 16 tables of
+session_state and workspace_docs; `workspaces.manage` (19 of 20 methods) with the
+knowledge store, approval, examples, context and setup-run bookkeeping; `/workspaces`
+routes; `scripts/verify_workspaces.py` 58/58 live (including: no tenant bound sees no
+rows, a forged tenant write is refused by Postgres, existing dashboards/tiles/sessions
+unaffected). Slices 2–3 ✅ built (2026-09-28): AI drafts (decomposer role; olist 61/61
+tables and columns drafted live in 5 s), the setup-test runner (execution accuracy vs
+the first 10 English SQL questions of the curated set; owner-graded elsewhere; never
+the fast path), workspace context in the SQL agent and the fast path (verified live).
+Slice 4 ✅ (2026-09-28): the Workspaces page, wizard (Business / Knowledge / Test),
+workspace switching in the picker, the Verified badge; mocked suite 94/94 (28 for
+workspaces, written before the UI; UI implementation delegated, then audited and
+fixed), live browser walk with real AI drafts. Found on the way: CORS refused PUT, so
+saving a dashboard layout from the browser had failed since Phase 2b (fixed; static
+test added). **Open:** the exit measurement (setup test ≥ 8/10 on olist and public)
+waits for Groq's daily token quota on gpt-oss-120b, exhausted on 2026-09-27.
+
+- **Exit:** done-criterion 2 in §7 passes on two different sample databases (olist and
+  public): a workspace set up through the wizard scores at least 8 of 10 on its setup
+  test.
+
+### Phase 3b — Measure, then lean (scope review, 2026-09-28)
+
+The scope review (Claude Docs: "StateSync scope review") measured the pipeline on the
+live stack: a database question makes 5 model calls, ~4,900 input tokens, ~3.3 s, and
+the Groq free tier (8K tokens/min, 200K/day per model) caps use at ~55 questions a day.
+No accuracy number in this repo was measured on the Groq models in use.
+
+Order of work (owner, 2026-09-29; cleanup items are **kept for now**, D-v3-13):
+
+1. **Instrumentation:** every model call recorded per answer (tokens in/out/cached, time,
+   retries, rate-limit headroom); developer mode shows it.
+2. **Groq baseline:** a fixed 30-question set (`fixtures/golden/groq_baseline.json`,
+   selected by rule from existing fixtures) and `scripts/eval_groq.py` (paced, resumable,
+   dry-run costs no quota).
+3. **Lean pipeline behind flags, default off until measured:** language check in code,
+   router only where a source has documents (merged with the follow-up rewrite), column
+   profiles instead of the SQL draft, shorter answers with numbers formatted in code,
+   cache-friendly prompt order, at most one retry on a timeout, fail fast on stalls.
+4. **Trust features:** answer checks (fan-out, empty/NULL-heavy, ratio formatting, dates
+   outside the data), plain-English "how I got this", column profiles at scan.
+5. **Rest of Phase 3 around evidence-tiered answering** (Verified / Compiled / Checked /
+   Unchecked): metrics, templates from verified queries, definitions mined from documents
+   with citations, a self-testing workspace; then uploads, own Postgres (self-hosted),
+   the synthetic-schema switches.
+
+**Groq baseline, measured 2026-09-29** (`docs/eval/groq_baseline_2026-09-29.json`, commit
+9800de1, shipped flags): **25/30 (83%)** — olist 10/10, logistics SQL 6/8, documents 5/6,
+follow-ups 4/6; routing 30/30; 4,652 input + 356 output tokens and 4.7 model calls per
+question; latency p50 2.6 s, p90 3.5 s; 150,238 tokens for the run. Misses: a percentage
+where the reference divides by a different base (c2g_08: all fulfillments vs delivered ones; an ambiguous question, scorer unchanged; corrected 2026-10-01 from 'fraction'); a projection
+difference; one document retrieval miss; two follow-ups that counted at the wrong grain
+(payment rows instead of orders; reviews duplicated by a join under COUNT(*) — the fan-out
+check covers SUM/AVG only so far).
+
+Each change ships only if accuracy on the baseline set holds within one question and
+tokens or time fall. Implementation is delegated from written specs to Sonnet subagents
+and audited by execution (D-v3-15).
+
+### Phase 3c — Evidence-tiered answering (scope review, "a distinctive method")
+
+Every answer carries the evidence behind it, and the cheapest trustworthy path answers
+first. Slices, each a written spec, delegated and audited:
+
+1. **Tier labels.** Each answer gets `evidence`: `verified` (an approved query, run as
+   is), `compiled` (a template or metric filled in code), `checked` (new SQL that passed
+   the answer checks), `unchecked` (new SQL with a caveat, or checks off). The chat's
+   Verified badge becomes a tier chip with a one-line explanation.
+2. **Thumbs up / down.** A confirmed answer becomes an approved example in its workspace
+   (and later a template); a thumbs-down records the question for the setup test.
+3. **Templates from verified queries.** Literals in an approved query (dates, limits,
+   numbers, text values) become typed slots, found with the SQL parser and stored per
+   workspace (new table, RLS). A question close to a template is matched by one short
+   qwen call that returns the template and slot values; the SQL is assembled in code,
+   values validated (dates parse, numbers, text values quoted and checked against column
+   profiles) and passed through the same SQL gate. No SQL-model call.
+4. **Self-testing workspace.** Approved examples re-run on a schedule like dashboard
+   cards (no model); a failure or changed result shape flags them for review; a weekly
+   sample re-asked through the full pipeline keeps a live accuracy score.
+5. **Uploads and documents per workspace** (the original slice 5: parser service, text
+   PDFs, chunking into `workspace_docs`), then **definitions mined from documents** with
+   page citations for owner approval.
+   **Done 2026-09-29 (5a/5b):** account library with folders (migration 024, D-v3-17);
+   isolated `parser` service (internal network, no secrets, read-only, per-file child
+   process with memory/CPU/time limits); MCP `library.manage` (20th tool) with batched
+   Ollama embedding; `/library` routes with background ingestion; Library page and a
+   workspace Documents tab. A question in a workspace searches its chosen folders next to
+   the sample corpus (same model and cosine, merged by score), the router is told the
+   workspace's document titles (as data, after the fixed prompt), and citations carry the
+   document's title. Live: `scripts/verify_library.py` 24/24; one real question in an
+   olist workspace routed to docs and cited the uploaded policy. Ingestion runs at about
+   0.3 s per chunk on the local CPU embedder (88 chunks in 28 s).
+   **Definitions from documents, done 2026-09-29** (migration 025,
+   `orchestrator/doc_definitions.py`): passages are scored in code for definitional
+   wording and only the best, up to `mine_max_chars`, go to the model; each proposal must
+   quote one sentence, and it is kept only if that quote is really in the cited passage and
+   contains the term (dropped ones are counted, never shown). Kept proposals are drafts
+   (source `document`) with their citation (title, page, quote) for the owner to approve;
+   the owner's own definitions are never replaced. Live on a handbook: 4 of 4 definitions
+   found, 0 invented, one model call, 2.6 s.
+6. **Metrics** (governed definitions compiled to SQL), the **account-level library**
+   (sources chosen by workspaces), **own Postgres** (self-hosted, enabled on the owner's
+   machine per D-v3-18), and the synthetic-schema switches.
+   **Own Postgres and the switches, done 2026-09-29** (migration 026, `mcp/connections.py`,
+   `orchestrator/datasets.py`): a connection's id (`cn_<16 hex>`) is its dataset name, so
+   every existing path reaches it; saved only when the login is really read-only; password
+   encrypted with a key only the MCP holds; StateSync's own services and local addresses
+   refused; SQL may read only that database's tables (qualifier mapped at parse-tree
+   positions, gated again). Library → Databases tab; connections listed as datasets for new
+   workspaces. `scripts/verify_connections.py` 24/24 live against a throwaway Postgres; one
+   real question answered correctly. `[pipeline].synthetic_schemas` keeps the ONDC framing
+   and DIGIPIN on the three built-in datasets only; an own database without uploads skips
+   the router call. Remaining in slice 6: metrics (awaiting the owner's go-ahead on the design).
+
+Exit: the Phase 3 exit (8/10 on olist and public through the wizard) plus, on the Groq
+baseline set, the share of answers on each tier and accuracy per tier reported.
 
 ### Phase 4 — Deploy
 
@@ -493,6 +665,15 @@ header requires a record for any change there).
 | D-v3-7 | 2026-09-27 | `tiles.min_refresh_s` 60 → 15; tiles on `live` default to 30 s | A refresh is one indexed SELECT on a small schema, no model call; 30 s is what makes the dashboard feel live |
 | D-v3-8 | 2026-09-27 | Presentation (chart kind, sort, labels) is decided in the browser from the rows; the server's chart proposal is unchanged | Changing the server's spec would move E2-V1's measured chart score; presentation is not what that metric grades |
 | D-v3-9 | 2026-09-27 | The dashboard planner uses the `decomposer` role | Planning a dashboard is decomposing a goal into questions; a new role would add a config entry per provider for no gain |
+| D-v3-10 | 2026-09-28 | MCP methods 19 and 20: `workspaces.manage`, `docs.manage`; the ceiling stays 20 | Workspaces, the knowledge store and connections share one method; documents another. The ceiling is now full: a further method needs a new decision |
+| D-v3-11 | 2026-09-28 | Text PDFs are parsed with pypdf, not Docling | Docling's layout models are about 2 GB and scanned PDFs are out of scope; pypdf is BSD-licensed (PyMuPDF is AGPL) |
+| D-v3-12 | 2026-09-28 | Setup tests on sample datasets are graded by execution accuracy against curated reference SQL | An objective score beats the owner grading their own demo; right answers become approved examples for that workspace only, so the benchmarks stay clean |
+| D-v3-13 | 2026-09-29 | The scope review's cleanup list (memory + Qdrant, vision scorer, unused adapters, tenancy placeholder, evaluator service) stays for now | Owner decision: test before removing; each item is measured before it goes |
+| D-v3-14 | 2026-09-29 | Measure first: instrumentation and a Groq baseline precede any pipeline change; lean changes land behind flags, default off | Every existing accuracy number predates Groq; the draft call and others were never measured on their own |
+| D-v3-15 | 2026-09-29 | Bulk implementation goes to Sonnet subagents from written specs with completion criteria; the lead audits by execution and reading | Owner request for cheaper usage; audits caught real bugs in delegated work before (Phase 3 slice 4) |
+| D-v3-16 | 2026-09-29 | Four lean-pipeline variants exist behind `[pipeline]` flags (language_gate, router_mode, sql_draft_mode, synth_style), plus `sql.timeout_retry_max` and `models.groq_max_total_wait_s`; all ship at today's behaviour | A variant becomes the default only after `scripts/eval_groq.py` shows accuracy within one question of the baseline and lower tokens or time |
+| D-v3-17 | 2026-09-29 | Documents (and later database connections) live in an account-level library with folders; each workspace chooses the folders and connection it uses. Column meanings stay with the connection; business terms and approved answers stay per workspace | Owner decision: upload once, reuse across teams; one contract, one copy |
+| D-v3-18 | 2026-09-29 | v1 is built and run self-hosted, everything on the owner's machine: uploads and own-Postgres connections are enabled there. Hosted multi-user concerns (usage metering, plans, a connector inside a customer's network, encrypted connections on a public site) wait until a hosted version is wanted | Owner decision: a self-hosted copy cannot be monitored, so plans and usage only matter for a hosted SaaS; build the product first, host it later if required |
 
 ## 9. Issue register
 

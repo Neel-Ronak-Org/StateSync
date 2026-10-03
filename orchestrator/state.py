@@ -46,6 +46,12 @@ class Provenance(BaseModel):
     chunk_id:     str
     page:         int | None
     score:        float
+    # An uploaded document's title (Phase 3c slice 5); None for the sample corpus,
+    # whose ids the web app already turns into labels.
+    title:        str | None = None
+    # The heading path of an uploaded chunk ("2. Definitions"), from the layout
+    # chunker (docs/specs/rag_v2.md Phase C); None for flat chunks and the sample corpus.
+    section:      str | None = None
 
 
 class RetrievalResult(BaseModel):
@@ -92,6 +98,10 @@ _LAST_WRITE_WINS_FIELDS: frozenset[str] = frozenset({
     "vega_spec",
     "flags_snapshot",
     "debug_candidate_sql",
+    "allow_fast_path",
+    "verified_example",
+    "compiled_template",
+    "doc_abstained",
 })
 
 # Fields whose reducer is "append" (list concatenation)
@@ -101,6 +111,7 @@ _APPEND_FIELDS: frozenset[str] = frozenset({
     "route_history",
     "interrogation_samples",
     "script_repairs",
+    "caveats",
 })
 
 # Fields whose reducer is "field-wise sum"
@@ -116,6 +127,7 @@ _IMMUTABLE_FIELDS: frozenset[str] = frozenset({
     "session_id",
     "raw_query",
     "target_schema",
+    "workspace_id",
 })
 
 
@@ -131,6 +143,14 @@ class StateSyncState(BaseModel):
     # Chosen once at entry and must never change mid-query — a query that switched
     # corpus halfway would produce an answer whose provenance is unknowable.
     target_schema: str
+    # The workspace the question was asked in (docs/V3_PLAN.md Phase 3), or None.
+    # With one, the SQL agent adds the workspace's approved knowledge to its
+    # prompt, and an exact match of an approved example runs its SQL directly.
+    workspace_id: str | None = None
+    # Titles of the READY uploaded documents this workspace searches (Phase 3c
+    # slice 5), loaded at entry; the router sees them so a question about one
+    # of them goes to the docs route.
+    library_titles: list[str] = Field(default_factory=list)
 
     # --- input & normalization (Part D) ---
     raw_query:    str
@@ -164,6 +184,9 @@ class StateSyncState(BaseModel):
     interrogation_samples:   list[dict] = Field(default_factory=list)  # ACCUMULATE (Part C2)
     # Pre-execution mechanical script/column repairs (B1) -- auditable from trace rather than only logs
     script_repairs:          list[str] = Field(default_factory=list)   # ACCUMULATE
+    # Non-blocking warnings about a result that ran but may mislead (pipeline.answer_checks):
+    # the synthesizer mentions them and the UI shows them under the answer.
+    caveats:                 list[str] = Field(default_factory=list)   # ACCUMULATE
     candidate_sql:           str | None = None
     executed_sql:            str | None = None
     sql_rows:                list[dict] = Field(default_factory=list)
@@ -184,6 +207,14 @@ class StateSyncState(BaseModel):
     # deterministically testable. Never set by production request paths.
     # Consumed once by sql_agent_node at attempt 0; ignored on any retry.
     debug_candidate_sql: str | None = None
+
+    # --- workspace fast path (Phase 3) ---
+    # allow_fast_path is False for the setup test, which must measure the
+    # pipeline rather than replay answers it approved earlier.
+    allow_fast_path:  bool = True
+    verified_example: bool = False   # the SQL is an approved example, run as-is
+    compiled_template: bool = False  # the SQL is an approved example's template filled in code (Phase 3c)
+    doc_abstained: bool = False      # the docs route found nothing relevant; the synthesizer answers "not found" with no model call (RAG v2 Phase E)
 
     # --- output (Part E2) ---
     answer_text: str | None = None

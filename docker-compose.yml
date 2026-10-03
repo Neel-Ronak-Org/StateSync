@@ -8,6 +8,16 @@ networks:
     internal: true   # no external routing; containers cannot reach the internet
   app_net:
     driver: bridge
+  # The upload parser's network (docs/V3_PLAN.md Phase 3c slice 5): internal,
+  # shared only with the orchestrator. The parser reaches no database, no
+  # model and no internet; the orchestrator is the only thing that reaches it.
+  parser_net:
+    driver: bridge
+    internal: true
+  # The re-ranker's network (docs/specs/rag_v3.md): internal, shared only with the MCP.
+  reranker_net:
+    driver: bridge
+    internal: true
 
 # ─── Volumes ─────────────────────────────────────────────────────────────────
 volumes:
@@ -96,7 +106,7 @@ services:
   # B-V3 (orchestrator cannot reach postgres) is unaffected — ollama does not
   # route between the two networks.
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.32.9   # pinned 2026-10-03 (the image already running; tagged locally, not pulled)
     restart: unless-stopped
     networks:
       - db_net
@@ -121,7 +131,9 @@ services:
     networks:
       - db_net
       - app_net
+      - reranker_net
     environment:
+      - RERANKER_URL=http://reranker:8096
       - MCP_HOST=0.0.0.0
       - MCP_PORT=8080
       - POSTGRES_DSN=postgresql://statesync_reader:READER_PLACEHOLDER@postgres:5432/statesync
@@ -133,6 +145,14 @@ services:
     secrets:
       - pg_reader_password
       - pg_history_password
+      # Encrypts the passwords of the owner's own databases (mcp/connections.py).
+      # Held by the MCP only. Create it with scripts/make_connection_key.py.
+      - connection_key
+      # The shared secret every /rpc call must carry (mcp/service_auth.py). Held by
+      # the MCP and the orchestrator only; the MCP will not start without it.
+      - mcp_token
+      # The evaluator's own, restricted token (data.run_select on built-in datasets only).
+      - mcp_token_evaluator
     depends_on:
       postgres:
         condition: service_healthy
@@ -155,7 +175,8 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     networks:
-      - app_net         # app_net ONLY — intentionally not on db_net
+      - app_net         # app_net — intentionally not on db_net
+      - parser_net      # to hand uploads to the parser; the parser reaches nothing
     environment:
       - ORCHESTRATOR_HOST=0.0.0.0
       - ORCHESTRATOR_PORT=8090
@@ -169,14 +190,19 @@ services:
       # Groq (provider = "groq", the v3 default -- docs/V3_PLAN.md 0.4).
       - GROQ_API_KEY_FILE=/run/secrets/groq_api_key
       - CONFIG_DIR=/app/config
+      # Reference questions for a workspace's setup test (docs/V3_PLAN.md Phase 3).
+      - FIXTURES_DIR=/app/fixtures
+      - PARSER_URL=http://parser:8095
     volumes:
       - ./config:/app/config:ro
+      - ./fixtures:/app/fixtures:ro
     secrets:
       - anthropic_api_key
       - azure_openai_api_key
       - gemini_api_key
       - groq_api_key
       - api_principals
+      - mcp_token       # sent on every MCP call (orchestrator/mcp_client.py)
     depends_on:
       mcp:
         condition: service_healthy
@@ -186,6 +212,58 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+
+  # ── 5b. parser ─────────────────────────────────────────────────────────────
+  # Turns uploaded files into text (parser/server.py). The most hostile input
+  # StateSync accepts, so: internal network shared only with the orchestrator,
+  # no secrets, non-root, read-only filesystem, no capabilities, bounded memory
+  # and processes, and each file parsed in a child process with its own limits.
+  parser:
+    build:
+      context: ./parser
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - parser_net
+    environment:
+      - CONFIG_DIR=/app/config
+      - PARSER_PORT=8095
+    volumes:
+      - ./config:/app/config:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    pids_limit: 64
+
+  # ── re-ranker ──────────────────────────────────────────────────────────────
+  # Cross-encoder passage re-ranking (reranker/server.py, docs/specs/rag_v3.md). Reached only
+  # by the MCP over reranker_net; no internet, no database, models baked in at build time.
+  reranker:
+    build:
+      context: ./reranker
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - reranker_net
+    environment:
+      - CONFIG_DIR=/app/config
+      - RERANKER_PORT=8096
+    volumes:
+      - ./config:/app/config:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 4g
+    pids_limit: 64
 
   # ── 6. frontend ────────────────────────────────────────────────────────────
   # The web app (web/, docs/V3_PLAN.md Phase 2): a React bundle served by nginx,
@@ -199,7 +277,9 @@ services:
     networks:
       - app_net
     ports:
-      - "3000:80"
+      # localhost only (2026-10-02): the API this UI calls is bound to 127.0.0.1 in the override, so
+      # serving the page on every interface only exposed it to the local network, never usefully.
+      - "127.0.0.1:3000:80"
     environment:
       # Consumed by the BROWSER, not by this container. entrypoint.sh bakes it
       # into app.js, which runs on the user's machine, so it must be an address
@@ -237,6 +317,11 @@ services:
       - CONFIG_DIR=/app/config
       - FIXTURES_DIR=/app/fixtures
       - EVAL_DB_PATH=/app/data/eval_history.db
+    # Its own credentials, never the orchestrator's: an API principal for /query, and an
+    # MCP token that may only run gold SELECTs (mcp/service_auth.py rule 5).
+    secrets:
+      - api_token_evaluator
+      - mcp_token_evaluator
     volumes:
       - ./config:/app/config:ro
       - ./fixtures:/app/fixtures:ro
@@ -312,7 +397,15 @@ secrets:
     file: ./secrets/azure_openai_api_key
   gemini_api_key:
     file: ./secrets/gemini_api_key
+  connection_key:
+    file: ./secrets/connection_key
   groq_api_key:
     file: ./secrets/groq_api_key
+  mcp_token:
+    file: ./secrets/mcp_token
+  mcp_token_evaluator:
+    file: ./secrets/mcp_token_evaluator
+  api_token_evaluator:
+    file: ./secrets/api_token_evaluator
   api_principals:
     file: ./secrets/api_principals.json

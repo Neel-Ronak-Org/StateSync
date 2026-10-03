@@ -41,12 +41,10 @@ from config_loader import cfg
 
 logger = logging.getLogger(__name__)
 
-# ── Config (loaded from env vars set by docker-compose, not from literals) ────
-# The actual values come from config/statesync.toml via the MCP startup.
-# We read them from environment variables here because the MCP service uses
-# its own copy of the config loader.
-_statement_timeout_ms: int = int(os.environ.get("STATEMENT_TIMEOUT_MS", "15000"))
-_session_idle_timeout_ms: int = int(os.environ.get("SESSION_IDLE_TIMEOUT_MS", "60000"))
+# ── Config: config/statesync.toml [mcp], the single source (these were Dockerfile ENV
+# values repeating the config until 2026-10-02) ─────────────────────────────────
+_statement_timeout_ms: int = int(cfg.mcp.statement_timeout_ms)
+_session_idle_timeout_ms: int = int(cfg.mcp.session_idle_timeout_ms)
 _pool: AsyncConnectionPool | None = None
 
 
@@ -122,6 +120,18 @@ async def close_pool() -> None:
     _pool = None
 
 
+async def _bind_tenant(conn: psycopg.AsyncConnection) -> None:
+    """Scope this transaction to the session's tenant for row-level security.
+
+    Migration 021 puts RLS on every table in session_state and workspace_docs,
+    with policies on current_setting('statesync.tenant_id'). set_config(...,
+    true) lasts until the transaction ends. Outside a request there is no
+    tenant, so the setting is empty and no row matches: fail closed.
+    """
+    from session import current_tenant_id  # local: session imports config only, but keep db import-light
+    await conn.execute("SELECT set_config('statesync.tenant_id', %s, true)", (current_tenant_id() or "",))
+
+
 @asynccontextmanager
 async def get_connection() -> AsyncIterator[psycopg.AsyncConnection]:
     """
@@ -139,6 +149,7 @@ async def get_connection() -> AsyncIterator[psycopg.AsyncConnection]:
         # Begin an explicit READ ONLY transaction for every request.
         await conn.execute("BEGIN READ ONLY")
         try:
+            await _bind_tenant(conn)
             yield conn
         finally:
             # Always rollback — Layer 2 guarantee (A4.5).
@@ -224,13 +235,15 @@ async def get_history_connection() -> AsyncIterator[psycopg.AsyncConnection]:
     docstring for why it exists and what constrains it. Never used by any
     agent-facing tool; only mcp/tools/history_tools.py, tile_tools.py
     (user-owned tiles, migration 017) and dashboard_tools.py (user-owned
-    dashboards, migration 019) call this.
+    dashboards, migration 019) and workspace_tools.py (workspaces, migration
+    021) call this.
     """
     if _history_pool is None:
         raise RuntimeError("History database pool not initialized. Call init_history_pool() first.")
 
     async with _history_pool.connection() as conn:
         try:
+            await _bind_tenant(conn)
             yield conn
             await conn.commit()
         except Exception:

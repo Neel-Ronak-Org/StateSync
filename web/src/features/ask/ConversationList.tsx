@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useDatasetLabel } from '@/features/library/useConnections'
 import { formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -28,6 +29,7 @@ interface ConversationListProps {
 /** The Ask page's left pane (web/DESIGN.md §7): conversations, newest first, each deletable. */
 export function ConversationList({ sessions, isLoading, activeSessionId, onSelect, onNewChat, onDelete }: ConversationListProps) {
   const [pending, setPending] = useState<SessionSummary | null>(null)
+  const datasetLabel = useDatasetLabel(sessions.map((s) => s.target_schema))
   const [deleting, setDeleting] = useState(false)
 
   const confirmDelete = async () => {
@@ -85,7 +87,7 @@ export function ConversationList({ sessions, isLoading, activeSessionId, onSelec
                   <span className="block truncate text-xs font-medium text-foreground">{s.first_query}</span>
                   <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
                     <span title={absolute}>{relative}</span>
-                    {s.target_schema && <span>· {s.target_schema}</span>}
+                    {s.target_schema && <span>· {datasetLabel(s.target_schema)}</span>}
                   </span>
                 </button>
                 <Button

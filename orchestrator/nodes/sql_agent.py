@@ -75,13 +75,19 @@ import os
 import time
 from typing import Any
 
+import answer_checks
+import templates as sql_templates
+from column_profiles import format_profiles, get_profiles
 from config_loader import cfg
 from classifiers.error_classifier import classify_error
 from llm.provider import get_agent_llm
-from mcp_client import MCPSession, data_run_select, data_sample_rows, schema_list_tables
+from table_selection import tables_in_sql
+from mcp_client import MCPSession, data_run_select, data_sample_rows, schema_describe_table, schema_list_tables, workspaces_manage
 from memory_store import get_trajectory_store
 from schema_retriever import get_schema_retriever, target_schema
+from datasets import frame_prompt, synthetic_features
 from spatial_resolver import get_spatial_resolver
+from workspace_context import format_context, system_suffix
 
 logger = logging.getLogger(__name__)
 
@@ -225,6 +231,26 @@ def _parse_referenced_tables(sql: str) -> list[str]:
                 found.append(name)
 
     _RangeVarCollector()(tree)
+    return found
+
+
+def question_for(state_dict: dict[str, Any]) -> str:
+    """The question this agent answers. On the hybrid route (graph.py) it is only the SQL part of a
+    compound question, subtasks[0] from hybrid_plan_node, answered with everything a data-only
+    question gets (workspace knowledge, fast path, templates, the correction loop)."""
+    if state_dict.get("route") == "hybrid" and state_dict.get("subtasks"):
+        return str(state_dict["subtasks"][0])
+    return state_dict.get("normalized_query") or state_dict.get("raw_query", "")
+
+
+def _example_tables(ws_ctx: dict[str, Any] | None) -> list[str]:
+    """Tables the workspace's matched approved examples read: always shown by table selection
+    (docs/specs/table_selection.md), because an approved query is the strongest relevance signal."""
+    found: list[str] = []
+    for ex in (ws_ctx or {}).get("examples") or []:
+        for t in tables_in_sql(str(ex.get("sql") or "")):
+            if t not in found:
+                found.append(t)
     return found
 
 
@@ -512,6 +538,46 @@ def _repair_script_column_mismatch(
     return rewritten_sql, collected_notes
 
 
+async def _try_template(
+    session: MCPSession, state_dict: dict[str, Any], question: str, max_rows: int,
+) -> tuple[str | None, dict[str, Any] | None, int, int, int]:
+    """Phase 3c: answer from a template of an approved query (pipeline.templates = "on").
+
+    Returns (sql, exec_result, tokens_in, tokens_out, model_calls); sql is None whenever
+    the template route did not produce rows, and the caller then runs the normal path in
+    the same attempt. Nothing here records an error: a template that does not fit is not
+    a failed attempt. One short decomposer-role call picks the template and reads the
+    values; the SQL itself is assembled in code (orchestrator/templates.py) and executed
+    through the same MCP gate as any query.
+    """
+    query_id = state_dict.get("query_id", "")
+    found = await workspaces_manage(session, principal_id=state_dict["principal_id"], action="templates",
+                                    workspace_id=state_dict["workspace_id"], question=question)
+    candidates = found.get("templates") if found.get("ok") else None
+    if not candidates:
+        return None, None, 0, 0, 0
+    result = await get_agent_llm("decomposer").complete(
+        system=sql_templates.MATCHER_PROMPT,
+        messages=[{"role": "user", "content": sql_templates.format_candidates(question, candidates)}],
+        max_tokens=cfg.templates.matcher_max_tokens,
+    )
+    spent = (result.tokens_in, result.tokens_out, 1)
+    match = sql_templates.parse_match(result.text, candidates)
+    if match is None:
+        logger.info("SQL Agent templates: no match for query_id=%s", query_id)
+        return (None, None, *spent)
+    chosen, values = match
+    filled = sql_templates.fill_template(chosen.get("template_sql"), chosen.get("slots"), values)
+    if filled is None:
+        logger.info("SQL Agent templates: template %s not fillable for query_id=%s", chosen.get("template_id"), query_id)
+        return (None, None, *spent)
+    exec_result = await data_run_select(session, filled, max_rows=max_rows)
+    if not (exec_result.get("ok") and exec_result.get("rows")):
+        logger.info("SQL Agent templates: template %s gave no rows for query_id=%s", chosen.get("template_id"), query_id)
+        return (None, None, *spent)
+    return (filled, exec_result, *spent)
+
+
 async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     """
     SQL Agent node. Attempt 0: consults memory, interrogates (miss path
@@ -520,7 +586,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     A3 and appends an ErrorRecord; the graph edge (not this function)
     decides whether to loop back.
     """
-    raw_query: str = state_dict.get("normalized_query") or state_dict.get("raw_query", "")
+    raw_query: str = question_for(state_dict)
     tenant_id: str = state_dict["tenant_id"]
     query_id: str = state_dict.get("query_id", "")
     session_id: str = state_dict.get("session_id", "")
@@ -543,7 +609,8 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
 
     mcp_base_url = os.environ.get("MCP_URL", "http://mcp:8080")
 
-    async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id) as session:
+    async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id,
+                          dataset=state_dict.get("target_schema")) as session:
         # Always needed: fingerprint (memory key on attempt 0) and table list.
         _schema = state_dict.get("target_schema") or target_schema()
         tables_result = await schema_list_tables(session, _schema)
@@ -556,7 +623,48 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         new_interrogation_samples: list[dict] = []
         table_descriptions: list[dict] = []
 
-        if attempt == 0:
+        # Phase 3: a question asked in a workspace gets that workspace's
+        # APPROVED knowledge (workspace_context.py), and an exact match of an
+        # approved example runs its SQL directly -- the fast path, attempt 0
+        # only and never during the setup test (allow_fast_path=False).
+        workspace_id = state_dict.get("workspace_id")
+        ws_ctx: dict[str, Any] = {}
+        if workspace_id:
+            ws_ctx = await workspaces_manage(session, principal_id=state_dict["principal_id"], action="context",
+                                             workspace_id=workspace_id, question=raw_query)
+            if not ws_ctx.get("ok"):
+                logger.warning("SQL Agent: workspace context unavailable for query_id=%s: %s",
+                               query_id, ws_ctx.get("message"))
+                ws_ctx = {}
+        ws_block = format_context(ws_ctx, None, int(cfg.workspaces.context_max_chars)) if ws_ctx else ""
+        ws_suffix = system_suffix(ws_ctx.get("business_context")) if ws_ctx else ""
+        exact_sql: str | None = None
+        if attempt == 0 and state_dict.get("allow_fast_path", True) and not state_dict.get("debug_candidate_sql"):
+            exact_sql = (ws_ctx.get("exact") or {}).get("sql")
+
+        # Phase 3c: no exact example, so try a template of a near one (one short
+        # decomposer call, no SQL-model call). On any miss the normal path runs below.
+        compiled_sql: str | None = None
+        compiled_exec: dict[str, Any] | None = None
+        if (
+            attempt == 0 and workspace_id and not exact_sql
+            and flags_snapshot.get("pipeline.templates", "off") == "on"
+            and state_dict.get("allow_fast_path", True) and not state_dict.get("debug_candidate_sql")
+        ):
+            try:
+                compiled_sql, compiled_exec, t_in, t_out, t_calls = await _try_template(
+                    session, state_dict, raw_query, cfg.mcp.max_rows_default)
+                tokens_in_total += t_in
+                tokens_out_total += t_out
+                llm_calls_total += t_calls
+            except Exception as exc:  # noqa: BLE001 -- a template is an optimisation, never a failure
+                logger.warning("SQL Agent templates skipped for query_id=%s: %s", query_id, exc)
+                compiled_sql = compiled_exec = None
+
+        if attempt == 0 and (exact_sql or compiled_sql):
+            # Fast path (or compiled template): no memory, no draft, no interrogation.
+            context_block = ""
+        elif attempt == 0:
             # Step 1: consult memory (attempt 0 only -- C2-V6).
             if memory_enabled:
                 store = get_trajectory_store()
@@ -576,52 +684,112 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 context_block = _format_memory_context(
                     mem_insight, mem_tables, mem_join_path, mem_dialect_notes,
                 )
+                if ws_block:
+                    context_block += "\n\n" + ws_block
             else:
                 retriever = get_schema_retriever()
-                schema_context, table_descriptions = await retriever.retrieve(session, table_names, _schema)
+                schema_context, table_descriptions = await retriever.retrieve(
+                    session, table_names, _schema, question=raw_query, attempt=attempt,
+                    must_include=_example_tables(ws_ctx), fingerprint=schema_fingerprint)
                 trajectory_steps += len(table_names)
                 context_block = f"Schema:\n{schema_context}"
+                if ws_block:
+                    context_block += "\n\n" + ws_block
 
-                # Step 2: draft the query BEFORE interrogating, so interrogation
-                # can target the tables this question actually touches rather
-                # than the first few tables in schema order (which was blind to
-                # the question and sampled the same four tables every time).
-                # This costs one extra generation call on the miss path only --
-                # recorded in docs/phase_e_gap_log.md, since it shifts the M1
-                # control baseline and must not be read as a memory-path win.
-                #
-                # The test harness's injected candidate doubles as the draft
-                # when present, so seeded-SQL tests (C2-V1..V4) get targeted
-                # sampling for free and their call counts are unchanged.
-                draft_sql: str = state_dict.get("debug_candidate_sql") or ""
-                if not draft_sql:
-                    draft_result = await get_agent_llm("sql").complete(
-                        system=_SYSTEM_PROMPT.format(max_rows=cfg.mcp.max_rows_default),
-                        messages=[{"role": "user", "content": (
-                            f"{context_block}\n\nQuestion: {raw_query}\n\n"
-                            f"Write a single PostgreSQL SELECT query to answer this question."
-                        )}],
-                        max_tokens=cfg.sql.max_tokens_sql,
+                draft_mode = str(flags_snapshot.get("pipeline.sql_draft_mode", "llm"))
+                if draft_mode == "profiles" and not state_dict.get("debug_candidate_sql"):
+                    # One-call variant: cached column profiles replace the throwaway
+                    # draft call and the live sampling (orchestrator/column_profiles.py).
+                    # Live sampling returns only after an empty_result (retry branch).
+                    profiles = await get_profiles(
+                        session, _schema, schema_fingerprint, table_names, table_descriptions,
                     )
-                    tokens_in_total += draft_result.tokens_in
-                    tokens_out_total += draft_result.tokens_out
-                    llm_calls_total += 1
-                    draft_sql = _strip_sql_fences(draft_result.text)
+                    profile_block = format_profiles(profiles, int(cfg.pipeline.profile_max_chars))
+                    if profile_block:
+                        context_block += "\n\n" + profile_block
+                else:
+                    # Step 2: draft the query BEFORE interrogating, so interrogation
+                    # can target the tables this question actually touches rather
+                    # than the first few tables in schema order (which was blind to
+                    # the question and sampled the same four tables every time).
+                    # This costs one extra generation call on the miss path only --
+                    # recorded in docs/phase_e_gap_log.md, since it shifts the M1
+                    # control baseline and must not be read as a memory-path win.
+                    #
+                    # The test harness's injected candidate doubles as the draft
+                    # when present, so seeded-SQL tests (C2-V1..V4) get targeted
+                    # sampling for free and their call counts are unchanged.
+                    draft_sql: str = state_dict.get("debug_candidate_sql") or ""
+                    if not draft_sql:
+                        draft_result = await get_agent_llm("sql").complete(
+                            system=frame_prompt(_SYSTEM_PROMPT.format(max_rows=cfg.mcp.max_rows_default),
+                                                _schema) + ws_suffix,
+                            messages=[{"role": "user", "content": (
+                                f"{context_block}\n\nQuestion: {raw_query}\n\n"
+                                f"Write a single PostgreSQL SELECT query to answer this question."
+                            )}],
+                            max_tokens=cfg.sql.max_tokens_sql,
+                        )
+                        tokens_in_total += draft_result.tokens_in
+                        tokens_out_total += draft_result.tokens_out
+                        llm_calls_total += 1
+                        draft_sql = _strip_sql_fences(draft_result.text)
 
-                referenced_tables = _parse_referenced_tables(draft_sql)
-                logger.info(
-                    "SQL Agent interrogation targeting for query_id=%s: draft references %s",
-                    query_id,
-                    referenced_tables or "(nothing parseable -- schema-wide fallback)",
-                )
+                    referenced_tables = _parse_referenced_tables(draft_sql)
+                    logger.info(
+                        "SQL Agent interrogation targeting for query_id=%s: draft references %s",
+                        query_id,
+                        referenced_tables or "(nothing parseable -- schema-wide fallback)",
+                    )
 
-                # Step 3: active interrogation (miss path, attempt 0 only).
-                targets = _pick_interrogation_targets(
+                    # Step 3: active interrogation (miss path, attempt 0 only).
+                    targets = _pick_interrogation_targets(
+                        table_descriptions,
+                        cfg.sql.interrogation_max_samples,
+                        referenced_tables=referenced_tables,
+                    )
+                    for target in targets:
+                        sample_result = await data_sample_rows(
+                            session, target["table"], columns=target["columns"],
+                            schema=_schema,
+                        )
+                        new_interrogation_samples.append({
+                            "table": target["table"],
+                            "columns_sampled": target["columns_display"],
+                            "rows": sample_result.get("rows", []),
+                        })
+                        trajectory_steps += 1
+
+                    if new_interrogation_samples:
+                        context_block += "\n\n" + _format_interrogation_samples(new_interrogation_samples)
+        else:
+            # Retry: full schema always (regardless of attempt-0 hit/miss),
+            # no memory re-consultation, no interrogation (already in state
+            # from attempt 0, if any -- not re-sampled).
+            retriever = get_schema_retriever()
+            schema_context, table_descriptions = await retriever.retrieve(
+                session, table_names, _schema, question=raw_query, attempt=attempt,
+                must_include=_example_tables(ws_ctx), fingerprint=schema_fingerprint)
+            trajectory_steps += len(table_names)
+            context_block = f"Schema:\n{schema_context}"
+            if ws_block:
+                context_block += "\n\n" + ws_block
+
+            # "profiles" draft mode: attempt 0 ran on cached profiles alone, so
+            # the first live sampling happens here, and only when the failure
+            # was a valid-but-empty result (a literal that matches no stored
+            # value). Targets are the tables the failed SQL referenced.
+            last_err = existing_errors[-1]
+            if (
+                flags_snapshot.get("pipeline.sql_draft_mode", "llm") == "profiles"
+                and last_err.get("category") == "empty_result"
+            ):
+                failed_sql = last_err.get("offending_sql") or state_dict.get("candidate_sql") or ""
+                for target in _pick_interrogation_targets(
                     table_descriptions,
                     cfg.sql.interrogation_max_samples,
-                    referenced_tables=referenced_tables,
-                )
-                for target in targets:
+                    referenced_tables=_parse_referenced_tables(failed_sql),
+                ):
                     sample_result = await data_sample_rows(
                         session, target["table"], columns=target["columns"],
                         schema=_schema,
@@ -632,17 +800,8 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                         "rows": sample_result.get("rows", []),
                     })
                     trajectory_steps += 1
-
                 if new_interrogation_samples:
                     context_block += "\n\n" + _format_interrogation_samples(new_interrogation_samples)
-        else:
-            # Retry: full schema always (regardless of attempt-0 hit/miss),
-            # no memory re-consultation, no interrogation (already in state
-            # from attempt 0, if any -- not re-sampled).
-            retriever = get_schema_retriever()
-            schema_context, table_descriptions = await retriever.retrieve(session, table_names, _schema)
-            trajectory_steps += len(table_names)
-            context_block = f"Schema:\n{schema_context}"
 
         # Phase D: entity-preservation + spatial predicate hints, appended
         # regardless of which branch above built context_block (memory hit,
@@ -654,7 +813,8 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         if entity_hint:
             context_block += "\n\n" + entity_hint
 
-        spatial_resolution = get_spatial_resolver().resolve(raw_query)
+        # DIGIPIN belongs to the synthetic ONDC corpus (datasets.py).
+        spatial_resolution = get_spatial_resolver().resolve(raw_query) if synthetic_features(_schema) else None
         if spatial_resolution:
             context_block += "\n\n" + _format_spatial_hint(spatial_resolution)
 
@@ -663,8 +823,19 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         # Step 4: generate SQL -- debug override (attempt 0, test harness
         # only) or the provider seam.
         debug_sql = state_dict.get("debug_candidate_sql")
-        if attempt == 0 and debug_sql:
+        verified_example = False
+        used_debug_sql = False
+        if attempt == 0 and exact_sql:
+            candidate_sql = exact_sql
+            verified_example = True
+            logger.info("SQL Agent fast path for query_id=%s: approved example in workspace %s",
+                        query_id, workspace_id)
+        elif attempt == 0 and compiled_sql:
+            candidate_sql = compiled_sql
+            logger.info("SQL Agent compiled template for query_id=%s in workspace %s", query_id, workspace_id)
+        elif attempt == 0 and debug_sql:
             candidate_sql = debug_sql
+            used_debug_sql = True
             logger.warning(
                 "SQL Agent using debug_candidate_sql override for query_id=%s "
                 "(test harness only -- never set by production request paths).",
@@ -673,13 +844,13 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         else:
             llm = get_agent_llm("sql")
             if attempt == 0:
-                system_prompt = _SYSTEM_PROMPT.format(max_rows=max_rows)
+                system_prompt = frame_prompt(_SYSTEM_PROMPT.format(max_rows=max_rows), _schema) + ws_suffix
                 user_message = (
                     f"{context_block}\n\nQuestion: {raw_query}\n\n"
                     f"Write a single PostgreSQL SELECT query to answer this question."
                 )
             else:
-                system_prompt = _CORRECTION_SYSTEM_PROMPT.format(max_rows=max_rows)
+                system_prompt = frame_prompt(_CORRECTION_SYSTEM_PROMPT.format(max_rows=max_rows), _schema) + ws_suffix
                 error_history_text = _format_error_history(existing_errors)
                 # Error history first, schema second: the fix is the most
                 # important, actionable content, and leading with it reads
@@ -718,13 +889,18 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             )
 
         # Step 5: execute.
-        exec_result = await data_run_select(session, candidate_sql, max_rows=max_rows)
+        if compiled_exec is not None and candidate_sql == compiled_sql:
+            exec_result = compiled_exec  # already executed while deciding to use the template
+        else:
+            exec_result = await data_run_select(session, candidate_sql, max_rows=max_rows)
         elapsed_ms = int(time.monotonic() * 1000) - start_ms
 
         update: dict[str, Any] = {
             "schema_fingerprint": schema_fingerprint,
             "candidate_sql": candidate_sql,
             "attempt": attempt,
+            "verified_example": verified_example,
+            "compiled_template": bool(compiled_sql),
         }
         if new_interrogation_samples:
             update["interrogation_samples"] = new_interrogation_samples
@@ -751,19 +927,87 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             and last_error.get("category") == "empty_result"
         )
 
-        if ok and (rows or repeat_empty_accepted):
+        # pipeline.answer_checks: deterministic checks on a result that RAN. Never for
+        # the fast path (an approved example is already verified) or the test harness's
+        # injected SQL; with the flag off none of this issues a query.
+        fanout_finding: answer_checks.Finding | None = None
+        caveats: list[str] = []
+        if (
+            ok and rows
+            and flags_snapshot.get("pipeline.answer_checks", "off") == "on"
+            and not verified_example and not used_debug_sql
+        ):
+            try:
+                table_columns = {
+                    d["table"]: [c["name"] for c in d.get("columns", []) if isinstance(c, dict) and "name" in c]
+                    for d in table_descriptions if isinstance(d, dict) and "table" in d
+                }
+                # A memory hit reads no schema, so describe just the probed tables.
+                for probe in answer_checks.fanout_probe(candidate_sql, _schema) or []:
+                    bare = probe.table.split(".")[-1]
+                    if bare not in table_columns and probe.table not in table_columns:
+                        desc = await schema_describe_table(session, bare, _schema)
+                        table_columns[bare] = [
+                            c["name"] for c in desc.get("columns", []) if isinstance(c, dict) and "name" in c
+                        ]
+                fanout_finding = await answer_checks.check_fanout(
+                    session, candidate_sql, schema_fingerprint, table_columns, _schema,
+                )
+            except Exception as exc:
+                logger.warning("SQL Agent answer checks skipped for query_id=%s: %s", query_id, exc)
+            caveats = [
+                c for c in (
+                    answer_checks.truncation_caveat(len(rows), max_rows),
+                    answer_checks.null_aggregate_caveat(rows),
+                ) if c
+            ]
+
+        fanout_retry = False
+        if fanout_finding is not None:
+            prior_fanouts = sum(1 for e in existing_errors if e.get("category") == "join_cardinality")
+            if prior_fanouts < int(cfg.answer_checks.fanout_retry_max):
+                fanout_retry = True
+            else:
+                caveats.append("These figures may count some rows more than once (join fan-out).")
+
+        if fanout_retry:
+            # Failure-shaped, like any other failed attempt: no executed_sql, so the graph
+            # retries and the correction prompt shows this message and hint.
+            logger.warning(
+                "SQL Agent join fan-out for query_id=%s attempt=%d: %s",
+                query_id, attempt, fanout_finding.message,
+            )
+            update["sql_rows"] = []
+            update["sql_columns"] = []
+            update["errors"] = [{
+                "attempt": attempt,
+                "category": "join_cardinality",
+                "engine_code": None,
+                "message": fanout_finding.message,
+                "offending_sql": candidate_sql,
+                "remediation_hint": (
+                    "Aggregate the joined table in a subquery before joining, or aggregate at the "
+                    "right grain (e.g. COUNT(DISTINCT key)), so each row of "
+                    f"{fanout_finding.table} counts once."
+                ),
+            }]
+
+        elif ok and (rows or repeat_empty_accepted):
             # Real success, or a second empty_result in a row accepted as
             # the answer (A3) -- both are terminal-success shaped state.
             update["executed_sql"] = candidate_sql
             update["sql_rows"] = rows
             update["sql_columns"] = exec_result.get("columns", [])
+            if caveats:
+                update["caveats"] = caveats
             logger.info(
                 "SQL Agent success for query_id=%s attempt=%d: %d rows returned.",
                 query_id, attempt, len(rows),
             )
 
             # Write back unless this is a clean attempt-0 memory hit (C1 GAP-1).
-            write_back = not (attempt == 0 and memory_hit)
+            # A compiled answer adds no new insight either, and must not cost a model call.
+            write_back = not (attempt == 0 and memory_hit) and not compiled_sql
             if memory_enabled and write_back:
                 w_in, w_out, w_calls = await _write_trajectory(
                     session=session,

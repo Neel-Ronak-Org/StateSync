@@ -52,17 +52,56 @@ export interface TraceMetrics {
   [key: string]: unknown
 }
 
+/** One model call made while answering, in call order (developer mode shows these). */
+export interface ModelCall {
+  role: string
+  model: string
+  tokens_in?: number
+  tokens_out?: number
+  cached_tokens?: number
+  retries?: number
+  waited_ms?: number
+  ms: number
+  rate_remaining_tokens?: number | null
+  /** Set instead of the token fields when the call failed. */
+  error?: string
+}
+
+export interface GroundedFigure {
+  text: string
+  start: number
+  end: number
+  matched: boolean
+  source: { kind: 'cell' | 'text' | 'aggregate' | 'question' | 'passage' | 'derived'; row?: number; column?: string; aggregate?: string } | null
+}
+
+export interface NumberGrounding {
+  figures: GroundedFigure[]
+  matched: number
+  unmatched: string[]
+}
+
 export interface StateTrace {
   query_id: string
   target_schema: string
+  workspace_id?: string | null
+  verified_example?: boolean
+  /** How much to trust the answer (orchestrator/evidence.py); absent or null when no SQL ran. */
+  evidence?: 'verified' | 'compiled' | 'checked' | 'unchecked' | null
   route: Route | null
   executed_sql: string | null
+  /** Plain-English reading of the executed SQL ("How I got this"); absent or null when none. */
+  explanation?: string | null
   candidate_sql: string | null
   sql_rows_count: number
   sql_rows: Row[]
   sql_columns: string[]
   attempt: number
   errors: unknown[]
+  /** Warnings about a result that ran but may mislead (pipeline.answer_checks); absent when none. */
+  caveats?: string[]
+  /** Every figure in the prose traced to its source (pipeline.number_grounding); null when off. */
+  number_grounding?: NumberGrounding | null
   metrics: TraceMetrics
   memory_hit: boolean
   detected_language: string | null
@@ -74,6 +113,9 @@ export interface StateTrace {
   context_guessed: boolean
   subtasks: string[]
   retrievals: Retrieval[]
+  calls?: ModelCall[]
+  /** Which answer writer ran (pipeline.synth_style); 'short' leaves the chart to the browser. */
+  synth_style?: 'full' | 'short'
   [key: string]: unknown
 }
 
@@ -81,6 +123,7 @@ export interface QueryRequest {
   query: string
   session_id?: string
   schema?: string
+  workspace_id?: string
 }
 
 export interface QueryResponse {
@@ -203,6 +246,15 @@ export interface PinTileRequest {
   dashboard_id?: string
   viz?: VizKindName
   layout?: TileLayout
+  /** Pinned in a workspace: the answer also becomes its approved example (tile_tools.py, property 6). */
+  workspace_id?: string
+}
+
+/** What a workspace pin did with the approved example; absent when no workspace was sent. */
+export interface PinExampleResult {
+  saved: boolean
+  example_id?: string
+  reason?: string
 }
 
 export interface UpdateTileRequest {
@@ -250,4 +302,188 @@ export interface BuildJob {
   error: string | null
   started_at: string
   finished_at: string | null
+}
+
+export type SetupState = 'created' | 'scanned' | 'drafted' | 'approved' | 'tested'
+export type Verdict = 'pending' | 'running' | 'right' | 'wrong' | 'error'
+
+export interface Workspace {
+  workspace_id: string
+  name: string
+  target_schema: string
+  business_context: string
+  context_version: number
+  setup_state: SetupState
+  setup_score: number | null
+  setup_total: number | null
+  created_at: string
+  updated_at: string
+  counts: {
+    tables: number
+    approved: number
+    definitions: number
+    examples: number
+  }
+  /** How the approved examples fared at their last re-run (no model involved). */
+  health: WorkspaceHealth
+  /** A workspace whose last check is older than this many seconds is re-checked on opening. */
+  example_check_stale_after_s: number
+}
+
+export type ExampleCheckState = 'ok' | 'changed' | 'failed'
+
+export interface WorkspaceHealth {
+  ok: number
+  changed: number
+  failed: number
+  unchecked: number
+  checked_at: string | null
+}
+
+/** An approved answer with the result of its latest self-check. */
+export interface ExampleInfo {
+  example_id: string
+  question: string
+  sql_text: string
+  source: string
+  check_state: ExampleCheckState | null
+  checked_at: string | null
+  check_detail: string | null
+}
+
+export interface ExampleCheckResult {
+  checked: number
+  counts: { ok: number; changed: number; failed: number }
+  checked_at: string
+}
+
+export interface CatalogEntry {
+  table_name: string
+  column_name: string
+  data_type: string
+  row_estimate: number | null
+  sample_values: string[]
+  description: string | null
+  description_source: 'ai' | 'owner' | null
+  approved: boolean
+}
+
+export interface Definition {
+  definition_id: string
+  term: string
+  definition: string
+  source: 'ai' | 'owner' | 'document'
+  approved: boolean
+  /** Where a definition found in a document came from (the exact sentence, checked against the passage). */
+  citation?: DefinitionCitation | null
+}
+
+export interface DefinitionCitation {
+  document_id: string
+  chunk_id: string
+  page: number | null
+  title: string
+  quote: string
+}
+
+export interface SetupJob {
+  job_id: string
+  kind: 'draft' | 'test' | 'mine'
+  workspace_id: string
+  state: 'running' | 'done' | 'failed'
+  done: number
+  total: number
+  error: string | null
+  run_id: string | null
+  /** mine: definitions proposed, and proposals left out because their quote was not in the document. */
+  found?: number
+  dropped?: number
+  started_at: string
+  finished_at: string | null
+}
+
+export interface SetupResult {
+  position: number
+  question: string
+  has_reference: boolean
+  answer_text: string | null
+  answer_sql: string | null
+  verdict: Verdict
+  detail: string | null
+}
+
+export interface SetupRun {
+  run_id: string
+  workspace_id: string
+  state: 'running' | 'done' | 'failed'
+  graded_by: 'reference' | 'owner'
+  score: number | null
+  total: number
+  started_at: string
+  finished_at: string | null
+  results: SetupResult[]
+}
+
+export type LibraryDocumentStatus = 'processing' | 'ready' | 'failed'
+
+export interface LibraryFolder {
+  folder_id: string
+  name: string
+  created_at: string
+  document_count: number
+  ready_count: number
+  workspace_ids: string[]
+}
+
+export interface LibraryDocument {
+  document_id: string
+  folder_id: string
+  title: string
+  filename: string
+  content_type: string
+  pages: number | null
+  bytes: number
+  status: LibraryDocumentStatus
+  error: string | null
+  chunk_count: number
+  created_at: string
+}
+
+export type ConnectionStatus = 'ok' | 'failed'
+
+export type SslMode = 'disable' | 'prefer' | 'require' | 'verify-ca' | 'verify-full'
+
+/** A Postgres database the user connected (never carries the password). */
+export interface Connection {
+  connection_id: string
+  name: string
+  host: string
+  port: number
+  dbname: string
+  username: string
+  sslmode: SslMode | string
+  schema_name: string | null
+  status: ConnectionStatus
+  check_detail: string | null
+  checked_at: string | null
+  created_at: string
+  workspace_ids: string[]
+}
+
+/** The body of POST /library/connections. The password is sent once and never returned. */
+export interface NewConnection {
+  name: string
+  host: string
+  port: number
+  dbname: string
+  username: string
+  password: string
+  sslmode: SslMode
+}
+
+/** What a create or a test returns: the connection and the schemas the login can read. */
+export interface ConnectionCheck {
+  connection: Connection
+  schemas: string[]
+  warnings: string[]
 }

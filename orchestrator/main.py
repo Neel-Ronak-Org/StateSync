@@ -9,6 +9,7 @@ Endpoints:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import time
@@ -22,12 +23,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from auth import (AuthError, Principal, RateLimited, RateLimiter, authenticate, init_auth,
-                  rate_limiter, read_rate_limiter)
+from auth import (CSRF_HEADER, SESSION_COOKIE, AuthError, Principal, RateLimited, RateLimiter, all_principals,
+                  authenticate, credential_header, init_auth, rate_limiter, read_rate_limiter)
 from config_loader import cfg, flags, snapshot_flags
 from graph import graph
 from llm.provider import LLM_READINESS, validate_llm_config
+from llm.recording import start_recording, stop_recording
 from failures import user_facing_failure
+from evidence import evidence_tier
+from number_grounding import caveat as grounding_caveat
+from number_grounding import ground
+from sql_explain import explain_sql
 from mcp_client import (MCPSession, audit_record, history_append_turn,
                         history_check_session, history_get_recent_turns,
                         history_get_turn_rows, history_list_sessions, history_delete_session)
@@ -38,6 +44,10 @@ from state import StateSyncState
 from tiles_api import register_tile_routes
 from builder_api import register_build_routes
 from dashboards_api import register_dashboard_routes
+from library_api import call_library, is_connection_dataset, register_library_routes
+from workspaces_api import call_workspaces, register_workspace_routes
+from session_api import register_session_routes
+from example_timer import run_forever as run_example_timer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -62,14 +72,25 @@ async def lifespan(app: FastAPI):
     # Eagerly load and validate API principals — fails closed at startup if the
     # secret file is missing, empty, or malformed, preventing unauthenticated deploys.
     init_auth()
+    timer_task = None
+    if str(cfg.example_checks.timer) == "on":
+        # The self-test timer (example_timer.py): re-checks approved examples on a schedule.
+        timer_task = asyncio.create_task(run_example_timer(
+            all_principals, call_workspaces,
+            interval_s=float(cfg.example_checks.timer_interval_s),
+            initial_delay_s=float(cfg.example_checks.timer_initial_delay_s),
+            stale_after_s=float(cfg.example_checks.stale_after_s),
+            max_workspaces=int(cfg.example_checks.timer_max_workspaces)))
     yield
+    if timer_task is not None:
+        timer_task.cancel()
     logger.info("StateSync Orchestrator shutting down.")
 
 
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="StateSync Orchestrator",
-    description="Multi-agent analytics API for ONDC network data.",
+    description="Text-to-SQL and document analytics API (StateSync).",
     version="0.1.0-phase-b",
     lifespan=lifespan,
 )
@@ -79,12 +100,15 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(cfg.api.cors_allowed_origins),
-    allow_credentials=False,
-    # PATCH and DELETE for the /tiles routes (rename, unpin). Without them the
-    # browser preflight refuses those calls from the web UI's origin, which no
+    # Credentials: the web app's HttpOnly session cookie (auth.py, session_api.py). Safe only
+    # because the origins are an explicit list, never a wildcard.
+    allow_credentials=True,
+    # PATCH and DELETE for the /tiles routes (rename, unpin); PUT for the
+    # /workspaces knowledge routes (Phase 3). Without them the browser
+    # preflight refuses those calls from the web UI's origin, which no
     # server-side test can see (found auditing Phase 1).
-    allow_methods=["GET", "POST", "PATCH", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allow_headers=["Authorization", "Content-Type", "X-Filename", CSRF_HEADER],
     # Browsers hide every non-safelisted response header from cross-origin
     # JavaScript unless it is exposed. Without this the web UI could never read
     # Retry-After on a 429 and could only say "try again shortly" (the old UI
@@ -165,7 +189,8 @@ async def _authenticate_and_limit(request: Request, limiter: RateLimiter) -> Pri
     route = request.url.path
 
     try:
-        principal = authenticate(request.headers.get("Authorization"))
+        principal = authenticate(credential_header(request.headers.get("Authorization"),
+                                                   request.cookies.get(SESSION_COOKIE), request.headers.get(CSRF_HEADER)))
     except AuthError as exc:
         await _audit(
             "anonymous",
@@ -208,6 +233,9 @@ class QueryRequest(BaseModel):
     # None means "use the configured default", which keeps existing callers
     # and every measurement script byte-identical in behaviour.
     schema: str | None = None
+    # A workspace of the caller's (docs/V3_PLAN.md Phase 3): the question is
+    # answered on its dataset with its approved knowledge.
+    workspace_id: str | None = None
     # Test harness only (C2-V1/V2): seeds the attempt-0 candidate SQL,
     # bypassing LLM generation. Never sent by the frontend.
     debug_candidate_sql: str | None = None
@@ -375,6 +403,18 @@ async def get_turn_rows_route(
     return result
 
 
+async def _library_titles(principal: Principal, workspace_id: str | None) -> list[str]:
+    """Titles of the ready uploaded documents a workspace searches ([] without one, or on failure)."""
+    if not workspace_id:
+        return []
+    try:
+        result = await call_library(principal, "workspace_documents", workspace_id=workspace_id)
+    except Exception as exc:
+        logger.warning("Library titles unavailable for workspace %s: %s", workspace_id, exc)
+        return []
+    return [d["title"] for d in result.get("documents", [])] if result.get("ok") else []
+
+
 async def answer_question(
     principal: Principal,
     query: str,
@@ -383,6 +423,8 @@ async def answer_question(
     client_ip: str | None,
     route_path: str = "/query",
     debug_candidate_sql: str | None = None,
+    workspace_id: str | None = None,
+    allow_fast_path: bool = True,
 ) -> QueryResponse:
     """
     Run one question through the pipeline and record the turn: the body of
@@ -407,6 +449,7 @@ async def answer_question(
     }
 
     t0 = time.monotonic()
+    model_calls = start_recording()
     try:
         raw_final = await graph.ainvoke(
             StateSyncState(
@@ -416,6 +459,9 @@ async def answer_question(
                 session_id=initial_input["session_id"],
                 raw_query=initial_input["raw_query"],
                 target_schema=requested,
+                workspace_id=workspace_id,
+                library_titles=await _library_titles(principal, workspace_id),
+                allow_fast_path=allow_fast_path,
                 flags_snapshot=initial_input["flags_snapshot"],
                 debug_candidate_sql=debug_candidate_sql,
             )
@@ -435,6 +481,8 @@ async def answer_question(
         )
         status_code, message = user_facing_failure(exc, query_id)
         raise HTTPException(status_code=status_code, detail=message)
+    finally:
+        stop_recording()
 
     latency_ms = int((time.monotonic() - t0) * 1000)  # noqa: literals — ms conversion factor
 
@@ -442,16 +490,37 @@ async def answer_question(
     # sql_rows/sql_columns are included (not just the count) so C1-V3 can do
     # execution-based dataframe equality across repeated runs -- this trace
     # object is verification/debugging-oriented, not the user-facing payload.
+    # Every figure in the prose, traced to a cell, a total, the question or a
+    # cited passage (number_grounding.py, no model). Unmatched figures become a
+    # caveat, which also keeps the answer out of the "checked" tier.
+    grounding = None
+    caveats = list(final_state.caveats)
+    if final_state.flags_snapshot.get("pipeline.number_grounding") == "on" and final_state.answer_text:
+        grounding = ground(final_state.answer_text, final_state.sql_rows, final_state.sql_columns,
+                           final_state.normalized_query or final_state.raw_query,
+                           [r.content for r in final_state.retrievals])
+        figure_caveat = grounding_caveat(grounding["unmatched"])
+        if figure_caveat:
+            caveats.append(figure_caveat)
+
     state_trace = {
         "query_id":    final_state.query_id,
         "tenant_id":   final_state.tenant_id,
         "principal_id": final_state.principal_id,
         "target_schema": final_state.target_schema,
+        "workspace_id": final_state.workspace_id,
+        "verified_example": final_state.verified_example,
+        "evidence": evidence_tier(final_state.verified_example, final_state.executed_sql,
+                                  final_state.flags_snapshot, caveats,
+                                  final_state.compiled_template),
+        "number_grounding": grounding,
         "route":       final_state.route,
         "executed_sql": final_state.executed_sql,
         # executed_sql is null when a statement was rejected before execution,
         # so candidate_sql is what a caller inspects to see what the agent actually proposed.
         "candidate_sql": final_state.candidate_sql,
+        # Plain-English reading of the SQL (deterministic, no model): "How I got this".
+        "explanation": explain_sql(final_state.executed_sql),
         "sql_rows_count": len(final_state.sql_rows),
         "sql_rows":    final_state.sql_rows,
         "sql_columns": final_state.sql_columns,
@@ -459,6 +528,7 @@ async def answer_question(
         "errors":      [e.model_dump() for e in final_state.errors],
         "interrogation_samples": final_state.interrogation_samples,
         "script_repairs": final_state.script_repairs,
+        "caveats":     caveats,
         "metrics":     final_state.metrics.model_dump(),
         "memory_hit":       final_state.memory_hit,
         "memory_trace_id":  final_state.memory_trace_id,
@@ -472,6 +542,8 @@ async def answer_question(
         "spatial":            final_state.spatial.model_dump(),
         "subtasks":           final_state.subtasks,
         "retrievals":         [r.model_dump() for r in final_state.retrievals],
+        "calls":              model_calls,
+        "synth_style":        final_state.flags_snapshot.get("pipeline.synth_style", "full"),
     }
 
     # Recomputed here from final_state's typed fields, not read off the
@@ -610,7 +682,22 @@ async def run_query(
         raise HTTPException(status_code=422, detail="query must not be empty")
 
     requested = body.schema or target_schema()
-    if requested not in cfg.api.allowed_schemas:
+    if body.workspace_id:
+        # The workspace decides the dataset; it must be the caller's own.
+        try:
+            workspace = (await call_workspaces(principal, "get", workspace_id=body.workspace_id)).get("workspace")
+        except Exception as exc:
+            logger.error("Workspace lookup failed for %s: %s", body.workspace_id, exc)
+            raise HTTPException(status_code=503, detail="Workspace service unavailable. Try again shortly.")
+        if workspace is None:
+            raise HTTPException(status_code=404, detail="No such workspace.")
+        if body.schema and body.schema != workspace["target_schema"]:
+            raise HTTPException(status_code=409, detail=(
+                f"This workspace uses the {workspace['target_schema']} dataset, not {body.schema}."))
+        requested = workspace["target_schema"]
+    # A connected database (cn_...) is reachable only through a workspace of the
+    # caller's own, checked just above; the MCP resolves it for this tenant.
+    if requested not in cfg.api.allowed_schemas and not (body.workspace_id and is_connection_dataset(requested)):
         raise HTTPException(
             status_code=422,
             detail=f"Schema {requested!r} is not allowed. Allowed schemas: {sorted(cfg.api.allowed_schemas)}",
@@ -673,11 +760,17 @@ async def run_query(
         requested,
         client_ip,
         debug_candidate_sql=body.debug_candidate_sql,
+        workspace_id=body.workspace_id,
     )
 
 
+register_session_routes(app, require_principal=require_principal, audit=_audit)
 register_tile_routes(app, require_principal=require_principal, audit=_audit)
 register_dashboard_routes(app, require_principal=require_principal, audit=_audit)
+register_workspace_routes(app, require_principal=require_principal, audit=_audit,
+                          require_principal_for_model=require_principal_for_model,
+                          answer_question=answer_question)
+register_library_routes(app, require_principal=require_principal, audit=_audit)
 register_build_routes(app, require_principal=require_principal,
                       require_principal_for_model=require_principal_for_model,
                       audit=_audit, answer_question=answer_question)
