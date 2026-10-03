@@ -113,5 +113,8 @@ which git ignores.
 - **Known caveat:** Jin et al. 2026 (arXiv:2601.08778) report annotation errors in a large share of BIRD
   Mini-Dev and released corrected labels. A study must say which labels it scores against, and should
   report both.
-- **Not loaded yet:** the Postgres load (a separate local container, like FIBEN) and the study spec come
-  next; nothing has been run on it.
+- **Loaded (2026-10-03):** `demo/bird_db.sh` → `statesync-bird-db` on 127.0.0.1:5436, database `bird`,
+  read-only `statesync_reader`. The dump's 75 tables are split into one schema per BIRD database (11,
+  from `dev_tables.json`), so each question sees only its own database, as in official BIRD. All 500
+  gold queries (original labels) execute against their schema: 500/500, none slower than 5 s.
+  Difficulty: 148 simple, 250 moderate, 102 challenging. No model has been run on it.
