@@ -273,11 +273,18 @@ def analyse(rows: list[dict], judges: dict[str, list[float]], fanout_ids: set[in
         pvalues["H4"] = sign_test_p(fixed, broken)
     out["tests"]["H4"] = h4
     # H1: on the fan-out set only.
-    if fanout_ids is not None and "fanout_retry" in out["matched_k"]:
+    if fanout_ids is not None:
+        # The precondition counts double-counting errors: wrong risky answers whose result is the naive
+        # join's (eval_bird.cmd_score_fanout; a lower bound).
         risky_wrong = sum(1 for r, w in zip(rows, wrong) if w and r["question_id"] in fanout_ids)
-        h1 = {"risky_wrong": risky_wrong, **out["matched_k"]["fanout_retry"]}
-        if risky_wrong < H1_MIN_ERRORS:
-            h1["status"] = f"untestable: {risky_wrong} wrong answers on risky questions (precondition {H1_MIN_ERRORS})"
+        fanout_errors = sum(1 for r in rows if r.get("fanout_error"))
+        h1: dict[str, Any] = {"risky_wrong": risky_wrong, "fanout_errors": fanout_errors,
+                              **out["matched_k"].get("fanout_retry", {"k": 0, "check_caught": 0})}
+        if fanout_errors < H1_MIN_ERRORS:
+            h1["status"] = f"untestable: {fanout_errors} double-counting errors (precondition {H1_MIN_ERRORS})"
+        elif "fanout_retry" not in out["matched_k"]:
+            h1["status"] = "the fan-out check never fired"
+            pvalues["H1"] = 1.0
         else:
             pvalues["H1"] = out["matched_k"]["fanout_retry"]["p_one_sided"]
         out["tests"]["H1"] = h1

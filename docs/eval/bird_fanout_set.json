@@ -1,0 +1,2142 @@
+{
+ "created": "2026-10-03T15:15:49+00:00",
+ "protocol": "v2 \u00a73.2",
+ "status": "draft",
+ "source_sha256": "2273d7e4bd2f141022fd779aebfd380cb63a10b2cccec92c10df7399b6a4d8e8",
+ "risky": 60,
+ "control": 33,
+ "failed": [
+  {
+   "id": "F018",
+   "problems": [
+    "risky but the naive join gives the same result"
+   ]
+  },
+  {
+   "id": "F020",
+   "problems": [
+    "risky but the naive join gives the same result"
+   ]
+  }
+ ],
+ "risky_ids": [
+  "F001",
+  "F002",
+  "F003",
+  "F004",
+  "F005",
+  "F006",
+  "F007",
+  "F008",
+  "F009",
+  "F014",
+  "F015",
+  "F016",
+  "F017",
+  "F019",
+  "F024",
+  "F025",
+  "F026",
+  "F027",
+  "F028",
+  "F029",
+  "F030",
+  "F034",
+  "F035",
+  "F036",
+  "F037",
+  "F038",
+  "F042",
+  "F043",
+  "F044",
+  "F045",
+  "F046",
+  "F050",
+  "F051",
+  "F052",
+  "F053",
+  "F054",
+  "F058",
+  "F059",
+  "F060",
+  "F061",
+  "F062",
+  "F066",
+  "F067",
+  "F068",
+  "F069",
+  "F070",
+  "F071",
+  "F075",
+  "F076",
+  "F077",
+  "F078",
+  "F079",
+  "F080",
+  "F084",
+  "F085",
+  "F086",
+  "F087",
+  "F093",
+  "F094",
+  "F095"
+ ],
+ "control_ids": [
+  "F010",
+  "F011",
+  "F012",
+  "F013",
+  "F021",
+  "F022",
+  "F023",
+  "F031",
+  "F032",
+  "F033",
+  "F039",
+  "F040",
+  "F041",
+  "F047",
+  "F048",
+  "F049",
+  "F055",
+  "F056",
+  "F057",
+  "F063",
+  "F064",
+  "F065",
+  "F072",
+  "F073",
+  "F074",
+  "F081",
+  "F082",
+  "F083",
+  "F088",
+  "F089",
+  "F090",
+  "F091",
+  "F092"
+ ],
+ "questions": [
+  {
+   "id": "F001",
+   "db_id": "formula_1",
+   "kind": "risky",
+   "relation": "laptimes.driverid -> drivers.driverid",
+   "question": "How many drivers have recorded at least one lap faster than 1 minute 10 seconds?",
+   "evidence": "lap faster than 1 minute 10 seconds refers to milliseconds < 70000",
+   "gold": "SELECT COUNT(DISTINCT driverid) FROM laptimes WHERE milliseconds < 70000",
+   "naive": "SELECT COUNT(*) FROM drivers d JOIN laptimes l ON l.driverid = d.driverid WHERE l.milliseconds < 70000",
+   "gold_result": [
+    [
+     "29"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "896"
+    ]
+   ]
+  },
+  {
+   "id": "F002",
+   "db_id": "formula_1",
+   "kind": "risky",
+   "relation": "pitstops.driverid -> drivers.driverid",
+   "question": "How many British drivers have made at least one pit stop?",
+   "evidence": "British refers to nationality = 'British'",
+   "gold": "SELECT COUNT(DISTINCT d.driverid) FROM drivers d JOIN pitstops p ON p.driverid = d.driverid WHERE d.nationality = 'British'",
+   "naive": "SELECT COUNT(*) FROM drivers d JOIN pitstops p ON p.driverid = d.driverid WHERE d.nationality = 'British'",
+   "gold_result": [
+    [
+     "6"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "811"
+    ]
+   ]
+  },
+  {
+   "id": "F003",
+   "db_id": "formula_1",
+   "kind": "risky",
+   "relation": "laptimes.driverid -> drivers.driverid",
+   "question": "What is the average birth year of the drivers who recorded lap times in the 2009 season?",
+   "evidence": "birth year refers to the year of dob; 2009 season refers to races.year = 2009",
+   "gold": "SELECT AVG(EXTRACT(YEAR FROM dob)) FROM drivers WHERE driverid IN (SELECT l.driverid FROM laptimes l JOIN races r ON r.raceid = l.raceid WHERE r.year = 2009)",
+   "naive": "SELECT AVG(EXTRACT(YEAR FROM d.dob)) FROM drivers d JOIN laptimes l ON l.driverid = d.driverid JOIN races r ON r.raceid = l.raceid WHERE r.year = 2009",
+   "gold_result": [
+    [
+     "1981.2000000000000000"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "1980.8961745256782646"
+    ]
+   ]
+  },
+  {
+   "id": "F004",
+   "db_id": "formula_1",
+   "kind": "risky",
+   "relation": "results.raceid -> races.raceid",
+   "question": "How many circuits have hosted a race in which at least one driver retired with an engine failure?",
+   "evidence": "engine failure refers to status = 'Engine'",
+   "gold": "SELECT COUNT(DISTINCT ra.circuitid) FROM races ra JOIN results r ON r.raceid = ra.raceid JOIN status s ON s.statusid = r.statusid WHERE s.status = 'Engine'",
+   "naive": "SELECT COUNT(*) FROM circuits c JOIN races ra ON ra.circuitid = c.circuitid JOIN results r ON r.raceid = ra.raceid JOIN status s ON s.statusid = r.statusid WHERE s.status = 'Engine'",
+   "gold_result": [
+    [
+     "66"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "1947"
+    ]
+   ]
+  },
+  {
+   "id": "F005",
+   "db_id": "formula_1",
+   "kind": "risky",
+   "relation": "results.constructorid -> constructors.constructorid",
+   "question": "For each constructor nationality, how many constructors scored points in the 2010 season?",
+   "evidence": "scored points refers to results.points > 0; 2010 season refers to races.year = 2010",
+   "gold": "SELECT c.nationality, COUNT(DISTINCT c.constructorid) FROM constructors c JOIN results r ON r.constructorid = c.constructorid JOIN races ra ON ra.raceid = r.raceid WHERE ra.year = 2010 AND r.points > 0 GROUP BY c.nationality",
+   "naive": "SELECT c.nationality, COUNT(*) FROM constructors c JOIN results r ON r.constructorid = c.constructorid JOIN races ra ON ra.raceid = r.raceid WHERE ra.year = 2010 AND r.points > 0 GROUP BY c.nationality",
+   "gold_result": [
+    [
+     "Austrian",
+     "1"
+    ],
+    [
+     "British",
+     "2"
+    ],
+    [
+     "French",
+     "1"
+    ],
+    [
+     "German",
+     "1"
+    ],
+    [
+     "Indian",
+     "1"
+    ],
+    [
+     "Italian",
+     "2"
+    ],
+    [
+     "Swiss",
+     "1"
+    ]
+   ],
+   "gold_rows": 7,
+   "naive_result": [
+    [
+     "Austrian",
+     "31"
+    ],
+    [
+     "British",
+     "45"
+    ],
+    [
+     "French",
+     "19"
+    ],
+    [
+     "German",
+     "25"
+    ],
+    [
+     "Indian",
+     "14"
+    ],
+    [
+     "Italian",
+     "35"
+    ],
+    [
+     "Swiss",
+     "11"
+    ]
+   ]
+  },
+  {
+   "id": "F006",
+   "db_id": "formula_1",
+   "kind": "risky",
+   "relation": "races.circuitid -> circuits.circuitid",
+   "question": "What is the average latitude of the circuits that have hosted at least one race since 2010?",
+   "evidence": "since 2010 refers to races.year >= 2010",
+   "gold": "SELECT AVG(lat) FROM circuits WHERE circuitid IN (SELECT circuitid FROM races WHERE year >= 2010)",
+   "naive": "SELECT AVG(c.lat) FROM circuits c JOIN races r ON r.circuitid = c.circuitid WHERE r.year >= 2010",
+   "gold_result": [
+    [
+     "33.889449195861815"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "32.20829684025532"
+    ]
+   ]
+  },
+  {
+   "id": "F007",
+   "db_id": "formula_1",
+   "kind": "risky",
+   "relation": "results.raceid -> races.raceid",
+   "question": "How many races in 2005 had at least one driver who finished more than 5 places ahead of their grid position?",
+   "evidence": "finished more than 5 places ahead of grid refers to grid - position > 5 with position not null",
+   "gold": "SELECT COUNT(DISTINCT ra.raceid) FROM races ra JOIN results r ON r.raceid = ra.raceid WHERE ra.year = 2005 AND r.position IS NOT NULL AND r.grid - r.position > 5",
+   "naive": "SELECT COUNT(*) FROM races ra JOIN results r ON r.raceid = ra.raceid WHERE ra.year = 2005 AND r.position IS NOT NULL AND r.grid - r.position > 5",
+   "gold_result": [
+    [
+     "18"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "63"
+    ]
+   ]
+  },
+  {
+   "id": "F008",
+   "db_id": "formula_1",
+   "kind": "risky",
+   "relation": "qualifying.driverid -> drivers.driverid",
+   "question": "How many drivers born after 1985 have qualified in first position at least once?",
+   "evidence": "born after 1985 refers to year of dob > 1985; qualified in first position refers to qualifying.position = 1",
+   "gold": "SELECT COUNT(DISTINCT d.driverid) FROM drivers d JOIN qualifying q ON q.driverid = d.driverid WHERE EXTRACT(YEAR FROM d.dob) > 1985 AND q.position = 1",
+   "naive": "SELECT COUNT(*) FROM drivers d JOIN qualifying q ON q.driverid = d.driverid WHERE EXTRACT(YEAR FROM d.dob) > 1985 AND q.position = 1",
+   "gold_result": [
+    [
+     "4"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "50"
+    ]
+   ]
+  },
+  {
+   "id": "F009",
+   "db_id": "formula_1",
+   "kind": "risky",
+   "relation": "driverstandings.driverid -> drivers.driverid",
+   "question": "What is the average birth year of drivers who have led the drivers' standings after at least one race?",
+   "evidence": "led the standings refers to driverstandings.position = 1; birth year refers to the year of dob",
+   "gold": "SELECT AVG(EXTRACT(YEAR FROM dob)) FROM drivers WHERE driverid IN (SELECT driverid FROM driverstandings WHERE position = 1)",
+   "naive": "SELECT AVG(EXTRACT(YEAR FROM d.dob)) FROM drivers d JOIN driverstandings s ON s.driverid = d.driverid WHERE s.position = 1",
+   "gold_result": [
+    [
+     "1948.1355932203389831"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "1957.1144329896907216"
+    ]
+   ]
+  },
+  {
+   "id": "F010",
+   "db_id": "formula_1",
+   "kind": "control",
+   "relation": "laptimes.driverid -> drivers.driverid",
+   "question": "How many laps faster than 1 minute 10 seconds were recorded by French drivers?",
+   "evidence": "lap faster than 1 minute 10 seconds refers to milliseconds < 70000; French refers to nationality = 'French'",
+   "gold": "SELECT COUNT(*) FROM laptimes WHERE milliseconds < 70000 AND driverid IN (SELECT driverid FROM drivers WHERE nationality = 'French')",
+   "naive": "SELECT COUNT(*) FROM laptimes l JOIN drivers d ON d.driverid = l.driverid WHERE l.milliseconds < 70000 AND d.nationality = 'French'",
+   "gold_result": [
+    [
+     "67"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "67"
+    ]
+   ]
+  },
+  {
+   "id": "F011",
+   "db_id": "formula_1",
+   "kind": "control",
+   "relation": "pitstops.driverid -> drivers.driverid",
+   "question": "What is the earliest date of birth among drivers who have made a pit stop?",
+   "evidence": "",
+   "gold": "SELECT MIN(dob) FROM drivers WHERE driverid IN (SELECT driverid FROM pitstops)",
+   "naive": "SELECT MIN(d.dob) FROM drivers d JOIN pitstops p ON p.driverid = d.driverid",
+   "gold_result": [
+    [
+     "1969-01-03"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "1969-01-03"
+    ]
+   ]
+  },
+  {
+   "id": "F012",
+   "db_id": "formula_1",
+   "kind": "control",
+   "relation": "pitstops.driverid -> drivers.driverid",
+   "question": "How many pit stops have British drivers made in total?",
+   "evidence": "British refers to nationality = 'British'",
+   "gold": "SELECT COUNT(*) FROM pitstops WHERE driverid IN (SELECT driverid FROM drivers WHERE nationality = 'British')",
+   "naive": "SELECT COUNT(*) FROM pitstops p JOIN drivers d ON d.driverid = p.driverid WHERE d.nationality = 'British'",
+   "gold_result": [
+    [
+     "811"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "811"
+    ]
+   ]
+  },
+  {
+   "id": "F013",
+   "db_id": "formula_1",
+   "kind": "control",
+   "relation": "constructorresults.constructorid -> constructors.constructorid",
+   "question": "How many points did German constructors score in total in the constructor results of the 2008 season?",
+   "evidence": "German refers to constructors.nationality = 'German'; 2008 season refers to races.year = 2008",
+   "gold": "SELECT SUM(points) FROM constructorresults WHERE constructorid IN (SELECT constructorid FROM constructors WHERE nationality = 'German') AND raceid IN (SELECT raceid FROM races WHERE year = 2008)",
+   "naive": "SELECT SUM(cr.points) FROM constructorresults cr JOIN constructors c ON c.constructorid = cr.constructorid JOIN races r ON r.raceid = cr.raceid WHERE c.nationality = 'German' AND r.year = 2008",
+   "gold_result": [
+    [
+     "127.0"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "127.0"
+    ]
+   ]
+  },
+  {
+   "id": "F014",
+   "db_id": "financial",
+   "kind": "risky",
+   "relation": "trans.account_id -> account.account_id",
+   "question": "How many accounts have at least one withdrawal transaction of more than 50,000?",
+   "evidence": "withdrawal refers to trans.type = 'VYDAJ'; more than 50,000 refers to amount > 50000",
+   "gold": "SELECT COUNT(DISTINCT account_id) FROM trans WHERE type = 'VYDAJ' AND amount > 50000",
+   "naive": "SELECT COUNT(*) FROM account a JOIN trans t ON t.account_id = a.account_id WHERE t.type = 'VYDAJ' AND t.amount > 50000",
+   "gold_result": [
+    [
+     "796"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "2597"
+    ]
+   ]
+  },
+  {
+   "id": "F015",
+   "db_id": "financial",
+   "kind": "risky",
+   "relation": "account.district_id -> district.district_id",
+   "question": "What is the combined number of inhabitants of the districts in which at least one account was opened in 1997?",
+   "evidence": "number of inhabitants refers to A4; opened in 1997 refers to the year of account.date = 1997",
+   "gold": "SELECT SUM(CAST(a4 AS BIGINT)) FROM district WHERE district_id IN (SELECT district_id FROM account WHERE EXTRACT(YEAR FROM date) = 1997)",
+   "naive": "SELECT SUM(CAST(d.a4 AS BIGINT)) FROM district d JOIN account a ON a.district_id = d.district_id WHERE EXTRACT(YEAR FROM a.date) = 1997",
+   "gold_result": [
+    [
+     "10309137"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "246841110"
+    ]
+   ]
+  },
+  {
+   "id": "F016",
+   "db_id": "financial",
+   "kind": "risky",
+   "relation": "client.district_id -> district.district_id",
+   "question": "Consider the districts where at least one client born after 1980 lives. What is the average number of inhabitants of these districts?",
+   "evidence": "number of inhabitants refers to A4; born after 1980 refers to the year of birth_date > 1980",
+   "gold": "SELECT AVG(CAST(a4 AS BIGINT)) FROM district WHERE district_id IN (SELECT district_id FROM client WHERE EXTRACT(YEAR FROM birth_date) > 1980)",
+   "naive": "SELECT AVG(CAST(d.a4 AS BIGINT)) FROM district d JOIN client c ON c.district_id = d.district_id WHERE EXTRACT(YEAR FROM c.birth_date) > 1980",
+   "gold_result": [
+    [
+     "151113.880952380952"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "277040.125000000000"
+    ]
+   ]
+  },
+  {
+   "id": "F017",
+   "db_id": "financial",
+   "kind": "risky",
+   "relation": "account.district_id -> district.district_id",
+   "question": "How many districts have at least one account with weekly statement issuance?",
+   "evidence": "weekly issuance refers to frequency = 'POPLATEK TYDNE'",
+   "gold": "SELECT COUNT(DISTINCT district_id) FROM account WHERE frequency = 'POPLATEK TYDNE'",
+   "naive": "SELECT COUNT(*) FROM district d JOIN account a ON a.district_id = d.district_id WHERE a.frequency = 'POPLATEK TYDNE'",
+   "gold_result": [
+    [
+     "75"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "240"
+    ]
+   ]
+  },
+  {
+   "id": "F019",
+   "db_id": "financial",
+   "kind": "risky",
+   "relation": "trans.account_id -> account.account_id",
+   "question": "What is the average loan amount of the loans whose account has made at least one credit card withdrawal?",
+   "evidence": "credit card withdrawal refers to trans.operation = 'VYBER KARTOU'",
+   "gold": "SELECT AVG(amount) FROM loan WHERE account_id IN (SELECT account_id FROM trans WHERE operation = 'VYBER KARTOU')",
+   "naive": "SELECT AVG(l.amount) FROM loan l JOIN trans t ON t.account_id = l.account_id WHERE t.operation = 'VYBER KARTOU'",
+   "gold_result": [
+    [
+     "156218.027027027027"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "129220.290155440415"
+    ]
+   ]
+  },
+  {
+   "id": "F021",
+   "db_id": "financial",
+   "kind": "control",
+   "relation": "account.district_id -> district.district_id",
+   "question": "What is the total amount of all loans granted to accounts in the Prague region?",
+   "evidence": "Prague region refers to district.A3 = 'Prague'",
+   "gold": "SELECT SUM(amount) FROM loan WHERE account_id IN (SELECT a.account_id FROM account a JOIN district d ON d.district_id = a.district_id WHERE d.a3 = 'Prague')",
+   "naive": "SELECT SUM(l.amount) FROM loan l JOIN account a ON a.account_id = l.account_id JOIN district d ON d.district_id = a.district_id WHERE d.a3 = 'Prague'",
+   "gold_result": [
+    [
+     "12932412"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "12932412"
+    ]
+   ]
+  },
+  {
+   "id": "F022",
+   "db_id": "financial",
+   "kind": "control",
+   "relation": "trans.account_id -> account.account_id",
+   "question": "How many transactions of more than 80,000 were made from accounts opened in 1993?",
+   "evidence": "opened in 1993 refers to the year of account.date = 1993",
+   "gold": "SELECT COUNT(*) FROM trans WHERE amount > 80000 AND account_id IN (SELECT account_id FROM account WHERE EXTRACT(YEAR FROM date) = 1993)",
+   "naive": "SELECT COUNT(*) FROM trans t JOIN account a ON a.account_id = t.account_id WHERE t.amount > 80000 AND EXTRACT(YEAR FROM a.date) = 1993",
+   "gold_result": [
+    [
+     "4"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "4"
+    ]
+   ]
+  },
+  {
+   "id": "F023",
+   "db_id": "financial",
+   "kind": "control",
+   "relation": "order.account_id -> account.account_id",
+   "question": "What is the largest loan amount granted to an account that has at least one permanent order?",
+   "evidence": "",
+   "gold": "SELECT MAX(amount) FROM loan WHERE account_id IN (SELECT account_id FROM \"order\")",
+   "naive": "SELECT MAX(l.amount) FROM loan l JOIN \"order\" o ON o.account_id = l.account_id",
+   "gold_result": [
+    [
+     "590820"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "590820"
+    ]
+   ]
+  },
+  {
+   "id": "F024",
+   "db_id": "card_games",
+   "kind": "risky",
+   "relation": "legalities.uuid -> cards.uuid",
+   "question": "How many cards are banned in at least one format?",
+   "evidence": "banned refers to legalities.status = 'Banned'",
+   "gold": "SELECT COUNT(DISTINCT uuid) FROM legalities WHERE status = 'Banned'",
+   "naive": "SELECT COUNT(*) FROM cards c JOIN legalities l ON l.uuid = c.uuid WHERE l.status = 'Banned'",
+   "gold_result": [
+    [
+     "1169"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "2313"
+    ]
+   ]
+  },
+  {
+   "id": "F025",
+   "db_id": "card_games",
+   "kind": "risky",
+   "relation": "foreign_data.uuid -> cards.uuid",
+   "question": "How many mythic rare cards have been printed in at least one foreign language?",
+   "evidence": "mythic rare refers to rarity = 'mythic'; printed in a foreign language refers to having a row in foreign_data",
+   "gold": "SELECT COUNT(DISTINCT c.uuid) FROM cards c JOIN foreign_data f ON f.uuid = c.uuid WHERE c.rarity = 'mythic'",
+   "naive": "SELECT COUNT(*) FROM cards c JOIN foreign_data f ON f.uuid = c.uuid WHERE c.rarity = 'mythic'",
+   "gold_result": [
+    [
+     "1397"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "10655"
+    ]
+   ]
+  },
+  {
+   "id": "F026",
+   "db_id": "card_games",
+   "kind": "risky",
+   "relation": "rulings.uuid -> cards.uuid",
+   "question": "What is the average converted mana cost of the cards that have at least one ruling?",
+   "evidence": "",
+   "gold": "SELECT AVG(convertedmanacost) FROM cards WHERE uuid IN (SELECT uuid FROM rulings)",
+   "naive": "SELECT AVG(c.convertedmanacost) FROM cards c JOIN rulings r ON r.uuid = c.uuid",
+   "gold_result": [
+    [
+     "3.3423357943460466"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "3.550330982465335"
+    ]
+   ]
+  },
+  {
+   "id": "F027",
+   "db_id": "card_games",
+   "kind": "risky",
+   "relation": "legalities.uuid -> cards.uuid",
+   "question": "How many different artists illustrated at least one card that is restricted in some format?",
+   "evidence": "restricted refers to legalities.status = 'Restricted'",
+   "gold": "SELECT COUNT(DISTINCT c.artist) FROM cards c JOIN legalities l ON l.uuid = c.uuid WHERE l.status = 'Restricted'",
+   "naive": "SELECT COUNT(c.artist) FROM cards c JOIN legalities l ON l.uuid = c.uuid WHERE l.status = 'Restricted'",
+   "gold_result": [
+    [
+     "109"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "636"
+    ]
+   ]
+  },
+  {
+   "id": "F028",
+   "db_id": "card_games",
+   "kind": "risky",
+   "relation": "set_translations.setcode -> sets.code",
+   "question": "What is the total base set size of the sets that have at least one translation?",
+   "evidence": "",
+   "gold": "SELECT SUM(basesetsize) FROM sets WHERE code IN (SELECT setcode FROM set_translations)",
+   "naive": "SELECT SUM(s.basesetsize) FROM sets s JOIN set_translations t ON t.setcode = s.code",
+   "gold_result": [
+    [
+     "23584"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "235840"
+    ]
+   ]
+  },
+  {
+   "id": "F029",
+   "db_id": "card_games",
+   "kind": "risky",
+   "relation": "legalities.uuid -> cards.uuid",
+   "question": "How many cards illustrated by Kev Walker are legal in at least one format?",
+   "evidence": "legal refers to legalities.status = 'Legal'",
+   "gold": "SELECT COUNT(DISTINCT c.uuid) FROM cards c JOIN legalities l ON l.uuid = c.uuid WHERE c.artist = 'Kev Walker' AND l.status = 'Legal'",
+   "naive": "SELECT COUNT(*) FROM cards c JOIN legalities l ON l.uuid = c.uuid WHERE c.artist = 'Kev Walker' AND l.status = 'Legal'",
+   "gold_result": [
+    [
+     "984"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "7064"
+    ]
+   ]
+  },
+  {
+   "id": "F030",
+   "db_id": "card_games",
+   "kind": "risky",
+   "relation": "rulings.uuid -> cards.uuid",
+   "question": "How many rare cards have received a ruling dated in 2012?",
+   "evidence": "rare refers to rarity = 'rare'; dated in 2012 refers to the year of rulings.date = 2012",
+   "gold": "SELECT COUNT(DISTINCT c.uuid) FROM cards c JOIN rulings r ON r.uuid = c.uuid WHERE c.rarity = 'rare' AND EXTRACT(YEAR FROM r.date) = 2012",
+   "naive": "SELECT COUNT(*) FROM cards c JOIN rulings r ON r.uuid = c.uuid WHERE c.rarity = 'rare' AND EXTRACT(YEAR FROM r.date) = 2012",
+   "gold_result": [
+    [
+     "217"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "526"
+    ]
+   ]
+  },
+  {
+   "id": "F031",
+   "db_id": "card_games",
+   "kind": "control",
+   "relation": "legalities.uuid -> cards.uuid",
+   "question": "How many legality entries mark a card illustrated by Kev Walker as banned?",
+   "evidence": "banned refers to legalities.status = 'Banned'",
+   "gold": "SELECT COUNT(*) FROM legalities WHERE status = 'Banned' AND uuid IN (SELECT uuid FROM cards WHERE artist = 'Kev Walker')",
+   "naive": "SELECT COUNT(*) FROM legalities l JOIN cards c ON c.uuid = l.uuid WHERE l.status = 'Banned' AND c.artist = 'Kev Walker'",
+   "gold_result": [
+    [
+     "48"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "48"
+    ]
+   ]
+  },
+  {
+   "id": "F032",
+   "db_id": "card_games",
+   "kind": "control",
+   "relation": "legalities.uuid -> cards.uuid",
+   "question": "What is the highest converted mana cost among cards that are banned in at least one format?",
+   "evidence": "banned refers to legalities.status = 'Banned'",
+   "gold": "SELECT MAX(convertedmanacost) FROM cards WHERE uuid IN (SELECT uuid FROM legalities WHERE status = 'Banned')",
+   "naive": "SELECT MAX(c.convertedmanacost) FROM cards c JOIN legalities l ON l.uuid = c.uuid WHERE l.status = 'Banned'",
+   "gold_result": [
+    [
+     "15.0"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "15.0"
+    ]
+   ]
+  },
+  {
+   "id": "F033",
+   "db_id": "card_games",
+   "kind": "control",
+   "relation": "rulings.uuid -> cards.uuid",
+   "question": "How many rulings have been issued for cards illustrated by Kev Walker?",
+   "evidence": "",
+   "gold": "SELECT COUNT(*) FROM rulings WHERE uuid IN (SELECT uuid FROM cards WHERE artist = 'Kev Walker')",
+   "naive": "SELECT COUNT(*) FROM rulings r JOIN cards c ON c.uuid = r.uuid WHERE c.artist = 'Kev Walker'",
+   "gold_result": [
+    [
+     "1253"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "1253"
+    ]
+   ]
+  },
+  {
+   "id": "F034",
+   "db_id": "european_football_2",
+   "kind": "risky",
+   "relation": "player_attributes.player_api_id -> player.player_api_id",
+   "question": "How many players have at least one attribute record with an overall rating above 85?",
+   "evidence": "",
+   "gold": "SELECT COUNT(DISTINCT player_api_id) FROM player_attributes WHERE overall_rating > 85",
+   "naive": "SELECT COUNT(*) FROM player p JOIN player_attributes a ON a.player_api_id = p.player_api_id WHERE a.overall_rating > 85",
+   "gold_result": [
+    [
+     "159"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "1099"
+    ]
+   ]
+  },
+  {
+   "id": "F035",
+   "db_id": "european_football_2",
+   "kind": "risky",
+   "relation": "player_attributes.player_api_id -> player.player_api_id",
+   "question": "What is the average height of the players who were rated with a potential above 85 at least once?",
+   "evidence": "",
+   "gold": "SELECT AVG(height) FROM player WHERE player_api_id IN (SELECT player_api_id FROM player_attributes WHERE potential > 85)",
+   "naive": "SELECT AVG(p.height) FROM player p JOIN player_attributes a ON a.player_api_id = p.player_api_id WHERE a.potential > 85",
+   "gold_result": [
+    [
+     "181.5174234424498416"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "180.7796670208997520"
+    ]
+   ]
+  },
+  {
+   "id": "F036",
+   "db_id": "european_football_2",
+   "kind": "risky",
+   "relation": "team_attributes.team_api_id -> team.team_api_id",
+   "question": "How many teams have at least one attribute record with a fast build-up play speed?",
+   "evidence": "fast build-up play speed refers to buildupplayspeedclass = 'Fast'",
+   "gold": "SELECT COUNT(DISTINCT team_api_id) FROM team_attributes WHERE buildupplayspeedclass = 'Fast'",
+   "naive": "SELECT COUNT(*) FROM team t JOIN team_attributes a ON a.team_api_id = t.team_api_id WHERE a.buildupplayspeedclass = 'Fast'",
+   "gold_result": [
+    [
+     "105"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "172"
+    ]
+   ]
+  },
+  {
+   "id": "F037",
+   "db_id": "european_football_2",
+   "kind": "risky",
+   "relation": "player_attributes.player_api_id -> player.player_api_id",
+   "question": "How many players who weigh more than 180 pounds are recorded as left-footed in at least one attribute record?",
+   "evidence": "weigh more than 180 pounds refers to weight > 180; left-footed refers to preferred_foot = 'left'",
+   "gold": "SELECT COUNT(DISTINCT p.player_api_id) FROM player p JOIN player_attributes a ON a.player_api_id = p.player_api_id WHERE p.weight > 180 AND a.preferred_foot = 'left'",
+   "naive": "SELECT COUNT(*) FROM player p JOIN player_attributes a ON a.player_api_id = p.player_api_id WHERE p.weight > 180 AND a.preferred_foot = 'left'",
+   "gold_result": [
+    [
+     "619"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "8951"
+    ]
+   ]
+  },
+  {
+   "id": "F038",
+   "db_id": "european_football_2",
+   "kind": "risky",
+   "relation": "player_attributes.player_api_id -> player.player_api_id",
+   "question": "What is the average weight of the players whose attacking work rate was recorded as high at least once?",
+   "evidence": "high attacking work rate refers to attacking_work_rate = 'high'",
+   "gold": "SELECT AVG(weight) FROM player WHERE player_api_id IN (SELECT player_api_id FROM player_attributes WHERE attacking_work_rate = 'high')",
+   "naive": "SELECT AVG(p.weight) FROM player p JOIN player_attributes a ON a.player_api_id = p.player_api_id WHERE a.attacking_work_rate = 'high'",
+   "gold_result": [
+    [
+     "164.2717261904761905"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "164.2973869182448684"
+    ]
+   ]
+  },
+  {
+   "id": "F039",
+   "db_id": "european_football_2",
+   "kind": "control",
+   "relation": "player_attributes.player_api_id -> player.player_api_id",
+   "question": "How many attribute records give a player taller than 190 cm an overall rating above 80?",
+   "evidence": "taller than 190 cm refers to height > 190",
+   "gold": "SELECT COUNT(*) FROM player_attributes WHERE overall_rating > 80 AND player_api_id IN (SELECT player_api_id FROM player WHERE height > 190)",
+   "naive": "SELECT COUNT(*) FROM player_attributes a JOIN player p ON p.player_api_id = a.player_api_id WHERE a.overall_rating > 80 AND p.height > 190",
+   "gold_result": [
+    [
+     "608"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "608"
+    ]
+   ]
+  },
+  {
+   "id": "F040",
+   "db_id": "european_football_2",
+   "kind": "control",
+   "relation": "player_attributes.player_api_id -> player.player_api_id",
+   "question": "What is the greatest height of a player who was rated above 85 overall at least once?",
+   "evidence": "",
+   "gold": "SELECT MAX(height) FROM player WHERE player_api_id IN (SELECT player_api_id FROM player_attributes WHERE overall_rating > 85)",
+   "naive": "SELECT MAX(p.height) FROM player p JOIN player_attributes a ON a.player_api_id = p.player_api_id WHERE a.overall_rating > 85",
+   "gold_result": [
+    [
+     "198"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "198"
+    ]
+   ]
+  },
+  {
+   "id": "F041",
+   "db_id": "european_football_2",
+   "kind": "control",
+   "relation": "match.home_team_api_id -> team.team_api_id",
+   "question": "How many matches of the 2015/2016 season did Real Madrid CF win at home?",
+   "evidence": "won at home refers to home_team_goal > away_team_goal with Real Madrid CF as the home team",
+   "gold": "SELECT COUNT(*) FROM match WHERE season = '2015/2016' AND home_team_goal > away_team_goal AND home_team_api_id IN (SELECT team_api_id FROM team WHERE team_long_name = 'Real Madrid CF')",
+   "naive": "SELECT COUNT(*) FROM match m JOIN team t ON t.team_api_id = m.home_team_api_id WHERE m.season = '2015/2016' AND m.home_team_goal > m.away_team_goal AND t.team_long_name = 'Real Madrid CF'",
+   "gold_result": [
+    [
+     "16"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "16"
+    ]
+   ]
+  },
+  {
+   "id": "F042",
+   "db_id": "thrombosis_prediction",
+   "kind": "risky",
+   "relation": "laboratory.id -> patient.id",
+   "question": "How many patients have at least one laboratory test with a GPT value above 200?",
+   "evidence": "",
+   "gold": "SELECT COUNT(DISTINCT id) FROM laboratory WHERE gpt > 200",
+   "naive": "SELECT COUNT(*) FROM patient p JOIN laboratory l ON l.id = p.id WHERE l.gpt > 200",
+   "gold_result": [
+    [
+     "31"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "133"
+    ]
+   ]
+  },
+  {
+   "id": "F043",
+   "db_id": "thrombosis_prediction",
+   "kind": "risky",
+   "relation": "laboratory.id -> patient.id",
+   "question": "How many female patients diagnosed with SLE have had at least one laboratory test with a positive C-reactive protein?",
+   "evidence": "female refers to sex = 'F'; diagnosed with SLE refers to patient.diagnosis = 'SLE'; positive C-reactive protein refers to crp = '+'",
+   "gold": "SELECT COUNT(DISTINCT p.id) FROM patient p JOIN laboratory l ON l.id = p.id WHERE p.sex = 'F' AND p.diagnosis = 'SLE' AND l.crp = '+'",
+   "naive": "SELECT COUNT(*) FROM patient p JOIN laboratory l ON l.id = p.id WHERE p.sex = 'F' AND p.diagnosis = 'SLE' AND l.crp = '+'",
+   "gold_result": [
+    [
+     "19"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "141"
+    ]
+   ]
+  },
+  {
+   "id": "F044",
+   "db_id": "thrombosis_prediction",
+   "kind": "risky",
+   "relation": "laboratory.id -> patient.id",
+   "question": "What is the average birth year of the patients who had at least one laboratory test with total cholesterol of 250 or more?",
+   "evidence": "total cholesterol refers to T-CHO; birth year refers to the year of birthday",
+   "gold": "SELECT AVG(EXTRACT(YEAR FROM birthday)) FROM patient WHERE id IN (SELECT id FROM laboratory WHERE \"T-CHO\" >= 250)",
+   "naive": "SELECT AVG(EXTRACT(YEAR FROM p.birthday)) FROM patient p JOIN laboratory l ON l.id = p.id WHERE l.\"T-CHO\" >= 250",
+   "gold_result": [
+    [
+     "1954.6557377049180328"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "1953.4019417475728155"
+    ]
+   ]
+  },
+  {
+   "id": "F045",
+   "db_id": "thrombosis_prediction",
+   "kind": "risky",
+   "relation": "laboratory.id -> patient.id",
+   "question": "How many patients who were admitted to the hospital had at least one laboratory test with a platelet count below 100?",
+   "evidence": "admitted refers to admission = '+'; platelet count refers to PLT",
+   "gold": "SELECT COUNT(DISTINCT p.id) FROM patient p JOIN laboratory l ON l.id = p.id WHERE p.admission = '+' AND l.plt < 100",
+   "naive": "SELECT COUNT(*) FROM patient p JOIN laboratory l ON l.id = p.id WHERE p.admission = '+' AND l.plt < 100",
+   "gold_result": [
+    [
+     "22"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "100"
+    ]
+   ]
+  },
+  {
+   "id": "F046",
+   "db_id": "thrombosis_prediction",
+   "kind": "risky",
+   "relation": "laboratory.id -> patient.id; examination.id -> patient.id",
+   "question": "Among the patients who have had a special examination, how many had at least one laboratory test with an IgG value above 2000?",
+   "evidence": "a special examination refers to a row in examination",
+   "gold": "SELECT COUNT(DISTINCT p.id) FROM patient p JOIN examination e ON e.id = p.id JOIN laboratory l ON l.id = p.id WHERE l.igg > 2000",
+   "naive": "SELECT COUNT(*) FROM patient p JOIN examination e ON e.id = p.id JOIN laboratory l ON l.id = p.id WHERE l.igg > 2000",
+   "gold_result": [
+    [
+     "9"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "43"
+    ]
+   ]
+  },
+  {
+   "id": "F047",
+   "db_id": "thrombosis_prediction",
+   "kind": "control",
+   "relation": "laboratory.id -> patient.id",
+   "question": "How many laboratory tests with a GPT value above 200 belong to male patients?",
+   "evidence": "male refers to sex = 'M'",
+   "gold": "SELECT COUNT(*) FROM laboratory WHERE gpt > 200 AND id IN (SELECT id FROM patient WHERE sex = 'M')",
+   "naive": "SELECT COUNT(*) FROM laboratory l JOIN patient p ON p.id = l.id WHERE l.gpt > 200 AND p.sex = 'M'",
+   "gold_result": [
+    [
+     "23"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "23"
+    ]
+   ]
+  },
+  {
+   "id": "F048",
+   "db_id": "thrombosis_prediction",
+   "kind": "control",
+   "relation": "laboratory.id -> patient.id",
+   "question": "What is the earliest birthday among patients who had a laboratory test with a GPT value above 200?",
+   "evidence": "",
+   "gold": "SELECT MIN(birthday) FROM patient WHERE id IN (SELECT id FROM laboratory WHERE gpt > 200)",
+   "naive": "SELECT MIN(p.birthday) FROM patient p JOIN laboratory l ON l.id = p.id WHERE l.gpt > 200",
+   "gold_result": [
+    [
+     "1922-12-01"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "1922-12-01"
+    ]
+   ]
+  },
+  {
+   "id": "F049",
+   "db_id": "thrombosis_prediction",
+   "kind": "control",
+   "relation": "laboratory.id -> patient.id",
+   "question": "How many laboratory tests with a positive C-reactive protein belong to female patients?",
+   "evidence": "positive C-reactive protein refers to crp = '+'; female refers to sex = 'F'",
+   "gold": "SELECT COUNT(*) FROM laboratory WHERE crp = '+' AND id IN (SELECT id FROM patient WHERE sex = 'F')",
+   "naive": "SELECT COUNT(*) FROM laboratory l JOIN patient p ON p.id = l.id WHERE l.crp = '+' AND p.sex = 'F'",
+   "gold_result": [
+    [
+     "518"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "518"
+    ]
+   ]
+  },
+  {
+   "id": "F050",
+   "db_id": "toxicology",
+   "kind": "risky",
+   "relation": "atom.molecule_id -> molecule.molecule_id",
+   "question": "How many molecules contain at least one chlorine atom?",
+   "evidence": "chlorine refers to element = 'cl'",
+   "gold": "SELECT COUNT(DISTINCT molecule_id) FROM atom WHERE element = 'cl'",
+   "naive": "SELECT COUNT(*) FROM molecule m JOIN atom a ON a.molecule_id = m.molecule_id WHERE a.element = 'cl'",
+   "gold_result": [
+    [
+     "115"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "317"
+    ]
+   ]
+  },
+  {
+   "id": "F051",
+   "db_id": "toxicology",
+   "kind": "risky",
+   "relation": "bond.molecule_id -> molecule.molecule_id",
+   "question": "How many carcinogenic molecules have at least one double bond?",
+   "evidence": "carcinogenic refers to label = '+'; double bond refers to bond_type = '='",
+   "gold": "SELECT COUNT(DISTINCT m.molecule_id) FROM molecule m JOIN bond b ON b.molecule_id = m.molecule_id WHERE m.label = '+' AND b.bond_type = '='",
+   "naive": "SELECT COUNT(*) FROM molecule m JOIN bond b ON b.molecule_id = m.molecule_id WHERE m.label = '+' AND b.bond_type = '='",
+   "gold_result": [
+    [
+     "121"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "634"
+    ]
+   ]
+  },
+  {
+   "id": "F052",
+   "db_id": "toxicology",
+   "kind": "risky",
+   "relation": "atom.molecule_id -> molecule.molecule_id",
+   "question": "Among the molecules that contain at least one sodium atom, what percentage are carcinogenic?",
+   "evidence": "sodium refers to element = 'na'; carcinogenic refers to label = '+'; percentage = carcinogenic molecules / molecules * 100",
+   "gold": "SELECT COUNT(*) FILTER (WHERE label = '+') * 100.0 / COUNT(*) FROM molecule WHERE molecule_id IN (SELECT molecule_id FROM atom WHERE element = 'na')",
+   "naive": "SELECT SUM(CASE WHEN m.label = '+' THEN 1 ELSE 0 END) * 100.0 / COUNT(*) FROM molecule m JOIN atom a ON a.molecule_id = m.molecule_id WHERE a.element = 'na'",
+   "gold_result": [
+    [
+     "35.2941176470588235"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "46.8750000000000000"
+    ]
+   ]
+  },
+  {
+   "id": "F053",
+   "db_id": "toxicology",
+   "kind": "risky",
+   "relation": "atom.molecule_id -> molecule.molecule_id",
+   "question": "How many different elements appear in the molecules that have at least one triple bond?",
+   "evidence": "triple bond refers to bond_type = '#'",
+   "gold": "SELECT COUNT(DISTINCT a.element) FROM atom a WHERE a.molecule_id IN (SELECT molecule_id FROM bond WHERE bond_type = '#')",
+   "naive": "SELECT COUNT(a.element) FROM atom a JOIN bond b ON b.molecule_id = a.molecule_id WHERE b.bond_type = '#'",
+   "gold_result": [
+    [
+     "6"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "68"
+    ]
+   ]
+  },
+  {
+   "id": "F054",
+   "db_id": "toxicology",
+   "kind": "risky",
+   "relation": "atom.molecule_id -> molecule.molecule_id",
+   "question": "How many non-carcinogenic molecules contain at least one bromine atom?",
+   "evidence": "non-carcinogenic refers to label = '-'; bromine refers to element = 'br'",
+   "gold": "SELECT COUNT(DISTINCT m.molecule_id) FROM molecule m JOIN atom a ON a.molecule_id = m.molecule_id WHERE m.label = '-' AND a.element = 'br'",
+   "naive": "SELECT COUNT(*) FROM molecule m JOIN atom a ON a.molecule_id = m.molecule_id WHERE m.label = '-' AND a.element = 'br'",
+   "gold_result": [
+    [
+     "3"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "4"
+    ]
+   ]
+  },
+  {
+   "id": "F055",
+   "db_id": "toxicology",
+   "kind": "control",
+   "relation": "atom.molecule_id -> molecule.molecule_id",
+   "question": "How many chlorine atoms are there in carcinogenic molecules?",
+   "evidence": "chlorine refers to element = 'cl'; carcinogenic refers to label = '+'",
+   "gold": "SELECT COUNT(*) FROM atom WHERE element = 'cl' AND molecule_id IN (SELECT molecule_id FROM molecule WHERE label = '+')",
+   "naive": "SELECT COUNT(*) FROM atom a JOIN molecule m ON m.molecule_id = a.molecule_id WHERE a.element = 'cl' AND m.label = '+'",
+   "gold_result": [
+    [
+     "116"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "116"
+    ]
+   ]
+  },
+  {
+   "id": "F056",
+   "db_id": "toxicology",
+   "kind": "control",
+   "relation": "bond.molecule_id -> molecule.molecule_id",
+   "question": "How many double bonds are there in carcinogenic molecules?",
+   "evidence": "double bond refers to bond_type = '='; carcinogenic refers to label = '+'",
+   "gold": "SELECT COUNT(*) FROM bond WHERE bond_type = '=' AND molecule_id IN (SELECT molecule_id FROM molecule WHERE label = '+')",
+   "naive": "SELECT COUNT(*) FROM bond b JOIN molecule m ON m.molecule_id = b.molecule_id WHERE b.bond_type = '=' AND m.label = '+'",
+   "gold_result": [
+    [
+     "634"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "634"
+    ]
+   ]
+  },
+  {
+   "id": "F057",
+   "db_id": "toxicology",
+   "kind": "control",
+   "relation": "atom.molecule_id -> molecule.molecule_id",
+   "question": "How many atoms belong to non-carcinogenic molecules?",
+   "evidence": "non-carcinogenic refers to label = '-'",
+   "gold": "SELECT COUNT(*) FROM atom WHERE molecule_id IN (SELECT molecule_id FROM molecule WHERE label = '-')",
+   "naive": "SELECT COUNT(*) FROM atom a JOIN molecule m ON m.molecule_id = a.molecule_id WHERE m.label = '-'",
+   "gold_result": [
+    [
+     "5419"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "5419"
+    ]
+   ]
+  },
+  {
+   "id": "F058",
+   "db_id": "student_club",
+   "kind": "risky",
+   "relation": "attendance.link_to_member -> member.member_id",
+   "question": "How many members attended at least one game?",
+   "evidence": "game refers to event.type = 'Game'",
+   "gold": "SELECT COUNT(DISTINCT a.link_to_member) FROM attendance a JOIN event e ON e.event_id = a.link_to_event WHERE e.type = 'Game'",
+   "naive": "SELECT COUNT(*) FROM member m JOIN attendance a ON a.link_to_member = m.member_id JOIN event e ON e.event_id = a.link_to_event WHERE e.type = 'Game'",
+   "gold_result": [
+    [
+     "24"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "43"
+    ]
+   ]
+  },
+  {
+   "id": "F059",
+   "db_id": "student_club",
+   "kind": "risky",
+   "relation": "attendance.link_to_event -> event.event_id",
+   "question": "What is the total amount budgeted for the events that were attended by at least one member?",
+   "evidence": "amount budgeted refers to budget.amount",
+   "gold": "SELECT SUM(amount) FROM budget WHERE link_to_event IN (SELECT link_to_event FROM attendance)",
+   "naive": "SELECT SUM(b.amount) FROM budget b JOIN attendance a ON a.link_to_event = b.link_to_event",
+   "gold_result": [
+    [
+     "2220"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "61180"
+    ]
+   ]
+  },
+  {
+   "id": "F060",
+   "db_id": "student_club",
+   "kind": "risky",
+   "relation": "expense.link_to_budget -> budget.budget_id",
+   "question": "How many events have at least one approved expense?",
+   "evidence": "approved refers to expense.approved = 'true'; expenses are linked to events through budget",
+   "gold": "SELECT COUNT(DISTINCT b.link_to_event) FROM budget b JOIN expense x ON x.link_to_budget = b.budget_id WHERE x.approved = 'true'",
+   "naive": "SELECT COUNT(*) FROM event e JOIN budget b ON b.link_to_event = e.event_id JOIN expense x ON x.link_to_budget = b.budget_id WHERE x.approved = 'true'",
+   "gold_result": [
+    [
+     "11"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "31"
+    ]
+   ]
+  },
+  {
+   "id": "F061",
+   "db_id": "student_club",
+   "kind": "risky",
+   "relation": "attendance.link_to_member -> member.member_id",
+   "question": "What is the total amount of income received from members who attended at least one meeting?",
+   "evidence": "meeting refers to event.type = 'Meeting'; income amount refers to income.amount",
+   "gold": "SELECT SUM(amount) FROM income WHERE link_to_member IN (SELECT a.link_to_member FROM attendance a JOIN event e ON e.event_id = a.link_to_event WHERE e.type = 'Meeting')",
+   "naive": "SELECT SUM(i.amount) FROM income i JOIN attendance a ON a.link_to_member = i.link_to_member JOIN event e ON e.event_id = a.link_to_event WHERE e.type = 'Meeting'",
+   "gold_result": [
+    [
+     "1500"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "5600"
+    ]
+   ]
+  },
+  {
+   "id": "F062",
+   "db_id": "student_club",
+   "kind": "risky",
+   "relation": "attendance.link_to_event -> event.event_id",
+   "question": "How many events of type Meeting were attended by at least one member whose position is Member?",
+   "evidence": "position refers to member.position = 'Member'",
+   "gold": "SELECT COUNT(DISTINCT e.event_id) FROM event e JOIN attendance a ON a.link_to_event = e.event_id JOIN member m ON m.member_id = a.link_to_member WHERE e.type = 'Meeting' AND m.position = 'Member'",
+   "naive": "SELECT COUNT(*) FROM event e JOIN attendance a ON a.link_to_event = e.event_id JOIN member m ON m.member_id = a.link_to_member WHERE e.type = 'Meeting' AND m.position = 'Member'",
+   "gold_result": [
+    [
+     "4"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "85"
+    ]
+   ]
+  },
+  {
+   "id": "F063",
+   "db_id": "student_club",
+   "kind": "control",
+   "relation": "attendance.link_to_event -> event.event_id",
+   "question": "How many attendance records are there for games?",
+   "evidence": "game refers to event.type = 'Game'",
+   "gold": "SELECT COUNT(*) FROM attendance WHERE link_to_event IN (SELECT event_id FROM event WHERE type = 'Game')",
+   "naive": "SELECT COUNT(*) FROM attendance a JOIN event e ON e.event_id = a.link_to_event WHERE e.type = 'Game'",
+   "gold_result": [
+    [
+     "43"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "43"
+    ]
+   ]
+  },
+  {
+   "id": "F064",
+   "db_id": "student_club",
+   "kind": "control",
+   "relation": "expense.link_to_budget -> budget.budget_id",
+   "question": "What is the total cost of the expenses charged to budgets in the Food category?",
+   "evidence": "Food category refers to budget.category = 'Food'",
+   "gold": "SELECT SUM(cost) FROM expense WHERE link_to_budget IN (SELECT budget_id FROM budget WHERE category = 'Food')",
+   "naive": "SELECT SUM(x.cost) FROM expense x JOIN budget b ON b.budget_id = x.link_to_budget WHERE b.category = 'Food'",
+   "gold_result": [
+    [
+     "1234.7301"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "1234.7301"
+    ]
+   ]
+  },
+  {
+   "id": "F065",
+   "db_id": "student_club",
+   "kind": "control",
+   "relation": "expense.link_to_budget -> budget.budget_id",
+   "question": "What is the highest single expense cost charged to budgets of events of type Meeting?",
+   "evidence": "",
+   "gold": "SELECT MAX(cost) FROM expense WHERE link_to_budget IN (SELECT b.budget_id FROM budget b JOIN event e ON e.event_id = b.link_to_event WHERE e.type = 'Meeting')",
+   "naive": "SELECT MAX(x.cost) FROM expense x JOIN budget b ON b.budget_id = x.link_to_budget JOIN event e ON e.event_id = b.link_to_event WHERE e.type = 'Meeting'",
+   "gold_result": [
+    [
+     "195.3"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "195.3"
+    ]
+   ]
+  },
+  {
+   "id": "F066",
+   "db_id": "superhero",
+   "kind": "risky",
+   "relation": "hero_power.hero_id -> superhero.id",
+   "question": "How many superheroes have at least one of the powers Flight, Super Strength or Super Speed?",
+   "evidence": "",
+   "gold": "SELECT COUNT(DISTINCT hp.hero_id) FROM hero_power hp JOIN superpower sp ON sp.id = hp.power_id WHERE sp.power_name IN ('Flight', 'Super Strength', 'Super Speed')",
+   "naive": "SELECT COUNT(*) FROM superhero s JOIN hero_power hp ON hp.hero_id = s.id JOIN superpower sp ON sp.id = hp.power_id WHERE sp.power_name IN ('Flight', 'Super Strength', 'Super Speed')",
+   "gold_result": [
+    [
+     "435"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "815"
+    ]
+   ]
+  },
+  {
+   "id": "F067",
+   "db_id": "superhero",
+   "kind": "risky",
+   "relation": "hero_power.hero_id -> superhero.id",
+   "question": "What is the average height of the superheroes who have Flight or Telepathy?",
+   "evidence": "height refers to height_cm",
+   "gold": "SELECT AVG(height_cm) FROM superhero WHERE id IN (SELECT hp.hero_id FROM hero_power hp JOIN superpower sp ON sp.id = hp.power_id WHERE sp.power_name IN ('Flight', 'Telepathy'))",
+   "naive": "SELECT AVG(s.height_cm) FROM superhero s JOIN hero_power hp ON hp.hero_id = s.id JOIN superpower sp ON sp.id = hp.power_id WHERE sp.power_name IN ('Flight', 'Telepathy')",
+   "gold_result": [
+    [
+     "154.0290456431535270"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "160.6421052631578947"
+    ]
+   ]
+  },
+  {
+   "id": "F068",
+   "db_id": "superhero",
+   "kind": "risky",
+   "relation": "hero_attribute.hero_id -> superhero.id",
+   "question": "How many Marvel Comics superheroes have a value of 100 in at least one attribute?",
+   "evidence": "Marvel Comics refers to publisher_name = 'Marvel Comics'",
+   "gold": "SELECT COUNT(DISTINCT s.id) FROM superhero s JOIN publisher p ON p.id = s.publisher_id JOIN hero_attribute ha ON ha.hero_id = s.id WHERE p.publisher_name = 'Marvel Comics' AND ha.attribute_value = 100",
+   "naive": "SELECT COUNT(*) FROM superhero s JOIN publisher p ON p.id = s.publisher_id JOIN hero_attribute ha ON ha.hero_id = s.id WHERE p.publisher_name = 'Marvel Comics' AND ha.attribute_value = 100",
+   "gold_result": [
+    [
+     "55"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "117"
+    ]
+   ]
+  },
+  {
+   "id": "F069",
+   "db_id": "superhero",
+   "kind": "risky",
+   "relation": "hero_attribute.hero_id -> superhero.id",
+   "question": "What is the average weight of the superheroes who have at least one attribute valued above 90?",
+   "evidence": "weight refers to weight_kg",
+   "gold": "SELECT AVG(weight_kg) FROM superhero WHERE id IN (SELECT hero_id FROM hero_attribute WHERE attribute_value > 90)",
+   "naive": "SELECT AVG(s.weight_kg) FROM superhero s JOIN hero_attribute ha ON ha.hero_id = s.id WHERE ha.attribute_value > 90",
+   "gold_result": [
+    [
+     "535252.664864864865"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "235804.114285714286"
+    ]
+   ]
+  },
+  {
+   "id": "F070",
+   "db_id": "superhero",
+   "kind": "risky",
+   "relation": "hero_power.hero_id -> superhero.id",
+   "question": "How many publishers have at least one superhero with Telepathy?",
+   "evidence": "",
+   "gold": "SELECT COUNT(DISTINCT s.publisher_id) FROM superhero s JOIN hero_power hp ON hp.hero_id = s.id JOIN superpower sp ON sp.id = hp.power_id WHERE sp.power_name = 'Telepathy'",
+   "naive": "SELECT COUNT(*) FROM publisher p JOIN superhero s ON s.publisher_id = p.id JOIN hero_power hp ON hp.hero_id = s.id JOIN superpower sp ON sp.id = hp.power_id WHERE sp.power_name = 'Telepathy'",
+   "gold_result": [
+    [
+     "11"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "91"
+    ]
+   ]
+  },
+  {
+   "id": "F071",
+   "db_id": "superhero",
+   "kind": "risky",
+   "relation": "hero_power.hero_id -> superhero.id",
+   "question": "For each gender, how many superheroes have at least one power whose name contains the word Super?",
+   "evidence": "",
+   "gold": "SELECT g.gender, COUNT(DISTINCT s.id) FROM superhero s JOIN gender g ON g.id = s.gender_id JOIN hero_power hp ON hp.hero_id = s.id JOIN superpower sp ON sp.id = hp.power_id WHERE sp.power_name LIKE '%Super%' GROUP BY g.gender",
+   "naive": "SELECT g.gender, COUNT(*) FROM superhero s JOIN gender g ON g.id = s.gender_id JOIN hero_power hp ON hp.hero_id = s.id JOIN superpower sp ON sp.id = hp.power_id WHERE sp.power_name LIKE '%Super%' GROUP BY g.gender",
+   "gold_result": [
+    [
+     "Female",
+     "91"
+    ],
+    [
+     "Male",
+     "285"
+    ],
+    [
+     "N/A",
+     "10"
+    ]
+   ],
+   "gold_rows": 3,
+   "naive_result": [
+    [
+     "Male",
+     "465"
+    ],
+    [
+     "N/A",
+     "16"
+    ],
+    [
+     "Female",
+     "149"
+    ]
+   ]
+  },
+  {
+   "id": "F072",
+   "db_id": "superhero",
+   "kind": "control",
+   "relation": "hero_power.hero_id -> superhero.id",
+   "question": "How many superheroes published by DC Comics have Flight?",
+   "evidence": "",
+   "gold": "SELECT COUNT(*) FROM superhero WHERE publisher_id IN (SELECT id FROM publisher WHERE publisher_name = 'DC Comics') AND id IN (SELECT hp.hero_id FROM hero_power hp JOIN superpower sp ON sp.id = hp.power_id WHERE sp.power_name = 'Flight')",
+   "naive": "SELECT COUNT(*) FROM superhero s JOIN publisher p ON p.id = s.publisher_id JOIN hero_power hp ON hp.hero_id = s.id JOIN superpower sp ON sp.id = hp.power_id WHERE p.publisher_name = 'DC Comics' AND sp.power_name = 'Flight'",
+   "gold_result": [
+    [
+     "84"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "84"
+    ]
+   ]
+  },
+  {
+   "id": "F073",
+   "db_id": "superhero",
+   "kind": "control",
+   "relation": "hero_power.hero_id -> superhero.id",
+   "question": "What is the greatest height among the superheroes who have Flight or Telepathy?",
+   "evidence": "height refers to height_cm",
+   "gold": "SELECT MAX(height_cm) FROM superhero WHERE id IN (SELECT hp.hero_id FROM hero_power hp JOIN superpower sp ON sp.id = hp.power_id WHERE sp.power_name IN ('Flight', 'Telepathy'))",
+   "naive": "SELECT MAX(s.height_cm) FROM superhero s JOIN hero_power hp ON hp.hero_id = s.id JOIN superpower sp ON sp.id = hp.power_id WHERE sp.power_name IN ('Flight', 'Telepathy')",
+   "gold_result": [
+    [
+     "975"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "975"
+    ]
+   ]
+  },
+  {
+   "id": "F074",
+   "db_id": "superhero",
+   "kind": "control",
+   "relation": "superhero.eye_colour_id -> colour.id",
+   "question": "How many superheroes published by DC Comics have blue eyes?",
+   "evidence": "blue eyes refers to colour = 'Blue' through eye_colour_id",
+   "gold": "SELECT COUNT(*) FROM superhero WHERE publisher_id IN (SELECT id FROM publisher WHERE publisher_name = 'DC Comics') AND eye_colour_id IN (SELECT id FROM colour WHERE colour = 'Blue')",
+   "naive": "SELECT COUNT(*) FROM superhero s JOIN publisher p ON p.id = s.publisher_id JOIN colour c ON c.id = s.eye_colour_id WHERE p.publisher_name = 'DC Comics' AND c.colour = 'Blue'",
+   "gold_result": [
+    [
+     "88"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "88"
+    ]
+   ]
+  },
+  {
+   "id": "F075",
+   "db_id": "codebase_community",
+   "kind": "risky",
+   "relation": "badges.userid -> users.id",
+   "question": "How many users have earned the Popular Question badge?",
+   "evidence": "Popular Question badge refers to badges.name = 'Popular Question'",
+   "gold": "SELECT COUNT(DISTINCT userid) FROM badges WHERE name = 'Popular Question'",
+   "naive": "SELECT COUNT(*) FROM users u JOIN badges b ON b.userid = u.id WHERE b.name = 'Popular Question'",
+   "gold_result": [
+    [
+     "2733"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "4536"
+    ]
+   ]
+  },
+  {
+   "id": "F076",
+   "db_id": "codebase_community",
+   "kind": "risky",
+   "relation": "comments.userid -> users.id",
+   "question": "What is the average reputation of the users who have written at least one comment with a score above 10?",
+   "evidence": "",
+   "gold": "SELECT AVG(reputation) FROM users WHERE id IN (SELECT userid FROM comments WHERE score > 10)",
+   "naive": "SELECT AVG(u.reputation) FROM users u JOIN comments c ON c.userid = u.id WHERE c.score > 10",
+   "gold_result": [
+    [
+     "7355.0000000000000000"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "23595.202702702703"
+    ]
+   ]
+  },
+  {
+   "id": "F077",
+   "db_id": "codebase_community",
+   "kind": "risky",
+   "relation": "comments.postid -> posts.id",
+   "question": "How many posts have received at least one comment with a score above 5?",
+   "evidence": "",
+   "gold": "SELECT COUNT(DISTINCT postid) FROM comments WHERE score > 5",
+   "naive": "SELECT COUNT(*) FROM posts p JOIN comments c ON c.postid = p.id WHERE c.score > 5",
+   "gold_result": [
+    [
+     "791"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "925"
+    ]
+   ]
+  },
+  {
+   "id": "F078",
+   "db_id": "codebase_community",
+   "kind": "risky",
+   "relation": "comments.postid -> posts.id",
+   "question": "What is the total view count of the posts that have at least one comment mentioning regression?",
+   "evidence": "mentioning regression refers to comments.text LIKE '%regression%'",
+   "gold": "SELECT SUM(viewcount) FROM posts WHERE id IN (SELECT postid FROM comments WHERE text LIKE '%regression%')",
+   "naive": "SELECT SUM(p.viewcount) FROM posts p JOIN comments c ON c.postid = p.id WHERE c.text LIKE '%regression%'",
+   "gold_result": [
+    [
+     "2414994"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "3517200"
+    ]
+   ]
+  },
+  {
+   "id": "F079",
+   "db_id": "codebase_community",
+   "kind": "risky",
+   "relation": "votes.userid -> users.id",
+   "question": "How many users older than 40 have cast at least one vote?",
+   "evidence": "older than 40 refers to age > 40",
+   "gold": "SELECT COUNT(DISTINCT u.id) FROM users u JOIN votes v ON v.userid = u.id WHERE u.age > 40",
+   "naive": "SELECT COUNT(*) FROM users u JOIN votes v ON v.userid = u.id WHERE u.age > 40",
+   "gold_result": [
+    [
+     "39"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "161"
+    ]
+   ]
+  },
+  {
+   "id": "F080",
+   "db_id": "codebase_community",
+   "kind": "risky",
+   "relation": "votes.postid -> posts.id",
+   "question": "What is the average score of the posts that received at least one vote with a bounty?",
+   "evidence": "a vote with a bounty refers to bountyamount IS NOT NULL",
+   "gold": "SELECT AVG(score) FROM posts WHERE id IN (SELECT postid FROM votes WHERE bountyamount IS NOT NULL)",
+   "naive": "SELECT AVG(p.score) FROM posts p JOIN votes v ON v.postid = p.id WHERE v.bountyamount IS NOT NULL",
+   "gold_result": [
+    [
+     "11.2000000000000000"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "11.1782178217821782"
+    ]
+   ]
+  },
+  {
+   "id": "F081",
+   "db_id": "codebase_community",
+   "kind": "control",
+   "relation": "comments.userid -> users.id",
+   "question": "How many comments were written by users with a reputation above 10,000?",
+   "evidence": "",
+   "gold": "SELECT COUNT(*) FROM comments WHERE userid IN (SELECT id FROM users WHERE reputation > 10000)",
+   "naive": "SELECT COUNT(*) FROM comments c JOIN users u ON u.id = c.userid WHERE u.reputation > 10000",
+   "gold_result": [
+    [
+     "57439"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "57439"
+    ]
+   ]
+  },
+  {
+   "id": "F082",
+   "db_id": "codebase_community",
+   "kind": "control",
+   "relation": "badges.userid -> users.id",
+   "question": "What is the highest reputation among the users who earned a Teacher badge?",
+   "evidence": "Teacher badge refers to badges.name = 'Teacher'",
+   "gold": "SELECT MAX(reputation) FROM users WHERE id IN (SELECT userid FROM badges WHERE name = 'Teacher')",
+   "naive": "SELECT MAX(u.reputation) FROM users u JOIN badges b ON b.userid = u.id WHERE b.name = 'Teacher'",
+   "gold_result": [
+    [
+     "87393"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "87393"
+    ]
+   ]
+  },
+  {
+   "id": "F083",
+   "db_id": "codebase_community",
+   "kind": "control",
+   "relation": "votes.postid -> posts.id",
+   "question": "How many votes were cast on posts with a score above 50?",
+   "evidence": "",
+   "gold": "SELECT COUNT(*) FROM votes WHERE postid IN (SELECT id FROM posts WHERE score > 50)",
+   "naive": "SELECT COUNT(*) FROM votes v JOIN posts p ON p.id = v.postid WHERE p.score > 50",
+   "gold_result": [
+    [
+     "2345"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "2345"
+    ]
+   ]
+  },
+  {
+   "id": "F084",
+   "db_id": "debit_card_specializing",
+   "kind": "risky",
+   "relation": "yearmonth.customerid -> customers.customerid",
+   "question": "How many SME customers had a monthly consumption above 100,000 in at least one month?",
+   "evidence": "SME refers to segment = 'SME'",
+   "gold": "SELECT COUNT(DISTINCT c.customerid) FROM customers c JOIN yearmonth y ON y.customerid = c.customerid WHERE c.segment = 'SME' AND y.consumption > 100000",
+   "naive": "SELECT COUNT(*) FROM customers c JOIN yearmonth y ON y.customerid = c.customerid WHERE c.segment = 'SME' AND y.consumption > 100000",
+   "gold_result": [
+    [
+     "125"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "567"
+    ]
+   ]
+  },
+  {
+   "id": "F085",
+   "db_id": "debit_card_specializing",
+   "kind": "risky",
+   "relation": "yearmonth.customerid -> customers.customerid",
+   "question": "How many customers who pay in EUR have at least one monthly consumption record in 2012?",
+   "evidence": "pay in EUR refers to currency = 'EUR'; the first 4 characters of yearmonth.date are the year",
+   "gold": "SELECT COUNT(DISTINCT c.customerid) FROM customers c JOIN yearmonth y ON y.customerid = c.customerid WHERE c.currency = 'EUR' AND SUBSTR(y.date, 1, 4) = '2012'",
+   "naive": "SELECT COUNT(*) FROM customers c JOIN yearmonth y ON y.customerid = c.customerid WHERE c.currency = 'EUR' AND SUBSTR(y.date, 1, 4) = '2012'",
+   "gold_result": [
+    [
+     "1713"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "10149"
+    ]
+   ]
+  },
+  {
+   "id": "F086",
+   "db_id": "debit_card_specializing",
+   "kind": "risky",
+   "relation": "transactions_1k.gasstationid -> gasstations.gasstationid",
+   "question": "How many gas stations in the Czech Republic had at least one transaction in August 2012?",
+   "evidence": "Czech Republic refers to country = 'CZE'",
+   "gold": "SELECT COUNT(DISTINCT g.gasstationid) FROM gasstations g JOIN transactions_1k t ON t.gasstationid = g.gasstationid WHERE g.country = 'CZE' AND t.date >= DATE '2012-08-01' AND t.date < DATE '2012-09-01'",
+   "naive": "SELECT COUNT(*) FROM gasstations g JOIN transactions_1k t ON t.gasstationid = g.gasstationid WHERE g.country = 'CZE' AND t.date >= DATE '2012-08-01' AND t.date < DATE '2012-09-01'",
+   "gold_result": [
+    [
+     "410"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "933"
+    ]
+   ]
+  },
+  {
+   "id": "F087",
+   "db_id": "debit_card_specializing",
+   "kind": "risky",
+   "relation": "transactions_1k.customerid -> customers.customerid",
+   "question": "How many customers in the KAM segment made at least one transaction in August 2012?",
+   "evidence": "KAM refers to segment = 'KAM'",
+   "gold": "SELECT COUNT(DISTINCT c.customerid) FROM customers c JOIN transactions_1k t ON t.customerid = c.customerid WHERE c.segment = 'KAM' AND t.date >= DATE '2012-08-01' AND t.date < DATE '2012-09-01'",
+   "naive": "SELECT COUNT(*) FROM customers c JOIN transactions_1k t ON t.customerid = c.customerid WHERE c.segment = 'KAM' AND t.date >= DATE '2012-08-01' AND t.date < DATE '2012-09-01'",
+   "gold_result": [
+    [
+     "134"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "499"
+    ]
+   ]
+  },
+  {
+   "id": "F088",
+   "db_id": "debit_card_specializing",
+   "kind": "control",
+   "relation": "yearmonth.customerid -> customers.customerid",
+   "question": "How many monthly consumption records above 100,000 belong to SME customers?",
+   "evidence": "SME refers to segment = 'SME'",
+   "gold": "SELECT COUNT(*) FROM yearmonth WHERE consumption > 100000 AND customerid IN (SELECT customerid FROM customers WHERE segment = 'SME')",
+   "naive": "SELECT COUNT(*) FROM yearmonth y JOIN customers c ON c.customerid = y.customerid WHERE y.consumption > 100000 AND c.segment = 'SME'",
+   "gold_result": [
+    [
+     "567"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "567"
+    ]
+   ]
+  },
+  {
+   "id": "F089",
+   "db_id": "debit_card_specializing",
+   "kind": "control",
+   "relation": "yearmonth.customerid -> customers.customerid",
+   "question": "What is the highest single monthly consumption of a customer who pays in CZK?",
+   "evidence": "pays in CZK refers to currency = 'CZK'",
+   "gold": "SELECT MAX(consumption) FROM yearmonth WHERE customerid IN (SELECT customerid FROM customers WHERE currency = 'CZK')",
+   "naive": "SELECT MAX(y.consumption) FROM yearmonth y JOIN customers c ON c.customerid = y.customerid WHERE c.currency = 'CZK'",
+   "gold_result": [
+    [
+     "2052187.1"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "2052187.1"
+    ]
+   ]
+  },
+  {
+   "id": "F090",
+   "db_id": "california_schools",
+   "kind": "control",
+   "relation": "satscores.cds -> schools.cdscode (one-to-one)",
+   "question": "How many schools in Los Angeles County had more than 500 SAT test takers?",
+   "evidence": "SAT test takers refers to numtsttakr",
+   "gold": "SELECT COUNT(*) FROM satscores WHERE numtsttakr > 500 AND cds IN (SELECT cdscode FROM schools WHERE county = 'Los Angeles')",
+   "naive": "SELECT COUNT(*) FROM satscores s JOIN schools sc ON sc.cdscode = s.cds WHERE s.numtsttakr > 500 AND sc.county = 'Los Angeles'",
+   "gold_result": [
+    [
+     "31"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "31"
+    ]
+   ]
+  },
+  {
+   "id": "F091",
+   "db_id": "california_schools",
+   "kind": "control",
+   "relation": "frpm.cdscode -> schools.cdscode (one-to-one)",
+   "question": "What is the total K-12 enrollment of the charter schools in Alameda County?",
+   "evidence": "charter schools refers to schools.charter = 1; K-12 enrollment refers to frpm.\"Enrollment (K-12)\"",
+   "gold": "SELECT SUM(\"Enrollment (K-12)\") FROM frpm WHERE cdscode IN (SELECT cdscode FROM schools WHERE charter = 1 AND county = 'Alameda')",
+   "naive": "SELECT SUM(f.\"Enrollment (K-12)\") FROM frpm f JOIN schools s ON s.cdscode = f.cdscode WHERE s.charter = 1 AND s.county = 'Alameda'",
+   "gold_result": [
+    [
+     "20514.0"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "20514.0"
+    ]
+   ]
+  },
+  {
+   "id": "F092",
+   "db_id": "california_schools",
+   "kind": "control",
+   "relation": "satscores.cds -> schools.cdscode (one-to-one)",
+   "question": "What is the average SAT math score of magnet schools?",
+   "evidence": "magnet schools refers to magnet = 1; SAT math score refers to avgscrmath",
+   "gold": "SELECT AVG(avgscrmath) FROM satscores WHERE cds IN (SELECT cdscode FROM schools WHERE magnet = 1)",
+   "naive": "SELECT AVG(s.avgscrmath) FROM satscores s JOIN schools sc ON sc.cdscode = s.cds WHERE sc.magnet = 1",
+   "gold_result": [
+    [
+     "477.6054421768707483"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "477.6054421768707483"
+    ]
+   ]
+  },
+  {
+   "id": "F093",
+   "db_id": "financial",
+   "kind": "risky",
+   "relation": "trans.account_id -> account.account_id",
+   "question": "How many accounts opened in 1996 have at least one cash credit transaction?",
+   "evidence": "opened in 1996 refers to the year of account.date = 1996; cash credit refers to trans.operation = 'VKLAD'",
+   "gold": "SELECT COUNT(DISTINCT a.account_id) FROM account a JOIN trans t ON t.account_id = a.account_id WHERE EXTRACT(YEAR FROM a.date) = 1996 AND t.operation = 'VKLAD'",
+   "naive": "SELECT COUNT(*) FROM account a JOIN trans t ON t.account_id = a.account_id WHERE EXTRACT(YEAR FROM a.date) = 1996 AND t.operation = 'VKLAD'",
+   "gold_result": [
+    [
+     "1363"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "35436"
+    ]
+   ]
+  },
+  {
+   "id": "F094",
+   "db_id": "financial",
+   "kind": "risky",
+   "relation": "account.district_id -> district.district_id",
+   "question": "Consider the districts that have at least one account with a loan in debt. What is the average of these districts' average salaries?",
+   "evidence": "loan in debt refers to loan.status = 'D'; average salary refers to A11",
+   "gold": "SELECT AVG(a11) FROM district WHERE district_id IN (SELECT a.district_id FROM account a JOIN loan l ON l.account_id = a.account_id WHERE l.status = 'D')",
+   "naive": "SELECT AVG(d.a11) FROM district d JOIN account a ON a.district_id = d.district_id JOIN loan l ON l.account_id = a.account_id WHERE l.status = 'D'",
+   "gold_result": [
+    [
+     "9169.0333333333333333"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "9333.9111111111111111"
+    ]
+   ]
+  },
+  {
+   "id": "F095",
+   "db_id": "financial",
+   "kind": "risky",
+   "relation": "client.district_id -> district.district_id",
+   "question": "What is the combined number of inhabitants of the districts where at least one female client born before 1950 lives?",
+   "evidence": "number of inhabitants refers to A4; female refers to gender = 'F'; born before 1950 refers to the year of birth_date < 1950",
+   "gold": "SELECT SUM(CAST(a4 AS BIGINT)) FROM district WHERE district_id IN (SELECT district_id FROM client WHERE gender = 'F' AND EXTRACT(YEAR FROM birth_date) < 1950)",
+   "naive": "SELECT SUM(CAST(d.a4 AS BIGINT)) FROM district d JOIN client c ON c.district_id = d.district_id WHERE c.gender = 'F' AND EXTRACT(YEAR FROM c.birth_date) < 1950",
+   "gold_result": [
+    [
+     "10309137"
+    ]
+   ],
+   "gold_rows": 1,
+   "naive_result": [
+    [
+     "293112729"
+    ]
+   ]
+  }
+ ]
+}

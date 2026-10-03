@@ -135,3 +135,12 @@ def test_v2_signals():
     v = eb.signals(fixed)
     assert v["grounding_before_repair"] and v["any_data_check"] and v["refusal"]
     assert eb.signals({**base, "sql_rows_count": 0})["empty_result"]
+
+
+def test_the_fanout_signal_reads_a_retry_or_its_caveat():
+    base = {"executed_sql": "SELECT 1", "errors": [], "number_grounding": {"unmatched": []}, "evidence": "checked",
+            "answer_text": "x", "sql_rows_count": 1, "caveats": []}
+    assert not eb.signals(base)["fanout_retry"]
+    assert eb.signals({**base, "errors": [{"category": "join_cardinality"}]})["fanout_retry"]
+    caveat = "These figures may count some rows more than once (join fan-out)."
+    assert eb.signals({**base, "caveats": [caveat]})["fanout_retry"] and eb.signals({**base, "caveats": [caveat]})["any_data_check"]

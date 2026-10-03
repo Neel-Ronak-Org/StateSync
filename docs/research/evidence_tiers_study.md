@@ -139,7 +139,7 @@ without it):
 
 | Family | Signal | Definition |
 |---|---|---|
-| Data checks | fan-out | the probe found a join repeating rows (a `join_cardinality` retry) |
+| Data checks | fan-out | the probe found a join repeating rows (a `join_cardinality` retry, or its caveat when no retry is allowed) |
 | | truncation | the result reached the row cap |
 | | NULL-heavy | the NULL-heavy caveat was raised |
 | | figure grounding | a figure in the text was not traced, before any repair |
@@ -347,6 +347,15 @@ only on held-out data.
     returned the answer's 58 schools with other identifier columns, and whole-row comparison called
     them all different. The label already ignores extra columns, so the baseline uses the same rule.
     Decided before any held-out question was asked.
+15. **The fan-out check runs warn-only on the fan-out set** (`[answer_checks] fanout_retry_max = 0`
+    for that run only). When the check fires, the shipped pipeline retries with corrected SQL. A fixed
+    retry would turn a correct detection into an apparent false alarm, and the judge and
+    self-consistency would see different SQL from the check. H1 is about detection, so on the fan-out
+    set the check only adds its caveat and the answer stays as first written.
+    - The held-out run keeps the shipped value (1). On BIRD the check rarely fires (0 of 100 dev
+      answers); where it does, the SQL before the retry is labelled separately
+      (`correct_before_fanout_retry`).
+    - Decided before any fan-out question was asked.
 
 **What the pilot did differently from v1** (recorded in `docs/eval/bird_pilot_report.md`):
 - original labels instead of corrected ones;

@@ -93,6 +93,7 @@ CROSSCHECK = EVAL / "bird_crossengine_check.json"
 # our Mini-Dev copy; each corrected query answers ITS question, so held-out runs ask that text.
 CORRECTED = REPO / "data" / "external" / "bird" / "corrected" / "arcwise_plat_sql_only_with_diff.json"
 CORRECTED_SHA256 = "e7bf76408f99266506ea558d84982c69422e5db3dfecab5f08a3a8d3900e8395"
+FANOUT = EVAL / "bird_fanout_set.json"      # protocol v2 §3.2 (scripts/build_fanout_set.py); asked only once frozen
 MAX_ROWS = 1000                # noqa: literals - [mcp] max_rows_default, the row cap the pipeline runs with
 SIG_DIGITS = 5                 # noqa: literals - v2 number comparison (REAL vs double differ in the 6th digit)
 ANSWER_REL_TOL = 0.005         # noqa: literals - "agrees to 3 significant digits" for the answer label
@@ -105,6 +106,7 @@ REFUSAL = re.compile(r"\b(?:can(?:no|'|’)t|unable to)\s+(?:determine|compute|a
                      r"calculate|find|tell|say)\b", re.IGNORECASE)
 TRUNCATION_CAVEAT = "Showing the first"        # answer_checks.truncation_caveat
 NULL_CAVEAT = "No matching data"               # answer_checks.null_aggregate_caveat
+FANOUT_CAVEAT = "(join fan-out)"               # sql_agent.py, when no fan-out retry is left (fanout_retry_max)
 
 JUDGE_SYSTEM = (
     "You check answers from a text-to-SQL system on a PostgreSQL database. You are given the user's "
@@ -126,6 +128,21 @@ def corrected_questions() -> dict[int, dict]:
     if sha256(CORRECTED) != CORRECTED_SHA256:
         raise SystemExit(f"{CORRECTED} is not the file the protocol fixed")
     return {int(x["question_id"]): x for x in json.loads(CORRECTED.read_text())}
+
+
+def fanout_questions() -> dict[str, dict]:
+    """The frozen fan-out set, keyed by its ids (F001...), shaped like BIRD questions."""
+    record = json.loads(FANOUT.read_text())
+    if record.get("status") != "frozen":
+        raise SystemExit(f"{FANOUT} is not frozen yet (owner review, protocol v2 §3.2)")
+    return {e["id"]: {"question_id": e["id"], "db_id": e["db_id"], "difficulty": e["kind"], "question": e["question"],
+                      "evidence": e["evidence"], "SQL": e["gold"]} for e in record["questions"]}
+
+
+def qid_order(qid: Any) -> tuple[int, str]:
+    """Sort key for BIRD's integer ids and the fan-out set's F-ids alike."""
+    text = str(qid)
+    return (int(text), "") if text.isdigit() else (10 ** 9, text)
 
 
 def question_text(q: dict) -> str:
@@ -306,22 +323,27 @@ def cmd_ask(label: str, spacing_s: float, limit: int | None, sample_name: str = 
             only_ids: list[int] | None = None) -> int:
     """Ask the sample's questions not yet answered under `label`. `only_ids` restricts a run to some of
     the sample's questions (dev checks of a fix; never a confirmatory run)."""
-    sample = json.loads((HELDOUT if sample_name == "heldout" else SAMPLE).read_text())
-    if sample["questions_sha256"] != sha256(QUESTIONS):
-        print("the question file changed since the sample was fixed")
-        return 1
+    if sample_name == "fanout":
+        by_id: dict[Any, dict] = fanout_questions()
+        sample = {"question_ids": list(by_id)}
+    else:
+        sample = json.loads((HELDOUT if sample_name == "heldout" else SAMPLE).read_text())
+        if sample["questions_sha256"] != sha256(QUESTIONS):
+            print("the question file changed since the sample was fixed")
+            return 1
+        by_id = {q["question_id"]: q for q in questions()}
     setup = json.loads(SETUP.read_text())
-    by_id = {q["question_id"]: q for q in questions()}
     if sample_name == "heldout":   # ask the wording the corrected gold answers (db and difficulty unchanged)
         corrected = corrected_questions()
         by_id = {i: {**q, "question": corrected[i]["question"], "evidence": corrected[i].get("evidence")}
                  for i, q in by_id.items()}
     out = answers_path(label)
-    sample_file = HELDOUT if sample_name == "heldout" else SAMPLE
+    sample_file = {"heldout": HELDOUT, "fanout": FANOUT}.get(sample_name, SAMPLE)
+    source = {"heldout": ("corrected", CORRECTED_SHA256), "fanout": ("fanout_set", sha256(FANOUT))}.get(
+        sample_name, ("mini_dev_postgresql", sha256(QUESTIONS)))
     done = json.loads(out.read_text()) if out.exists() else {
         "label": label, "sample": sample_name, "sample_sha256": sha256(sample_file),
-        "question_source": "corrected" if sample_name == "heldout" else "mini_dev_postgresql",
-        "question_source_sha256": CORRECTED_SHA256 if sample_name == "heldout" else sha256(QUESTIONS), "answers": {}}
+        "question_source": source[0], "question_source_sha256": source[1], "answers": {}}
     import tomllib   # the flags the orchestrator was started with (shipped_flags.py checks they are current)
     done.setdefault("pipeline_flags", tomllib.loads((REPO / "config" / "flags.toml").read_text())["pipeline"])
     errors, asked = 0, 0
@@ -435,7 +457,10 @@ def signals(a: dict, pred_rows: list[tuple] | None = None) -> dict[str, Any]:
     v1 = {
         "no_sql": not a.get("executed_sql"),
         "tier_unchecked": a.get("evidence") in (None, "unchecked"),
-        "fanout_retry": any(e.get("category") == "join_cardinality" for e in errs if isinstance(e, dict)),
+        # The fan-out check fired: a retry, or (no retry left, e.g. fanout_retry_max = 0 on the fan-out
+        # set) its caveat.
+        "fanout_retry": any(e.get("category") == "join_cardinality" for e in errs if isinstance(e, dict))
+                        or any(FANOUT_CAVEAT in c for c in (caveats or [])),
         "grounding_unmatched": bool(grounding.get("unmatched")),
         "repair_triggered": bool(repair),
         "repair_still_flagged": repair.get("outcome") == "still_flagged",
@@ -548,10 +573,15 @@ def cmd_score_v2(label: str, gold_sqlite: Path | None) -> int:
         pred = _run(conn, q["db_id"], unqualify(a["executed_sql"])) if a.get("executed_sql") else None
         ok = gold is not None
         before, after = text_before_repair(a), a.get("answer_text") or ""
+        first = next((e.get("offending_sql") for e in a.get("errors") or []
+                      if isinstance(e, dict) and e.get("category") == "join_cardinality"), None)
+        first_rows = _run(conn, q["db_id"], unqualify(first)) if first else None
         rows.append({"question_id": int(qid), "difficulty": q["difficulty"], "db_id": q["db_id"],
                      "excluded": int(qid) in CROSS_ENGINE_EXCLUDED, "gold_failed": not ok,
                      "correct": ok and rows_match_relaxed(pred, gold, norm=norm_v2),
                      "correct_strict": ok and rows_match(pred, gold, norm_v2),
+                     # The SQL before a fan-out retry (the SQL-side repair), when one happened.
+                     "correct_before_fanout_retry": (ok and rows_match_relaxed(first_rows, gold, norm=norm_v2)) if first else None,
                      "answer_correct_before": answer_label(before, gold) if ok else None,
                      "answer_correct_after": answer_label(after, gold) if ok else None,
                      "signals": signals(a, pred), "repair_outcome": (a.get("repair") or {}).get("outcome"),
@@ -580,6 +610,50 @@ def cmd_score_v2(label: str, gold_sqlite: Path | None) -> int:
                                    "recall": round(tp / len(wrong), 4) if wrong else None,
                                    "false_alarm_rate": round((len(flagged) - tp) / max(1, n - len(wrong)), 4)}
     out = EVAL / f"bird_scores_{label}_v2_{'corrected' if gold_sqlite else 'original'}.json"
+    out.write_text(json.dumps({"report": report, "rows": rows}, indent=1) + "\n")
+    print(json.dumps(report, indent=1))
+    return 0
+
+
+def cmd_score_fanout(label: str) -> int:
+    """Fan-out set labels: the set's gold on PostgreSQL (it was written for PostgreSQL), the prediction on
+    PostgreSQL, compared under norm_v2 (relaxed and strict); answer label; every signal. Rows carry the
+    question's kind (risky / control)."""
+    answers = json.loads(answers_path(label).read_text())["answers"]
+    by_id = fanout_questions()
+    naive_sql = {e["id"]: e["naive"] for e in json.loads(FANOUT.read_text())["questions"]}
+    conn = bird_connection()
+    rows = []
+    for qid, a in sorted(answers.items(), key=lambda kv: qid_order(kv[0])):
+        q = by_id[qid]
+        gold = _run(conn, q["db_id"], q["SQL"])
+        pred = _run(conn, q["db_id"], unqualify(a["executed_sql"])) if a.get("executed_sql") else None
+        ok = gold is not None
+        naive = _run(conn, q["db_id"], naive_sql[qid])
+        correct = ok and rows_match_relaxed(pred, gold, norm=norm_v2)
+        rows.append({"question_id": qid, "kind": q["difficulty"], "difficulty": q["difficulty"], "db_id": q["db_id"],
+                     "excluded": False, "gold_failed": not ok,
+                     # A wrong answer whose result is the naive join's: a double-counting error (a lower bound;
+                     # a model can double count along another join path).
+                     "fanout_error": q["difficulty"] == "risky" and not correct and naive is not None
+                                     and rows_match_relaxed(pred, naive, norm=norm_v2),
+                     "correct": correct,
+                     "correct_strict": ok and rows_match(pred, gold, norm_v2),
+                     "answer_correct_before": answer_label(text_before_repair(a), gold) if ok else None,
+                     "answer_correct_after": answer_label(a.get("answer_text") or "", gold) if ok else None,
+                     "signals": signals(a, pred), "repair_outcome": (a.get("repair") or {}).get("outcome"),
+                     "self_consistency_risk": ((a.get("self_consistency") or {}).get("risk") if a.get("self_consistency") else 1.0),
+                     "self_consistency_sampled": bool(a.get("self_consistency")),
+                     "llm_calls": len(a.get("calls") or []), "latency_ms": a.get("latency_ms")})
+    report: dict[str, Any] = {"label": label, "labels": "v2 fan-out", "fanout_sha256": sha256(FANOUT), "kinds": {}}
+    for kind in ("risky", "control"):
+        sub = [r for r in rows if r["kind"] == kind and not r["gold_failed"]]
+        wrong = [r for r in sub if not r["correct"]]
+        report["kinds"][kind] = {"n": len(sub), "accuracy": round(1 - len(wrong) / len(sub), 4) if sub else None,
+                                 "fanout_errors": sum(bool(r.get("fanout_error")) for r in sub),
+                                 "fanout_flagged": sum(r["signals"]["fanout_retry"] for r in sub),
+                                 "fanout_flagged_wrong": sum(r["signals"]["fanout_retry"] for r in wrong)}
+    out = EVAL / f"bird_scores_{label}_v2_fanout.json"
     out.write_text(json.dumps({"report": report, "rows": rows}, indent=1) + "\n")
     print(json.dumps(report, indent=1))
     return 0
@@ -648,10 +722,10 @@ def cmd_judge(label: str, endpoint: str, model: str, spacing_s: float, limit: in
     record["verdicts"] = [v for v in record["verdicts"] if v["id"] in done]
     schemas: dict[str, str] = {}
     items = []
-    for qid, a in sorted(answers.items(), key=lambda kv: int(kv[0])):
+    for qid, a in sorted(answers.items(), key=lambda kv: qid_order(kv[0])):
         if qid in done or (limit is not None and len(items) >= limit):
             continue
-        q = by_id[int(qid)]
+        q = by_id[int(qid)] if qid.isdigit() else {"db_id": a["db_id"], "question": a.get("question_asked", "")}
         schemas.setdefault(q["db_id"], schema_text(q["db_id"]))
         prompt = (f"Question: {a.get('question_asked') or question_text(q)}\n\nTables:\n{schemas[q['db_id']]}\n\nSQL:\n{a.get('executed_sql') or '(none)'}\n\n"
                   f"First rows of the result:\n{preview(q['db_id'], a.get('executed_sql'))}\n\nAnswer:\n{text_before_repair(a)}")
@@ -684,14 +758,14 @@ def main() -> int:
     sub.add_parser("setup")
     p = sub.add_parser("ask")
     p.add_argument("--label", required=True)
-    p.add_argument("--sample", choices=["pilot", "heldout"], default="pilot")
+    p.add_argument("--sample", choices=["pilot", "heldout", "fanout"], default="pilot")
     p.add_argument("--ids", help="comma-separated question ids of the sample (dev checks only)")
     p.add_argument("--spacing", type=float, default=45.0)
     p.add_argument("--limit", type=int, help="ask at most this many new questions (a daily quota)")
     p = sub.add_parser("score")
     p.add_argument("--label", required=True)
     p.add_argument("--gold", type=Path, help="v1: a second PostgreSQL gold file")
-    p.add_argument("--labels", choices=["v1", "v2"], default="v1")
+    p.add_argument("--labels", choices=["v1", "v2", "fanout"], default="v1")
     p.add_argument("--gold-sqlite", type=Path, help="v2: the corrected annotations (SQLite); default BIRD's own SQLite gold")
     p = sub.add_parser("judge")
     p.add_argument("--label", required=True)
@@ -710,8 +784,10 @@ def main() -> int:
         return cmd_setup()
     if args.cmd == "ask":
         return cmd_ask(args.label, args.spacing, args.limit, args.sample,
-                       [int(i) for i in args.ids.split(",")] if args.ids else None)
+                       [int(i) if i.isdigit() else i for i in args.ids.split(",")] if args.ids else None)
     if args.cmd == "score":
+        if args.labels == "fanout":
+            return cmd_score_fanout(args.label)
         return cmd_score_v2(args.label, args.gold_sqlite) if args.labels == "v2" else cmd_score(args.label, args.gold)
     return cmd_judge(args.label, args.endpoint, args.model, args.spacing, args.limit)
 
