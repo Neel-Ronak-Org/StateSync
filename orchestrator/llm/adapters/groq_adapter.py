@@ -120,6 +120,11 @@ class GroqAdapter:
             )
         return base_url
 
+    def _label(self) -> str:
+        """'Groq', or the endpoint name for an OpenAI-compatible subclass (logs only)."""
+        ep = getattr(self, "endpoint", None)
+        return f"Endpoint {ep.name}" if ep is not None else "Groq"
+
     @staticmethod
     def _effort_for(model: str) -> str:
         """Reasoning effort for this model, or '' to omit the parameter.
@@ -188,14 +193,14 @@ class GroqAdapter:
                 delay = self._retry_delay(exc, backoff)
                 if waited_s + delay > _max_total_wait_s():
                     logger.warning(
-                        "Groq gave up after %.1fs of waiting (models.groq_max_total_wait_s=%.1f, "
+                        "%s gave up after %.1fs of waiting (models.groq_max_total_wait_s=%.1f, "
                         "model=%s); raising %s.",
-                        waited_s, _max_total_wait_s(), self.model, type(exc).__name__,
+                        self._label(), waited_s, _max_total_wait_s(), self.model, type(exc).__name__,
                     )
                     raise
                 logger.warning(
-                    "Groq call failed transiently (%s, attempt %d/%d, model=%s); retrying in %.1fs.",
-                    type(exc).__name__, attempt + 1, attempts, self.model, delay,
+                    "%s call failed transiently (%s, attempt %d/%d, model=%s); retrying in %.1fs.",
+                    self._label(), type(exc).__name__, attempt + 1, attempts, self.model, delay,
                 )
                 await asyncio.sleep(delay)
                 waited_s += delay

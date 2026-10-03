@@ -67,9 +67,10 @@ def endpoint(name: str) -> Endpoint:
     table = flags.llm.get("endpoints", {}).get(name)
     if table is None:
         raise OpenAICompatConfigError(f"No [llm.endpoints.{name}] in config/flags.toml.")
+    effort = table.get("reasoning_effort", {}) or {}
     return Endpoint(name=name, base_url=check_base_url(str(table.get("base_url", ""))),
                     key_secret=str(table.get("key_secret", "")),
-                    reasoning_effort=dict(table.get("reasoning_effort", {}) or {}))
+                    reasoning_effort=effort.as_dict() if hasattr(effort, "as_dict") else dict(effort))
 
 
 def parse_spec(spec: str) -> tuple[str, str]:

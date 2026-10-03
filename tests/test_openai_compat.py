@@ -116,3 +116,13 @@ def test_the_shipped_flags_define_every_role_and_keep_fallback_off():
     assert str(flags.llm.openai_compat.fallback) == "off"
     for role in ("supervisor", "sql", "synthesizer", "memory_summarizer", "normalizer", "decomposer", "judge", "rewriter"):
         oc.parse_spec(getattr(flags.llm.models.openai_compat, role))
+
+
+def test_endpoints_read_from_the_real_flags():
+    # The config is a read-only namespace, not a dict; this once broke endpoint() live.
+    ep = oc.endpoint("groq")
+    assert ep.base_url.startswith("https://") and ep.key_secret == "groq_api_key"
+    assert ep.reasoning_effort.get("openai/gpt-oss-120b") == "low"
+    assert oc.endpoint("local_router").base_url.startswith("http://host.docker.internal")
+    with pytest.raises(oc.OpenAICompatConfigError):
+        oc.endpoint("nope")
