@@ -136,3 +136,13 @@ chmod 600 secrets/groq_api_key
 `config/flags.toml` ships `provider = "groq"`. Without a key the orchestrator
 refuses to start and says so; to run fully offline instead, set
 `provider = "local"` and `ollama pull qwen2.5:7b`.
+
+### Local router (optional; demo/omniroute.sh)
+
+`local_router_api_key`: the client key you create in the OmniRoute dashboard (http://localhost:20128),
+used only when `flags.llm.provider = "openai_compat"` names the `local_router` endpoint. Until then it
+holds a `REPLACE...` placeholder (compose needs the file to exist):
+
+```bash
+echo "REPLACE with the client key you create in the OmniRoute dashboard" > secrets/local_router_api_key
+```

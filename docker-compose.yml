@@ -203,6 +203,9 @@ services:
       - groq_api_key
       - api_principals
       - mcp_token       # sent on every MCP call (orchestrator/mcp_client.py)
+      # Client key for a local router (demo/omniroute.sh), used only with provider = "openai_compat";
+      # a "REPLACE..." placeholder means "not configured".
+      - local_router_api_key
     depends_on:
       mcp:
         condition: service_healthy
@@ -403,6 +406,8 @@ secrets:
     file: ./secrets/groq_api_key
   mcp_token:
     file: ./secrets/mcp_token
+  local_router_api_key:
+    file: ./secrets/local_router_api_key
   mcp_token_evaluator:
     file: ./secrets/mcp_token_evaluator
   api_token_evaluator:
