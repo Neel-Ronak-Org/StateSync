@@ -78,6 +78,7 @@ from typing import Any
 import answer_checks
 import httpx
 import repair_loop
+import self_consistency
 import templates as sql_templates
 from column_profiles import format_profiles, get_profiles
 from config_loader import cfg
@@ -852,6 +853,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         debug_sql = state_dict.get("debug_candidate_sql")
         verified_example = False
         used_debug_sql = False
+        sc_prompt: tuple[str, str] | None = None   # the model-written SQL's prompt, for self-consistency
         if attempt == 0 and exact_sql:
             candidate_sql = exact_sql
             verified_example = True
@@ -889,6 +891,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                     f"Write a single corrected PostgreSQL SELECT query."
                 )
 
+            sc_prompt = (system_prompt, user_message)
             sql_result = await llm.complete(
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_message}],
@@ -1034,6 +1037,20 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 "SQL Agent success for query_id=%s attempt=%d: %d rows returned.",
                 query_id, attempt, len(rows),
             )
+
+            # [pipeline] self_consistency_k (the study's baseline; 0 = off when shipped): resample
+            # the prompt that wrote this SQL and compare results. Measurement only (self_consistency.py).
+            sc_k = int(flags_snapshot.get("pipeline.self_consistency_k", 0) or 0)
+            if sc_k > 0 and sc_prompt is not None:
+                sc_system, sc_user = sc_prompt
+                sc_llm = get_agent_llm("sql")
+                update["self_consistency"] = await self_consistency.sample(
+                    complete=lambda: sc_llm.complete(system=sc_system, messages=[{"role": "user", "content": sc_user}],
+                                                     max_tokens=cfg.sql.max_tokens_sql),
+                    run=lambda sql: data_run_select(session, sql, max_rows=max_rows),
+                    prepare=lambda text: _repair_script_column_mismatch(_strip_sql_fences(text), table_descriptions)[0],
+                    answer_rows=rows, k=sc_k,
+                )
 
             # Write back unless this is a clean attempt-0 memory hit (C1 GAP-1).
             # A compiled answer adds no new insight either, and must not cost a model call.

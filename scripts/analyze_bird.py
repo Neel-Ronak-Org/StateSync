@@ -210,6 +210,9 @@ def analyse(rows: list[dict], judges: dict[str, list[float]], fanout_ids: set[in
         out["signals"][name] = flag_stats([bool(r["signals"].get(name)) for r in rows], wrong)
     judge = judges.get(PRIMARY_JUDGE)
     scored: dict[str, list[float]] = {f"judge {m}": s for m, s in judges.items()}
+    if rows and all("self_consistency_risk" in r for r in rows) and any(r.get("self_consistency_sampled") for r in rows):
+        scored["self-consistency"] = [float(r["self_consistency_risk"]) for r in rows]
+        out["self_consistency_unsampled"] = sum(not r.get("self_consistency_sampled") for r in rows)
     if judge is not None:
         checks = [float(bool(r["signals"].get("any_data_check"))) for r in rows]
         scored["checks then judge"] = [2 * c + j for c, j in zip(checks, judge)]   # flagged first, then by judge risk

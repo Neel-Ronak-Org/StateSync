@@ -88,6 +88,11 @@ HELDOUT = EVAL / "bird_heldout_sample.json"
 SQLITE_QUESTIONS = BIRD / "mini_dev_sqlite.json"
 SQLITE_DBS = BIRD / "dev_databases"
 CROSSCHECK = EVAL / "bird_crossengine_check.json"
+# The corrected annotations (Arcwise-Plat-SQL; github.com/uiuc-kang-lab/text_to_sql_benchmarks, commit
+# b83d8a8 of 2026-08-27, CC BY-SA 4.0). Besides the SQL, the file rewrites 81 questions and 68 hints of
+# our Mini-Dev copy; each corrected query answers ITS question, so held-out runs ask that text.
+CORRECTED = REPO / "data" / "external" / "bird" / "corrected" / "arcwise_plat_sql_only_with_diff.json"
+CORRECTED_SHA256 = "e7bf76408f99266506ea558d84982c69422e5db3dfecab5f08a3a8d3900e8395"
 MAX_ROWS = 1000                # noqa: literals - [mcp] max_rows_default, the row cap the pipeline runs with
 SIG_DIGITS = 5                 # noqa: literals - v2 number comparison (REAL vs double differ in the 6th digit)
 ANSWER_REL_TOL = 0.005         # noqa: literals - "agrees to 3 significant digits" for the answer label
@@ -114,6 +119,13 @@ def questions() -> list[dict]:
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def corrected_questions() -> dict[int, dict]:
+    """The corrected file's question, hint and SQL per question_id (refuses a changed file)."""
+    if sha256(CORRECTED) != CORRECTED_SHA256:
+        raise SystemExit(f"{CORRECTED} is not the file the protocol fixed")
+    return {int(x["question_id"]): x for x in json.loads(CORRECTED.read_text())}
 
 
 def question_text(q: dict) -> str:
@@ -300,10 +312,16 @@ def cmd_ask(label: str, spacing_s: float, limit: int | None, sample_name: str = 
         return 1
     setup = json.loads(SETUP.read_text())
     by_id = {q["question_id"]: q for q in questions()}
+    if sample_name == "heldout":   # ask the wording the corrected gold answers (db and difficulty unchanged)
+        corrected = corrected_questions()
+        by_id = {i: {**q, "question": corrected[i]["question"], "evidence": corrected[i].get("evidence")}
+                 for i, q in by_id.items()}
     out = answers_path(label)
     sample_file = HELDOUT if sample_name == "heldout" else SAMPLE
-    done = json.loads(out.read_text()) if out.exists() else {"label": label, "sample": sample_name,
-                                                             "sample_sha256": sha256(sample_file), "answers": {}}
+    done = json.loads(out.read_text()) if out.exists() else {
+        "label": label, "sample": sample_name, "sample_sha256": sha256(sample_file),
+        "question_source": "corrected" if sample_name == "heldout" else "mini_dev_postgresql",
+        "question_source_sha256": CORRECTED_SHA256 if sample_name == "heldout" else sha256(QUESTIONS), "answers": {}}
     import tomllib   # the flags the orchestrator was started with (shipped_flags.py checks they are current)
     done.setdefault("pipeline_flags", tomllib.loads((REPO / "config" / "flags.toml").read_text())["pipeline"])
     errors, asked = 0, 0
@@ -318,12 +336,14 @@ def cmd_ask(label: str, spacing_s: float, limit: int | None, sample_name: str = 
                                           "workspace_id": setup[q["db_id"]]["workspace_id"]}, timeout=QUERY_TIMEOUT_S)
         trace = body.get("state_trace") or {}
         record = {"question_id": qid, "db_id": q["db_id"], "difficulty": q["difficulty"], "http_status": st,
+                  "question_asked": question_text(q),
                   "answer_text": body.get("answer_text"), "detail": body.get("detail"), "route": trace.get("route"),
                   "executed_sql": trace.get("executed_sql"), "candidate_sql": trace.get("candidate_sql"),
                   "evidence": trace.get("evidence"), "number_grounding": trace.get("number_grounding"),
                   "repair": trace.get("repair"), "errors": trace.get("errors"), "attempt": trace.get("attempt"),
                   "sql_rows_count": trace.get("sql_rows_count"), "calls": trace.get("calls"), "metrics": trace.get("metrics"),
                   "caveats": trace.get("caveats"),
+                  "self_consistency": trace.get("self_consistency"),
                   "latency_ms": body.get("latency_ms") or round((time.monotonic() - t0) * 1000),
                   "asked_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
         asked += 1
@@ -535,6 +555,10 @@ def cmd_score_v2(label: str, gold_sqlite: Path | None) -> int:
                      "answer_correct_before": answer_label(before, gold) if ok else None,
                      "answer_correct_after": answer_label(after, gold) if ok else None,
                      "signals": signals(a, pred), "repair_outcome": (a.get("repair") or {}).get("outcome"),
+                     # Self-consistency risk; an answer with no SQL, or none sampled, is the most suspect (1.0).
+                     "self_consistency_risk": ((a.get("self_consistency") or {}).get("risk")
+                                               if a.get("self_consistency") else 1.0),
+                     "self_consistency_sampled": bool(a.get("self_consistency")),
                      "llm_calls": len(a.get("calls") or []), "latency_ms": a.get("latency_ms")})
     kept = [r for r in rows if not r["excluded"] and not r["gold_failed"]]
     n = len(kept)
@@ -629,7 +653,7 @@ def cmd_judge(label: str, endpoint: str, model: str, spacing_s: float, limit: in
             continue
         q = by_id[int(qid)]
         schemas.setdefault(q["db_id"], schema_text(q["db_id"]))
-        prompt = (f"Question: {question_text(q)}\n\nTables:\n{schemas[q['db_id']]}\n\nSQL:\n{a.get('executed_sql') or '(none)'}\n\n"
+        prompt = (f"Question: {a.get('question_asked') or question_text(q)}\n\nTables:\n{schemas[q['db_id']]}\n\nSQL:\n{a.get('executed_sql') or '(none)'}\n\n"
                   f"First rows of the result:\n{preview(q['db_id'], a.get('executed_sql'))}\n\nAnswer:\n{text_before_repair(a)}")
         items.append({"id": qid, "prompt": prompt})
     req = {"endpoint": endpoint, "model": model, "system": JUDGE_SYSTEM, "max_tokens": JUDGE_MAX_TOKENS,

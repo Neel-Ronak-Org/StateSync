@@ -102,6 +102,7 @@ _LAST_WRITE_WINS_FIELDS: frozenset[str] = frozenset({
     "verified_example",
     "compiled_template",
     "doc_abstained",
+    "self_consistency",
 })
 
 # Fields whose reducer is "append" (list concatenation)
@@ -214,6 +215,8 @@ class StateSyncState(BaseModel):
     allow_fast_path:  bool = True
     verified_example: bool = False   # the SQL is an approved example, run as-is
     compiled_template: bool = False  # the SQL is an approved example's template filled in code (Phase 3c)
+    # The study's self-consistency baseline (self_consistency.py; [pipeline] self_consistency_k, 0 when shipped).
+    self_consistency: dict | None = None
     doc_abstained: bool = False      # the docs route found nothing relevant; the synthesizer answers "not found" with no model call (RAG v2 Phase E)
 
     # --- output (Part E2) ---

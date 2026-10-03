@@ -81,6 +81,18 @@ checks fire on fewer than 20% of answers and catch fewer than 20% of the wrong o
      rounding). The 7 that differ in substance (532, 533, 563, 565, 683, 788, 1482; 532 and 565 are
      pilot questions) are excluded.
    - The original PostgreSQL gold is kept as a sensitivity analysis.
+   - **The corrected file as downloaded (2026-10-03, with the owner's permission).**
+     - Source: `data/arcwise_plat_sql_only_with_diff.json` at repo commit `b83d8a8` (2026-08-27).
+     - sha256 `e7bf7640…8395`, 287,718 bytes, 498 records covering every unique Mini-Dev question.
+     - All 498 corrected queries run on SQLite; none returns an empty or all-NULL result.
+     - Its SQL differs from Mini-Dev's on 180 questions. Its `original_SQL` marker is present on only
+       83 of them, so changes are counted by comparison, not by the marker.
+     - **Deviation from the stated plan:** the README says this version keeps questions and hints
+       as posed, but against our Mini-Dev copy it rewrites 81 questions and 68 hints. Examples:
+       q1500 "September 2013" becomes "August 2012"; q1389 gains "Break ties by name".
+     - Each corrected query answers its own question, so the held-out run **asks the corrected
+       file's question and hint**, and every answer records the exact text asked.
+     - Decided before any held-out question was asked.
 2. **Fan-out set**, built by us before any model sees it:
    - list every one-to-many relationship in the 11 databases' foreign keys;
    - for each, write questions that aggregate a parent-level quantity where the natural query

@@ -525,6 +525,7 @@ async def answer_question(
                                   final_state.compiled_template),
         "number_grounding": grounding,
         "repair": repair_record,
+        "self_consistency": final_state.self_consistency,
         "route":       final_state.route,
         "executed_sql": final_state.executed_sql,
         # executed_sql is null when a statement was rejected before execution,
