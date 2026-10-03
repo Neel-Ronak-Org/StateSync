@@ -100,3 +100,18 @@ which git ignores.
 2. **FIBEN text-to-SQL** (needs model calls), loaded as a connected Postgres database
    through the product's own "connect your database" path: Part 2, not yet specified.
 3. **Linked SEC database** and cross-source agreement: database built (`demo/sec_db.sh`); study pre-registered in `docs/specs/sec_crosscheck.md` (needs model calls).
+
+## BIRD Mini-Dev (downloaded 2026-10-03, owner's permission)
+
+- **Source:** the BIRD project's official package (`bird-bench.oss-cn-beijing.aliyuncs.com/minidev.zip`,
+  linked from github.com/bird-bench/mini_dev, 800,943,648 bytes, last modified 2024-06-20) and the question
+  files from Hugging Face `birdsql/bird_mini_dev` at commit `f65faf4a`. Licence CC BY-SA 4.0.
+- **Contents:** 500 questions over 11 databases (each with `question`, `evidence`, gold `SQL`,
+  `difficulty`), in SQLite, MySQL and PostgreSQL versions; the PostgreSQL dump is
+  `minidev/MINIDEV_postgresql/BIRD_dev.sql` (1.0 GB). Unpacked size 4.1 GB, in git-ignored
+  `data/external/bird/`. Checksums: `fixtures/bird_minidev_checksums.txt`.
+- **Known caveat:** Jin et al. 2026 (arXiv:2601.08778) report annotation errors in a large share of BIRD
+  Mini-Dev and released corrected labels. A study must say which labels it scores against, and should
+  report both.
+- **Not loaded yet:** the Postgres load (a separate local container, like FIBEN) and the study spec come
+  next; nothing has been run on it.
