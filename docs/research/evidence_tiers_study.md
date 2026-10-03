@@ -27,6 +27,14 @@ StateSync instead checks the **answer against the data**, with no model:
 with model-based confidence, on accuracy of the warning and on cost?
 **RQ2.** Which check catches which errors (per-check ablation)? Which errors does none catch?
 **RQ3.** Do the checks raise false alarms on correct answers, and how often?
+**RQ4 (added 2026-10-03, before any BIRD run).** When a check flags an answer, does ONE
+repair attempt that is told exactly what failed turn wrong answers into right ones, how
+often does it break a right one, and what does it cost?
+
+Failure types used throughout (owner's framing, 2026-10-03): **grounded** (is every figure in
+the answer actually in the result?), **correct** (did the query answer the question: right
+table, filter, time window, no double counting?), **intended** (is it what the user meant:
+net or gross, fiscal or calendar?). Data checks are expected to see the first two only.
 
 ## 2. Hypotheses (stated before measuring)
 
@@ -36,6 +44,12 @@ with model-based confidence, on accuracy of the warning and on cost?
 - H2. Combining checks with one judge beats either alone on risk–coverage.
 - H3. Figure grounding has a low false-alarm rate (< 5% of correct answers flagged) after
   the list-marker fix; its catches are mostly prose errors, not SQL errors.
+
+- H4. A repair attempt triggered by a data check, with the failure stated in the prompt,
+  fixes more wrong answers than it breaks right ones, and raises end-to-end accuracy by at
+  least 2 points on BIRD at under 0.5 extra model calls per question on average. A repair
+  triggered only by "are you sure?" (no stated failure) fixes fewer (self-verification
+  without new information is weak).
 
 Any outcome is reportable. "The checks catch few real errors on BIRD" is a result.
 
@@ -67,6 +81,18 @@ Signals compared, each producing a "warn" decision and, where possible, a score:
 | Model-based baselines | verbalised confidence; self-consistency over k=5 samples (execution-result agreement); LLM judge (one provider); judge ensemble (two providers) |
 | Combined | checks OR judge; logistic combination (cross-validated) |
 
+**Repair loop (RQ4).** Fixed now, not tuned on BIRD:
+1. Answer, then run the checks. No flag → done.
+2. Flag → one repair call (same SQL model) whose prompt states the failing check and its
+   evidence (e.g. "the answer says 97.0%, which is not in the result"; "this join repeats rows
+   of orders: 1,204 joined rows for 1,000 orders"). Then the checks run again.
+3. Passes → the repaired answer is shown, marked as corrected. Still flagged → the original
+   answer is shown with a "might be wrong" label. Never more than one repair.
+4. Variants: (a) no loop; (b) loop triggered by data checks with evidence (ours);
+   (c) loop triggered by data checks but with only "check your answer" (no evidence);
+   (d) loop triggered by the LLM judge. The classifier verifiers (Laya and variants) are not
+   triggers: on real errors they reached only 0.52–0.73 AUROC (`research/verifier`).
+
 ## 5. Measures
 
 - Correctness label: execution match with the corrected gold (order-insensitive unless the
@@ -78,6 +104,8 @@ Signals compared, each producing a "warn" decision and, where possible, a score:
 - False alarms: share of correct answers warned, per check.
 - Cost: extra model calls and tokens per question for each signal (checks: zero).
 - Latency added per signal.
+- Repair loop (RQ4): accuracy before and after; fixed (wrong → right), broken (right → wrong),
+  unchanged; extra calls and latency per question; share of answers ending "might be wrong".
 
 ## 6. Analysis plan
 
@@ -108,3 +136,9 @@ Weeks: (1) data load + gold execution + fan-out set; (2) pipeline runs + checks;
 
 - 2026-09-30: protocol written. Known before measuring: a live answer's numbered-list
   markers ("1.", "2.") were read as figures; fixed in `number_grounding.py` (commit 590c59a).
+- 2026-10-03 (owner): RQ4, H4, the repair-loop conditions and measures, and the
+  grounded / correct / intended failure types added. BIRD Mini-Dev downloaded the same day;
+  no BIRD question has been run. The fan-out check now also covers COUNT (commit adf27ba),
+  which is the version every BIRD run uses. Providers: measurement runs use
+  `flags.llm.openai_compat.fallback = "off"`, and every call records the model the server
+  says answered (`llm/adapters/openai_compat_adapter.py`).
