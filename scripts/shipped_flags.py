@@ -98,7 +98,7 @@ SHIPPED_DEFAULTS: dict[tuple[str, str], str] = {
     ("pipeline", "doc_scope"): "all",
     ("pipeline", "doc_abstain"): "off",
     # RAG v3 (docs/specs/rag_v3.md): cross-encoder re-ranking and search-query rewriting, both off.
-    ("pipeline", "rerank"): "off",
+    ("pipeline", "rerank"): "bge",   # owner decision 2026-10-03 (docs/eval/rag_v3_report.md)
     ("pipeline", "query_rewrite"): "off",
     # RAG v2 (docs/specs/rag_v2.md): how an upload is cut into chunks. "paragraph" is
     # today's flat-page chunker; "layout" cuts by heading and keeps tables whole.
