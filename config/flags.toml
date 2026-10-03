@@ -40,6 +40,44 @@ base_url = "https://api.groq.com/openai/v1"
 [llm.groq.reasoning_effort]
 "openai/gpt-oss-120b" = "low"
 
+# provider = "openai_compat" (llm/adapters/openai_compat_adapter.py): named OpenAI-compatible
+# endpoints, each role pinned to "endpoint:model", with an explicit fallback policy. NOT the
+# shipped provider (that stays "groq"); this is the route to free tiers and paid credits.
+# Keys are Docker secret files named by key_secret (mount them in docker-compose.yml first).
+[llm.openai_compat]
+fallback             = "off"    # "off" (every measurement) | "same_model" | "any"
+require_served_match = true     # refuse an answer from a model other than the one requested
+
+[llm.endpoints.groq]
+base_url   = "https://api.groq.com/openai/v1"
+key_secret = "groq_api_key"
+[llm.endpoints.groq.reasoning_effort]
+"openai/gpt-oss-120b" = "low"
+
+[llm.endpoints.openrouter]
+base_url   = "https://openrouter.ai/api/v1"
+key_secret = "openrouter_api_key"
+[llm.endpoints.openrouter.reasoning_effort]
+"openai/gpt-oss-120b" = "low"
+
+[llm.endpoints.gemini_studio]          # Google AI Studio's OpenAI-compatible endpoint
+base_url   = "https://generativelanguage.googleapis.com/v1beta/openai/"
+key_secret = "gemini_api_key"
+
+[llm.endpoints.local_router]           # e.g. OmniRoute on this machine (compression OFF)
+base_url   = "http://host.docker.internal:20128/v1"
+key_secret = "local_router_api_key"
+
+[llm.models.openai_compat]
+supervisor        = "groq:qwen/qwen3.8-27b"
+sql               = "groq:openai/gpt-oss-120b"
+synthesizer       = "groq:openai/gpt-oss-120b"
+memory_summarizer = "groq:qwen/qwen3.8-27b"
+normalizer        = "groq:qwen/qwen3.8-27b"
+decomposer        = "groq:qwen/qwen3.8-27b"
+judge             = "groq:openai/gpt-oss-120b"
+rewriter          = "groq:qwen/qwen3.8-27b"
+
 # THREE LOCAL MODELS MEASURED, all seven roles, corrected fixture, 25 queries.
 # 7b ships because a 14b buys NOTHING and costs 3x the latency:
 #

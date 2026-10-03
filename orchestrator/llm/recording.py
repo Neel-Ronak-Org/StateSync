@@ -76,6 +76,8 @@ class RecordingModel:
             "waited_ms": response.waited_ms,
             "ms": int((time.monotonic() - t0) * _MS_PER_S),
             "rate_remaining_tokens": response.rate_remaining_tokens,
+            **({"served_model": response.served_model} if response.served_model else {}),
+            **({"endpoint": response.endpoint} if response.endpoint else {}),
         })
         return response
 

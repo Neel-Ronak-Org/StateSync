@@ -228,4 +228,5 @@ class GroqAdapter:
             retries=retries,
             waited_ms=int(waited_s * 1000),  # noqa: literals - seconds to milliseconds
             rate_remaining_tokens=remaining,
+            served_model=getattr(completion, "model", None),
         )

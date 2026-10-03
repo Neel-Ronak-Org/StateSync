@@ -113,9 +113,16 @@ def get_agent_llm(role: str) -> "ChatModel":
         from llm.adapters.groq_adapter import GroqAdapter
         return RecordingModel(GroqAdapter(model=model), role, model)
 
+    if provider == "openai_compat":
+        # Named OpenAI-compatible endpoints with an explicit fallback policy
+        # (llm/adapters/openai_compat_adapter.py). The role spec is "endpoint:model" or a list.
+        from llm.adapters.openai_compat_adapter import build
+        chain = build(getattr(flags.llm.models.openai_compat, role))
+        return RecordingModel(chain, role, chain.model)
+
     raise RuntimeError(
         f"Unknown LLM provider {provider!r}. "
-        "Valid values: 'local', 'anthropic', 'azure', 'gemini', 'groq'. "
+        "Valid values: 'local', 'anthropic', 'azure', 'gemini', 'groq', 'openai_compat'. "
         "Check flags.llm.provider in config/flags.toml."
     )
 
@@ -217,6 +224,13 @@ def validate_llm_config() -> None:
         GroqAdapter._read_api_key()        # raises GroqConfigError if absent
         GroqAdapter._read_base_url()       # raises GroqConfigError if malformed
         logger.info("  Groq API key: present ✓")
+    elif provider == "openai_compat":
+        # Every role's first spec must name a configured endpoint whose key file exists.
+        from llm.adapters.openai_compat_adapter import OpenAICompatAdapter, endpoint, parse_spec
+        for role in sorted(_VALID_ROLES):
+            spec = getattr(flags.llm.models.openai_compat, role)
+            name, _model = parse_spec(spec if isinstance(spec, str) else list(spec)[0])
+            OpenAICompatAdapter._key(endpoint(name))
     elif provider == "local":
         _check_local_models(str(flags.llm.ollama_url))
     else:
