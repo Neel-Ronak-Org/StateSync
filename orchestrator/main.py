@@ -31,6 +31,7 @@ from llm.provider import LLM_READINESS, validate_llm_config
 from llm.recording import start_recording, stop_recording
 from failures import user_facing_failure
 from evidence import evidence_tier
+from number_grounding import applies as grounding_applies
 from number_grounding import caveat as grounding_caveat
 from number_grounding import ground
 import repair_loop
@@ -504,7 +505,8 @@ async def answer_question(
     # caveat, which also keeps the answer out of the "checked" tier.
     grounding = None
     caveats = list(final_state.caveats)
-    if final_state.flags_snapshot.get("pipeline.number_grounding") == "on" and final_state.answer_text:
+    if (final_state.flags_snapshot.get("pipeline.number_grounding") == "on" and final_state.answer_text
+            and grounding_applies(final_state.route, final_state.executed_sql)):
         grounding = ground(final_state.answer_text, final_state.sql_rows, final_state.sql_columns,
                            final_state.normalized_query or final_state.raw_query,
                            [r.content for r in final_state.retrievals],

@@ -165,6 +165,14 @@ def _derived(mention: Mention, grounded: list[float]) -> bool:
     return False
 
 
+def applies(route: str | None, executed_sql: str | None) -> bool:
+    """Whether an answer has anything to ground against. A database answer whose query never ran has
+    no result: its text explains the failure and quotes error codes, which would come back as
+    "figures not found in the result" on top of the error (seen on BIRD: 3 of grounding's 4 catches,
+    docs/eval/bird_v2_report.md). Document and hybrid answers keep their passages."""
+    return not (route == "sql" and not executed_sql)
+
+
 def ground(answer_text: str, rows: list[dict], columns: list[str], question: str = "",
            passages: list[str] | None = None, version: int = 1,
            shown_rows: int | None = None) -> dict[str, Any]:
