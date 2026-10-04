@@ -240,7 +240,10 @@ Files:
 **Configuration** (protocol change 16):
 - gpt-oss-120b for SQL and answers, through Cheaper Inference, with reasoning effort low; every call
   reported gpt-oss-120b;
-- the normaliser is qwen3.8-27b through Cheaper Inference, thinking off;
+- the normaliser is qwen3.8-27b through Cheaper Inference, thinking off. Against Groq direct on 20 dev
+  questions (`bird_normaliser_route_check.json`; 3 Groq calls were rate-limited out): the same
+  language decision on 17 of 17, and the same preserved names on 15 of 17 (Groq kept "Los Angeles"
+  twice);
 - measurement flags as for the held-out run, with `self_consistency_k = 0` and `fanout_retry_max = 0`
   (warn only);
 - Gemini judge on Zed, as before.

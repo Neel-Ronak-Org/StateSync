@@ -348,6 +348,8 @@ help.
 - **One SQL model** (GPT-5 mini) at default sampling; the model may have seen BIRD during training.
 - **Model access** was through a local OpenAI-compatible proxy to a hosted subscription. The server
   reported the served model on every call (all `gpt-5-mini`; judge `gemini-3.8-flash`).
+- **Normaliser host.** In the robustness run the normaliser also ran on the reseller: the same language
+  decisions as Groq's on 17 of 17 dev questions, two fewer name hints.
 - **Empty answers from one host.** The reseller returned an empty answer text on 6 of the 93
   robustness answers. SQL labels are unaffected; the judge comparison is reported with and without them.
 - **Hosts.** Free-tier limits forced a change of host for the gpt-oss-120b runs (the secondary judge

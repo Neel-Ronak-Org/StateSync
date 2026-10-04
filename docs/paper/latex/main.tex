@@ -261,8 +261,8 @@ this. The fan-out set follows a textbook pattern and was drafted with an AI assi
 says nothing about subtler double counting. Free-tier limits forced a change of host for the
 gpt-oss-120b runs to a reseller that does not disclose its upstream; we checked the served model on
 every call and that the reasoning-effort setting was honoured, and the secondary judge's verdicts
-agree with the original host's on 93\% of 260 shared answers (AUROC 0.62 vs.\ 0.63). The same host
-returned an empty answer text on 6 of the 93 robustness answers; their SQL labels are unaffected, and
+agree with the original host's on 93\% of 260 shared answers (AUROC 0.62 vs.\ 0.63). Its normaliser made the same language decisions as Groq's on 17 of 17 dev questions but passed two
+fewer name hints. The same host returned an empty answer text on 6 of the 93 robustness answers; their SQL labels are unaffected, and
 we report the judge comparison with and without them. English questions, one benchmark, the SQL path
 only.
 
