@@ -2203,6 +2203,406 @@
    "tokens_out": 134,
    "ms": 240195,
    "p_correct": 0.2
+  },
+  {
+   "id": "904",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly finds the race and year where Michael Schumacher's lap time is minimal, matching the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 815,
+   "tokens_out": 91,
+   "ms": 871,
+   "p_correct": 1.0
+  },
+  {
+   "id": "909",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly computes the percentage of European Grand Prix races held in Germany and the answer matches the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 760,
+   "tokens_out": 91,
+   "ms": 642,
+   "p_correct": 1.0
+  },
+  {
+   "id": "910",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result provides the correct latitude and longitude for Silverstone Circuit as requested.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 659,
+   "tokens_out": 65,
+   "ms": 529,
+   "p_correct": 1.0
+  },
+  {
+   "id": "928",
+   "text": "{\"p_correct\": 0.96, \"reason\": \"The query correctly returns Lewis Hamilton as the first-place driver for the 2007 Canadian Grand Prix, matching the expected answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 789,
+   "tokens_out": 105,
+   "ms": 711,
+   "p_correct": 0.96
+  },
+  {
+   "id": "930",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly finds races where Hamilton's rank equals his overall minimum rank, and the answer lists those races.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 880,
+   "tokens_out": 97,
+   "ms": 658,
+   "p_correct": 1.0
+  },
+  {
+   "id": "931",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly reports the maximum fastest lap speed returned by the query for the 2009 Spanish Grand Prix.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 716,
+   "tokens_out": 75,
+   "ms": 683,
+   "p_correct": 1.0
+  },
+  {
+   "id": "933",
+   "text": "{\"p_correct\": 0.0, \"reason\": \"The query returned positionorder 1, but Lewis Hamilton actually finished 7th in the 2008 Chinese Grand Prix, so the answer is incorrect.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 755,
+   "tokens_out": 119,
+   "ms": 692,
+   "p_correct": 0.0
+  },
+  {
+   "id": "937",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly selects the time for the driver with rank 2 in the 2008 Chinese Grand Prix, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 731,
+   "tokens_out": 88,
+   "ms": 608,
+   "p_correct": 1.0
+  },
+  {
+   "id": "940",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The query logic is flawed and the zero count is unlikely to be correct, so the answer is probably wrong.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 785,
+   "tokens_out": 105,
+   "ms": 722,
+   "p_correct": 0.1
+  },
+  {
+   "id": "944",
+   "text": "{\"p_correct\": 0.9, \"reason\": \"The answer correctly notes that the query returned no rows, so the required times are unavailable and the percentage cannot be computed.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 932,
+   "tokens_out": 103,
+   "ms": 643,
+   "p_correct": 0.9
+  },
+  {
+   "id": "945",
+   "text": "{\"p_correct\": 1.0, \"reason\": \"The query correctly counts circuits in Adelaide, Australia and the answer reports the returned count of 1\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 638,
+   "tokens_out": 80,
+   "ms": 606,
+   "p_correct": 1.0
+  },
+  {
+   "id": "948",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly computes the maximum points for British constructors and the answer matches the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 653,
+   "tokens_out": 83,
+   "ms": 593,
+   "p_correct": 1.0
+  },
+  {
+   "id": "950",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists all constructor names returned by the query for race 291 with 0 points.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 709,
+   "tokens_out": 83,
+   "ms": 685,
+   "p_correct": 1.0
+  },
+  {
+   "id": "951",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts Japanese constructors with exactly two race entries where points are 0, and the result matches the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 721,
+   "tokens_out": 85,
+   "ms": 620,
+   "p_correct": 1.0
+  },
+  {
+   "id": "954",
+   "text": "{\"p_correct\": 0.9, \"reason\": \"The SQL correctly filters Japanese drivers and years 2007\u20112009 and computes the percentage of non\u2011null times, matching the requested definition.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 867,
+   "tokens_out": 94,
+   "ms": 720,
+   "p_correct": 0.9
+  },
+  {
+   "id": "955",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly averages champion (position=1) finish times in seconds for each year before 1975, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 927,
+   "tokens_out": 90,
+   "ms": 645,
+   "p_correct": 1.0
+  },
+  {
+   "id": "959",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The answer lists many values not present in the query result and adds a NULL and extra numbers, so it does not correctly reflect the returned fastest lap numbers.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 808,
+   "tokens_out": 135,
+   "ms": 852,
+   "p_correct": 0.1
+  },
+  {
+   "id": "960",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly averages fastestLapSpeed for the 2009 Spanish Grand Prix and the answer reports that value.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 743,
+   "tokens_out": 72,
+   "ms": 716,
+   "p_correct": 1.0
+  },
+  {
+   "id": "962",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly computes the percentage of drivers in 2000\u20112005 races born before 1985 who completed more than 50 laps, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 889,
+   "tokens_out": 95,
+   "ms": 650,
+   "p_correct": 1.0
+  },
+  {
+   "id": "964",
+   "text": "{\"p_correct\": 0.2, \"reason\": \"The answer only lists one driver code (SPE) despite the query likely returning multiple American drivers, so it does not fully answer the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 654,
+   "tokens_out": 135,
+   "ms": 741,
+   "p_correct": 0.2
+  },
+  {
+   "id": "967",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly selects the three youngest drivers and counts those with Dutch/Netherlandic nationality, matching the answer of 1.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 691,
+   "tokens_out": 113,
+   "ms": 689,
+   "p_correct": 1.0
+  },
+  {
+   "id": "971",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly selects the German driver with the earliest date of birth and returns the driverref 'brudes', matching the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 648,
+   "tokens_out": 97,
+   "ms": 701,
+   "p_correct": 1.0
+  },
+  {
+   "id": "972",
+   "text": "{\"p_correct\": 0.2, \"reason\": \"The query only checks for non\u2011null fastest lap entries, not that the driver actually posted the fastest lap overall, so the answer is likely incomplete.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 792,
+   "tokens_out": 130,
+   "ms": 815,
+   "p_correct": 0.2
+  },
+  {
+   "id": "977",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts rows with raceId > 50 and < 100, statusID = 2, and non\u2011null time, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 718,
+   "tokens_out": 94,
+   "ms": 794,
+   "p_correct": 1.0
+  },
+  {
+   "id": "978",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result lists the locations and their lat/lng for circuits in Austria as requested.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 755,
+   "tokens_out": 47,
+   "ms": 566,
+   "p_correct": 1.0
+  },
+  {
+   "id": "981",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result correctly identifies the youngest driver\u2019s earliest qualifying race with year, name, date, and time as requested.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 991,
+   "tokens_out": 93,
+   "ms": 679,
+   "p_correct": 1.0
+  },
+  {
+   "id": "988",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly filters German drivers born 1980-1985, computes average pit stop duration, orders ascending, and the answer lists the top three as returned.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 947,
+   "tokens_out": 126,
+   "ms": 693,
+   "p_correct": 1.0
+  },
+  {
+   "id": "989",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query returns the winner's finish time for the 2008 Canadian Grand Prix, matching the requested format.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 758,
+   "tokens_out": 91,
+   "ms": 700,
+   "p_correct": 1.0
+  },
+  {
+   "id": "994",
+   "text": "{\"p_correct\": 0.2, \"reason\": \"The query returns the single highest points entry rather than the total points per constructor across all Monaco races between 1980 and 2010\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 816,
+   "tokens_out": 85,
+   "ms": 684,
+   "p_correct": 0.2
+  },
+  {
+   "id": "1001",
+   "text": "{\"p_correct\": 0.2, \"reason\": \"The query selects the fastest Q3 time rather than the driver who was ranked 1st in the third qualifying session, so the result is likely incorrect.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 796,
+   "tokens_out": 171,
+   "ms": 817,
+   "p_correct": 0.2
+  },
+  {
+   "id": "1003",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly counts statusid=3 per driver for the Canadian Grand Prix and returns the maximum, which matches the answer of 2 accidents.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 715,
+   "tokens_out": 97,
+   "ms": 684,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1014",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result correctly returns the overall fastest lap time for circuits in Italy.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 781,
+   "tokens_out": 85,
+   "ms": 762,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1025",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly selects the league with the highest total goals for the 2015/2016 season and returns Spain LIGA BBVA, which matches the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1339,
+   "tokens_out": 64,
+   "ms": 702,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1028",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly selects the away team with the most wins in the 2009/2010 Scotland Premier League and returns Celtic, matching the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1433,
+   "tokens_out": 61,
+   "ms": 596,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1030",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly selects the league with the highest number of drawn matches for the 2015/2016 season and returns France Ligue 1, matching the answer\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1337,
+   "tokens_out": 64,
+   "ms": 458,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1032",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly reports the league name and match count from the query result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1327,
+   "tokens_out": 42,
+   "ms": 602,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1035",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly selects team_fifa_api_id with buildupplayspeed between 50 and 60 and the answer reports those IDs.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1550,
+   "tokens_out": 142,
+   "ms": 758,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1037",
+   "text": "{\"p_correct\": 0.0, \"reason\": \"The answer\u2019s percentage (24.597%) does not match the query result (24.574%), so it is inaccurate.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1499,
+   "tokens_out": 159,
+   "ms": 806,
+   "p_correct": 0.0
+  },
+  {
+   "id": "1039",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly reports the average long shots value returned by the SQL query.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1337,
+   "tokens_out": 47,
+   "ms": 601,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1040",
+   "text": "{\"p_correct\": 1, \"reason\": \"The listed players are exactly the top 10 names returned by the query, satisfying the height and ordering criteria.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1453,
+   "tokens_out": 52,
+   "ms": 658,
+   "p_correct": 1.0
   }
  ]
 }
