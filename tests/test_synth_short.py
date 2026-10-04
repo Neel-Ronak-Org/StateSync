@@ -111,3 +111,34 @@ def test_full_style_unchanged(monkeypatch):
         assert "A chart IS appropriate" in llm.user
         assert "Column summary" not in llm.user
         assert out["vega_spec"] is not None and out["vega_spec"]["mark"] == "bar"
+
+
+class _EmptyThenAnswer:
+    def __init__(self, replies: list[str]):
+        self.replies = replies
+        self.calls = 0
+
+    async def complete(self, system, messages, max_tokens):
+        text = self.replies[min(self.calls, len(self.replies) - 1)]
+        self.calls += 1
+        return SimpleNamespace(text=text, tokens_in=10, tokens_out=3)
+
+
+def _answer(monkeypatch, llm):
+    monkeypatch.setattr(synthesizer, "get_agent_llm", lambda role: llm)
+    state = {"query_id": "q", "raw_query": "how many?", "sql_rows": [{"n": 3}], "sql_columns": ["n"],
+             "executed_sql": "SELECT 3 AS n", "flags_snapshot": {}}
+    return asyncio.run(synthesizer.synthesizer_node(state))
+
+
+def test_an_empty_answer_is_asked_for_once_more(monkeypatch):
+    llm = _EmptyThenAnswer(["", json.dumps({"answer_text": "There are 3.", "chart": None, "citations": []})])
+    out = _answer(monkeypatch, llm)
+    assert llm.calls == 2 and out["answer_text"] == "There are 3."
+    assert out["metrics"]["llm_calls"] == 2 and out["metrics"]["tokens_in"] == 20
+
+
+def test_a_normal_answer_is_asked_for_once(monkeypatch):
+    llm = _EmptyThenAnswer([json.dumps({"answer_text": "There are 3.", "chart": None, "citations": []})])
+    out = _answer(monkeypatch, llm)
+    assert llm.calls == 1 and out["metrics"]["llm_calls"] == 1

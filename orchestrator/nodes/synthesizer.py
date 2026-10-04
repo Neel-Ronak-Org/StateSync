@@ -629,11 +629,18 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     llm = get_agent_llm("synthesizer")
 
     try:
-        result = await llm.complete(
-            system=_short_system_prompt() if short_style else _SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_message}],
-            max_tokens=cfg.sql.max_tokens_synthesizer,
-        )
+        call = {"system": _short_system_prompt() if short_style else _SYSTEM_PROMPT,
+                "messages": [{"role": "user", "content": user_message}],
+                "max_tokens": cfg.sql.max_tokens_synthesizer}
+        result = await llm.complete(**call)
+        calls, spent_in, spent_out = 1, 0, 0
+        if not (result.text or "").strip():
+            # An empty answer is never useful to the reader. Seen on a reseller host (6 of 93
+            # answers in the evidence-tiers robustness run: a normal finish, no visible text), so
+            # one more call before the empty text would reach the user.
+            logger.warning("Synthesizer returned an empty answer for query_id=%s; asking once more.", query_id)
+            calls, spent_in, spent_out = 2, result.tokens_in, result.tokens_out
+            result = await llm.complete(**call)
         elapsed_ms = int(time.monotonic() * 1000) - start_ms
 
         # Parse the JSON response (fences stripped first -- a fenced response
@@ -713,9 +720,9 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             "answer_text": answer_text,
             "vega_spec": final_chart,
             "metrics": {
-                "tokens_in":        result.tokens_in,
-                "tokens_out":       result.tokens_out,
-                "llm_calls":        1,
+                "tokens_in":        result.tokens_in + spent_in,
+                "tokens_out":       result.tokens_out + spent_out,
+                "llm_calls":        calls,
                 "trajectory_steps": 1,
                 "latency_ms":       elapsed_ms,
             },
