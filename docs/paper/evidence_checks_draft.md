@@ -194,8 +194,8 @@ temperature). A small model (Qwen3.8-27B) normalises the question.
 
   H1 and H4 carry preconditions (at least 10 double-counting errors; at least 10 repairs) and are
   reported as untestable otherwise.
-- **Error types:** every wrong answer was annotated blind to the signals into ten categories. A second
-  annotator re-labels a random 20% [PENDING: Cohen's κ].
+- **Error types:** every wrong answer was annotated blind to the signals into ten categories. A second annotator (GPT-6, run independently on a blank, reshuffled copy) labelled all 90. Agreement is κ = 0.74 over ten
+  categories, and κ = 0.87 for system error vs benchmark/scorer artefact.
 
 ## 5 Results (held-out, n = 393)
 
@@ -309,8 +309,8 @@ help.
   reported the served model on every call (all `gpt-5-mini`; judge `gemini-3.8-flash`).
 - **Rate limits.** The secondary judge (gpt-oss-120b) is partial (220 of 393) because of free-tier
   limits.
-- **Annotation** was done by an AI assistant, blind to the signals, with a second annotator on 20%
-  [PENDING: κ].
+- **Annotation.** Both error-type annotators are AI models, blind to the signals: κ = 0.74; κ = 0.87 for system
+  error vs artefact. Human annotation of a sample would strengthen this.
 - **The fan-out set** was written by us; its construction rules were fixed in advance and it is
   published.
 - **Scope.** English questions, one benchmark, the SQL path only. The system's document path is not
