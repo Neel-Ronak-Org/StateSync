@@ -229,6 +229,8 @@ temperature). A small model (Qwen3.8-27B) normalises the question.
 | self-consistency | 0.739 | 0.135 |
 | LLM judge | 0.697 | 0.153 |
 | checks, then judge | 0.697 | 0.152 |
+| judge ensemble (mean) | 0.701 | 0.147 |
+| gpt-oss-120b judge | 0.606 | 0.186 |
 
 **Hypotheses:**
 - **H2 is not supported:** AURC gain 0.001 (95% CI −0.005 to 0.009).
@@ -336,8 +338,12 @@ help.
 - **One SQL model** (GPT-5 mini) at default sampling; the model may have seen BIRD during training.
 - **Model access** was through a local OpenAI-compatible proxy to a hosted subscription. The server
   reported the served model on every call (all `gpt-5-mini`; judge `gemini-3.8-flash`).
-- **Rate limits.** The secondary judge (gpt-oss-120b) is partial (220 of 393) because of free-tier
-  limits.
+- **Hosts.** Free-tier limits forced a change of host for the gpt-oss-120b runs (the secondary judge
+  and the robustness run) to a reseller that does not disclose its upstream provider.
+  - We checked the served model name on every call, and that the reasoning-effort setting was
+    honoured.
+  - The judge's verdicts agree with the original host's on 93% of 260 shared answers (same
+    discrimination, AUROC 0.62 vs 0.63).
 - **Annotation.** Both error-type annotators are AI models, blind to the signals: κ = 0.74; κ = 0.87 for system
   error vs artefact. Human annotation of a sample would strengthen this.
 - **The fan-out set** was drafted with an AI assistant from rules fixed in advance and is published. Its

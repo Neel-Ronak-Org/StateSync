@@ -15,8 +15,8 @@ What it computes:
   catches against the expected number among the judge's k most suspect answers, ties broken at
   random (computed exactly, not sampled);
 - risk-coverage: AURC and selective accuracy at 80% and 90% coverage, ties broken at random (exact
-  expectation), for the judge, "checks then judge" (any data check first, then judge risk), and
-  self-consistency when present;
+  expectation), for each judge, the judges' mean (ensemble) when there are two or more, "checks then
+  judge" (any data check first, then judge risk), and self-consistency when present;
 - H2: AURC(judge) - AURC(checks then judge); H3: figure grounding's false alarms on answers whose
   text is correct, one-sided 95% upper bound; H4: fixed / broken by the answer label, sign test,
   accuracy gain, with its precondition (>= H4_MIN_TRIGGERS repairs);
@@ -218,6 +218,8 @@ def analyse(rows: list[dict], judges: dict[str, list[float]], fanout_ids: set[in
         out["signals"][name] = flag_stats([bool(r["signals"].get(name)) for r in rows], wrong)
     judge = judges.get(PRIMARY_JUDGE)
     scored: dict[str, list[float]] = {f"judge {m}": s for m, s in judges.items()}
+    if len(judges) > 1:   # protocol v2 §4: the judge ensemble is the mean of the judges' risks
+        scored["judge ensemble (mean)"] = [sum(col) / len(col) for col in zip(*judges.values())]
     if rows and all("self_consistency_risk" in r for r in rows) and any(r.get("self_consistency_sampled") for r in rows):
         scored["self-consistency"] = [float(r["self_consistency_risk"]) for r in rows]
         out["self_consistency_unsampled"] = sum(not r.get("self_consistency_sampled") for r in rows)

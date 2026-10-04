@@ -118,3 +118,12 @@ def test_final_holm_takes_h1_from_the_fanout_set_and_the_rest_from_held_out():
     fanout_untestable = {"holm": {"pvalues": {}}, "tests": {"H1": {"status": "untestable: 3 double-counting errors"}}}
     out = ab.confirmatory_holm(fanout_untestable, heldout)
     assert "H1" not in out["pvalues"] and out["untestable"] == ["H1", "H4"]
+
+
+def test_the_judge_ensemble_is_the_mean_and_needs_two_judges():
+    rows = [{"question_id": i, "db_id": "d", "correct": i % 2 == 0, "signals": {}} for i in range(4)]
+    one = ab.analyse(rows, judges={"a": [0.1, 0.9, 0.2, 0.8]})
+    assert "judge ensemble (mean)" not in one["risk_coverage"]
+    two = ab.analyse(rows, judges={"a": [0.1, 0.9, 0.2, 0.8], "b": [0.3, 0.5, 0.0, 1.0]})
+    ens = two["risk_coverage"]["judge ensemble (mean)"]
+    assert ens["aurc"] == round(ab.aurc([0.2, 0.7, 0.1, 0.9], [False, True, False, True]), 4)

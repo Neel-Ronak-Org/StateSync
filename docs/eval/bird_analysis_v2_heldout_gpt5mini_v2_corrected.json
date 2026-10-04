@@ -5,6 +5,7 @@
  "wrong": 90,
  "accuracy": 0.771,
  "judges": [
+  "gpt-oss-120b",
   "zed-hosted/gemini-3.8-flash"
  ],
  "signals": {
@@ -183,11 +184,23 @@
   }
  },
  "risk_coverage": {
+  "judge gpt-oss-120b": {
+   "auroc": 0.6058,
+   "aurc": 0.1857,
+   "selective_accuracy_80": 0.8077,
+   "selective_accuracy_90": 0.7845
+  },
   "judge zed-hosted/gemini-3.8-flash": {
    "auroc": 0.6969,
    "aurc": 0.1534,
    "selective_accuracy_80": 0.8537,
    "selective_accuracy_90": 0.8203
+  },
+  "judge ensemble (mean)": {
+   "auroc": 0.7009,
+   "aurc": 0.1469,
+   "selective_accuracy_80": 0.8328,
+   "selective_accuracy_90": 0.8076
   },
   "self-consistency": {
    "auroc": 0.7387,
@@ -537,11 +550,23 @@
    }
   },
   "risk_coverage": {
+   "judge gpt-oss-120b": {
+    "auroc": 0.6337,
+    "aurc": 0.1325,
+    "selective_accuracy_80": 0.861,
+    "selective_accuracy_90": 0.8341
+   },
    "judge zed-hosted/gemini-3.8-flash": {
     "auroc": 0.7569,
     "aurc": 0.0962,
     "selective_accuracy_80": 0.9116,
     "selective_accuracy_90": 0.874
+   },
+   "judge ensemble (mean)": {
+    "auroc": 0.7605,
+    "aurc": 0.0895,
+    "selective_accuracy_80": 0.8869,
+    "selective_accuracy_90": 0.8603
    },
    "self-consistency": {
     "auroc": 0.7605,

@@ -113,9 +113,20 @@ wrong, against the judge's k most suspect (ties at random); paired, stratified b
 | self-consistency (5 samples) | **0.739** | **0.135** | 85.8% |
 | Gemini 3.8 Flash judge | 0.697 | 0.153 | 85.4% |
 | data checks first, then judge | 0.697 | 0.152 | 85.6% |
+| judge ensemble (mean of the two judges) | 0.701 | 0.147 | 83.3% |
+| gpt-oss-120b judge | 0.606 | 0.186 | 80.8% |
 
-The secondary judge, gpt-oss-120b, is partial: 220 of 393, because Groq's free-tier daily cap ran out.
-It is reported once complete.
+**The secondary judge, gpt-oss-120b,** was re-run on all 393 answers through Cheaper Inference
+(protocol change 16), after Groq's free tier stopped it at 260.
+- **Agreement with the 260 Groq-direct verdicts:**
+  - 241 (93%) are on the same side of 0.5;
+  - 230 (88%) are within 0.1;
+  - Spearman 0.77;
+  - AUROC on the overlap 0.62 (Groq) vs 0.63 (Cheaper Inference).
+- **The route check** (`bird_cheaperinference_route_check.json`): every call reported gpt-oss-120b, and
+  the reasoning-effort setting is honoured.
+- **It is the weakest ranking here.** The ensemble barely improves on Gemini alone and stays behind
+  self-consistency.
 
 ### Pre-registered tests
 
