@@ -292,8 +292,24 @@ def analyse(rows: list[dict], judges: dict[str, list[float]], fanout_ids: set[in
     return out
 
 
+FORMAT_ONLY = "output format only"      # annotate_bird.ERROR_TYPES: a scorer false negative
+
+
+def catch_matrix(rows: list[dict], annotations: dict, signals: tuple[str, ...]) -> dict[str, Any]:
+    """RQ2: per error type (blind annotation of every wrong answer), how many each signal flagged."""
+    by_type: dict[str, list[dict]] = {}
+    for r in rows:
+        t = annotations.get(str(r["question_id"]))
+        if t and not r["correct"]:
+            by_type.setdefault(t, []).append(r)
+    return {t: {"n": len(rs), **{s: sum(bool(r["signals"].get(s)) for r in rs) for s in signals}}
+            for t, rs in sorted(by_type.items(), key=lambda kv: -len(kv[1]))}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--annotations", type=Path, help="the blind error-type worksheet (annotate_bird.py errors), for RQ2 "
+                                                     "and the exploratory format-only sensitivity")
     ap.add_argument("--scores", type=Path, required=True)
     ap.add_argument("--label", required=True, help="the answers' label, to find the judge files")
     ap.add_argument("--fanout-set", type=Path, help="the frozen fan-out set (risky question ids), for H1")
@@ -302,6 +318,22 @@ def main() -> int:
     rows, judges = load(args.scores, args.label)
     fanout = set(json.loads(args.fanout_set.read_text())["risky_ids"]) if args.fanout_set else None
     report = {"scores": str(args.scores), "label": args.label, **analyse(rows, judges, fanout)}
+    if args.annotations:
+        ann = {str(i["question_id"]): i["annotation"] for i in json.loads(args.annotations.read_text())["items"] if i["annotation"]}
+        judge = judges.get(PRIMARY_JUDGE)
+        extra = DATA_CHECKS + BASELINES
+        report["rq2_catch_matrix"] = catch_matrix(rows, ann, extra)
+        if judge is not None:   # the judge's "flag" at the same rate as any data check, for the matrix: its k most suspect
+            k = sum(bool(r["signals"].get("any_data_check")) for r in rows)
+            top = set(sorted(range(len(rows)), key=lambda i: -judge[i])[:k])
+            for t in report["rq2_catch_matrix"]:
+                report["rq2_catch_matrix"][t]["judge_top_k"] = sum(1 for i, r in enumerate(rows) if i in top and not r["correct"]
+                                                                   and ann.get(str(r["question_id"])) == t)
+        # Exploratory, not pre-registered as a test: answers whose only fault is output format count as correct.
+        relabelled = [{**r, "correct": r["correct"] or ann.get(str(r["question_id"])) == FORMAT_ONLY} for r in rows]
+        sens = analyse(relabelled, judges)
+        report["sensitivity_format_only_correct"] = {k: sens[k] for k in ("n", "wrong", "accuracy", "signals", "matched_k", "risk_coverage")}
+        report["sensitivity_format_only_correct"]["tests_exploratory"] = sens["tests"]
     out = args.out or EVAL / f"bird_analysis_v2_{args.scores.stem.removeprefix('bird_scores_')}.json"
     out.write_text(json.dumps(report, indent=1) + "\n")
     print(json.dumps(report, indent=1))

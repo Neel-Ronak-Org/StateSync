@@ -25,7 +25,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The language of the card with multiverse number 149934 is French.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -47,8 +47,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Total amount spent for category 'Food' is 1234.7299.",
-   "annotation": null,
-   "note": ""
+   "annotation": "right",
+   "note": "1234.7299 for 1234.73 (rounding)"
   },
   {
    "question_id": 877,
@@ -73,7 +73,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The youngest driver who finished race No. 872 is Sergio P\u00e9rez (driverid 815), born 1990-01-26.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -95,7 +95,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "For patients with an abnormal Ig M level (IGM \u2264 40 or IGM \u2265 400), the most common diagnosis is RA.",
-   "annotation": null,
+   "annotation": "wrong",
    "note": ""
   },
   {
@@ -135,7 +135,7 @@
    ],
    "predicted_row_count": 4,
    "answer_text": "Leagues with the most matches in the 2008/2009 season:\n- England Premier League\n- Italy Serie A\n- Spain LIGA BBVA\n- France Ligue 1",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -157,7 +157,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Season page URL for the year when race No. 901 took place: http://en.wikipedia.org/wiki/2014_Formula_One_season",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -179,7 +179,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The count of distinct patients with a normal anti-ribonuclear protein level (RNP = '-' or '+-') who were admitted to the hospital (Admission = '+') is 0, per the query result.",
-   "annotation": null,
+   "annotation": "wrong",
    "note": ""
   },
   {
@@ -205,7 +205,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "For 2013 (Between 201301 and 201312) the differences in annual average consumption (CZK) for the customers with the least consumption are:\n- SME minus LAM: -13,820.919616699219 CZK (SME is lower than LAM by this amount)\n- LAM minus KAM: 5,858.199890136719 CZK (LAM is higher than KAM by this amount)\n- KAM minus SME: 7,962.7197265625 CZK (KAM is higher than SME by this amount)",
-   "annotation": null,
+   "annotation": "wrong",
    "note": ""
   },
   {
@@ -227,7 +227,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "There are 1,382 unknown-power cards whose rulings contain the phrase 'triggered ability'.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -249,7 +249,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Superhero(s) meeting the condition (male, weight_kg > 0.79 * avg(weight_kg)): King Kong",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -271,7 +271,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The ratio of male to female superheroes is 2.5566502463054186 (\u2248 2.56 male superheroes per 1 female superhero).",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -293,7 +293,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "12 drivers did not finish the 2007 Bahrain Grand Prix (not_finished_count = 12).",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -337,7 +337,7 @@
    ],
    "predicted_row_count": 4,
    "answer_text": "Players born in October 1970 (player_api_id \u2014 player_name):\n- 23729 \u2014 Chris Swailes\n- 23950 \u2014 Dean Kiely\n- 30726 \u2014 Edwin van der Sar\n- 26536 \u2014 Sander Boschker",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -359,7 +359,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Count (distinct players born before 1986 with defensive_work_rate = 'high'): 892.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -381,7 +381,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "There are 429 cards with infinite power (power = '*').",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -403,7 +403,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Paul di Resta\u2019s fastest-lap speed in race 853 was 32.50155167390781% faster than the fastest-lap speed in race 854.",
-   "annotation": null,
+   "annotation": "wrong",
    "note": ""
   },
   {
@@ -427,7 +427,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Buchanan High \u2014 average writing score: 507",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -449,7 +449,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The most common bond type is \"-\" (as returned by the query).",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -481,8 +481,8 @@
    ],
    "predicted_row_count": 2,
    "answer_text": "Eligible free rates (K-12) for the two schools returned:\n- Eleanor Roosevelt High (10th): 0.290589 (29.0589%)\n- El Camino Real Charter High (11th): 0.134436 (13.4436%)",
-   "annotation": null,
-   "note": ""
+   "annotation": "right",
+   "note": "both rates stated"
   },
   {
    "question_id": 1115,
@@ -503,7 +503,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Landon Donovan's overall rating is 25.31645569620253% higher than Jordan Bowery's on 2013/7/12.",
-   "annotation": null,
+   "annotation": "wrong",
    "note": ""
   },
   {
@@ -543,7 +543,7 @@
    ],
    "predicted_row_count": 4,
    "answer_text": "Elements that have triple bonds (bond_type = '#'): c, n, p, y.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -565,7 +565,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "There are 0 members of the Student_Club whose major_name is 'Physics Teaching'.",
-   "annotation": null,
+   "annotation": "wrong",
    "note": ""
   },
   {
@@ -587,7 +587,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Average single bonds per carcinogenic molecule (label = '+') = 20.25.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -615,7 +615,7 @@
    ],
    "predicted_row_count": 2,
    "answer_text": "Transaction times for gas stations in chain no. 11:\n- 11:55:00\n- 14:29:00",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -637,7 +637,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "There is 1 distinct male patient with CENTROMEA in ('negative','0') and SSB in ('negative','0').",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -665,7 +665,7 @@
    ],
    "predicted_row_count": 2,
    "answer_text": "The atoms in bond TR144_8_19 are: c (carbon) and h (hydrogen).",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -687,8 +687,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The percentage of borderless cards is 42.413149836331% (calculated as 0.42413149836331 \u00d7 100).",
-   "annotation": null,
-   "note": ""
+   "annotation": "wrong",
+   "note": "states 42.41% for a gold of 0.424 (%), multiplying by 100 twice"
   },
   {
    "question_id": 371,
@@ -709,7 +709,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The percentage of Story Spotlight cards whose language is French is 83.65384615384616% (\u224883.65%).",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -731,7 +731,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "There are 0 accounts in the East Bohemia region that choose issuance after transaction (POPLATEK PO OBRATU).",
-   "annotation": null,
+   "annotation": "wrong",
    "note": ""
   },
   {
@@ -753,7 +753,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "1 Japanese constructor has 0 points in 2 races (COUNT(raceID) = 2 and constructors.nationality = 'Japanese').",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -783,7 +783,7 @@
    ],
    "predicted_row_count": 2,
    "answer_text": "The elements for bond id TR001_10_11 are: c and o. The query returned two rows showing element pairs (c, o) and (o, c), indicating the bond involves elements c and o.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -805,7 +805,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Notes for the Fundraising entry on 2019-09-14: \"Secured donations to help pay for speaker gifts.\"",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -827,7 +827,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "For the patient with Diagnosis = 'SLE' (Description = '1994-02-19'), the anti-Cardiolipin antibody (aCL IgM) concentration on 1993/11/12 was 4.1.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -851,7 +851,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "For the oldest SJS patient in the result: the medical laboratory work was last completed on 1986-01-07, and the patient was 69 years old when they initially arrived at the hospital.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -873,7 +873,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The finish time for the driver who ranked second in the 2008 Chinese Grand Prix is \"+16.445\".",
-   "annotation": null,
+   "annotation": "wrong",
    "note": ""
   },
   {
@@ -895,7 +895,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "September Speaker",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -917,7 +917,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "There is 1 post owned by an elder user (Age > 65) with a score of 20 or higher.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -939,7 +939,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The ratio of votes in 2010 to votes in 2011 is 1.307099679981036 (approximately 1.3071).",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -961,7 +961,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Total number of superheroes without full name (full_name IS NULL): 122.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -983,7 +983,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "For UserId = 24, the ratio Count(posts.Id) / Count(votes.Id) = 0.375. In other words, the user has 0.375 times as many posts as votes (posts are 37.5% of the number of votes).",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -1005,7 +1005,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "There are 2 distinct male patients (born between 1936 and 1956) with creatinine phosphokinase (CPK) \u2265 250.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -1027,7 +1027,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The percentage is 0%. The query result shows percentage = 0 for Members with t_shirt_size = 'Medium' who received amount = 50.",
-   "annotation": null,
+   "annotation": "wrong",
    "note": ""
   },
   {
@@ -1049,7 +1049,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Ariel Borysiuk's overall rating is 133.7260677466863% higher than Paulin Puel's overall rating.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -1071,7 +1071,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "There are 19 distinct female patients with normal anti-scl70 (SC170 IN ('negative','0')) and no recorded symptoms (symptoms IS NULL).",
-   "annotation": null,
+   "annotation": "wrong",
    "note": ""
   },
   {
@@ -1093,7 +1093,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Spain LIGA BBVA",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -1115,7 +1115,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The total average cost that Elijah Allen spent in events in September and October is 74.07750010490417.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -1137,7 +1137,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "98.25041006014216% of LAM customers consumed more than 46.73.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -1160,7 +1160,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Top source of funds received in September 2019: School Appropration with total_amount 3000.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -1183,8 +1183,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The dataset shows Serra Angel has convertedManaCost = 5.0. The converted mana cost for \"Shrine Keeper\" is not present in the provided data, so a comparison cannot be determined from these results.",
-   "annotation": null,
-   "note": ""
+   "annotation": "wrong",
+   "note": "does not answer: says the comparison cannot be determined"
   },
   {
    "question_id": 704,
@@ -1207,7 +1207,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "For the tag with TagName = 'sample': excerptpostid = 28276 and wikipostid = 28275.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -1229,7 +1229,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Average lap time for Lewis Hamilton in the 2009 Malaysian Grand Prix: 109,398.54838709677 milliseconds (\u2248 1 minute 49.399 seconds).",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -1247,7 +1247,7 @@
    "predicted_rows": null,
    "predicted_row_count": null,
    "answer_text": "The query failed and the percentage could not be computed. Classified failure category: unclassified. Error code: 42846. Error message: \"cannot cast type boolean to double precision\nLINE 1: ...oilid IS NOT NULL AND c.cardkingdomid IS NOT NULL)::double p...\n                                                             ^\".\nThe attempted SQL failed while trying to cast a boolean expression to double precision, so no percentage for 'Coldsnap' was produced.",
-   "annotation": null,
+   "annotation": "wrong",
    "note": ""
   },
   {
@@ -1287,7 +1287,7 @@
    ],
    "predicted_row_count": 4,
    "answer_text": "The four player attribute IDs with the lowest potential who prefer to use the right foot when attacking are: 132235, 132236, 66213, 66214.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -1309,7 +1309,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The average number of test takers from Fresno schools that opened in 1980 is 137.88888888888889.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -1331,7 +1331,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The fastest lap speed (max(fastestLapSpeed)) in the 2009 Spanish Grand Prix was 202.484.",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -1365,7 +1365,7 @@
    ],
    "predicted_row_count": 3,
    "answer_text": "Races in the earliest recorded year and month:\n- British Grand Prix\n- Monaco Grand Prix\n- Indianapolis 500",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -1405,7 +1405,7 @@
    ],
    "predicted_row_count": 9,
    "answer_text": "Abu Dhabi Grand Prix coordinates: latitude 24.4672, longitude 54.6031. (Query returned this same coordinate in 9 rows.)",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -1428,7 +1428,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The tallest player is Kristof van Hout (player_api_id 148325).",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -1452,7 +1452,7 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Molecule ID TR006 \u2014 Hydrogen ratio: 0.3617021276595745 (\u224836.17%). Label: + (carcinogenic).",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   },
   {
@@ -1474,8 +1474,9 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The driver with the highest number of accidents in the Canadian Grand Prix had 2 accidents (statusid = 3).",
-   "annotation": null,
+   "annotation": "right",
    "note": ""
   }
- ]
+ ],
+ "annotator": "Claude (blind to the automatic label and the signals; 2026-10-04)"
 }

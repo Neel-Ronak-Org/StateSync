@@ -1,0 +1,1583 @@
+{
+ "kind": "answers",
+ "scores": "docs/eval/bird_scores_heldout_gpt5mini_v2_corrected.json",
+ "choices": [
+  "right",
+  "wrong"
+ ],
+ "items": [
+  {
+   "question_id": 522,
+   "db_id": "card_games",
+   "question": "Which cards are ranked 1st on EDHRec? List all of the cards name and its banned play format.\nHint: ranked 1st on EDHRec refers to edhrecRank = 1; banned refers to status = 'Banned'; play format refers to format; cards name refers to name",
+   "gold_sql": "SELECT T1.name, T2.format FROM cards AS T1 INNER JOIN legalities AS T2 ON T2.uuid = T1.uuid WHERE T1.edhrecRank = 1 AND T2.status = 'Banned' GROUP BY T1.name, T2.format",
+   "gold_rows": [
+    [
+     "Sol Ring",
+     "duel"
+    ],
+    [
+     "Sol Ring",
+     "legacy"
+    ]
+   ],
+   "gold_row_count": 2,
+   "predicted_sql": "SELECT c.name, l.format\nFROM cn_2bf53571f75f4c79.cards AS c\nJOIN cn_2bf53571f75f4c79.legalities AS l ON c.uuid = l.uuid\nWHERE c.edhrecrank = 1 AND l.status = 'Banned'",
+   "predicted_rows": [
+    [
+     "Sol Ring",
+     "duel"
+    ],
+    [
+     "Sol Ring",
+     "legacy"
+    ],
+    [
+     "Sol Ring",
+     "duel"
+    ],
+    [
+     "Sol Ring",
+     "legacy"
+    ],
+    [
+     "Sol Ring",
+     "duel"
+    ]
+   ],
+   "predicted_row_count": 66,
+   "answer_text": "The query results include only one card name: Sol Ring. The rows show the formats: duel and legacy (both repeated). The provided data does not include a status column, so I cannot confirm which formats are marked as \"Banned\" from the context given; I can only report the format values present for the card.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 665,
+   "db_id": "codebase_community",
+   "question": "What is the average monthly number of links created in 2010 for posts that have no more than 2 answers?\nHint: calculation = DIVIDE(COUNT(Id where YEAR(CreationDate) = 2010 and AnswerCount < = 2), 12)",
+   "gold_sql": "SELECT CAST(COUNT(T1.Id) AS REAL) / 12 FROM postLinks AS T1 INNER JOIN posts AS T2 ON T1.PostId = T2.Id WHERE T2.AnswerCount <= 2 AND STRFTIME('%Y', T1.CreationDate) = '2010'",
+   "gold_rows": [
+    [
+     "8.666666666666666"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT COUNT(pl.id)::numeric / 12 AS average_monthly_links\nFROM cn_f084a0aafeb24880.postlinks pl\nJOIN cn_f084a0aafeb24880.posts p ON pl.postid = p.id\nWHERE pl.creationdate >= '2010-01-01'::timestamptz\n  AND pl.creationdate < '2011-01-01'::timestamptz\n  AND COALESCE(p.answercount, 0) <= 2",
+   "predicted_rows": [
+    [
+     "8.6666666666666667"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "The average monthly number of links created in 2010 for posts with no more than 2 answers is 8.666666666666666 (\u2248 8.67). This value is the total count for 2010 meeting AnswerCount \u2264 2 divided by 12 months.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 578,
+   "db_id": "codebase_community",
+   "question": "Which user made a post titled 'Understanding what Dassault iSight is doing?' and how much is the reputation of the user?\nHint: \"Understanding what Dassault iSight is doing?\" is the Title of post; user refers to DisplayName;",
+   "gold_sql": "SELECT T1.DisplayName, T1.Reputation FROM users AS T1 INNER JOIN posts AS T2 ON T1.Id = T2.OwnerUserId WHERE T2.Title = 'Understanding what Dassault iSight is doing?'",
+   "gold_rows": [
+    [
+     "Hendy",
+     "146"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT u.displayname, u.reputation\nFROM cn_f084a0aafeb24880.posts p\nJOIN cn_f084a0aafeb24880.users u ON p.owneruserid = u.id\nWHERE p.title = 'Understanding what Dassault iSight is doing?'",
+   "predicted_rows": [
+    [
+     "Hendy",
+     "146"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "The post titled \"Understanding what Dassault iSight is doing?\" was made by the user DisplayName: Hendy. Hendy's reputation is 146.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 694,
+   "db_id": "codebase_community",
+   "question": "Provide the text of the latest 10 comments to the post with the title 'Analysing wind data with R' and the display name of the user who left it.\nHint: the latest comment refers to MAX(CreationDate);",
+   "gold_sql": "SELECT c.Text, u.DisplayName\nFROM comments c JOIN posts p ON c.PostId = p.Id LEFT JOIN users u ON c.UserId = u.Id \nWHERE p.Title = 'Analysing wind data with R' ORDER BY c.CreationDate DESC LIMIT 10;",
+   "gold_rows": [
+    [
+     "i thought of integrating seperetly until 4 m/s, between 4 and 15m/s and over 15m/s, and comparing it to a situation of 100% of the time a turbine working in optimal speed",
+     "eliavs"
+    ],
+    [
+     "well untill 4 m/s there is no wind generation and the max is 15 m/s, wind stronger than 15 m/s will make the same amount of energy",
+     "eliavs"
+    ],
+    [
+     "Regarding your question about energy, it's going to be difficult to answer. Do you know anything about your device? Do you know anything of the relationship between wind speed/direction and power? Do you know anything about the layout of the turbines at this particular site since that has a huge impact on the power as you no doubt are aware.",
+     "David Heffernan"
+    ],
+    [
+     "note that 'lag' is a term used mainly in analysis of data in time, referring to one thing occurring after another. This isn't a lag - it's perhaps more accurately called a shift - or maybe an offset - but shift is probably more common for distributions, they shift and scale.",
+     "Spacedman"
+    ],
+    [
+     "i tried ploting it with out zero's but still there is a lag",
+     "eliavs"
+    ]
+   ],
+   "gold_row_count": 10,
+   "predicted_sql": "SELECT c.text, u.displayname\nFROM cn_f084a0aafeb24880.posts p\nJOIN cn_f084a0aafeb24880.comments c ON c.postid = p.id\nLEFT JOIN cn_f084a0aafeb24880.users u ON c.userid = u.id\nWHERE p.title = 'Analysing wind data with R'\nORDER BY c.creationdate::timestamptz DESC\nLIMIT 10",
+   "predicted_rows": [
+    [
+     "i thought of integrating seperetly until 4 m/s, between 4 and 15m/s and over 15m/s, and comparing it to a situation of 100% of the time a turbine working in optimal speed",
+     "eliavs"
+    ],
+    [
+     "well untill 4 m/s there is no wind generation and the max is 15 m/s, wind stronger than 15 m/s will make the same amount of energy",
+     "eliavs"
+    ],
+    [
+     "Regarding your question about energy, it's going to be difficult to answer. Do you know anything about your device? Do you know anything of the relationship between wind speed/direction and power? Do you know anything about the layout of the turbines at this particular site since that has a huge impact on the power as you no doubt are aware.",
+     "David Heffernan"
+    ],
+    [
+     "note that 'lag' is a term used mainly in analysis of data in time, referring to one thing occurring after another. This isn't a lag - it's perhaps more accurately called a shift - or maybe an offset - but shift is probably more common for distributions, they shift and scale.",
+     "Spacedman"
+    ],
+    [
+     "i tried ploting it with out zero's but still there is a lag",
+     "eliavs"
+    ]
+   ],
+   "predicted_row_count": 10,
+   "answer_text": "Latest 10 comments (text \u2014 displayname):\n\n1) \"i thought of integrating seperetly until 4 m/s, between 4 and 15m/s and over 15m/s, and comparing it to a situation of 100% of the time a turbine working in optimal speed\" \u2014 eliavs\n\n2) \"well untill 4 m/s there is no wind generation and the max is 15 m/s, wind stronger than 15 m/s will make the same amount of energy\" \u2014 eliavs\n\n3) \"Regarding your question about energy, it's going to be difficult to answer. Do you know anything about your device? Do you know anything of the relationship between wind speed/direction and power? Do you know anything about the layout of the turbines at this particular site since that has a huge impact on the power as you no doubt are aware.\" \u2014 David Heffernan\n\n4) \"note that 'lag' is a term used mainly in analysis of data in time, referring to one thing occurring after another. This isn't a lag - it's perhaps more accurately called a shift - or maybe an offset - but shift is probably more common for distributions, they shift and scale.\" \u2014 Spacedman\n\n5) \"i tried ploting it with out zero's but still there is a lag\" \u2014 eliavs\n\n6) \"well yes mainly from literature and other works on wind for the purpose of wind farms\" \u2014 eliavs\n\n7) \"judging from the graph, the problem is not the lag. What you have plotted is roughly goodness of fit. So it seems that Weibull distribution is not apropriate for your data. I see that there is a bunch up near zero, do you have zero values in your data? In that case you will need to model zero values separately. So first suggestion would be to try Weibull for non zero values. Also why Weibull, is there particular reason, some reference from similar work perhaps?\" \u2014 mpiktas\n\n8) \"yup i have thanks to all that helped me!!\" \u2014 eliavs\n\n9) \"+1, interesting question, you might find that soon you will have enough reputation :)\" \u2014 mpiktas\n\n10) \"About the picture, post to some image hosting and put a link -- I'll convert it into a pasted-in picture.\" \u2014 mbq",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 1399,
+   "db_id": "student_club",
+   "question": "Did Maya Mclean attend the 'Women's Soccer' event? YES or NO.\nHint: Maya Mclean is the full name; full name refers to first_name, last_name; 'Women's Soccer' is an event_name",
+   "gold_sql": "SELECT CASE WHEN COUNT(*) > 0 THEN 'YES' ELSE 'NO' END FROM member AS T1 INNER JOIN attendance AS T2 ON T1.member_id = T2.link_to_member INNER JOIN event AS T3 ON T2.link_to_event = T3.event_id WHERE T1.first_name = 'Maya' AND T1.last_name = 'Mclean' AND T3.event_name = 'Women''s Soccer'",
+   "gold_rows": [
+    [
+     "YES"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT CASE WHEN COUNT(a.link_to_member) > 0 THEN 'YES' ELSE 'NO' END AS attended\nFROM cn_97b3964026cb47ff.attendance a\nJOIN cn_97b3964026cb47ff.member m ON a.link_to_member = m.member_id\nJOIN cn_97b3964026cb47ff.event e ON a.link_to_event = e.event_id\nWHERE m.first_name = 'Maya' AND m.last_name = 'Mclean' AND e.event_name = 'Women''s Soccer'",
+   "predicted_rows": [
+    [
+     "YES"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "YES \u2014 the query result shows attended = \"YES\", indicating Maya Mclean attended the 'Women's Soccer' event.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 1231,
+   "db_id": "thrombosis_prediction",
+   "question": "For patient born between 1936-1956, how many male patients have creatinine phosphokinase beyond the normal range?\nHint: born between 1936-1956 refers to year(Birthday) BETWEEN '1936' AND '1956'; male patients refers to sex = 'M'; creatinine phosphokinase beyond the normal range refers to CPK > = 250; Should consider DISTINCT in the final result;",
+   "gold_sql": "SELECT COUNT(DISTINCT T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE STRFTIME('%Y', T1.Birthday) BETWEEN '1936' AND '1956' AND T1.SEX = 'M' AND T2.CPK >= 250",
+   "gold_rows": [
+    [
+     "2"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT COUNT(DISTINCT p.id) AS male_patient_count\nFROM cn_be782f3725e34f54.patient p\nJOIN cn_be782f3725e34f54.laboratory l ON l.id = p.id\nWHERE p.sex = 'M'\n  AND p.birthday::timestamptz BETWEEN '1936-01-01'::timestamptz AND '1956-12-31'::timestamptz\n  AND l.cpk >= 250.0",
+   "predicted_rows": [
+    [
+     "2"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "There are 2 distinct male patients (born between 1936 and 1956) with creatinine phosphokinase (CPK) \u2265 250.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 1032,
+   "db_id": "european_football_2",
+   "question": "Give the name of the league with the highest matches of all time and how many matches were played in the said league.\nHint: league with highest matches of all time refers to MAX(COUNT(league_id));",
+   "gold_sql": "SELECT l.name, COUNT(m.id) AS match_count FROM League AS l JOIN Match AS m ON l.id = m.league_id GROUP BY l.id, l.name HAVING COUNT(m.id) = (SELECT MAX(match_count) FROM (SELECT COUNT(id) AS match_count FROM Match GROUP BY league_id ) )",
+   "gold_rows": [
+    [
+     "England Premier League",
+     "3040"
+    ],
+    [
+     "France Ligue 1",
+     "3040"
+    ],
+    [
+     "Spain LIGA BBVA",
+     "3040"
+    ]
+   ],
+   "gold_row_count": 3,
+   "predicted_sql": "SELECT l.name, COUNT(m.id) AS matches_count\nFROM cn_e1b70dcdfda248fc.league l\nJOIN cn_e1b70dcdfda248fc.match m ON l.id = m.league_id\nGROUP BY l.name\nORDER BY COUNT(m.id) DESC\nLIMIT 1",
+   "predicted_rows": [
+    [
+     "England Premier League",
+     "3040"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "The league with the highest matches of all time is: England Premier League with 3,040 matches played.",
+   "annotation": "wrong",
+   "note": ""
+  },
+  {
+   "question_id": 671,
+   "db_id": "codebase_community",
+   "question": "What is the display name of the user who acquired the first Autobiographer badge?\nHint: Autobiographer is the name of the badge; acquired the first refers to MIN(Date);",
+   "gold_sql": "SELECT DISTINCT u.DisplayName FROM users AS u JOIN badges AS b ON u.Id = b.UserId WHERE b.Name = 'Autobiographer' AND b.Date = ( SELECT MIN(Date) FROM badges WHERE Name = 'Autobiographer')",
+   "gold_rows": [
+    [
+     "Geoff Dalgas"
+    ],
+    [
+     "Jarrod Dixon"
+    ],
+    [
+     "Vince"
+    ],
+    [
+     "csgillespie"
+    ],
+    [
+     "Pierre"
+    ]
+   ],
+   "gold_row_count": 12,
+   "predicted_sql": "SELECT u.displayname\nFROM cn_f084a0aafeb24880.badges b\nJOIN cn_f084a0aafeb24880.users u ON u.id = b.userid\nWHERE b.name = 'Autobiographer'\n  AND b.date::timestamptz = (\n    SELECT MIN(b2.date::timestamptz)\n    FROM cn_f084a0aafeb24880.badges b2\n    WHERE b2.name = 'Autobiographer'\n  )",
+   "predicted_rows": [
+    [
+     "Geoff Dalgas"
+    ],
+    [
+     "Jarrod Dixon"
+    ],
+    [
+     "Vince"
+    ],
+    [
+     "csgillespie"
+    ],
+    [
+     "Pierre"
+    ]
+   ],
+   "predicted_row_count": 12,
+   "answer_text": "Geoff Dalgas",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 27,
+   "db_id": "california_schools",
+   "question": "Give the names and average scores in writing for the schools that were opened after 1991 or closed before 2000? Also, list the communication number of the schools if there is any.\nHint: Communication number refers to phone number.",
+   "gold_sql": "SELECT T2.School, T1.AvgScrWrite, T2.Phone FROM schools AS T2 LEFT JOIN satscores AS T1 ON T2.CDSCode = T1.cds WHERE strftime('%Y', T2.OpenDate) > '1991' OR strftime('%Y', T2.ClosedDate) < '2000'",
+   "gold_rows": [
+    [
+     "FAME Public Charter",
+     "505",
+     "None"
+    ],
+    [
+     "Envision Academy for Arts & Technology",
+     "395",
+     "(510) 596-8901"
+    ],
+    [
+     "Aspire California College Preparatory Academy",
+     "None",
+     "None"
+    ],
+    [
+     "Community School for Creative Education",
+     "None",
+     "(510) 686-4131"
+    ],
+    [
+     "Yu Ming Charter",
+     "None",
+     "(510) 452-2063"
+    ]
+   ],
+   "gold_row_count": 8574,
+   "predicted_sql": "SELECT s.school, ss.avgscrwrite, s.phone\nFROM cn_9240ceb08edb4938.schools s\nLEFT JOIN cn_9240ceb08edb4938.satscores ss\n  ON ss.cds = s.cdscode AND ss.rtype = 'S'\nWHERE (s.opendate::timestamptz > '1991-12-31'::timestamptz OR s.closeddate::timestamptz < '2000-01-01'::timestamptz)",
+   "predicted_rows": [
+    [
+     "FAME Public Charter",
+     "505",
+     "None"
+    ],
+    [
+     "Envision Academy for Arts & Technology",
+     "395",
+     "(510) 596-8901"
+    ],
+    [
+     "Aspire California College Preparatory Academy",
+     "None",
+     "None"
+    ],
+    [
+     "Community School for Creative Education",
+     "None",
+     "(510) 686-4131"
+    ],
+    [
+     "Yu Ming Charter",
+     "None",
+     "(510) 452-2063"
+    ]
+   ],
+   "predicted_row_count": 8574,
+   "answer_text": "I cannot determine which schools were opened after 1991 or closed before 2000 because the provided result set includes only these columns: school, avgscrwrite, and phone \u2014 it does not include any opening or closing year data to apply your criteria. If you can provide a column with opening/closing years or a list of schools that meet the date criteria, I can return names, their avgscrwrite, and phone numbers from the dataset.\n\nCaveat: The query results shown are the first 1,000 rows of a larger result set; the full result may include more schools.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 1507,
+   "db_id": "debit_card_specializing",
+   "question": "Please list the disparate time of the transactions taken place in the gas stations from chain no. 11.",
+   "gold_sql": "SELECT DISTINCT T1.Time FROM transactions_1k AS T1 INNER JOIN gasstations AS T2 ON T1.GasStationID = T2.GasStationID WHERE T2.ChainID = 11",
+   "gold_rows": [
+    [
+     "14:29:00"
+    ],
+    [
+     "11:55:00"
+    ]
+   ],
+   "gold_row_count": 2,
+   "predicted_sql": "SELECT DISTINCT t.time\nFROM cn_dfa531d796da43e7.transactions_1k t\nJOIN cn_dfa531d796da43e7.gasstations g ON t.gasstationid = g.gasstationid\nWHERE g.chainid = 11::bigint",
+   "predicted_rows": [
+    [
+     "11:55:00"
+    ],
+    [
+     "14:29:00"
+    ]
+   ],
+   "predicted_row_count": 2,
+   "answer_text": "Transaction times for gas stations in chain no. 11:\n- 11:55:00\n- 14:29:00",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 24,
+   "db_id": "california_schools",
+   "question": "Give the names of the schools with the percent eligible for free meals in K-12 is more than 0.1 and test takers whose test score is greater than or equal to 1500?\nHint: Percent eligible for free meals = Free Meal Count (K-12) / Total (Enrollment (K-12)",
+   "gold_sql": "SELECT T2.\"School Name\"\nFROM satscores AS T1 INNER JOIN frpm AS T2 ON T1.cds = T2.CDSCode \nWHERE CAST(T2.\"Free Meal Count (K-12)\" AS REAL) / T2.\"Enrollment (K-12)\" > 0.1 AND T1.NumGE1500 > 0 AND rtype = 'S'",
+   "gold_rows": [
+    [
+     "FAME Public Charter"
+    ],
+    [
+     "Envision Academy for Arts & Technology"
+    ],
+    [
+     "Alameda Science and Technology Institute"
+    ],
+    [
+     "Alameda High"
+    ],
+    [
+     "Alternatives in Action"
+    ]
+   ],
+   "gold_row_count": 1142,
+   "predicted_sql": "SELECT f.\"School Name\"\nFROM cn_9240ceb08edb4938.frpm f\nJOIN cn_9240ceb08edb4938.satscores s ON f.cdscode = s.cds\nWHERE (f.\"Free Meal Count (K-12)\"::double precision / NULLIF(f.\"Enrollment (K-12)\"::double precision, 0)) > 0.1\nAND s.numge1500 > 0",
+   "predicted_rows": [
+    [
+     "FAME Public Charter"
+    ],
+    [
+     "Envision Academy for Arts & Technology"
+    ],
+    [
+     "Alameda Science and Technology Institute"
+    ],
+    [
+     "Alameda High"
+    ],
+    [
+     "Alternatives in Action"
+    ]
+   ],
+   "predicted_row_count": 1165,
+   "answer_text": "I cannot determine which schools meet those criteria from the provided data. The query results include only a single column (School Name) for the first 1,000 rows and do not include Free Meal Count, Enrollment (K-12), test taker counts, or test scores. Without those fields I cannot compute percent eligible for free meals nor filter by test scores \u22651500.",
+   "annotation": "wrong",
+   "note": ""
+  },
+  {
+   "question_id": 1079,
+   "db_id": "european_football_2",
+   "question": "Which player is the tallest?\nHint: tallest player refers to MAX(height);",
+   "gold_sql": "SELECT player_name FROM Player ORDER BY height DESC LIMIT 1",
+   "gold_rows": [
+    [
+     "Kristof van Hout"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT p.player_api_id, p.player_name\nFROM cn_e1b70dcdfda248fc.player p\nWHERE p.height = (SELECT MAX(p2.height) FROM cn_e1b70dcdfda248fc.player p2)",
+   "predicted_rows": [
+    [
+     "148325",
+     "Kristof van Hout"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "The tallest player is Kristof van Hout (player_api_id 148325).",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 1105,
+   "db_id": "european_football_2",
+   "question": "How was Francesco Migliore's attacking work rate on 2015/5/1?\nHint: Francesco Migliore refers to player_name = 'Francesco Migliore'; on 2015/5/1 refers to date LIKE '2015-05-01%';",
+   "gold_sql": "SELECT t2.attacking_work_rate FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE t2.\"date\" LIKE '2015-05-01%' AND t1.player_name = 'Francesco Migliore'",
+   "gold_rows": [
+    [
+     "medium"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT pa.attacking_work_rate\nFROM cn_e1b70dcdfda248fc.player AS p\nJOIN cn_e1b70dcdfda248fc.player_attributes AS pa\n  ON p.player_api_id = pa.player_api_id\nWHERE p.player_name = 'Francesco Migliore'\n  AND pa.date::timestamptz >= '2015-05-01'::timestamptz\n  AND pa.date::timestamptz < '2015-05-02'::timestamptz",
+   "predicted_rows": [
+    [
+     "medium"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "Francesco Migliore's attacking work rate on 2015-05-01 was: medium.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 1422,
+   "db_id": "student_club",
+   "question": "State the category of events were held at MU 215.\nHint: 'MU 215' is the location of event;",
+   "gold_sql": "SELECT `type`\nFROM `event`\nWHERE `location` = 'MU 215';",
+   "gold_rows": [
+    [
+     "Meeting"
+    ],
+    [
+     "Election"
+    ],
+    [
+     "Guest Speaker"
+    ],
+    [
+     "Guest Speaker"
+    ],
+    [
+     "Guest Speaker"
+    ]
+   ],
+   "gold_row_count": 19,
+   "predicted_sql": "SELECT DISTINCT e.type\nFROM cn_97b3964026cb47ff.event e\nWHERE e.location = 'MU 215'",
+   "predicted_rows": [
+    [
+     "Election"
+    ],
+    [
+     "Guest Speaker"
+    ],
+    [
+     "Meeting"
+    ]
+   ],
+   "predicted_row_count": 3,
+   "answer_text": "Events held at MU 215 were: Election; Guest Speaker; Meeting.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 685,
+   "db_id": "codebase_community",
+   "question": "Identify the total views on the post 'Computer Game Datasets'. Name the user who posted it last time.\nHint: total views refer to ViewCount; Name the user refers to DisplayName; post 'Computer Game Datasets' refers to Text = 'Computer Game Datasets';",
+   "gold_sql": "SELECT T2.ViewCount, T3.DisplayName FROM postHistory AS T1 INNER JOIN posts AS T2 ON T1.PostId = T2.Id INNER JOIN users AS T3 ON T2.LastEditorUserId = T3.Id WHERE T1.Text = 'Computer Game Datasets'",
+   "gold_rows": [
+    [
+     "1708",
+     "mbq"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT DISTINCT ON (ph.postid) p.viewcount, u.displayname\nFROM cn_f084a0aafeb24880.posthistory ph\nJOIN cn_f084a0aafeb24880.posts p ON ph.postid = p.id\nJOIN cn_f084a0aafeb24880.users u ON ph.userid = u.id\nWHERE ph.text = 'Computer Game Datasets'\nORDER BY ph.postid, ph.creationdate::timestamptz DESC",
+   "predicted_rows": [
+    [
+     "1708",
+     "Menno"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "Total views (ViewCount) on the post 'Computer Game Datasets' are 1708. The post was last posted by user DisplayName: Menno.",
+   "annotation": "wrong",
+   "note": ""
+  },
+  {
+   "question_id": 200,
+   "db_id": "toxicology",
+   "question": "Find the triple-bonded molecules which are carcinogenic.\nHint: triple-bonded molecules refers to bond_type = '#'; carcinogenic refers to label = '+'",
+   "gold_sql": "SELECT DISTINCT T2.molecule_id FROM bond AS T1 INNER JOIN molecule AS T2 ON T1.molecule_id = T2.molecule_id WHERE T1.bond_type = '#' AND T2.label = '+'",
+   "gold_rows": [
+    [
+     "TR041"
+    ],
+    [
+     "TR499"
+    ]
+   ],
+   "gold_row_count": 2,
+   "predicted_sql": "SELECT DISTINCT m.molecule_id\nFROM cn_426229f583924ad0.molecule AS m\nJOIN cn_426229f583924ad0.bond AS b\n  ON b.molecule_id = m.molecule_id\nWHERE m.label = '+'\n  AND b.bond_type = '#'",
+   "predicted_rows": [
+    [
+     "TR041"
+    ],
+    [
+     "TR499"
+    ]
+   ],
+   "predicted_row_count": 2,
+   "answer_text": "The triple-bonded molecules that are carcinogenic (bond_type = '#' and label = '+') are: TR041 and TR499.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 1505,
+   "db_id": "debit_card_specializing",
+   "question": "Among the customers who paid in euro, how many of them have a monthly consumption of over 1000?\nHint: Pays in euro = Currency = 'EUR'.",
+   "gold_sql": "SELECT COUNT(DISTINCT T1.CustomerID) FROM yearmonth AS T1 INNER JOIN customers AS T2 ON T1.CustomerID = T2.CustomerID WHERE T2.Currency = 'EUR' AND T1.Consumption > 1000.00",
+   "gold_rows": [
+    [
+     "391"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT COUNT(DISTINCT y.customerid) FROM cn_dfa531d796da43e7.yearmonth y JOIN cn_dfa531d796da43e7.customers c ON y.customerid = c.customerid WHERE c.currency = 'EUR' AND y.consumption > 1000",
+   "predicted_rows": [
+    [
+     "391"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "There are 391 customers who pay in euro (Currency = 'EUR') with monthly consumption over 1000.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 797,
+   "db_id": "superhero",
+   "question": "Which superheroes have blue eyes with brown hair?\nHint: which superheroes refers to superhero_name; blue eyes refers to color = 'Blue' and color.id = eye_colour_id; brown hair refers to color = 'Brown' and color.id = hair_colour_id;",
+   "gold_sql": "SELECT T1.superhero_name FROM superhero AS T1 INNER JOIN colour AS T2 ON T1.eye_colour_id = T2.id INNER JOIN colour AS T3 ON T1.hair_colour_id = T3.id WHERE T2.colour = 'Blue' AND T3.colour = 'Brown'",
+   "gold_rows": [
+    [
+     "Atlas"
+    ],
+    [
+     "Atlas"
+    ],
+    [
+     "Big Man"
+    ],
+    [
+     "Bloodaxe"
+    ],
+    [
+     "Blue Beetle"
+    ]
+   ],
+   "gold_row_count": 22,
+   "predicted_sql": "SELECT s.superhero_name\nFROM cn_b710015657fa447c.superhero s\nJOIN cn_b710015657fa447c.colour e ON s.eye_colour_id = e.id\nJOIN cn_b710015657fa447c.colour h ON s.hair_colour_id = h.id\nWHERE e.colour = 'Blue' AND h.colour = 'Brown'",
+   "predicted_rows": [
+    [
+     "Atlas"
+    ],
+    [
+     "Atlas"
+    ],
+    [
+     "Big Man"
+    ],
+    [
+     "Bloodaxe"
+    ],
+    [
+     "Blue Beetle"
+    ]
+   ],
+   "predicted_row_count": 22,
+   "answer_text": "The superheroes with blue eyes and brown hair are: Atlas, Big Man, Bloodaxe, Blue Beetle, Blue Beetle II, Captain Epic, Chewbacca, Fabian Cortez, Gravity, Hawkman, Hercules, Jack-Jack, Mister Knife, Molecule Man, Multiple Man, Rick Flag, Scarecrow, Scarlet Witch, Spider-Girl, Toxin, X-Man.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 822,
+   "db_id": "superhero",
+   "question": "How many green-skinned villains are there in the superhero universe?\nHint: green-skinned refers to colour.colour = 'Green' WHERE skin_colour_id = colour.id; villains refers to alignment = 'Bad';",
+   "gold_sql": "SELECT COUNT(T1.id) FROM superhero AS T1 INNER JOIN alignment AS T2 ON T1.alignment_id = T2.id INNER JOIN colour AS T3 ON T1.skin_colour_id = T3.id WHERE T2.alignment = 'Bad' AND T3.colour = 'Green'",
+   "gold_rows": [
+    [
+     "6"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT COUNT(s.id) AS green_villains\nFROM cn_b710015657fa447c.superhero s\nJOIN cn_b710015657fa447c.colour c ON s.skin_colour_id = c.id\nJOIN cn_b710015657fa447c.alignment a ON s.alignment_id = a.id\nWHERE c.colour = 'Green' AND a.alignment = 'Bad'",
+   "predicted_rows": [
+    [
+     "6"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "There are 6 green-skinned villains in the superhero universe according to the query results.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 227,
+   "db_id": "toxicology",
+   "question": "What is the percentage of molecules that are carcinogenic? Please provide your answer as a percentage with three decimal places.\nHint: label = '+' mean molecules are carcinogenic; percentage = DIVIDE(SUM(label = '+'), COUNT(molecule_id)) as percent",
+   "gold_sql": "SELECT ROUND(CAST(COUNT(CASE WHEN T.label = '+' THEN T.molecule_id ELSE NULL END) AS REAL) * 100 / COUNT(T.molecule_id),3) FROM molecule t",
+   "gold_rows": [
+    [
+     "44.315"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT ROUND(100.0 * SUM(CASE WHEN m.label = '+' THEN 1 ELSE 0 END)::numeric / COUNT(m.molecule_id)::numeric, 3) AS percent\nFROM cn_426229f583924ad0.molecule AS m",
+   "predicted_rows": [
+    [
+     "44.315"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "Percentage of carcinogenic molecules: 44.315% (SUM(label = '+') / COUNT(molecule_id)).",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 1483,
+   "db_id": "debit_card_specializing",
+   "question": "How much did customer 6 consume in total between August and November 2013?\nHint: Between August And November 2013 refers to Between 201308 And 201311; The first 4 strings of the Date values in the yearmonth table can represent year; The 5th and 6th string of the date can refer to month.",
+   "gold_sql": "SELECT SUM(Consumption) FROM yearmonth WHERE CustomerID = 6 AND Date BETWEEN '201308' AND '201311'",
+   "gold_rows": [
+    [
+     "1224.96"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT SUM(y.consumption) AS total_consumption\nFROM cn_dfa531d796da43e7.yearmonth y\nWHERE y.customerid = 6\n  AND to_date(y.date, 'YYYYMM')::timestamptz BETWEEN to_date('201308','YYYYMM')::timestamptz AND to_date('201311','YYYYMM')::timestamptz",
+   "predicted_rows": [
+    [
+     "1224.96"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "Total consumption for customer 6 between August and November 2013 (201308\u2013201311) is 1224.96.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 794,
+   "db_id": "superhero",
+   "question": "Which hero was the fastest?\nHint: which hero refers to superhero_name; fastest refers to MAX(attribute_value) WHERE attribute_name = 'Speed';",
+   "gold_sql": "SELECT s.superhero_name FROM superhero AS s JOIN hero_attribute AS ha ON s.id = ha.hero_id JOIN attribute AS a ON ha.attribute_id = a.id WHERE a.attribute_name = 'Speed' AND ha.attribute_value = ( SELECT MAX(ha2.attribute_value) FROM hero_attribute AS ha2 JOIN attribute AS a2 ON ha2.attribute_id = a2.id WHERE a2.attribute_name = 'Speed' )",
+   "gold_rows": [
+    [
+     "Air-Walker"
+    ],
+    [
+     "Angela"
+    ],
+    [
+     "Ardina"
+    ],
+    [
+     "Aurora"
+    ],
+    [
+     "Ben 10"
+    ]
+   ],
+   "gold_row_count": 40,
+   "predicted_sql": "SELECT s.superhero_name\nFROM cn_b710015657fa447c.hero_attribute ha\nJOIN cn_b710015657fa447c.attribute a ON ha.attribute_id = a.id\nJOIN cn_b710015657fa447c.superhero s ON ha.hero_id = s.id\nWHERE a.attribute_name = 'Speed'\nORDER BY ha.attribute_value DESC\nLIMIT 1",
+   "predicted_rows": [
+    [
+     "Air-Walker"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "Air-Walker was the fastest (highest Speed).",
+   "annotation": "wrong",
+   "note": ""
+  },
+  {
+   "question_id": 340,
+   "db_id": "card_games",
+   "question": "Which are the card ids that have incredibly powerful foils.\nHint: incredibly poweful foils refers to cardKingdomFoilId is not null AND cardKingdomId is not null",
+   "gold_sql": "SELECT id FROM cards WHERE cardKingdomFoilId IS NOT NULL AND cardKingdomId IS NOT NULL",
+   "gold_rows": [
+    [
+     "4"
+    ],
+    [
+     "5"
+    ],
+    [
+     "6"
+    ],
+    [
+     "9"
+    ],
+    [
+     "10"
+    ]
+   ],
+   "gold_row_count": 25061,
+   "predicted_sql": "SELECT c.id\nFROM cn_2bf53571f75f4c79.cards c\nWHERE c.cardkingdomfoilid IS NOT NULL\n  AND c.cardkingdomid IS NOT NULL",
+   "predicted_rows": [
+    [
+     "48207"
+    ],
+    [
+     "48208"
+    ],
+    [
+     "48209"
+    ],
+    [
+     "48210"
+    ],
+    [
+     "48211"
+    ]
+   ],
+   "predicted_row_count": 25061,
+   "answer_text": "These card ids meet the \u201cincredibly powerful foils\u201d condition (cardKingdomFoilId IS NOT NULL AND cardKingdomId IS NOT NULL). The query returned 1,000 rows; the first 50 ids are:\n21026, 21027, 21028, 21029, 21030, 21031, 21074, 21032, 21033, 21034, 21035, 21036, 21037, 21087, 21038, 21039, 21040, 21041, 21042, 21043, 21044, 21045, 21046, 21047, 21048, 21049, 21050, 21051, 21052, 21053, 21054, 21055, 21174, 21056, 21057, 21058, 21059, 21060, 21061, 21062, 21063, 21064, 21065, 21066, 21067, 21088, 21068, 21069, 21070, 21071.\n\nCaveat: showing the first 1,000 rows; the full result set is larger.",
+   "annotation": "right",
+   "note": "same count, order differs: assumed the same set"
+  },
+  {
+   "question_id": 1479,
+   "db_id": "debit_card_specializing",
+   "question": "Which year recorded the most consumption of gas paid in CZK?\nHint: The first 4 strings of the Date values in the yearmonth table can represent year.",
+   "gold_sql": "SELECT SUBSTR(T2.Date, 1, 4) FROM customers AS T1 INNER JOIN yearmonth AS T2 ON T1.CustomerID = T2.CustomerID WHERE T1.Currency = 'CZK' GROUP BY SUBSTR(T2.Date, 1, 4) ORDER BY SUM(T2.Consumption) DESC LIMIT 1",
+   "gold_rows": [
+    [
+     "2013"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT left(y.date,4) AS year\nFROM cn_dfa531d796da43e7.yearmonth y\nJOIN cn_dfa531d796da43e7.customers c ON y.customerid = c.customerid\nWHERE c.currency = 'CZK'\nGROUP BY left(y.date,4)\nORDER BY sum(y.consumption) DESC\nLIMIT 1",
+   "predicted_rows": [
+    [
+     "2013"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "2013",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 1270,
+   "db_id": "thrombosis_prediction",
+   "question": "Among the patients who has a normal anti-scl70, how many of them are female and does not have any symptom?\nHint: normal anti-scl70 refers to SC170 IN('negative', '0'); female refers to Sex = 'F'; does not have any symptom refers to symptoms IS NULL; Should consider DISTINCT in the final result;",
+   "gold_sql": "SELECT COUNT(DISTINCT T1.ID) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID INNER JOIN Examination AS T3 ON T3.ID = T2.ID WHERE (T2.SC170 = 'negative' OR T2.SC170 = '0') AND T1.SEX = 'F' AND T3.Symptoms IS NULL",
+   "gold_rows": [
+    [
+     "2"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT COUNT(DISTINCT p.id) FROM cn_be782f3725e34f54.patient p WHERE p.sex = 'F' AND EXISTS (SELECT 1 FROM cn_be782f3725e34f54.laboratory l WHERE l.id = p.id AND lower(l.sc170) IN ('negative','0')) AND NOT EXISTS (SELECT 1 FROM cn_be782f3725e34f54.examination e WHERE e.id = p.id AND e.symptoms IS NOT NULL)",
+   "predicted_rows": [
+    [
+     "19"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "There are 19 distinct female patients with normal anti-scl70 (SC170 IN ('negative','0')) and no recorded symptoms (symptoms IS NULL).",
+   "annotation": "wrong",
+   "note": ""
+  },
+  {
+   "question_id": 100,
+   "db_id": "financial",
+   "question": "Among the account opened, how many female customers who were born before 1950 and stayed in Sokolov?\nHint: Customers refer to clients; Female refers to gender = 'F'; Names of districts appear in column A2",
+   "gold_sql": "SELECT COUNT(T2.client_id) FROM district AS T1 INNER JOIN client AS T2 ON T1.district_id = T2.district_id WHERE T2.gender = 'F' AND STRFTIME('%Y', T2.birth_date) < '1950' AND T1.A2 = 'Sokolov'",
+   "gold_rows": [
+    [
+     "8"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT count(DISTINCT c.client_id) FROM cn_b7185de16da64408.client c JOIN cn_b7185de16da64408.disp d ON d.client_id = c.client_id JOIN cn_b7185de16da64408.account a ON d.account_id = a.account_id JOIN cn_b7185de16da64408.district di ON c.district_id = di.district_id WHERE c.gender = 'F' AND c.birth_date::timestamptz < '1950-01-01'::timestamptz AND di.a2 = 'Sokolov'",
+   "predicted_rows": [
+    [
+     "8"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "There are 8 female customers born before 1950 who stayed in Sokolov.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 371,
+   "db_id": "card_games",
+   "question": "What is the percentage of cards whose language is French among the Story Spotlight cards?\nHint: Story Spotlight card refers to isStorySpotlight = 1; French is the language; Percentage = Divide(Count(distinct id) where language = 'French' and isStorySpotlight = 1, Count(distinct id) where isStorySpotlight = 1)*100",
+   "gold_sql": "SELECT CAST(COUNT(DISTINCT CASE WHEN T2.language = 'French' THEN T1.id ELSE NULL END) AS REAL) * 100 / COUNT(DISTINCT T1.id) FROM cards AS T1 LEFT JOIN foreign_data AS T2 ON T1.uuid = T2.uuid WHERE T1.isStorySpotlight = 1",
+   "gold_rows": [
+    [
+     "83.65384615384616"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT CASE WHEN COUNT(DISTINCT c.id)=0 THEN 0 ELSE 100.0 * COUNT(DISTINCT CASE WHEN fd.language = 'French' THEN c.id END) / COUNT(DISTINCT c.id) END AS percentage\nFROM cn_2bf53571f75f4c79.cards c\nLEFT JOIN cn_2bf53571f75f4c79.foreign_data fd ON fd.uuid = c.uuid\nWHERE c.isstoryspotlight::text = '1'",
+   "predicted_rows": [
+    [
+     "83.6538461538461538"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "The percentage of Story Spotlight cards whose language is French is 83.65384615384616% (\u224883.65%).",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 341,
+   "db_id": "card_games",
+   "question": "What are the borderless card ids available without powerful foils?\nHint: borderless' refers to borderColor; powerful foils refers to cardKingdomFoilId paired with cardKingdomId are not null",
+   "gold_sql": "SELECT id FROM cards WHERE borderColor = 'borderless' AND (cardKingdomFoilId IS NULL OR cardKingdomId IS NULL)",
+   "gold_rows": [
+    [
+     "23004"
+    ],
+    [
+     "25350"
+    ],
+    [
+     "25355"
+    ],
+    [
+     "25357"
+    ],
+    [
+     "25359"
+    ]
+   ],
+   "gold_row_count": 72,
+   "predicted_sql": "SELECT c.id\nFROM cn_2bf53571f75f4c79.cards c\nWHERE c.bordercolor = 'borderless'\n  AND (c.cardkingdomfoilid IS NULL OR c.cardkingdomid IS NULL)",
+   "predicted_rows": [
+    [
+     "48440"
+    ],
+    [
+     "48441"
+    ],
+    [
+     "48442"
+    ],
+    [
+     "48262"
+    ],
+    [
+     "48263"
+    ]
+   ],
+   "predicted_row_count": 72,
+   "answer_text": "The borderless card ids available without powerful foils (from the query results) are:\n23004, 25355, 25357, 25350, 25359, 25361, 33094, 33095, 33096, 33097, 33098, 33099, 33100, 33101, 33102, 33103, 33104, 33105, 33106, 33107, 33108, 33109, 33110, 33111, 33112, 33113, 33114, 33115, 33116, 33117, 39967, 48448, 48449, 48450, 48451, 48436, 48437, 48438, 48439, 48440, 48441, 48442, 48262, 48263, 48264, 48265, 48266, 48443, 48444, 48445",
+   "annotation": "right",
+   "note": "same count, order differs: assumed the same set"
+  },
+  {
+   "question_id": 933,
+   "db_id": "formula_1",
+   "question": "What was Lewis Hamilton's final rank in the 2008 Chinese Grand Prix?\nHint: Lewis Hamilton refers to the full name of the driver; Full name of the driver refers to drivers.forename and drivers.surname; final rank refers to positionOrder; Chinese Grand Prix refers to races.name = 'Chinese Grand Prix';",
+   "gold_sql": "SELECT T2.positionOrder FROM races AS T1 INNER JOIN results AS T2 ON T2.raceId = T1.raceId INNER JOIN drivers AS T3 ON T3.driverId = T2.driverId WHERE T3.forename = 'Lewis' AND T3.surname = 'Hamilton' AND T1.name = 'Chinese Grand Prix' AND T1.year = 2008",
+   "gold_rows": [
+    [
+     "1"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT r.positionorder\nFROM cn_dbd54b57e3f84128.results r\nJOIN cn_dbd54b57e3f84128.drivers d ON r.driverid = d.driverid\nJOIN cn_dbd54b57e3f84128.races ra ON r.raceid = ra.raceid\nWHERE ra.name = 'Chinese Grand Prix'\n  AND ra.year = 2008\n  AND concat(' ', d.forename, ' ', d.surname) = ' Lewis Hamilton'",
+   "predicted_rows": [
+    [
+     "1"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "Lewis Hamilton\u2019s final rank in the 2008 Chinese Grand Prix was 1 (positionOrder = 1).",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 723,
+   "db_id": "superhero",
+   "question": "Among the superheroes with blue eyes, how many of them have the super power of \"Agility\"?\nHint: blue eyes refers to colour = 'Blue' and eye_colour_id = colour.id; super power of \"Agility\" refers to power_name = 'Agility'",
+   "gold_sql": "SELECT COUNT(T1.id) FROM superhero AS T1 INNER JOIN hero_power AS T2 ON T1.id = T2.hero_id INNER JOIN superpower AS T3 ON T2.power_id = T3.id INNER JOIN colour AS T4 ON T1.eye_colour_id = T4.id WHERE T3.power_name = 'Agility' AND T4.colour = 'Blue'",
+   "gold_rows": [
+    [
+     "83"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT COUNT(*) AS agility_blue_count\nFROM cn_b710015657fa447c.superhero s\nJOIN cn_b710015657fa447c.colour c ON s.eye_colour_id = c.id\nJOIN cn_b710015657fa447c.hero_power hp ON s.id = hp.hero_id\nJOIN cn_b710015657fa447c.superpower sp ON hp.power_id = sp.id\nWHERE c.colour = 'Blue'\n  AND sp.power_name = 'Agility'",
+   "predicted_rows": [
+    [
+     "83"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "There are 83 superheroes with blue eyes who have the super power \u201cAgility.\u201d",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 875,
+   "db_id": "formula_1",
+   "question": "Show me the season page of year when the race No. 901 took place.\nHint: the season page refers to url; race number refers to raceId;",
+   "gold_sql": "SELECT T2.url FROM races AS T1 INNER JOIN seasons AS T2 ON T2.year = T1.year WHERE T1.raceId = 901",
+   "gold_rows": [
+    [
+     "http://en.wikipedia.org/wiki/2014_Formula_One_season"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT s.url\nFROM cn_dbd54b57e3f84128.races r\nJOIN cn_dbd54b57e3f84128.seasons s ON s.year = r.year\nWHERE r.raceid = 901",
+   "predicted_rows": [
+    [
+     "http://en.wikipedia.org/wiki/2014_Formula_One_season"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "Season page URL for the year when race No. 901 took place: http://en.wikipedia.org/wiki/2014_Formula_One_season",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 39,
+   "db_id": "california_schools",
+   "question": "What is the average number of test takers from Fresno schools that opened between 1/1/1980 and 12/31/1980?\nHint: between 1/1/1980 and 12/31/1980 means the year = 1980",
+   "gold_sql": "SELECT AVG(T1.NumTstTakr) FROM satscores AS T1 INNER JOIN schools AS T2 ON T1.cds = T2.CDSCode WHERE strftime('%Y', T2.OpenDate) = '1980' AND T2.County = 'Fresno'",
+   "gold_rows": [
+    [
+     "137.88888888888889"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT AVG(s.numtsttakr) AS avg_num_test_takers\nFROM cn_9240ceb08edb4938.satscores s\nJOIN cn_9240ceb08edb4938.schools sch ON s.cds = sch.cdscode\nWHERE sch.county = 'Fresno'\n  AND sch.opendate IS NOT NULL\n  AND cast(sch.opendate AS timestamptz) BETWEEN '1980-01-01'::timestamptz AND '1980-12-31'::timestamptz",
+   "predicted_rows": [
+    [
+     "137.8888888888888889"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "The average number of test takers from Fresno schools that opened in 1980 is 137.88888888888889.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 1080,
+   "db_id": "european_football_2",
+   "question": "Among the players whose preferred foot was the left foot when attacking, how many of them would remain in his position when the team attacked?\nHint: preferred foot when attacking was the left refers to preferred_foot = 'left'; players who would remain in his position when the team attacked refers to attacking_work_rate = 'low';",
+   "gold_sql": "SELECT COUNT(DISTINCT player_api_id) FROM Player_Attributes WHERE preferred_foot = 'left' AND attacking_work_rate = 'low'",
+   "gold_rows": [
+    [
+     "189"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT COUNT(DISTINCT pa.player_api_id) AS left_preferred_and_low_attackers\nFROM cn_e1b70dcdfda248fc.player_attributes pa\nWHERE pa.preferred_foot = 'left' AND pa.attacking_work_rate = 'low'",
+   "predicted_rows": [
+    [
+     "189"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "There are 189 players whose preferred foot is left and who would remain in their position when the team attacked (preferred_foot = 'left' and attacking_work_rate = 'low'), according to the query result.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 1405,
+   "db_id": "student_club",
+   "question": "List all the budgeted categories for the 'April Speaker' event in an ascending order, along with their amount budgeted.\nHint: 'April Speaker' is an event name; amount budgeted refers to SUM(amount); budget categories refers to category",
+   "gold_sql": "SELECT T2.category, SUM(T2.amount) FROM event AS T1 JOIN budget AS T2 ON T1.event_id = T2.link_to_event WHERE T1.event_name = 'April Speaker' GROUP BY T2.category ORDER BY SUM(T2.amount) ASC",
+   "gold_rows": [
+    [
+     "Parking",
+     "10"
+    ],
+    [
+     "Speaker Gifts",
+     "25"
+    ],
+    [
+     "Advertisement",
+     "75"
+    ],
+    [
+     "Food",
+     "150"
+    ]
+   ],
+   "gold_row_count": 4,
+   "predicted_sql": "SELECT b.category, SUM(b.amount) AS amount_budgeted\nFROM cn_97b3964026cb47ff.budget b\nJOIN cn_97b3964026cb47ff.event e ON b.link_to_event = e.event_id\nWHERE e.event_name = 'April Speaker'\nGROUP BY b.category\nORDER BY b.category ASC",
+   "predicted_rows": [
+    [
+     "Advertisement",
+     "75"
+    ],
+    [
+     "Food",
+     "150"
+    ],
+    [
+     "Parking",
+     "10"
+    ],
+    [
+     "Speaker Gifts",
+     "25"
+    ]
+   ],
+   "predicted_row_count": 4,
+   "answer_text": "Budget categories for the 'April Speaker' event, sorted ascending by amount budgeted:\n1. Parking \u2014 10\n2. Speaker Gifts \u2014 25\n3. Advertisement \u2014 75\n4. Food \u2014 150",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 604,
+   "db_id": "codebase_community",
+   "question": "What is the average of the up votes and the average user age for users creating more than 10 posts?\nHint: creating more than 10 post refers to Count (UserId) > 10; average of the up votes = Divide (Sum(UpVotes), Count (UserId)); average age = Divide (Sum(Age), Count(UserId))",
+   "gold_sql": "SELECT AVG(T1.UpVotes), AVG(T1.Age) FROM users AS T1 INNER JOIN ( SELECT OwnerUserId, COUNT(*) AS post_count FROM posts GROUP BY OwnerUserId HAVING post_count > 10) AS T2 ON T1.Id = T2.OwnerUserId",
+   "gold_rows": [
+    [
+     "182.2832618025751",
+     "34.083333333333336"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT SUM(u.upvotes)::double precision / COUNT(u.id) AS avg_upvotes, SUM(u.age)::double precision / COUNT(u.id) AS avg_age\nFROM cn_f084a0aafeb24880.users u\nJOIN (\n  SELECT p.owneruserid\n  FROM cn_f084a0aafeb24880.posts p\n  WHERE p.owneruserid IS NOT NULL\n  GROUP BY p.owneruserid\n  HAVING COUNT(p.owneruserid) > 10\n) q ON q.owneruserid = u.id",
+   "predicted_rows": [
+    [
+     "182.2832618025751",
+     "9.127896995708154"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "For users creating more than 10 posts: average up votes = 182.2832618025751; average user age = 9.127896995708154.",
+   "annotation": "wrong",
+   "note": "follows the hint; NULL ages in the denominator"
+  },
+  {
+   "question_id": 1241,
+   "db_id": "thrombosis_prediction",
+   "question": "For patients with abnormal platelet level, state the number of patients with lower than normal range. How is it compare to the number of patients with higher than normal range?\nHint: platelet level lower than normal range refers to PLT < 100; calculation = SUBTRACT(SUM(PLT < 100), SUM(PLT > 400)); platelet level higher than normal range refers to PLT > 400;",
+   "gold_sql": "SELECT (SELECT COUNT(DISTINCT ID) FROM Laboratory WHERE PLT < 100) AS low_count, (SELECT COUNT(DISTINCT ID) FROM Laboratory WHERE PLT > 400) AS high_count;",
+   "gold_rows": [
+    [
+     "36",
+     "82"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT\n  count(DISTINCT l.id) FILTER (WHERE l.plt < 100) AS lower_count,\n  count(DISTINCT l.id) FILTER (WHERE l.plt > 400) AS higher_count,\n  (count(DISTINCT l.id) FILTER (WHERE l.plt < 100) - count(DISTINCT l.id) FILTER (WHERE l.plt > 400)) AS difference\nFROM cn_be782f3725e34f54.laboratory l",
+   "predicted_rows": [
+    [
+     "36",
+     "82",
+     "-46"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "There are 36 patients with platelet level lower than the normal range (PLT < 100) and 82 patients with platelet level higher than the normal range (PLT > 400). The difference (lower minus higher) is -46, meaning there are 46 more patients with high platelets than low platelets in this cohort.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 868,
+   "db_id": "formula_1",
+   "question": "Where is Malaysian Grand Prix held? Give the location coordinates.\nHint: location coordinates refers to (lat, lng); Malaysian Grand Prix refers to races.name = 'Malaysian Grand Prix'",
+   "gold_sql": "SELECT DISTINCT T1.lat, T1.lng FROM circuits AS T1 INNER JOIN races AS T2 ON T2.circuitID = T1.circuitId WHERE T2.name = 'Malaysian Grand Prix'",
+   "gold_rows": [
+    [
+     "2.76083",
+     "101.738"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT c.lat AS circuit_lat, c.lng AS circuit_lng\nFROM cn_dbd54b57e3f84128.races r\nJOIN cn_dbd54b57e3f84128.circuits c ON c.circuitid = r.circuitid\nWHERE r.name = 'Malaysian Grand Prix'",
+   "predicted_rows": [
+    [
+     "2.76083",
+     "101.738"
+    ],
+    [
+     "2.76083",
+     "101.738"
+    ],
+    [
+     "2.76083",
+     "101.738"
+    ],
+    [
+     "2.76083",
+     "101.738"
+    ],
+    [
+     "2.76083",
+     "101.738"
+    ]
+   ],
+   "predicted_row_count": 19,
+   "answer_text": "The Malaysian Grand Prix location coordinates (lat, lng) are (2.76083, 101.738). The query returned this same coordinate for all 19 rows.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 1179,
+   "db_id": "thrombosis_prediction",
+   "question": "For the patient who was diagnosed with SLE on 1994/2/19, what was his/her anti-Cardiolipin antibody concentration status on 1993/11/12?\nHint: diagnosed with SLE refers to Diagnosis = 'SLE'; 1994/2/19 refers to Description = '1994-02-19'; anti-Cardiolipin refers to aCL IgM; 1993/11/12 refers to Examination Date = '1993/11/12'",
+   "gold_sql": "SELECT \"aCL IgM\" FROM Examination WHERE ID IN (SELECT ID FROM Patient WHERE Diagnosis = 'SLE' AND Description = '1994-02-19') AND \"Examination Date\" = '1993-11-12'",
+   "gold_rows": [
+    [
+     "4.1"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT e.\"aCL IgM\"\nFROM cn_be782f3725e34f54.patient AS p\nJOIN cn_be782f3725e34f54.examination AS e ON p.id = e.id\nWHERE p.diagnosis = 'SLE'\n  AND p.description::timestamptz = '1994-02-19'::timestamptz\n  AND e.\"Examination Date\"::timestamptz = '1993-11-12'::timestamptz",
+   "predicted_rows": [
+    [
+     "4.1"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "For the patient with Diagnosis = 'SLE' (Description = '1994-02-19'), the anti-Cardiolipin antibody (aCL IgM) concentration on 1993/11/12 was 4.1.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 530,
+   "db_id": "card_games",
+   "question": "List all the frame styles and cards Allen Williams worked on and add a YES/NO if the card is banned.\nHint: frame styles refers to frameVersion; cards Allen Williams worked on refers to artist = 'Allen Williams'; banned cards refers to status = 'Banned'",
+   "gold_sql": "SELECT DISTINCT T1.frameVersion, T1.name, IIF(T2.status = 'Banned', 'YES', 'NO') FROM cards AS T1 INNER JOIN legalities AS T2 ON T1.uuid = T2.uuid WHERE T1.artist = 'Allen Williams'",
+   "gold_rows": [
+    [
+     "1997",
+     "Blinking Spirit",
+     "NO"
+    ],
+    [
+     "1997",
+     "Kjeldoran Royal Guard",
+     "NO"
+    ],
+    [
+     "1997",
+     "Enervate",
+     "NO"
+    ],
+    [
+     "1997",
+     "Diminishing Returns",
+     "NO"
+    ],
+    [
+     "2003",
+     "Blinking Spirit",
+     "NO"
+    ]
+   ],
+   "gold_row_count": 83,
+   "predicted_sql": "SELECT c.frameversion, c.name, CASE WHEN bool_or(l.status = 'Banned') THEN 'YES' ELSE 'NO' END AS banned\nFROM cn_2bf53571f75f4c79.cards c\nLEFT JOIN cn_2bf53571f75f4c79.legalities l ON l.uuid = c.uuid\nWHERE c.artist = 'Allen Williams'\nGROUP BY c.frameversion, c.name",
+   "predicted_rows": [
+    [
+     "1993",
+     "Aegis of the Meek",
+     "NO"
+    ],
+    [
+     "1993",
+     "Blinking Spirit",
+     "NO"
+    ],
+    [
+     "1993",
+     "Counterspell",
+     "NO"
+    ],
+    [
+     "1993",
+     "Diminishing Returns",
+     "NO"
+    ],
+    [
+     "1993",
+     "Enervate",
+     "NO"
+    ]
+   ],
+   "predicted_row_count": 83,
+   "answer_text": "Listed below are the rows returned (frameVersion \u2014 card name \u2014 BANNED):\n1993 \u2014 Aegis of the Meek \u2014 NO\n1993 \u2014 Blinking Spirit \u2014 NO\n1993 \u2014 Counterspell \u2014 NO\n1993 \u2014 Diminishing Returns \u2014 NO\n1993 \u2014 Enervate \u2014 NO\n1993 \u2014 Errantry \u2014 NO\n1993 \u2014 Giant Growth \u2014 NO\n1993 \u2014 Hematite Talisman \u2014 NO\n1993 \u2014 Kjeldoran Royal Guard \u2014 NO\n1993 \u2014 Land Cap \u2014 NO\n1993 \u2014 Minion of Leshrac \u2014 NO\n1993 \u2014 Prismatic Ward \u2014 NO\n1993 \u2014 Suffocation \u2014 NO\n1993 \u2014 Touch of Vitae \u2014 NO\n1993 \u2014 Updraft \u2014 NO\n1993 \u2014 Venomous Breath \u2014 NO\n1993 \u2014 Whip Vine \u2014 NO\n1997 \u2014 Apocalypse \u2014 NO\n1997 \u2014 Blinking Spirit \u2014 NO\n1997 \u2014 Caldera Lake \u2014 NO\n1997 \u2014 Chaotic Goo \u2014 NO\n1997 \u2014 Counterspell \u2014 NO\n1997 \u2014 Crystalline Sliver \u2014 NO\n1997 \u2014 Dauthi Mindripper \u2014 NO\n1997 \u2014 Diminishing Returns \u2014 NO\n1997 \u2014 Disenchant \u2014 NO\n1997 \u2014 Enervate \u2014 NO\n1997 \u2014 Flowstone Blade \u2014 NO\n1997 \u2014 Giant Growth \u2014 NO\n1997 \u2014 Horned Sliver \u2014 NO\n1997 \u2014 Kjeldoran Royal Guard \u2014 NO\n1997 \u2014 Metallic Sliver \u2014 NO\n1997 \u2014 Minion of Leshrac \u2014 NO\n1997 \u2014 Rebuild \u2014 NO\n1997 \u2014 Thran Lens \u2014 NO\n2003 \u2014 Angelic Wall \u2014 NO\n2003 \u2014 Blinking Spirit \u2014 NO\n2003 \u2014 Captain of the Mists \u2014 NO\n2003 \u2014 Crystalline Sliver \u2014 NO\n2003 \u2014 Dark Favor \u2014 NO\n2003 \u2014 Divine Favor \u2014 NO\n2003 \u2014 Flowstone Blade \u2014 NO\n2003 \u2014 Gladecover Scout \u2014 NO\n2003 \u2014 Grafted Exoskeleton \u2014 NO\n2003 \u2014 Hooded Horror \u2014 NO\n2003 \u2014 Illusory Angel \u2014 NO\n2003 \u2014 Indomitable Archangel \u2014 NO\n2003 \u2014 Karmic Guide \u2014 NO\n2003 \u2014 Maritime Guard \u2014 NO\n2003 \u2014 Metallic Sliver \u2014 NO",
+   "annotation": "right",
+   "note": "same count, order differs: assumed the same set"
+  },
+  {
+   "question_id": 273,
+   "db_id": "toxicology",
+   "question": "What is the percentage of element chlorine in carcinogenic molecules?\nHint: chlorine refers to element = 'cl'; label = '+' mean molecules are carcinogenic; percentage = DIVIDE(SUM(element = 'cl'); COUNT(molecule_id)) as percentage where label = '+'",
+   "gold_sql": "SELECT CAST(COUNT( CASE WHEN T1.element = 'cl' THEN T1.element ELSE NULL END) AS REAL) * 100 / COUNT(T1.element) FROM atom AS T1 INNER JOIN molecule AS T2 ON T1.molecule_id = T2.molecule_id WHERE T2.label = '+'",
+   "gold_rows": [
+    [
+     "3.1419284940411703"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT (SUM((a.element = 'cl')::int)::numeric / NULLIF(COUNT(a.molecule_id),0)) AS percentage\nFROM cn_426229f583924ad0.molecule m\nJOIN cn_426229f583924ad0.atom a ON m.molecule_id = a.molecule_id\nWHERE m.label = '+'",
+   "predicted_rows": [
+    [
+     "0.03141928494041170098"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "The percentage of element chlorine (Cl) in carcinogenic molecules (label = '+') is 0.0314192849404117, i.e., approximately 3.1419%.",
+   "annotation": "right",
+   "note": "fraction for a percentage: formatting only, counted right"
+  },
+  {
+   "question_id": 972,
+   "db_id": "formula_1",
+   "question": "Which drivers who were born in 1971 and has the fastest lap time on the race? Give id and code of these drivers.\nHint: born in 1971 refers to year(dob) = 1971; has the fastest lap time refers to fastestLapTime has values",
+   "gold_sql": "SELECT DISTINCT T2.driverId, T2.code \nFROM results AS T1 INNER JOIN drivers AS T2 on T1.driverId = T2.driverId \nWHERE STRFTIME('%Y', T2.dob) = '1971' AND T1.fastestLapTime IS NOT NULL",
+   "gold_rows": [
+    [
+     "14",
+     "COU"
+    ],
+    [
+     "35",
+     "VIL"
+    ],
+    [
+     "37",
+     "DLR"
+    ],
+    [
+     "69",
+     "BAD"
+    ]
+   ],
+   "gold_row_count": 4,
+   "predicted_sql": "SELECT DISTINCT d.driverid, d.code\nFROM cn_dbd54b57e3f84128.drivers d\nJOIN cn_dbd54b57e3f84128.results r ON r.driverid = d.driverid\nWHERE EXTRACT(YEAR FROM d.dob::timestamptz) = 1971\n  AND r.fastestlaptime IS NOT NULL",
+   "predicted_rows": [
+    [
+     "14",
+     "COU"
+    ],
+    [
+     "35",
+     "VIL"
+    ],
+    [
+     "37",
+     "DLR"
+    ],
+    [
+     "69",
+     "BAD"
+    ]
+   ],
+   "predicted_row_count": 4,
+   "answer_text": "Drivers born in 1971 who recorded the fastest lap time in the race (id and code):\n- driverid: 14, code: COU\n- driverid: 35, code: VIL\n- driverid: 37, code: DLR\n- driverid: 69, code: BAD",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 1135,
+   "db_id": "european_football_2",
+   "question": "Please provide the four player attribute IDs with the lowest potential who prefer to use the right foot when attacking.\nHint: lowest potential players refers to MIN(potential); prefer to use the right foot when attacking refers to preferred_foot = 'right'",
+   "gold_sql": "SELECT id FROM Player_Attributes WHERE preferred_foot = 'right' ORDER BY potential ASC LIMIT 4",
+   "gold_rows": [
+    [
+     "132235"
+    ],
+    [
+     "132236"
+    ],
+    [
+     "66213"
+    ],
+    [
+     "66214"
+    ]
+   ],
+   "gold_row_count": 4,
+   "predicted_sql": "SELECT pa.id\nFROM cn_e1b70dcdfda248fc.player_attributes pa\nWHERE pa.preferred_foot = 'right' AND pa.potential IS NOT NULL\nORDER BY pa.potential ASC, pa.id ASC\nLIMIT 4",
+   "predicted_rows": [
+    [
+     "132235"
+    ],
+    [
+     "132236"
+    ],
+    [
+     "66213"
+    ],
+    [
+     "66214"
+    ]
+   ],
+   "predicted_row_count": 4,
+   "answer_text": "The four player attribute IDs with the lowest potential who prefer to use the right foot when attacking are: 132235, 132236, 66213, 66214.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 474,
+   "db_id": "card_games",
+   "question": "Among the sets of cards that have an Italian translation, how many of them have a base set number of under 100?\nHint: Italian translation refers to language = 'Italian'; have a translation means translation is not null; base set number of under 100 refers to baseSetSize < 10",
+   "gold_sql": "SELECT COUNT(T1.id) FROM sets AS T1 INNER JOIN set_translations AS T2 ON T2.setCode = T1.code WHERE T2.translation IS NOT NULL AND T1.baseSetSize < 100 AND T2.language = 'Italian'",
+   "gold_rows": [
+    [
+     "30"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT COUNT(DISTINCT s.id) AS count_sets\nFROM cn_2bf53571f75f4c79.set_translations st\nJOIN cn_2bf53571f75f4c79.sets s ON st.setcode = s.code\nWHERE st.language = 'Italian'\n  AND st.translation IS NOT NULL\n  AND s.basesetsize < 10",
+   "predicted_rows": [
+    [
+     "0"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "The query result shows 0 sets. In other words, there are no sets with a non-null Italian translation (language = 'Italian') that have baseSetSize < 10.",
+   "annotation": "wrong",
+   "note": ""
+  },
+  {
+   "question_id": 884,
+   "db_id": "formula_1",
+   "question": "List the names of all races that occurred in the earliest recorded year and month.\nHint: earliest recorded year and month refers to year = year(min(date)) and month = month(min(date));",
+   "gold_sql": "SELECT name FROM races WHERE STRFTIME('%Y', date) = ( SELECT STRFTIME('%Y', date) FROM races ORDER BY date ASC LIMIT 1 ) AND STRFTIME('%m', date) = ( SELECT STRFTIME('%m', date) FROM races ORDER BY date ASC LIMIT 1 )",
+   "gold_rows": [
+    [
+     "British Grand Prix"
+    ],
+    [
+     "Monaco Grand Prix"
+    ],
+    [
+     "Indianapolis 500"
+    ]
+   ],
+   "gold_row_count": 3,
+   "predicted_sql": "SELECT r.name\nFROM cn_dbd54b57e3f84128.races r,\n     (SELECT min(r2.date::timestamptz) AS min_dt FROM cn_dbd54b57e3f84128.races r2) m\nWHERE extract(year FROM r.date::timestamptz) = extract(year FROM m.min_dt)\n  AND extract(month FROM r.date::timestamptz) = extract(month FROM m.min_dt)",
+   "predicted_rows": [
+    [
+     "British Grand Prix"
+    ],
+    [
+     "Monaco Grand Prix"
+    ],
+    [
+     "Indianapolis 500"
+    ]
+   ],
+   "predicted_row_count": 3,
+   "answer_text": "Races in the earliest recorded year and month:\n- British Grand Prix\n- Monaco Grand Prix\n- Indianapolis 500",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 281,
+   "db_id": "toxicology",
+   "question": "Tally the toxicology element of the 4th atom of each molecule that was carcinogenic.\nHint: label = '+' means molecules are carcinogenic; 4th atom of each molecule refers to substr(atom_id, -2) = '_4';",
+   "gold_sql": "SELECT element, COUNT(*) FROM atom JOIN molecule ON atom.molecule_id = molecule.molecule_id WHERE molecule.label = '+' AND substr(atom_id, -2) = '_4' GROUP BY element;",
+   "gold_rows": [
+    [
+     "br",
+     "6"
+    ],
+    [
+     "c",
+     "114"
+    ],
+    [
+     "cl",
+     "7"
+    ],
+    [
+     "f",
+     "1"
+    ],
+    [
+     "h",
+     "3"
+    ]
+   ],
+   "gold_row_count": 8,
+   "predicted_sql": "SELECT a.element, COUNT(*) AS count\nFROM cn_426229f583924ad0.molecule AS m\nJOIN cn_426229f583924ad0.atom AS a ON a.molecule_id = m.molecule_id\nWHERE m.label LIKE '%+%' AND RIGHT(a.atom_id, 2) = '_4'\nGROUP BY a.element\nORDER BY count DESC",
+   "predicted_rows": [
+    [
+     "c",
+     "114"
+    ],
+    [
+     "o",
+     "13"
+    ],
+    [
+     "cl",
+     "7"
+    ],
+    [
+     "n",
+     "6"
+    ],
+    [
+     "br",
+     "6"
+    ]
+   ],
+   "predicted_row_count": 8,
+   "answer_text": "Tally of the toxicology element present as the 4th atom (atom_id ending in '_4') for molecules labeled carcinogenic ('+'):\n- c: 114\n- o: 13\n- cl: 7\n- n: 6\n- br: 6\n- h: 3\n- s: 2\n- f: 1",
+   "annotation": "right",
+   "note": "same count, order differs: assumed the same set"
+  },
+  {
+   "question_id": 197,
+   "db_id": "toxicology",
+   "question": "Calculate the average number of oxygen atoms in single-bonded molecules.\nHint: single-bonded molecules refers to bond_type = '-' ; average number of oxygen atom = AVG(SUM(element = 'o'))",
+   "gold_sql": "WITH oxygen_atoms_per_molecule AS (SELECT atom.molecule_id, SUM(atom.element = 'o') AS oxygen_count FROM atom GROUP BY atom.molecule_id), single_bond_molecules AS (SELECT DISTINCT bond.molecule_id FROM bond WHERE bond.bond_type = '-') SELECT AVG(oxygen_atoms_per_molecule.oxygen_count) AS average_oxygen_atoms FROM single_bond_molecules JOIN oxygen_atoms_per_molecule ON single_bond_molecules.molecule_id = oxygen_atoms_per_molecule.molecule_id",
+   "gold_rows": [
+    [
+     "2.161290322580645"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT AVG(m.o_count) FROM (SELECT b.molecule_id, COALESCE(SUM((a.element = 'o')::int), 0) AS o_count FROM cn_426229f583924ad0.bond b LEFT JOIN cn_426229f583924ad0.atom a ON a.molecule_id = b.molecule_id WHERE b.bond_type = '-' GROUP BY b.molecule_id) m",
+   "predicted_rows": [
+    [
+     "69.2815249266862170"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "Average number of oxygen atoms in single-bonded (bond_type = '-') molecules: 69.28152492668622.",
+   "annotation": "wrong",
+   "note": ""
+  },
+  {
+   "question_id": 825,
+   "db_id": "superhero",
+   "question": "Identify the gender of the superhero who has the ability of Phoenix Force.\nHint: ability of Phoenix Force refers to power_name = 'Phoenix Force';",
+   "gold_sql": "SELECT T4.gender FROM superhero AS T1 INNER JOIN hero_power AS T2 ON T1.id = T2.hero_id INNER JOIN superpower AS T3 ON T2.power_id = T3.id INNER JOIN gender AS T4 ON T1.gender_id = T4.id WHERE T3.power_name = 'Phoenix Force'",
+   "gold_rows": [
+    [
+     "Female"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT g.gender\nFROM cn_b710015657fa447c.superpower sp\nJOIN cn_b710015657fa447c.hero_power hp ON hp.power_id = sp.id\nJOIN cn_b710015657fa447c.superhero s ON s.id = hp.hero_id\nJOIN cn_b710015657fa447c.gender g ON g.id = s.gender_id\nWHERE sp.power_name = 'Phoenix Force'",
+   "predicted_rows": [
+    [
+     "Female"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "The superhero who has the ability \"Phoenix Force\" is Female.",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 629,
+   "db_id": "codebase_community",
+   "question": "Calculate the ratio of votes in 2010 and 2011.\nHint: DIVIDE(COUNT(Id where YEAR(CreationDate) = 2010), COUNT(Id where YEAR(CreationDate) = 2011)) FROM votes;",
+   "gold_sql": "SELECT CAST(SUM(IIF(STRFTIME('%Y', CreationDate) = '2010', 1, 0)) AS REAL) / SUM(IIF(STRFTIME('%Y', CreationDate) = '2011', 1, 0)) FROM votes",
+   "gold_rows": [
+    [
+     "1.307099679981036"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT (COUNT(v.id) FILTER (WHERE extract(year FROM v.creationdate::timestamptz) = 2010)::numeric / NULLIF(COUNT(v.id) FILTER (WHERE extract(year FROM v.creationdate::timestamptz) = 2011), 0)) AS ratio\nFROM cn_f084a0aafeb24880.votes v",
+   "predicted_rows": [
+    [
+     "1.3070996799810359"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "The ratio of votes in 2010 to votes in 2011 is 1.307099679981036 (approximately 1.3071).",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 1409,
+   "db_id": "student_club",
+   "question": "Mention the total expense used on 8/20/2019.\nHint: total expense refers SUM(cost) where expense_date = '2019-08-20'",
+   "gold_sql": "SELECT SUM(cost) FROM expense WHERE expense_date = '2019-08-20'",
+   "gold_rows": [
+    [
+     "122.06"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT SUM(e.cost) AS total_expense\nFROM cn_97b3964026cb47ff.expense e\nWHERE e.expense_date::timestamptz = '2019-08-20'::timestamptz",
+   "predicted_rows": [
+    [
+     "122.06"
+    ]
+   ],
+   "predicted_row_count": 1,
+   "answer_text": "Total expense on 2019-08-20 (SUM(cost)) = 122.06",
+   "annotation": "right",
+   "note": ""
+  },
+  {
+   "question_id": 1122,
+   "db_id": "european_football_2",
+   "question": "State the name of the most strongest player.\nHint: strongest players refers to player has MAX(overall_rating)",
+   "gold_sql": "SELECT DISTINCT t1.player_name FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE t2.overall_rating = (SELECT MAX(overall_rating) FROM Player_Attributes)",
+   "gold_rows": [
+    [
+     "Lionel Messi"
+    ]
+   ],
+   "gold_row_count": 1,
+   "predicted_sql": "SELECT p.player_name\nFROM cn_e1b70dcdfda248fc.player_attributes pa\nJOIN cn_e1b70dcdfda248fc.player p ON pa.player_api_id = p.player_api_id\nWHERE pa.overall_rating = (\n  SELECT MAX(pa2.overall_rating) FROM cn_e1b70dcdfda248fc.player_attributes pa2\n)",
+   "predicted_rows": [
+    [
+     "Lionel Messi"
+    ],
+    [
+     "Lionel Messi"
+    ],
+    [
+     "Lionel Messi"
+    ],
+    [
+     "Lionel Messi"
+    ],
+    [
+     "Lionel Messi"
+    ]
+   ],
+   "predicted_row_count": 12,
+   "answer_text": "The strongest player (max overall_rating) is: Lionel Messi.",
+   "annotation": "right",
+   "note": ""
+  }
+ ],
+ "annotator": "Claude (blind to the SQL label and the signals; 2026-10-04). Formatting-only differences count as right."
+}
