@@ -109,6 +109,28 @@ def test_count_star_gets_one_star_probe_per_joined_table():
         ("live.orders", "o", True, "COUNT(*)"), ("live.customers", "c", True, "COUNT(*)")]
 
 
+def test_an_aggregate_over_one_tables_expression_is_probed():
+    # The robustness run's miss (fan-out set F009): AVG over EXTRACT(YEAR FROM d.dob) through a
+    # join that repeats each driver.
+    sql = ("SELECT AVG(EXTRACT(YEAR FROM d.dob)) FROM live.driverstandings s "
+           "JOIN live.drivers d ON d.driverid = s.driverid WHERE s.position = 1")
+    assert [(p.alias, p.table) for p in ac.fanout_probe(sql)] == [("d", "live.drivers")]
+    sql = "SELECT SUM(o.qty * o.price) FROM live.orders o JOIN live.customers c ON c.customer_id = o.customer_id"
+    assert [p.alias for p in ac.fanout_probe(sql)] == ["o"]
+
+
+@pytest.mark.parametrize("sql", [
+    # several tables in one expression: which one repeats is ambiguous, so no probe
+    "SELECT SUM(o.qty * c.discount) FROM live.orders o JOIN live.customers c ON c.customer_id = o.customer_id",
+    # no column at all
+    "SELECT SUM(1) FROM live.orders o JOIN live.customers c ON c.customer_id = o.customer_id",
+    # an unqualified column inside the expression
+    "SELECT AVG(EXTRACT(YEAR FROM dob)) FROM live.orders o JOIN live.customers c ON c.customer_id = o.customer_id",
+])
+def test_an_expression_aggregate_is_probed_only_when_it_reads_one_table(sql):
+    assert ac.fanout_probe(sql) is None
+
+
 def test_count_of_a_column_is_probed_like_sum():
     sql = "SELECT c.state, COUNT(o.order_id), SUM(o.amount) FROM live.orders o JOIN live.customers c ON c.customer_id = o.customer_id GROUP BY c.state"
     probes = ac.fanout_probe(sql)
