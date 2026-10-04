@@ -1,7 +1,7 @@
 # Do Data Checks Tell You When to Trust a Text-to-SQL Answer? A Pre-registered Study on Corrected BIRD Labels
 
-*Draft v0.1, 2026-10-04. Short-paper format (about 4 pages plus references). Results for the fan-out
-set (H1) and the run-to-run repeat are marked PENDING. Author block, venue and template to follow.*
+*Draft v0.1, 2026-10-04. Short-paper format (about 4 pages plus references). The run-to-run repeat is
+marked PENDING. Author block, venue and template to follow.*
 
 ## Abstract
 
@@ -27,8 +27,9 @@ judge).
 A blind annotation of every wrong answer explains why. Most errors are semantic: wrong filter values,
 wrong columns, wrong aggregation intent. The double-counting errors that a structural probe targets
 mostly arise through legitimate joins whose intent the probe cannot see. A fifth of the
-execution-match "errors" are formatting differences the scorer misses. [PENDING: one sentence on the
-fan-out set, H1.]
+execution-match "errors" are formatting differences the scorer misses. On a frozen set of 60 questions
+built to invite double counting, the model never double counted, so the pre-registered fan-out test
+could not be run: the textbook trap such probes target no longer catches a current model.
 
 ## 1 Introduction
 
@@ -60,7 +61,8 @@ system, and asked whether they earn their place. This paper reports a pre-regist
    double counting that happens through legitimate joins.
 4. **A frozen, owner-reviewed fan-out question set** (60 risky and 33 control questions on the BIRD
    databases), each with a verified gold query, an independent check query and the naive
-   double-counting query. [PENDING: results.]
+   double-counting query. The model answered 59 of the 60 risky questions correctly and never double
+   counted, so the fan-out hypothesis (H1) was untestable by its pre-registered precondition.
 5. **A measurement note.** It confirms known benchmark and metric problems (Wretblad et al., 2024;
    Pourreza and Rafiei, 2023; FLEX, 2025; Jin et al., 2026) on corrected labels, and quantifies them:
    - correction moves accuracy by 10.7 points;
@@ -169,8 +171,8 @@ temperature). A small model (Qwen3.8-27B) normalises the question.
   - Each question has a gold query, an independently written check query that must agree with it, and
     the naive join. The naive join must differ from gold for risky questions and equal it for
     controls, verified on the data.
-  - Written by the authors with AI assistance. A random 20% was reviewed by a second author before
-    freezing.
+  - Drafted with an AI assistant (Claude) from construction rules fixed in advance, and verified on the
+    data. The author reviewed a random 20% (19 questions, all accepted) before freezing.
   - On this set the fan-out check runs warn-only (no automatic retry), so detection is measured
     without repair.
 
@@ -233,7 +235,9 @@ temperature). A small model (Qwen3.8-27B) normalises the question.
 - **H3 is supported:** 2 of 242 correct answers flagged; upper bound 2.6%. But grounding fired on only
   5 answers, and 3 of its 4 hits are answers whose SQL failed and whose text quotes an error code.
 - **H4 is untestable:** 2 repairs were triggered.
-- **H1:** [PENDING: fan-out set].
+- **H1 is untestable:** on the fan-out set the model made no double-counting errors (precondition: 10).
+- **Holm** over the testable confirmatory tests (H2, H3): H3 is rejected (p = 0.0004), H2 is not
+  (p = 0.42).
 
 **What the errors are.** The 90 wrong answers, by type:
 
@@ -258,10 +262,28 @@ The fan-out probe caught none of the four double-counting errors:
 
 **Label quality.** A blind check of 50 random answers found none labelled correct that was wrong.
 
-**Fan-out set:** [PENDING: accuracy on risky and control questions; double-counting errors made by
-the model (the H1 precondition); flags; matched-k vs judge; H1 outcome; Holm over H1–H3.]
-
 **Run-to-run variation:** [PENDING: label flip rate on 50 repeated questions.]
+
+## 5b Results (fan-out set, n = 93)
+
+| kind | n | correct | double-counting errors | fan-out check fired |
+|---|---|---|---|---|
+| risky | 60 | 59 (98.3%) | 0 | 0 |
+| control | 33 | 29 (87.9%) | 0 | 0 |
+
+The model avoided every trap:
+- 39 of the 60 risky queries use `COUNT(DISTINCT …)`, and 15 a semi-join (`EXISTS` or `IN`).
+- The one wrong risky answer is a semi-join of the right shape that failed on a malformed column name.
+
+With no double counting to catch, H1's precondition fails, and the check fired on none of the 93
+answers.
+
+The five wrong answers (an unblinded, exploratory reading):
+- three filter values: an invented code, and a county name queried with " County" appended;
+- the failed query;
+- one formatting-only difference.
+
+The NULL-heavy check flagged two of them. The judge gave all four genuine errors a probability of 0.
 
 ## 6 Discussion
 
@@ -311,8 +333,11 @@ help.
   limits.
 - **Annotation.** Both error-type annotators are AI models, blind to the signals: κ = 0.74; κ = 0.87 for system
   error vs artefact. Human annotation of a sample would strengthen this.
-- **The fan-out set** was written by us; its construction rules were fixed in advance and it is
-  published.
+- **The fan-out set** was drafted with an AI assistant from rules fixed in advance and is published. Its
+  risky questions follow the textbook pattern ("count the X that have at least one Y"). The null
+  result for H1 shows that this pattern no longer traps a current model. It says nothing about the
+  subtler double counting seen in held-out answers, through joins that are legitimate for another
+  reading of the question.
 - **Scope.** English questions, one benchmark, the SQL path only. The system's document path is not
   evaluated.
 

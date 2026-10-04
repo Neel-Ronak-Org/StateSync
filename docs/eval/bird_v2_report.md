@@ -1,8 +1,7 @@
 # Evidence-tiers study, protocol v2: results report (DRAFT, methods only)
 
-Status: **draft, 2026-10-04.** The methods are written before any held-out result was looked at.
-The results sections are filled in once every run is complete, labels are frozen and the
-pre-registered analysis has run.
+Status: **draft, 2026-10-04.** The methods were written before any held-out result was looked at.
+Held-out and fan-out set results are complete; the run-to-run repeat is pending.
 
 Protocol: `docs/research/evidence_tiers_study.md` (v2, with changes 1–15 in its §10). Earlier
 development run: `docs/eval/bird_pilot_report.md`.
@@ -62,8 +61,8 @@ Files:
 - `bird_analysis_v2_heldout_gpt5mini_v2_corrected.json` (analysis)
 - `bird_worksheet_*_heldout_gpt5mini.json` (blind annotations)
 
-The fan-out set (H1) and the run-to-run repeat are reported below once complete. Holm is applied over
-all confirmatory tests then.
+The fan-out set (H1) is reported in its own section below. Holm is applied over all confirmatory tests
+(the tests table).
 
 ### Accuracy
 
@@ -121,10 +120,15 @@ It is reported once complete.
 
 | test | result | outcome |
 |---|---|---|
-| H1 (fan-out set) | pending | the fan-out run is in progress |
+| **H1** fan-out check beats judge at the same k (fan-out set) | 0 double-counting errors on 60 risky questions; the check never fired | **untestable** (precondition: 10) |
 | **H2** checks then judge beats judge (AURC) | gain 0.001 (95% CI −0.005 to 0.009), p = 0.42 | **not supported** |
 | **H3** grounding false alarms < 5% of correct texts | 2 of 242 (0.8%; upper 95% bound 2.6%), p = 0.0004 | **supported**, but grounding fired on only 5 answers (recall 4%) |
 | **H4** repair fixes > breaks, +2 points | 2 repairs triggered | **untestable** (precondition: 10) |
+
+**Holm over the confirmatory tests** (`bird_analysis_v2_fanout_gpt5mini_v2_fanout.json`, `holm_confirmatory`):
+- H1 and H4 are untestable by their pre-registered preconditions and carry no p-value.
+- That leaves H2 (p = 0.42) and H3 (p = 0.0004). H3 is rejected at the Holm threshold (0.025); H2 is
+  not.
 
 ### What the wrong answers are (RQ2)
 
@@ -165,6 +169,52 @@ The check's only flag fell on an answer whose fault was output format.
 **Figure grounding:** 3 of its 4 "catches" are answers whose SQL failed (the text quotes error codes).
 It caught one real figure problem.
 
+## Results: fan-out set (93 questions, H1)
+
+Files:
+- `bird_scores_fanout_gpt5mini_v2_fanout.json` (labels)
+- `bird_analysis_v2_fanout_gpt5mini_v2_fanout.json` (analysis)
+- `bird_judge_fanout_gpt5mini_local_router_zed-hosted_gemini-3.8-flash.json` (Gemini, 93 of 93)
+
+The set's content hash matches the frozen one (d91c700b…). Gold is run on PostgreSQL, the dialect the
+set was written for. The fan-out check warns but does not retry (change 15).
+
+| kind | n | correct | double-counting errors (wrong, and equal to the naive join's result) | fan-out check fired |
+|---|---|---|---|---|
+| risky | 60 | 59 (98.3%) | **0** | 0 |
+| control | 33 | 29 (87.9%) | 0 | 0 |
+
+**H1 is untestable.** Its precondition (at least 10 double-counting errors on the risky questions) is
+not met: GPT-5 mini never wrote the naive join.
+- 39 of the 60 risky queries use `COUNT(DISTINCT …)`; 15 use `EXISTS` or `IN (SELECT …)`.
+- The one wrong risky answer (F026) is a semi-join of the right shape. The model wrote a malformed
+  four-part column name, and the safety gate rejected the query.
+- The fan-out check had nothing to catch, and fired on none of the 93.
+
+**The five wrong answers** (unblinded reading; exploratory):
+- F011 (control): correct value, with a timestamp for a date. Formatting only; the answer label marks it
+  correct.
+- F023 (control): an invented filter literal (`k_symbol = 'TRVALY'`), so the result is NULL.
+- F026 (risky): the failed query above.
+- F090 and F091 (control): a county stored as "Los Angeles" / "Alameda", queried with " County"
+  appended. F091 returns NULL; F090 returns 0.
+
+Three of the five are filter-value errors, the commonest held-out type.
+
+**Signals on this set** (5 wrong; too few for comparisons, reported for completeness):
+- the NULL-heavy check flagged F023 and F091 (2 of 2 correct);
+- grounding, failed SQL and retry each flagged F026.
+
+The data checks flagged 3 answers, all wrong; at the same k the judge's 3 most suspect answers are
+also all wrong. Gemini ranks the set at AUROC 0.90, self-consistency at 0.78.
+Gemini gives probability 0 to all four genuine errors (F023, F026, F090, F091), including F090, which
+no check flags; the one it rates correct, F011, is the formatting-only answer.
+
+**What this adds.** Textbook "count the X that have at least one Y" questions no longer trap a current
+model: it uses DISTINCT or a semi-join. The double counting we saw on held-out BIRD (4 of 90 errors)
+came through joins that are correct for a different reading of the question, which neither a
+structural probe nor this set targets.
+
 ### Label quality
 
 - **Answer label vs a blind manual reading of 60 random answers:** 58 of 60 agree (96.7%). The rule
@@ -186,8 +236,10 @@ It caught one real figure problem.
 - **Calls:** 9.0 model calls per question, of which 5 are self-consistency samples.
 - **Latency:** median 30 s, p90 292 s. The p90 reflects the Groq waits, not the pipeline.
 
-### What this says so far (held-out only; H1 pending)
+### What this says (held-out and fan-out set)
 
+- **H1 could not be tested.** On 60 questions built to invite double counting, the model never double
+  counted, so the fan-out check had nothing to catch.
 - **Model-free data checks are not a better warning than an LLM judge.** At the same flag rate they
   catch about as many wrong answers or fewer (−1.8, CI includes 0), and they add nothing to the
   judge's ranking (H2).
