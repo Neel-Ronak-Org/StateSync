@@ -1,0 +1,3836 @@
+{
+ "label": "fanout_gptoss",
+ "sample": "fanout",
+ "sample_sha256": "a044307a9232d6abeeb117d1864b26cfd5a5d04d22cc777b6053e26507a3811b",
+ "question_source": "fanout_set",
+ "question_source_sha256": "a044307a9232d6abeeb117d1864b26cfd5a5d04d22cc777b6053e26507a3811b",
+ "answers": {
+  "F001": {
+   "question_id": "F001",
+   "db_id": "formula_1",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "How many drivers have recorded at least one lap faster than 1 minute 10 seconds?\nHint: lap faster than 1 minute 10 seconds refers to milliseconds < 70000",
+   "answer_text": "29 drivers have recorded at least one lap faster than 1 minute 10 seconds (i.e., lap time under 70,000 milliseconds).",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(DISTINCT lt.driverid) AS driver_count\nFROM cn_dbd54b57e3f84128.laptimes lt\nWHERE lt.milliseconds < 70000",
+   "candidate_sql": "SELECT COUNT(DISTINCT lt.driverid) AS driver_count\nFROM cn_dbd54b57e3f84128.laptimes lt\nWHERE lt.milliseconds < 70000",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "29",
+      "start": 0,
+      "end": 2,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "driver_count"
+      }
+     },
+     {
+      "text": "1",
+      "start": 54,
+      "end": 55,
+      "matched": true,
+      "source": {
+       "kind": "aggregate",
+       "aggregate": "count",
+       "column": "rows"
+      }
+     },
+     {
+      "text": "10",
+      "start": 63,
+      "end": 65,
+      "matched": true,
+      "source": {
+       "kind": "question"
+      }
+     },
+     {
+      "text": "70,000",
+      "start": 96,
+      "end": 102,
+      "matched": true,
+      "source": {
+       "kind": "question"
+      }
+     }
+    ],
+    "matched": 4,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 616,
+     "tokens_out": 54,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 459,
+     "rate_remaining_tokens": 7151,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1507,
+     "tokens_out": 65,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6530,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1648,
+     "tokens_out": 68,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5317,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 769,
+     "tokens_out": 52,
+     "cached_tokens": 64,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3047,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4540,
+    "tokens_out": 239,
+    "llm_calls": 4,
+    "trajectory_steps": 17,
+    "latency_ms": 16139
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 16180,
+   "asked_at": "2026-10-04T17:37:28+00:00"
+  },
+  "F002": {
+   "question_id": "F002",
+   "db_id": "formula_1",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "How many British drivers have made at least one pit stop?\nHint: British refers to nationality = 'British'",
+   "answer_text": "Six British drivers have made at least one pit stop.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(DISTINCT d.driverid) AS british_driver_pitstop_count\nFROM cn_dbd54b57e3f84128.drivers AS d\nJOIN cn_dbd54b57e3f84128.pitstops AS p ON d.driverid = p.driverid\nWHERE d.nationality = 'British'",
+   "candidate_sql": "SELECT COUNT(DISTINCT d.driverid) AS british_driver_pitstop_count\nFROM cn_dbd54b57e3f84128.drivers AS d\nJOIN cn_dbd54b57e3f84128.pitstops AS p ON d.driverid = p.driverid\nWHERE d.nationality = 'British'",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [],
+    "matched": 0,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 597,
+     "tokens_out": 51,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 249,
+     "rate_remaining_tokens": 7288,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1503,
+     "tokens_out": 234,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 9683,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2057,
+     "tokens_out": 179,
+     "cached_tokens": 68,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5409,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 757,
+     "tokens_out": 93,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4276,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4914,
+    "tokens_out": 557,
+    "llm_calls": 4,
+    "trajectory_steps": 18,
+    "latency_ms": 19859
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 19881,
+   "asked_at": "2026-10-04T17:37:53+00:00"
+  },
+  "F003": {
+   "question_id": "F003",
+   "db_id": "formula_1",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "What is the average birth year of the drivers who recorded lap times in the 2009 season?\nHint: birth year refers to the year of dob; 2009 season refers to races.year = 2009",
+   "answer_text": "The average birth year of drivers who recorded lap times in the 2009 season is 1981.2.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT AVG(EXTRACT(YEAR FROM sub.dob)) AS average_birth_year\nFROM (\n    SELECT d.driverid, d.dob\n    FROM cn_dbd54b57e3f84128.laptimes lt\n    JOIN cn_dbd54b57e3f84128.races r ON lt.raceid = r.raceid\n    JOIN cn_dbd54b57e3f84128.drivers d ON lt.driverid = d.driverid\n    WHERE r.year = 2009\n    GROUP BY d.driverid, d.dob\n) sub",
+   "candidate_sql": "SELECT AVG(EXTRACT(YEAR FROM sub.dob)) AS average_birth_year\nFROM (\n    SELECT d.driverid, d.dob\n    FROM cn_dbd54b57e3f84128.laptimes lt\n    JOIN cn_dbd54b57e3f84128.races r ON lt.raceid = r.raceid\n    JOIN cn_dbd54b57e3f84128.drivers d ON lt.driverid = d.driverid\n    WHERE r.year = 2009\n    GROUP BY d.driverid, d.dob\n) sub",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "1981.2",
+      "start": 79,
+      "end": 85,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "average_birth_year"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 624,
+     "tokens_out": 57,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 262,
+     "rate_remaining_tokens": 7325,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1525,
+     "tokens_out": 358,
+     "cached_tokens": 65,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 7217,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2415,
+     "tokens_out": 754,
+     "cached_tokens": 65,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 7234,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 775,
+     "tokens_out": 98,
+     "cached_tokens": 66,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4926,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 5339,
+    "tokens_out": 1267,
+    "llm_calls": 4,
+    "trajectory_steps": 19,
+    "latency_ms": 19898
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 19922,
+   "asked_at": "2026-10-04T17:38:18+00:00"
+  },
+  "F004": {
+   "question_id": "F004",
+   "db_id": "formula_1",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "How many circuits have hosted a race in which at least one driver retired with an engine failure?\nHint: engine failure refers to status = 'Engine'",
+   "answer_text": "66 circuits have hosted a race where at least one driver retired due to an engine failure (status = 'Engine').",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(DISTINCT c.circuitid)\nFROM cn_dbd54b57e3f84128.results r\nJOIN cn_dbd54b57e3f84128.status s ON r.statusid = s.statusid\nJOIN cn_dbd54b57e3f84128.races ra ON r.raceid = ra.raceid\nJOIN cn_dbd54b57e3f84128.circuits c ON ra.circuitid = c.circuitid\nWHERE s.status = 'Engine'",
+   "candidate_sql": "SELECT COUNT(DISTINCT c.circuitid)\nFROM cn_dbd54b57e3f84128.results r\nJOIN cn_dbd54b57e3f84128.status s ON r.statusid = s.statusid\nJOIN cn_dbd54b57e3f84128.races ra ON r.raceid = ra.raceid\nJOIN cn_dbd54b57e3f84128.circuits c ON ra.circuitid = c.circuitid\nWHERE s.status = 'Engine'",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "66",
+      "start": 0,
+      "end": 2,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "count"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 605,
+     "tokens_out": 58,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 259,
+     "rate_remaining_tokens": 7341,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1511,
+     "tokens_out": 394,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6589,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2799,
+     "tokens_out": 371,
+     "cached_tokens": 65,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5942,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 754,
+     "tokens_out": 102,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 7403,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 5669,
+    "tokens_out": 925,
+    "llm_calls": 4,
+    "trajectory_steps": 20,
+    "latency_ms": 20420
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 20436,
+   "asked_at": "2026-10-04T17:38:43+00:00"
+  },
+  "F005": {
+   "question_id": "F005",
+   "db_id": "formula_1",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "For each constructor nationality, how many constructors scored points in the 2010 season?\nHint: scored points refers to results.points > 0; 2010 season refers to races.year = 2010",
+   "answer_text": "In the 2010 season, the number of constructors that scored points for each nationality is:\n- Austrian: 1\n- British: 2\n- French: 1\n- German: 1\n- Indian: 1\n- Italian: 2\n- Swiss: 1",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT c.nationality, COUNT(DISTINCT c.constructorid) AS constructor_count\nFROM cn_dbd54b57e3f84128.constructors AS c\nJOIN cn_dbd54b57e3f84128.results AS r ON c.constructorid = r.constructorid\nJOIN cn_dbd54b57e3f84128.races AS ra ON r.raceid = ra.raceid\nWHERE r.points > 0\n  AND ra.year = 2010\nGROUP BY c.nationality\nORDER BY c.nationality",
+   "candidate_sql": "SELECT c.nationality, COUNT(DISTINCT c.constructorid) AS constructor_count\nFROM cn_dbd54b57e3f84128.constructors AS c\nJOIN cn_dbd54b57e3f84128.results AS r ON c.constructorid = r.constructorid\nJOIN cn_dbd54b57e3f84128.races AS ra ON r.raceid = ra.raceid\nWHERE r.points > 0\n  AND ra.year = 2010\nGROUP BY c.nationality\nORDER BY c.nationality",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "1",
+      "start": 103,
+      "end": 104,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "constructor_count"
+      }
+     },
+     {
+      "text": "2",
+      "start": 116,
+      "end": 117,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 1,
+       "column": "constructor_count"
+      }
+     },
+     {
+      "text": "1",
+      "start": 128,
+      "end": 129,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "constructor_count"
+      }
+     },
+     {
+      "text": "1",
+      "start": 140,
+      "end": 141,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "constructor_count"
+      }
+     },
+     {
+      "text": "1",
+      "start": 152,
+      "end": 153,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "constructor_count"
+      }
+     },
+     {
+      "text": "2",
+      "start": 165,
+      "end": 166,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 1,
+       "column": "constructor_count"
+      }
+     },
+     {
+      "text": "1",
+      "start": 176,
+      "end": 177,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "constructor_count"
+      }
+     }
+    ],
+    "matched": 7,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 7,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 622,
+     "tokens_out": 58,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 327,
+     "rate_remaining_tokens": 7321,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1523,
+     "tokens_out": 363,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4569,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2599,
+     "tokens_out": 356,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5407,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 896,
+     "tokens_out": 266,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6341,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 5640,
+    "tokens_out": 1043,
+    "llm_calls": 4,
+    "trajectory_steps": 19,
+    "latency_ms": 16858
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 16882,
+   "asked_at": "2026-10-04T17:39:05+00:00"
+  },
+  "F006": {
+   "question_id": "F006",
+   "db_id": "formula_1",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "What is the average latitude of the circuits that have hosted at least one race since 2010?\nHint: since 2010 refers to races.year >= 2010",
+   "answer_text": "",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT AVG(c.lat) AS average_latitude\nFROM cn_dbd54b57e3f84128.circuits AS c\nJOIN cn_dbd54b57e3f84128.races AS r ON c.circuitid = r.circuitid\nWHERE r.year >= 2010;",
+   "candidate_sql": "SELECT AVG(c.lat) AS average_latitude\nFROM cn_dbd54b57e3f84128.circuits AS c\nJOIN cn_dbd54b57e3f84128.races AS r ON c.circuitid = r.circuitid\nWHERE r.year >= 2010;",
+   "evidence": "unchecked",
+   "number_grounding": null,
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 615,
+     "tokens_out": 61,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 255,
+     "rate_remaining_tokens": 7327,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1517,
+     "tokens_out": 244,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 17350,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2304,
+     "tokens_out": 84,
+     "cached_tokens": 64,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4071,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 783,
+     "tokens_out": 100,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5726,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 5219,
+    "tokens_out": 489,
+    "llm_calls": 4,
+    "trajectory_steps": 18,
+    "latency_ms": 27770
+   },
+   "caveats": [
+    "These figures may count some rows more than once (join fan-out)."
+   ],
+   "self_consistency": null,
+   "latency_ms": 27833,
+   "asked_at": "2026-10-04T17:39:38+00:00"
+  },
+  "F007": {
+   "question_id": "F007",
+   "db_id": "formula_1",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "How many races in 2005 had at least one driver who finished more than 5 places ahead of their grid position?\nHint: finished more than 5 places ahead of grid refers to grid - position > 5 with position not null",
+   "answer_text": "In 2005, there were 18 races where at least one driver finished more than 5 places ahead of their starting grid position.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(DISTINCT r.raceid) AS race_count\nFROM cn_dbd54b57e3f84128.results AS res\nJOIN cn_dbd54b57e3f84128.races AS r\n  ON res.raceid = r.raceid\nWHERE r.year = 2005\n  AND res.position IS NOT NULL\n  AND (res.grid - res.position) > 5",
+   "candidate_sql": "SELECT COUNT(DISTINCT r.raceid) AS race_count\nFROM cn_dbd54b57e3f84128.results AS res\nJOIN cn_dbd54b57e3f84128.races AS r\n  ON res.raceid = r.raceid\nWHERE r.year = 2005\n  AND res.position IS NOT NULL\n  AND (res.grid - res.position) > 5",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "18",
+      "start": 20,
+      "end": 22,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "race_count"
+      }
+     },
+     {
+      "text": "5",
+      "start": 74,
+      "end": 75,
+      "matched": true,
+      "source": {
+       "kind": "question"
+      }
+     }
+    ],
+    "matched": 2,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 625,
+     "tokens_out": 62,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 295,
+     "rate_remaining_tokens": 7314,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1531,
+     "tokens_out": 239,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 38146,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2390,
+     "tokens_out": 147,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3393,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 774,
+     "tokens_out": 56,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 2973,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 5320,
+    "tokens_out": 504,
+    "llm_calls": 4,
+    "trajectory_steps": 18,
+    "latency_ms": 45052
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 45079,
+   "asked_at": "2026-10-04T17:40:28+00:00"
+  },
+  "F008": {
+   "question_id": "F008",
+   "db_id": "formula_1",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "How many drivers born after 1985 have qualified in first position at least once?\nHint: born after 1985 refers to year of dob > 1985; qualified in first position refers to qualifying.position = 1",
+   "answer_text": "There are 4 drivers born after 1985 who have qualified in first position at least once.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(DISTINCT d.driverid) AS driver_count\nFROM cn_dbd54b57e3f84128.drivers AS d\nJOIN cn_dbd54b57e3f84128.qualifying AS q\n  ON d.driverid = q.driverid\nWHERE d.dob > DATE '1985-12-31'\n  AND q.position = 1",
+   "candidate_sql": "SELECT COUNT(DISTINCT d.driverid) AS driver_count\nFROM cn_dbd54b57e3f84128.drivers AS d\nJOIN cn_dbd54b57e3f84128.qualifying AS q\n  ON d.driverid = q.driverid\nWHERE d.dob > DATE '1985-12-31'\n  AND q.position = 1",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "4",
+      "start": 10,
+      "end": 11,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "driver_count"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 626,
+     "tokens_out": 54,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 271,
+     "rate_remaining_tokens": 7312,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1526,
+     "tokens_out": 146,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4605,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2267,
+     "tokens_out": 143,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4732,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 771,
+     "tokens_out": 55,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6536,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 5190,
+    "tokens_out": 398,
+    "llm_calls": 4,
+    "trajectory_steps": 18,
+    "latency_ms": 16430
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 16456,
+   "asked_at": "2026-10-04T17:40:50+00:00"
+  },
+  "F009": {
+   "question_id": "F009",
+   "db_id": "formula_1",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "What is the average birth year of drivers who have led the drivers' standings after at least one race?\nHint: led the standings refers to driverstandings.position = 1; birth year refers to the year of dob",
+   "answer_text": "The average birth year of drivers who have ever led the drivers\u2019 standings (i.e., have held position\u202f1 after a race) is approximately 1957.1.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT AVG(EXTRACT(YEAR FROM d.dob)) AS average_birth_year\nFROM cn_dbd54b57e3f84128.driverstandings ds\nJOIN cn_dbd54b57e3f84128.drivers d ON ds.driverid = d.driverid\nWHERE ds.position = 1",
+   "candidate_sql": "SELECT AVG(EXTRACT(YEAR FROM d.dob)) AS average_birth_year\nFROM cn_dbd54b57e3f84128.driverstandings ds\nJOIN cn_dbd54b57e3f84128.drivers d ON ds.driverid = d.driverid\nWHERE ds.position = 1",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "1",
+      "start": 101,
+      "end": 102,
+      "matched": true,
+      "source": {
+       "kind": "aggregate",
+       "aggregate": "count",
+       "column": "rows"
+      }
+     },
+     {
+      "text": "1957.1",
+      "start": 134,
+      "end": 140,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "average_birth_year"
+      }
+     }
+    ],
+    "matched": 2,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 619,
+     "tokens_out": 56,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 262,
+     "rate_remaining_tokens": 7272,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1525,
+     "tokens_out": 165,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4816,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2136,
+     "tokens_out": 115,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 2830,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 779,
+     "tokens_out": 78,
+     "cached_tokens": 16,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3196,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 5059,
+    "tokens_out": 414,
+    "llm_calls": 4,
+    "trajectory_steps": 18,
+    "latency_ms": 11399
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 11421,
+   "asked_at": "2026-10-04T17:41:07+00:00"
+  },
+  "F010": {
+   "question_id": "F010",
+   "db_id": "formula_1",
+   "difficulty": "control",
+   "http_status": 200,
+   "question_asked": "How many laps faster than 1 minute 10 seconds were recorded by French drivers?\nHint: lap faster than 1 minute 10 seconds refers to milliseconds < 70000; French refers to nationality = 'French'",
+   "answer_text": "French drivers recorded 67 laps that were faster than 1 minute 10 seconds.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(*) AS lap_count\nFROM cn_dbd54b57e3f84128.laptimes AS lt\nJOIN cn_dbd54b57e3f84128.drivers AS d\n  ON lt.driverid = d.driverid\nWHERE lt.milliseconds < 70000\n  AND d.nationality = 'French'",
+   "candidate_sql": "SELECT COUNT(*) AS lap_count\nFROM cn_dbd54b57e3f84128.laptimes AS lt\nJOIN cn_dbd54b57e3f84128.drivers AS d\n  ON lt.driverid = d.driverid\nWHERE lt.milliseconds < 70000\n  AND d.nationality = 'French'",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "67",
+      "start": 24,
+      "end": 26,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "lap_count"
+      }
+     },
+     {
+      "text": "1",
+      "start": 54,
+      "end": 55,
+      "matched": true,
+      "source": {
+       "kind": "aggregate",
+       "aggregate": "count",
+       "column": "rows"
+      }
+     },
+     {
+      "text": "10",
+      "start": 63,
+      "end": 65,
+      "matched": true,
+      "source": {
+       "kind": "question"
+      }
+     }
+    ],
+    "matched": 3,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 624,
+     "tokens_out": 57,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 263,
+     "rate_remaining_tokens": 7318,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1524,
+     "tokens_out": 111,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3771,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2035,
+     "tokens_out": 111,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3058,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 776,
+     "tokens_out": 73,
+     "cached_tokens": 64,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 2984,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4959,
+    "tokens_out": 352,
+    "llm_calls": 4,
+    "trajectory_steps": 18,
+    "latency_ms": 10350
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 10621,
+   "asked_at": "2026-10-04T17:41:22+00:00"
+  },
+  "F011": {
+   "question_id": "F011",
+   "db_id": "formula_1",
+   "difficulty": "control",
+   "http_status": 200,
+   "question_asked": "What is the earliest date of birth among drivers who have made a pit stop?",
+   "answer_text": "The earliest date of birth among drivers who have made a pit stop is 1969-01-03.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT MIN(d.dob) AS earliest_dob\nFROM cn_dbd54b57e3f84128.drivers AS d\nJOIN cn_dbd54b57e3f84128.pitstops AS p\n  ON d.driverid = p.driverid",
+   "candidate_sql": "SELECT MIN(d.dob) AS earliest_dob\nFROM cn_dbd54b57e3f84128.drivers AS d\nJOIN cn_dbd54b57e3f84128.pitstops AS p\n  ON d.driverid = p.driverid",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [],
+    "matched": 0,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 590,
+     "tokens_out": 55,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 294,
+     "rate_remaining_tokens": 7348,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1503,
+     "tokens_out": 85,
+     "cached_tokens": 1440,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3524,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2057,
+     "tokens_out": 91,
+     "cached_tokens": 1472,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4737,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 739,
+     "tokens_out": 77,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6241,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4889,
+    "tokens_out": 308,
+    "llm_calls": 4,
+    "trajectory_steps": 18,
+    "latency_ms": 15063
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 15086,
+   "asked_at": "2026-10-04T17:41:42+00:00"
+  },
+  "F012": {
+   "question_id": "F012",
+   "db_id": "formula_1",
+   "difficulty": "control",
+   "http_status": 200,
+   "question_asked": "How many pit stops have British drivers made in total?\nHint: British refers to nationality = 'British'",
+   "answer_text": "British drivers have made a total of 811 pit stops.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(*) AS total_pit_stops\nFROM cn_dbd54b57e3f84128.pitstops AS p\nJOIN cn_dbd54b57e3f84128.drivers AS d ON p.driverid = d.driverid\nWHERE d.nationality = 'British'",
+   "candidate_sql": "SELECT COUNT(*) AS total_pit_stops\nFROM cn_dbd54b57e3f84128.pitstops AS p\nJOIN cn_dbd54b57e3f84128.drivers AS d ON p.driverid = d.driverid\nWHERE d.nationality = 'British'",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "811",
+      "start": 37,
+      "end": 40,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "total_pit_stops"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 596,
+     "tokens_out": 50,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 246,
+     "rate_remaining_tokens": 7348,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1503,
+     "tokens_out": 208,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 7060,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2056,
+     "tokens_out": 251,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6551,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 754,
+     "tokens_out": 75,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3739,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4909,
+    "tokens_out": 584,
+    "llm_calls": 4,
+    "trajectory_steps": 18,
+    "latency_ms": 17950
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 18018,
+   "asked_at": "2026-10-04T17:42:06+00:00"
+  },
+  "F013": {
+   "question_id": "F013",
+   "db_id": "formula_1",
+   "difficulty": "control",
+   "http_status": 200,
+   "question_asked": "How many points did German constructors score in total in the constructor results of the 2008 season?\nHint: German refers to constructors.nationality = 'German'; 2008 season refers to races.year = 2008",
+   "answer_text": "German constructors scored a total of 127.0 points in the 2008 season.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COALESCE(SUM(cr.points), 0) AS total_points\nFROM cn_dbd54b57e3f84128.constructorresults cr\nJOIN cn_dbd54b57e3f84128.races r ON cr.raceid = r.raceid\nJOIN cn_dbd54b57e3f84128.constructors c ON cr.constructorid = c.constructorid\nWHERE r.year = 2008 AND c.nationality = 'German'",
+   "candidate_sql": "SELECT COALESCE(SUM(cr.points), 0) AS total_points\nFROM cn_dbd54b57e3f84128.constructorresults cr\nJOIN cn_dbd54b57e3f84128.races r ON cr.raceid = r.raceid\nJOIN cn_dbd54b57e3f84128.constructors c ON cr.constructorid = c.constructorid\nWHERE r.year = 2008 AND c.nationality = 'German'",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "127.0",
+      "start": 38,
+      "end": 43,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "total_points"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 626,
+     "tokens_out": 57,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 261,
+     "rate_remaining_tokens": 7312,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1516,
+     "tokens_out": 257,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 10058,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2289,
+     "tokens_out": 240,
+     "cached_tokens": 64,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3890,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 763,
+     "tokens_out": 55,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4803,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 5194,
+    "tokens_out": 609,
+    "llm_calls": 4,
+    "trajectory_steps": 19,
+    "latency_ms": 19335
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 19385,
+   "asked_at": "2026-10-04T17:42:30+00:00"
+  },
+  "F014": {
+   "question_id": "F014",
+   "db_id": "financial",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "How many accounts have at least one withdrawal transaction of more than 50,000?\nHint: withdrawal refers to trans.type = 'VYDAJ'; more than 50,000 refers to amount > 50000",
+   "answer_text": "There are 796 accounts that have at least one withdrawal transaction (trans.type = 'VYDAJ') with an amount greater than 50,000.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(DISTINCT t.account_id) AS account_count FROM cn_b7185de16da64408.trans AS t WHERE t.type = 'VYDAJ' AND t.amount > 50000",
+   "candidate_sql": "SELECT COUNT(DISTINCT t.account_id) AS account_count FROM cn_b7185de16da64408.trans AS t WHERE t.type = 'VYDAJ' AND t.amount > 50000",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "796",
+      "start": 10,
+      "end": 13,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "account_count"
+      }
+     },
+     {
+      "text": "50,000",
+      "start": 120,
+      "end": 126,
+      "matched": true,
+      "source": {
+       "kind": "question"
+      }
+     }
+    ],
+    "matched": 2,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 628,
+     "tokens_out": 55,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 269,
+     "rate_remaining_tokens": 7310,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 996,
+     "tokens_out": 102,
+     "cached_tokens": 288,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3357,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1414,
+     "tokens_out": 73,
+     "cached_tokens": 288,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3125,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 772,
+     "tokens_out": 107,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 8989,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3810,
+    "tokens_out": 337,
+    "llm_calls": 4,
+    "trajectory_steps": 12,
+    "latency_ms": 16080
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 16118,
+   "asked_at": "2026-10-04T17:42:51+00:00"
+  },
+  "F015": {
+   "question_id": "F015",
+   "db_id": "financial",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "What is the combined number of inhabitants of the districts in which at least one account was opened in 1997?\nHint: number of inhabitants refers to A4; opened in 1997 refers to the year of account.date = 1997",
+   "answer_text": "The combined number of inhabitants of all districts where at least one account was opened in 1997 is 246,841,110.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT SUM(d.a4::bigint) AS total_inhabitants\nFROM cn_b7185de16da64408.account AS a\nJOIN cn_b7185de16da64408.district AS d ON a.district_id = d.district_id\nWHERE EXTRACT(YEAR FROM a.date) = 1997",
+   "candidate_sql": "SELECT SUM(d.a4::bigint) AS total_inhabitants\nFROM cn_b7185de16da64408.account AS a\nJOIN cn_b7185de16da64408.district AS d ON a.district_id = d.district_id\nWHERE EXTRACT(YEAR FROM a.date) = 1997",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "246,841,110",
+      "start": 101,
+      "end": 112,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "total_inhabitants"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 630,
+     "tokens_out": 60,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 289,
+     "rate_remaining_tokens": 7312,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 996,
+     "tokens_out": 546,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 12313,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1702,
+     "tokens_out": 294,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 21601,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 781,
+     "tokens_out": 59,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3254,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4109,
+    "tokens_out": 959,
+    "llm_calls": 4,
+    "trajectory_steps": 13,
+    "latency_ms": 37773
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 37800,
+   "asked_at": "2026-10-04T17:43:34+00:00"
+  },
+  "F016": {
+   "question_id": "F016",
+   "db_id": "financial",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "Consider the districts where at least one client born after 1980 lives. What is the average number of inhabitants of these districts?\nHint: number of inhabitants refers to A4; born after 1980 refers to the year of birth_date > 1980",
+   "answer_text": "The average number of inhabitants for districts that have at least one client born after 1980 is approximately 151,113.88.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT AVG(d.a4::numeric) AS avg_inhabitants\nFROM cn_b7185de16da64408.district AS d\nWHERE d.district_id IN (\n    SELECT DISTINCT c.district_id\n    FROM cn_b7185de16da64408.client AS c\n    WHERE c.birth_date > DATE '1980-12-31'\n)",
+   "candidate_sql": "SELECT AVG(d.a4::numeric) AS avg_inhabitants\nFROM cn_b7185de16da64408.district AS d\nWHERE d.district_id IN (\n    SELECT DISTINCT c.district_id\n    FROM cn_b7185de16da64408.client AS c\n    WHERE c.birth_date > DATE '1980-12-31'\n)",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "151,113.88",
+      "start": 111,
+      "end": 121,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "avg_inhabitants"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 633,
+     "tokens_out": 98,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 335,
+     "rate_remaining_tokens": 7311,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 987,
+     "tokens_out": 239,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 9709,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1681,
+     "tokens_out": 363,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 10268,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 789,
+     "tokens_out": 116,
+     "cached_tokens": 65,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3940,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4090,
+    "tokens_out": 816,
+    "llm_calls": 4,
+    "trajectory_steps": 13,
+    "latency_ms": 24430
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 24456,
+   "asked_at": "2026-10-04T17:44:04+00:00"
+  },
+  "F017": {
+   "question_id": "F017",
+   "db_id": "financial",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "How many districts have at least one account with weekly statement issuance?\nHint: weekly issuance refers to frequency = 'POPLATEK TYDNE'",
+   "answer_text": "75 districts have at least one account with weekly statement issuance (frequency = 'POPLATEK TYDNE').",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(DISTINCT a.district_id) AS district_count\nFROM cn_b7185de16da64408.account AS a\nWHERE a.frequency = 'POPLATEK TYDNE'\n  AND a.district_id IS NOT NULL",
+   "candidate_sql": "SELECT COUNT(DISTINCT a.district_id) AS district_count\nFROM cn_b7185de16da64408.account AS a\nWHERE a.frequency = 'POPLATEK TYDNE'\n  AND a.district_id IS NOT NULL",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "75",
+      "start": 0,
+      "end": 2,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "district_count"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 605,
+     "tokens_out": 48,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 310,
+     "rate_remaining_tokens": 7297,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 975,
+     "tokens_out": 176,
+     "cached_tokens": 65,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4269,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1150,
+     "tokens_out": 180,
+     "cached_tokens": 65,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4221,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 756,
+     "tokens_out": 93,
+     "cached_tokens": 68,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3738,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3486,
+    "tokens_out": 497,
+    "llm_calls": 4,
+    "trajectory_steps": 12,
+    "latency_ms": 12726
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 12750,
+   "asked_at": "2026-10-04T17:44:22+00:00"
+  },
+  "F019": {
+   "question_id": "F019",
+   "db_id": "financial",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "What is the average loan amount of the loans whose account has made at least one credit card withdrawal?\nHint: credit card withdrawal refers to trans.operation = 'VYBER KARTOU'",
+   "answer_text": "The average loan amount for loans whose account has made at least one credit\u2011card withdrawal (trans.operation = 'VYBER KARTOU') is 156,218.03.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT AVG(l.amount) AS average_loan_amount\nFROM cn_b7185de16da64408.loan AS l\nWHERE EXISTS (\n    SELECT 1\n    FROM cn_b7185de16da64408.trans AS t\n    WHERE t.account_id = l.account_id\n      AND t.operation = 'VYBER KARTOU'\n)",
+   "candidate_sql": "SELECT AVG(l.amount) AS average_loan_amount\nFROM cn_b7185de16da64408.loan AS l\nWHERE EXISTS (\n    SELECT 1\n    FROM cn_b7185de16da64408.trans AS t\n    WHERE t.account_id = l.account_id\n      AND t.operation = 'VYBER KARTOU'\n)",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "156,218.03",
+      "start": 131,
+      "end": 141,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "average_loan_amount"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 613,
+     "tokens_out": 55,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 284,
+     "rate_remaining_tokens": 7327,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 983,
+     "tokens_out": 289,
+     "cached_tokens": 310,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 8244,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1648,
+     "tokens_out": 304,
+     "cached_tokens": 65,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6793,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 774,
+     "tokens_out": 136,
+     "cached_tokens": 66,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3869,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4018,
+    "tokens_out": 784,
+    "llm_calls": 4,
+    "trajectory_steps": 13,
+    "latency_ms": 19502
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 19523,
+   "asked_at": "2026-10-04T17:44:46+00:00"
+  },
+  "F021": {
+   "question_id": "F021",
+   "db_id": "financial",
+   "difficulty": "control",
+   "http_status": 200,
+   "question_asked": "What is the total amount of all loans granted to accounts in the Prague region?\nHint: Prague region refers to district.A3 = 'Prague'",
+   "answer_text": "The total amount of all loans granted to accounts in the Prague region is 12,932,412.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT SUM(l.amount) AS total_amount\nFROM cn_b7185de16da64408.loan AS l\nJOIN cn_b7185de16da64408.account AS a ON l.account_id = a.account_id\nJOIN cn_b7185de16da64408.district AS d ON a.district_id = d.district_id\nWHERE d.a3 = 'Prague'",
+   "candidate_sql": "SELECT SUM(l.amount) AS total_amount\nFROM cn_b7185de16da64408.loan AS l\nJOIN cn_b7185de16da64408.account AS a ON l.account_id = a.account_id\nJOIN cn_b7185de16da64408.district AS d ON a.district_id = d.district_id\nWHERE d.a3 = 'Prague'",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "12,932,412",
+      "start": 74,
+      "end": 84,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "total_amount"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 605,
+     "tokens_out": 51,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 249,
+     "rate_remaining_tokens": 7335,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 975,
+     "tokens_out": 274,
+     "cached_tokens": 66,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6962,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1928,
+     "tokens_out": 276,
+     "cached_tokens": 68,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4680,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 758,
+     "tokens_out": 97,
+     "cached_tokens": 68,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4400,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4266,
+    "tokens_out": 698,
+    "llm_calls": 4,
+    "trajectory_steps": 14,
+    "latency_ms": 16525
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 16591,
+   "asked_at": "2026-10-04T17:45:08+00:00"
+  },
+  "F022": {
+   "question_id": "F022",
+   "db_id": "financial",
+   "difficulty": "control",
+   "http_status": 200,
+   "question_asked": "How many transactions of more than 80,000 were made from accounts opened in 1993?\nHint: opened in 1993 refers to the year of account.date = 1993",
+   "answer_text": "There were 4 transactions exceeding 80,000 that originated from accounts opened in 1993.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(*) AS transaction_count\nFROM cn_b7185de16da64408.trans AS t\nJOIN cn_b7185de16da64408.account AS a ON t.account_id = a.account_id\nWHERE t.amount > 80000\n  AND EXTRACT(YEAR FROM a.date) = 1993",
+   "candidate_sql": "SELECT COUNT(*) AS transaction_count\nFROM cn_b7185de16da64408.trans AS t\nJOIN cn_b7185de16da64408.account AS a ON t.account_id = a.account_id\nWHERE t.amount > 80000\n  AND EXTRACT(YEAR FROM a.date) = 1993",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "4",
+      "start": 11,
+      "end": 12,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "transaction_count"
+      }
+     },
+     {
+      "text": "80,000",
+      "start": 36,
+      "end": 42,
+      "matched": true,
+      "source": {
+       "kind": "question"
+      }
+     }
+    ],
+    "matched": 2,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 622,
+     "tokens_out": 64,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 458,
+     "rate_remaining_tokens": 7316,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 973,
+     "tokens_out": 104,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6168,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1551,
+     "tokens_out": 104,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 7570,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 764,
+     "tokens_out": 48,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3785,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3910,
+    "tokens_out": 320,
+    "llm_calls": 4,
+    "trajectory_steps": 13,
+    "latency_ms": 18234
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 18493,
+   "asked_at": "2026-10-04T17:45:31+00:00"
+  },
+  "F023": {
+   "question_id": "F023",
+   "db_id": "financial",
+   "difficulty": "control",
+   "http_status": 200,
+   "question_asked": "What is the largest loan amount granted to an account that has at least one permanent order?",
+   "answer_text": "The largest loan amount granted to an account that has at least one permanent order is 590,820.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT MAX(l.amount) AS max_loan_amount\nFROM cn_b7185de16da64408.loan AS l\nWHERE l.account_id IN (\n    SELECT DISTINCT o.account_id\n    FROM cn_b7185de16da64408.order AS o\n    WHERE o.account_id IS NOT NULL\n)",
+   "candidate_sql": "SELECT MAX(l.amount) AS max_loan_amount\nFROM cn_b7185de16da64408.loan AS l\nWHERE l.account_id IN (\n    SELECT DISTINCT o.account_id\n    FROM cn_b7185de16da64408.order AS o\n    WHERE o.account_id IS NOT NULL\n)",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "590,820",
+      "start": 87,
+      "end": 94,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "max_loan_amount"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 592,
+     "tokens_out": 57,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 245,
+     "rate_remaining_tokens": 7310,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 964,
+     "tokens_out": 405,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 8347,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1589,
+     "tokens_out": 128,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6215,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 755,
+     "tokens_out": 67,
+     "cached_tokens": 64,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3512,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3900,
+    "tokens_out": 657,
+    "llm_calls": 4,
+    "trajectory_steps": 14,
+    "latency_ms": 18547
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 18567,
+   "asked_at": "2026-10-04T17:45:55+00:00"
+  },
+  "F024": {
+   "question_id": "F024",
+   "db_id": "card_games",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "How many cards are banned in at least one format?\nHint: banned refers to legalities.status = 'Banned'",
+   "answer_text": "There are 1,169 cards that are banned in at least one format.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(DISTINCT c.id) AS banned_card_count\nFROM cn_2bf53571f75f4c79.cards AS c\nJOIN cn_2bf53571f75f4c79.legalities AS l ON l.uuid = c.uuid\nWHERE l.status = 'Banned'",
+   "candidate_sql": "SELECT COUNT(DISTINCT c.id) AS banned_card_count\nFROM cn_2bf53571f75f4c79.cards AS c\nJOIN cn_2bf53571f75f4c79.legalities AS l ON l.uuid = c.uuid\nWHERE l.status = 'Banned'",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "1,169",
+      "start": 10,
+      "end": 15,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "banned_card_count"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 599,
+     "tokens_out": 50,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 315,
+     "rate_remaining_tokens": 7337,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1234,
+     "tokens_out": 103,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3835,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2215,
+     "tokens_out": 101,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5080,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 753,
+     "tokens_out": 61,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4119,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4801,
+    "tokens_out": 315,
+    "llm_calls": 4,
+    "trajectory_steps": 11,
+    "latency_ms": 13567
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 13588,
+   "asked_at": "2026-10-04T17:46:14+00:00"
+  },
+  "F025": {
+   "question_id": "F025",
+   "db_id": "card_games",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "How many mythic rare cards have been printed in at least one foreign language?\nHint: mythic rare refers to rarity = 'mythic'; printed in a foreign language refers to having a row in foreign_data",
+   "answer_text": "",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(DISTINCT c.id) AS mythic_foreign_count\nFROM cn_2bf53571f75f4c79.cards AS c\nJOIN cn_2bf53571f75f4c79.foreign_data AS fd\n  ON c.uuid = fd.uuid\nWHERE c.rarity = 'mythic'",
+   "candidate_sql": "SELECT COUNT(DISTINCT c.id) AS mythic_foreign_count\nFROM cn_2bf53571f75f4c79.cards AS c\nJOIN cn_2bf53571f75f4c79.foreign_data AS fd\n  ON c.uuid = fd.uuid\nWHERE c.rarity = 'mythic'",
+   "evidence": "checked",
+   "number_grounding": null,
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 617,
+     "tokens_out": 55,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 293,
+     "rate_remaining_tokens": 7323,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1244,
+     "tokens_out": 118,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 7363,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2845,
+     "tokens_out": 129,
+     "cached_tokens": 288,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3472,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 767,
+     "tokens_out": 66,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6131,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 5473,
+    "tokens_out": 368,
+    "llm_calls": 4,
+    "trajectory_steps": 11,
+    "latency_ms": 17635
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 17656,
+   "asked_at": "2026-10-04T17:46:36+00:00"
+  },
+  "F026": {
+   "question_id": "F026",
+   "db_id": "card_games",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "What is the average converted mana cost of the cards that have at least one ruling?",
+   "answer_text": "The average converted mana cost of cards that have at least one ruling is 3.34.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT AVG(c.convertedmanacost) AS average_converted_mana_cost\nFROM cn_2bf53571f75f4c79.cards AS c\nWHERE EXISTS (\n    SELECT 1\n    FROM cn_2bf53571f75f4c79.rulings AS r\n    WHERE r.uuid = c.uuid\n)",
+   "candidate_sql": "SELECT AVG(c.convertedmanacost) AS average_converted_mana_cost\nFROM cn_2bf53571f75f4c79.cards AS c\nWHERE EXISTS (\n    SELECT 1\n    FROM cn_2bf53571f75f4c79.rulings AS r\n    WHERE r.uuid = c.uuid\n)",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "3.34",
+      "start": 74,
+      "end": 78,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "average_converted_mana_cost"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 591,
+     "tokens_out": 56,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 250,
+     "rate_remaining_tokens": 7349,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1217,
+     "tokens_out": 149,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 9943,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2351,
+     "tokens_out": 308,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6029,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 759,
+     "tokens_out": 105,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 33362,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4918,
+    "tokens_out": 618,
+    "llm_calls": 4,
+    "trajectory_steps": 11,
+    "latency_ms": 49929
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 49947,
+   "asked_at": "2026-10-04T17:47:31+00:00"
+  },
+  "F027": {
+   "question_id": "F027",
+   "db_id": "card_games",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "How many different artists illustrated at least one card that is restricted in some format?\nHint: restricted refers to legalities.status = 'Restricted'",
+   "answer_text": "There are 109 distinct artists who have illustrated at least one card that is listed as \u201cRestricted\u201d in any format.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(DISTINCT c.artist) AS artist_count\nFROM cn_2bf53571f75f4c79.cards AS c\nJOIN cn_2bf53571f75f4c79.legalities AS l\n  ON c.uuid = l.uuid\nWHERE l.status = 'Restricted' AND c.artist IS NOT NULL",
+   "candidate_sql": "SELECT COUNT(DISTINCT c.artist) AS artist_count\nFROM cn_2bf53571f75f4c79.cards AS c\nJOIN cn_2bf53571f75f4c79.legalities AS l\n  ON c.uuid = l.uuid\nWHERE l.status = 'Restricted' AND c.artist IS NOT NULL",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "109",
+      "start": 10,
+      "end": 13,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "artist_count"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 603,
+     "tokens_out": 55,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 247,
+     "rate_remaining_tokens": 7333,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1245,
+     "tokens_out": 131,
+     "cached_tokens": 64,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3297,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2226,
+     "tokens_out": 112,
+     "cached_tokens": 288,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4520,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 755,
+     "tokens_out": 98,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4076,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4829,
+    "tokens_out": 396,
+    "llm_calls": 4,
+    "trajectory_steps": 11,
+    "latency_ms": 12366
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 12384,
+   "asked_at": "2026-10-04T17:47:49+00:00"
+  },
+  "F028": {
+   "question_id": "F028",
+   "db_id": "card_games",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "What is the total base set size of the sets that have at least one translation?",
+   "answer_text": "The total base set size of the sets that have at least one translation is 23,584.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT SUM(s.baseSetsize) AS total_base_set_size\nFROM cn_2bf53571f75f4c79.sets AS s\nWHERE EXISTS (\n    SELECT 1\n    FROM cn_2bf53571f75f4c79.set_translations AS st\n    WHERE st.setcode = s.code\n)",
+   "candidate_sql": "SELECT SUM(s.baseSetsize) AS total_base_set_size\nFROM cn_2bf53571f75f4c79.sets AS s\nWHERE EXISTS (\n    SELECT 1\n    FROM cn_2bf53571f75f4c79.set_translations AS st\n    WHERE st.setcode = s.code\n)",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "23,584",
+      "start": 74,
+      "end": 80,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "total_base_set_size"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 591,
+     "tokens_out": 56,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 272,
+     "rate_remaining_tokens": 7349,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1229,
+     "tokens_out": 408,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 23528,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2421,
+     "tokens_out": 94,
+     "cached_tokens": 64,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4654,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 754,
+     "tokens_out": 46,
+     "cached_tokens": 640,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3040,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4995,
+    "tokens_out": 604,
+    "llm_calls": 4,
+    "trajectory_steps": 11,
+    "latency_ms": 31668
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 31697,
+   "asked_at": "2026-10-04T17:48:37+00:00"
+  },
+  "F029": {
+   "question_id": "F029",
+   "db_id": "card_games",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "How many cards illustrated by Kev Walker are legal in at least one format?\nHint: legal refers to legalities.status = 'Legal'",
+   "answer_text": "There are 984 cards illustrated by Kev Walker that are legal in at least one format.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(DISTINCT c.id) FROM cn_2bf53571f75f4c79.cards c JOIN cn_2bf53571f75f4c79.legalities l ON l.uuid = c.uuid WHERE c.artist = 'Kev Walker' AND l.status = 'Legal'",
+   "candidate_sql": "SELECT COUNT(DISTINCT c.id) FROM cn_2bf53571f75f4c79.cards c JOIN cn_2bf53571f75f4c79.legalities l ON l.uuid = c.uuid WHERE c.artist = 'Kev Walker' AND l.status = 'Legal'",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "984",
+      "start": 10,
+      "end": 13,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "count"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 603,
+     "tokens_out": 70,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 346,
+     "rate_remaining_tokens": 7337,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1244,
+     "tokens_out": 114,
+     "cached_tokens": 1184,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3298,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2382,
+     "tokens_out": 193,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 11157,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 752,
+     "tokens_out": 90,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4627,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4981,
+    "tokens_out": 467,
+    "llm_calls": 4,
+    "trajectory_steps": 11,
+    "latency_ms": 19749
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 19780,
+   "asked_at": "2026-10-04T17:49:01+00:00"
+  },
+  "F030": {
+   "question_id": "F030",
+   "db_id": "card_games",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "How many rare cards have received a ruling dated in 2012?\nHint: rare refers to rarity = 'rare'; dated in 2012 refers to the year of rulings.date = 2012",
+   "answer_text": "There are 526 rare cards that have received a ruling dated in 2012.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(*) \nFROM cn_2bf53571f75f4c79.cards AS c\nJOIN cn_2bf53571f75f4c79.rulings AS r ON c.uuid = r.uuid\nWHERE c.rarity = 'rare' \n  AND EXTRACT(YEAR FROM r.date) = 2012",
+   "candidate_sql": "SELECT COUNT(*) \nFROM cn_2bf53571f75f4c79.cards AS c\nJOIN cn_2bf53571f75f4c79.rulings AS r ON c.uuid = r.uuid\nWHERE c.rarity = 'rare' \n  AND EXTRACT(YEAR FROM r.date) = 2012",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "526",
+      "start": 10,
+      "end": 13,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "count"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 621,
+     "tokens_out": 55,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 265,
+     "rate_remaining_tokens": 7315,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1242,
+     "tokens_out": 144,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 10882,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2364,
+     "tokens_out": 118,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 8020,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 755,
+     "tokens_out": 54,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5081,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4982,
+    "tokens_out": 371,
+    "llm_calls": 4,
+    "trajectory_steps": 11,
+    "latency_ms": 24517
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 24657,
+   "asked_at": "2026-10-04T17:49:31+00:00"
+  },
+  "F031": {
+   "question_id": "F031",
+   "db_id": "card_games",
+   "difficulty": "control",
+   "http_status": 200,
+   "question_asked": "How many legality entries mark a card illustrated by Kev Walker as banned?\nHint: banned refers to legalities.status = 'Banned'",
+   "answer_text": "There are 48 legality entries that mark a card illustrated by Kev Walker as banned.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(*) AS banned_count\nFROM cn_2bf53571f75f4c79.legalities AS l\nJOIN cn_2bf53571f75f4c79.cards AS c ON l.uuid = c.uuid\nWHERE l.status = 'Banned'\n  AND c.artist = 'Kev Walker'",
+   "candidate_sql": "SELECT COUNT(*) AS banned_count\nFROM cn_2bf53571f75f4c79.legalities AS l\nJOIN cn_2bf53571f75f4c79.cards AS c ON l.uuid = c.uuid\nWHERE l.status = 'Banned'\n  AND c.artist = 'Kev Walker'",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "48",
+      "start": 10,
+      "end": 12,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "banned_count"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 603,
+     "tokens_out": 69,
+     "cached_tokens": 0,
+     "retries": 2,
+     "waited_ms": 101000,
+     "ms": 101490,
+     "rate_remaining_tokens": 7333,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1237,
+     "tokens_out": 139,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 8611,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2381,
+     "tokens_out": 141,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3456,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 753,
+     "tokens_out": 54,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3040,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4974,
+    "tokens_out": 403,
+    "llm_calls": 4,
+    "trajectory_steps": 11,
+    "latency_ms": 116863
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 117072,
+   "asked_at": "2026-10-04T17:51:33+00:00"
+  },
+  "F032": {
+   "question_id": "F032",
+   "db_id": "card_games",
+   "difficulty": "control",
+   "http_status": 200,
+   "question_asked": "What is the highest converted mana cost among cards that are banned in at least one format?\nHint: banned refers to legalities.status = 'Banned'",
+   "answer_text": "The highest converted mana cost among cards that are banned in at least one format is 15.0.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT MAX(c.convertedmanacost) AS max_convertedmanacost\nFROM cn_2bf53571f75f4c79.cards AS c\nJOIN cn_2bf53571f75f4c79.legalities AS l ON c.uuid = l.uuid\nWHERE l.status = 'Banned'",
+   "candidate_sql": "SELECT MAX(c.convertedmanacost) AS max_convertedmanacost\nFROM cn_2bf53571f75f4c79.cards AS c\nJOIN cn_2bf53571f75f4c79.legalities AS l ON c.uuid = l.uuid\nWHERE l.status = 'Banned'",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "15.0",
+      "start": 86,
+      "end": 90,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "max_convertedmanacost"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 606,
+     "tokens_out": 57,
+     "cached_tokens": 0,
+     "retries": 5,
+     "waited_ms": 300000,
+     "ms": 300826,
+     "rate_remaining_tokens": 7325,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1242,
+     "tokens_out": 195,
+     "cached_tokens": 66,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6685,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2226,
+     "tokens_out": 187,
+     "cached_tokens": 68,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5469,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 767,
+     "tokens_out": 108,
+     "cached_tokens": 65,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 9197,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4841,
+    "tokens_out": 547,
+    "llm_calls": 4,
+    "trajectory_steps": 11,
+    "latency_ms": 322440
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 322469,
+   "asked_at": "2026-10-04T17:57:01+00:00"
+  },
+  "F033": {
+   "question_id": "F033",
+   "db_id": "card_games",
+   "difficulty": "control",
+   "http_status": 200,
+   "question_asked": "How many rulings have been issued for cards illustrated by Kev Walker?",
+   "answer_text": "There have been 1,253 rulings issued for cards illustrated by Kev Walker.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(*) AS ruling_count\nFROM cn_2bf53571f75f4c79.rulings AS r\nJOIN cn_2bf53571f75f4c79.cards AS c ON r.uuid = c.uuid\nWHERE c.artist = 'Kev Walker'",
+   "candidate_sql": "SELECT COUNT(*) AS ruling_count\nFROM cn_2bf53571f75f4c79.rulings AS r\nJOIN cn_2bf53571f75f4c79.cards AS c ON r.uuid = c.uuid\nWHERE c.artist = 'Kev Walker'",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "1,253",
+      "start": 16,
+      "end": 21,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "ruling_count"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 588,
+     "tokens_out": 68,
+     "cached_tokens": 0,
+     "retries": 6,
+     "waited_ms": 271000,
+     "ms": 271874,
+     "rate_remaining_tokens": 7344,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 1224,
+     "tokens_out": 127,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3376,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2506,
+     "tokens_out": 122,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3206,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 741,
+     "tokens_out": 48,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3155,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 5059,
+    "tokens_out": 365,
+    "llm_calls": 4,
+    "trajectory_steps": 11,
+    "latency_ms": 281964
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 282056,
+   "asked_at": "2026-10-04T18:01:48+00:00"
+  },
+  "F034": {
+   "question_id": "F034",
+   "db_id": "european_football_2",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "How many players have at least one attribute record with an overall rating above 85?",
+   "answer_text": "There are 159 players who have at least one attribute record with an overall rating above 85.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(DISTINCT pa.player_api_id) AS player_count\nFROM cn_e1b70dcdfda248fc.player_attributes AS pa\nWHERE pa.overall_rating > 85",
+   "candidate_sql": "SELECT COUNT(DISTINCT pa.player_api_id) AS player_count\nFROM cn_e1b70dcdfda248fc.player_attributes AS pa\nWHERE pa.overall_rating > 85",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "159",
+      "start": 10,
+      "end": 13,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "player_count"
+      }
+     },
+     {
+      "text": "85",
+      "start": 90,
+      "end": 92,
+      "matched": true,
+      "source": {
+       "kind": "question"
+      }
+     }
+    ],
+    "matched": 2,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 592,
+     "tokens_out": 57,
+     "cached_tokens": 0,
+     "retries": 5,
+     "waited_ms": 300000,
+     "ms": 300985,
+     "rate_remaining_tokens": 7340,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2475,
+     "tokens_out": 86,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3347,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 3150,
+     "tokens_out": 81,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3713,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 742,
+     "tokens_out": 55,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3194,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 6959,
+    "tokens_out": 279,
+    "llm_calls": 4,
+    "trajectory_steps": 11,
+    "latency_ms": 311583
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 311621,
+   "asked_at": "2026-10-04T18:07:05+00:00"
+  },
+  "F035": {
+   "question_id": "F035",
+   "db_id": "european_football_2",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "What is the average height of the players who were rated with a potential above 85 at least once?",
+   "answer_text": "The average height of players who have been rated with a potential above 85 at least once is approximately 180.78\u202fcm. Note that this figure may count some rows more than once because of join fan\u2011out.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT AVG(p.height) AS average_height\nFROM cn_e1b70dcdfda248fc.player p\nJOIN cn_e1b70dcdfda248fc.player_attributes pa\n  ON p.player_api_id = pa.player_api_id\nWHERE pa.potential > 85;",
+   "candidate_sql": "SELECT AVG(p.height) AS average_height\nFROM cn_e1b70dcdfda248fc.player p\nJOIN cn_e1b70dcdfda248fc.player_attributes pa\n  ON p.player_api_id = pa.player_api_id\nWHERE pa.potential > 85;",
+   "evidence": "unchecked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "85",
+      "start": 73,
+      "end": 75,
+      "matched": true,
+      "source": {
+       "kind": "question"
+      }
+     },
+     {
+      "text": "180.78",
+      "start": 107,
+      "end": 113,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "average_height"
+      }
+     }
+    ],
+    "matched": 2,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 596,
+     "tokens_out": 61,
+     "cached_tokens": 0,
+     "retries": 6,
+     "waited_ms": 270000,
+     "ms": 270805,
+     "rate_remaining_tokens": 7336,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2486,
+     "tokens_out": 137,
+     "cached_tokens": 64,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3056,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 3458,
+     "tokens_out": 92,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 7182,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 779,
+     "tokens_out": 222,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 46832,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 7319,
+    "tokens_out": 512,
+    "llm_calls": 4,
+    "trajectory_steps": 12,
+    "latency_ms": 328147
+   },
+   "caveats": [
+    "These figures may count some rows more than once (join fan-out)."
+   ],
+   "self_consistency": null,
+   "latency_ms": 328234,
+   "asked_at": "2026-10-04T18:12:38+00:00"
+  },
+  "F036": {
+   "question_id": "F036",
+   "db_id": "european_football_2",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "How many teams have at least one attribute record with a fast build-up play speed?\nHint: fast build-up play speed refers to buildupplayspeedclass = 'Fast'",
+   "answer_text": "There are 105 teams that have at least one attribute record with a fast build-up play speed (buildupplayspeedclass = 'Fast').",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(DISTINCT ta.team_api_id) AS team_count\nFROM cn_e1b70dcdfda248fc.team_attributes AS ta\nWHERE ta.buildupplayspeedclass = 'Fast'",
+   "candidate_sql": "SELECT COUNT(DISTINCT ta.team_api_id) AS team_count\nFROM cn_e1b70dcdfda248fc.team_attributes AS ta\nWHERE ta.buildupplayspeedclass = 'Fast'",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "105",
+      "start": 10,
+      "end": 13,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "team_count"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 609,
+     "tokens_out": 56,
+     "cached_tokens": 0,
+     "retries": 3,
+     "waited_ms": 180000,
+     "ms": 180542,
+     "rate_remaining_tokens": 7323,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2493,
+     "tokens_out": 193,
+     "cached_tokens": 68,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4392,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 3297,
+     "tokens_out": 257,
+     "cached_tokens": 65,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5223,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 760,
+     "tokens_out": 107,
+     "cached_tokens": 68,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4016,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 7159,
+    "tokens_out": 613,
+    "llm_calls": 4,
+    "trajectory_steps": 11,
+    "latency_ms": 194395
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 194424,
+   "asked_at": "2026-10-04T18:15:58+00:00"
+  },
+  "F038": {
+   "question_id": "F038",
+   "db_id": "european_football_2",
+   "difficulty": "risky",
+   "http_status": 200,
+   "question_asked": "What is the average weight of the players whose attacking work rate was recorded as high at least once?\nHint: high attacking work rate refers to attacking_work_rate = 'high'",
+   "answer_text": "The average weight of players who had a high attacking work rate at least once is 164.27 (units as recorded in the data).",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT AVG(p.weight)::numeric AS average_weight\nFROM cn_e1b70dcdfda248fc.player p\nWHERE EXISTS (\n    SELECT 1\n    FROM cn_e1b70dcdfda248fc.player_attributes pa\n    WHERE pa.player_api_id = p.player_api_id\n      AND pa.attacking_work_rate = 'high'\n)",
+   "candidate_sql": "SELECT AVG(p.weight)::numeric AS average_weight\nFROM cn_e1b70dcdfda248fc.player p\nWHERE EXISTS (\n    SELECT 1\n    FROM cn_e1b70dcdfda248fc.player_attributes pa\n    WHERE pa.player_api_id = p.player_api_id\n      AND pa.attacking_work_rate = 'high'\n)",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "164.27",
+      "start": 82,
+      "end": 88,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "average_weight"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 610,
+     "tokens_out": 59,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 258,
+     "rate_remaining_tokens": 7098,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2493,
+     "tokens_out": 136,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4563,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 3482,
+     "tokens_out": 108,
+     "cached_tokens": 32,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4206,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 766,
+     "tokens_out": 66,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3066,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 7351,
+    "tokens_out": 369,
+    "llm_calls": 4,
+    "trajectory_steps": 12,
+    "latency_ms": 12438
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 12468,
+   "asked_at": "2026-10-04T18:22:21+00:00"
+  },
+  "F039": {
+   "question_id": "F039",
+   "db_id": "european_football_2",
+   "difficulty": "control",
+   "http_status": 200,
+   "question_asked": "How many attribute records give a player taller than 190 cm an overall rating above 80?\nHint: taller than 190 cm refers to height > 190",
+   "answer_text": "There are 608 attribute records where the player\u2019s height is greater than 190\u202fcm and the overall rating exceeds 80.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT COUNT(*) AS record_count\nFROM cn_e1b70dcdfda248fc.player AS p\nJOIN cn_e1b70dcdfda248fc.player_attributes AS pa\n  ON p.player_api_id = pa.player_api_id\nWHERE p.height > 190\n  AND pa.overall_rating > 80",
+   "candidate_sql": "SELECT COUNT(*) AS record_count\nFROM cn_e1b70dcdfda248fc.player AS p\nJOIN cn_e1b70dcdfda248fc.player_attributes AS pa\n  ON p.player_api_id = pa.player_api_id\nWHERE p.height > 190\n  AND pa.overall_rating > 80",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "608",
+      "start": 10,
+      "end": 13,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "record_count"
+      }
+     },
+     {
+      "text": "190",
+      "start": 74,
+      "end": 77,
+      "matched": true,
+      "source": {
+       "kind": "question"
+      }
+     },
+     {
+      "text": "80",
+      "start": 112,
+      "end": 114,
+      "matched": true,
+      "source": {
+       "kind": "question"
+      }
+     }
+    ],
+    "matched": 3,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 614,
+     "tokens_out": 61,
+     "cached_tokens": 0,
+     "retries": 5,
+     "waited_ms": 300000,
+     "ms": 300739,
+     "rate_remaining_tokens": 7018,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2492,
+     "tokens_out": 295,
+     "cached_tokens": 68,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5909,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 3481,
+     "tokens_out": 284,
+     "cached_tokens": 66,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6484,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 759,
+     "tokens_out": 107,
+     "cached_tokens": 68,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3855,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 7346,
+    "tokens_out": 747,
+    "llm_calls": 4,
+    "trajectory_steps": 12,
+    "latency_ms": 317266
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 317405,
+   "asked_at": "2026-10-04T18:27:43+00:00"
+  },
+  "F040": {
+   "question_id": "F040",
+   "db_id": "european_football_2",
+   "difficulty": "control",
+   "http_status": 200,
+   "question_asked": "What is the greatest height of a player who was rated above 85 overall at least once?",
+   "answer_text": "The greatest height among players who have had an overall rating above 85 at least once is 198 cm.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT MAX(p.height) AS greatest_height\nFROM cn_e1b70dcdfda248fc.player p\nJOIN cn_e1b70dcdfda248fc.player_attributes pa\n  ON p.player_api_id = pa.player_api_id\nWHERE pa.overall_rating > 85",
+   "candidate_sql": "SELECT MAX(p.height) AS greatest_height\nFROM cn_e1b70dcdfda248fc.player p\nJOIN cn_e1b70dcdfda248fc.player_attributes pa\n  ON p.player_api_id = pa.player_api_id\nWHERE pa.overall_rating > 85",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "85",
+      "start": 71,
+      "end": 73,
+      "matched": true,
+      "source": {
+       "kind": "question"
+      }
+     },
+     {
+      "text": "198",
+      "start": 91,
+      "end": 94,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "greatest_height"
+      }
+     }
+    ],
+    "matched": 2,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 594,
+     "tokens_out": 59,
+     "cached_tokens": 0,
+     "retries": 3,
+     "waited_ms": 180000,
+     "ms": 180603,
+     "rate_remaining_tokens": 7345,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 2477,
+     "tokens_out": 99,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4828,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "sql",
+     "model": "gpt-oss-120b",
+     "tokens_in": 3466,
+     "tokens_out": 93,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3770,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    },
+    {
+     "role": "synthesizer",
+     "model": "gpt-oss-120b",
+     "tokens_in": 745,
+     "tokens_out": 78,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4349,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-oss-120b",
+     "endpoint": "cheaperinference"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 7282,
+    "tokens_out": 329,
+    "llm_calls": 4,
+    "trajectory_steps": 12,
+    "latency_ms": 193769
+   },
+   "caveats": [],
+   "self_consistency": null,
+   "latency_ms": 193797,
+   "asked_at": "2026-10-04T18:31:02+00:00"
+  }
+ },
+ "pipeline_flags": {
+  "language_gate": "llm",
+  "router_mode": "always",
+  "sql_draft_mode": "llm",
+  "synth_style": "full",
+  "answer_checks": "on",
+  "templates": "off",
+  "number_grounding": "on",
+  "repair_loop": "evidence",
+  "sql_row_cap": "executor",
+  "grounding_version": "v2",
+  "self_consistency_k": 0,
+  "retrieval_mode": "dense",
+  "doc_scope": "all",
+  "doc_abstain": "off",
+  "rerank": "bge",
+  "query_rewrite": "off"
+ }
+}

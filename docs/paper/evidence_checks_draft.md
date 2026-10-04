@@ -1,7 +1,6 @@
 # Do Data Checks Tell You When to Trust a Text-to-SQL Answer? A Pre-registered Study on Corrected BIRD Labels
 
-*Draft v0.1, 2026-10-04. Short-paper format (about 4 pages plus references). The robustness run with a
-second SQL model (gpt-oss-120b) is pending. Author block, venue and template to follow.*
+*Draft v0.1, 2026-10-04. Short-paper format (about 4 pages plus references). All runs are complete. Author block, venue and template to follow.*
 
 ## Abstract
 
@@ -28,8 +27,9 @@ A blind annotation of every wrong answer explains why. Most errors are semantic:
 wrong columns, wrong aggregation intent. The double-counting errors that a structural probe targets
 mostly arise through legitimate joins whose intent the probe cannot see. A fifth of the
 execution-match "errors" are formatting differences the scorer misses. On a frozen set of 60 questions
-built to invite double counting, the model never double counted, so the pre-registered fan-out test
-could not be run: the textbook trap such probes target no longer catches a current model.
+built to invite double counting, the main model never double counted and a second model did so 5
+times, so the pre-registered fan-out test could not be run; when the error occurred, the check caught
+it precisely, but so did a strong judge.
 
 ## 1 Introduction
 
@@ -237,7 +237,8 @@ temperature). A small model (Qwen3.8-27B) normalises the question.
 - **H3 is supported:** 2 of 242 correct answers flagged; upper bound 2.6%. But grounding fired on only
   5 answers, and 3 of its 4 hits are answers whose SQL failed and whose text quotes an error code.
 - **H4 is untestable:** 2 repairs were triggered.
-- **H1 is untestable:** on the fan-out set the model made no double-counting errors (precondition: 10).
+- **H1 is untestable:** on the fan-out set GPT-5 mini made no double-counting errors and the
+  robustness model (gpt-oss-120b) made 5 (precondition: 10).
 - **Holm** over the testable confirmatory tests (H2, H3): H3 is rejected (p = 0.0004), H2 is not
   (p = 0.42).
 
@@ -294,6 +295,15 @@ The five wrong answers (an unblinded, exploratory reading):
 
 The NULL-heavy check flagged two of them. The judge gave all four genuine errors a probability of 0.
 
+**Robustness model (gpt-oss-120b).** As the protocol requires when the main model fails H1's
+precondition, the set was rerun with the second model:
+- it answered 54 of 60 risky questions correctly and made 5 double-counting errors, still short of 10;
+- the fan-out check fired on 4 answers, all wrong, catching 4 of the 5 with no false alarms (exploratory);
+- at the same flag rate the judge catches 3.2, but 6 answers came back with empty text from the host,
+  and without them the judge ties the check (4 vs 4).
+
+When the textbook error happens, the structural check is precise, and so is a strong judge.
+
 ## 6 Discussion
 
 **Why data checks rarely help.** The checks see the query and its own result; most errors are about
@@ -338,6 +348,8 @@ help.
 - **One SQL model** (GPT-5 mini) at default sampling; the model may have seen BIRD during training.
 - **Model access** was through a local OpenAI-compatible proxy to a hosted subscription. The server
   reported the served model on every call (all `gpt-5-mini`; judge `gemini-3.8-flash`).
+- **Empty answers from one host.** The reseller returned an empty answer text on 6 of the 93
+  robustness answers. SQL labels are unaffected; the judge comparison is reported with and without them.
 - **Hosts.** Free-tier limits forced a change of host for the gpt-oss-120b runs (the secondary judge
   and the robustness run) to a reseller that does not disclose its upstream provider.
   - We checked the served model name on every call, and that the reasoning-effort setting was

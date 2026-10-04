@@ -368,7 +368,14 @@ only on held-out data.
         honoured;
       - the secondary judge (below), whose agreement with Groq-direct verdicts measures whether the
         host changes the model's behaviour.
-    - **The normaliser (qwen3.8-27b) stays on Groq direct,** as in every other run.
+    - **The normaliser and other light roles (qwen3.8-27b) also run through Cheaper Inference, with
+      thinking off.** Its qwen thinks by default, and Groq's does not: thinking off brings output to a
+      median of 68 tokens (max 140), against Groq's 64 (156). Every other run used Groq direct.
+      - The first attempt kept the normaliser on Groq. Groq's cap slowed it to a few questions an
+        hour, so it was stopped at 37 answers, and the run was restarted from the start with this
+        configuration. Those 37 answers were never scored or looked at. They are kept, unanalysed, in
+        `bird_answers_fanout_gptoss_groq_normaliser_partial.json`.
+      - The two normalisers are compared on 20 dev questions (`bird_normaliser_route_check.json`).
     - **The robustness run uses `self_consistency_k = 0`** (cost; H1 does not use it), the measurement
       flags, and `fanout_retry_max = 0` as in change 15.
     - **The secondary judge (gpt-oss-120b) is re-run on all 393 held-out answers through Cheaper

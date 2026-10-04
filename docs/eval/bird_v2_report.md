@@ -1,8 +1,8 @@
 # Evidence-tiers study, protocol v2: results report (DRAFT, methods only)
 
 Status: **draft, 2026-10-04.** The methods were written before any held-out result was looked at.
-Held-out, fan-out set and run-to-run results are complete. The robustness run (fan-out set with
-gpt-oss-120b, protocol v2 §4) is pending.
+All runs are complete: held-out, fan-out set, run-to-run repeat, and the robustness run (the fan-out
+set with gpt-oss-120b, protocol v2 §2 H1 and §4).
 
 Protocol: `docs/research/evidence_tiers_study.md` (v2, with changes 1–15 in its §10). Earlier
 development run: `docs/eval/bird_pilot_report.md`.
@@ -132,7 +132,7 @@ wrong, against the judge's k most suspect (ties at random); paired, stratified b
 
 | test | result | outcome |
 |---|---|---|
-| **H1** fan-out check beats judge at the same k (fan-out set) | 0 double-counting errors on 60 risky questions; the check never fired | **untestable** (precondition: 10) |
+| **H1** fan-out check beats judge at the same k (fan-out set) | GPT-5 mini: 0 double-counting errors on 60 risky questions. Rerun with gpt-oss-120b (as the protocol requires): 5 | **untestable** for both models (precondition: 10) |
 | **H2** checks then judge beats judge (AURC) | gain 0.001 (95% CI −0.005 to 0.009), p = 0.42 | **not supported** |
 | **H3** grounding false alarms < 5% of correct texts | 2 of 242 (0.8%; upper 95% bound 2.6%), p = 0.0004 | **supported**, but grounding fired on only 5 answers (recall 4%) |
 | **H4** repair fixes > breaks, +2 points | 2 repairs triggered | **untestable** (precondition: 10) |
@@ -227,6 +227,50 @@ model: it uses DISTINCT or a semi-join. The double counting we saw on held-out B
 came through joins that are correct for a different reading of the question, which neither a
 structural probe nor this set targets.
 
+## Results: robustness run (fan-out set, gpt-oss-120b)
+
+H1's precondition failed for GPT-5 mini, so protocol v2 §2 reruns the set with the robustness model.
+
+Files:
+- `bird_answers_fanout_gptoss.json`
+- `bird_scores_fanout_gptoss_v2_fanout.json`
+- `bird_analysis_v2_fanout_gptoss_v2_fanout.json`
+- `bird_judge_fanout_gptoss_local_router_zed-hosted_gemini-3.8-flash.json`
+
+**Configuration** (protocol change 16):
+- gpt-oss-120b for SQL and answers, through Cheaper Inference, with reasoning effort low; every call
+  reported gpt-oss-120b;
+- the normaliser is qwen3.8-27b through Cheaper Inference, thinking off;
+- measurement flags as for the held-out run, with `self_consistency_k = 0` and `fanout_retry_max = 0`
+  (warn only);
+- Gemini judge on Zed, as before.
+
+| kind | n | correct | double-counting errors | fan-out check fired (all on wrong answers) |
+|---|---|---|---|---|
+| risky | 60 | 54 (90.0%) | **5** | 4 |
+| control | 33 | 30 (90.9%) | 0 | 0 |
+
+**H1 is untestable for this model too:** 5 double-counting errors, against a precondition of 10.
+
+**Exploratory:**
+- **The check, when the error happens:** the fan-out check fired 4 times, all on wrong answers. It caught
+  4 of the 5 double-counting errors, with no false alarms.
+  - The miss (F009) averaged `EXTRACT(YEAR FROM d.dob)`. The probe only read plain-column
+    aggregates; this was fixed after the study (commit 8d7c3f5). The measured numbers predate the fix.
+- **Against the judge at the same k (4):** the check caught 4, the judge 3.2 (+0.8, 95% CI 0 to 1.8,
+  p = 0.12).
+  - **Host artefact:** the answer writer returned an empty text on 6 of 93 answers (F013, F025, F037,
+    F054, F062, F095). This is a host-side failure: 45–66 output tokens, no visible text, normal
+    finish. Their SQL is correct, but the judge rated two of them wrong.
+  - **Without those 6,** the judge's top 4 catch 4.0, a tie with the check. The check's edge comes
+    from the artefact.
+- **Ranking:** Gemini ranks this set at AUROC 0.93 (0.94 without the six).
+
+**What it adds:**
+- The shipped model does make the textbook double count, about one risky question in twelve.
+- When it does, the structural check catches it precisely, but a strong judge catches it as well.
+- Neither model gives H1 enough errors to test.
+
 ## Results: run-to-run variation (50 questions asked twice)
 
 Files:
@@ -282,8 +326,9 @@ again until answered.
 
 - **Answers are unstable on about 10% of questions run to run,** and those are the questions whose
   self-consistency samples disagree.
-- **H1 could not be tested.** On 60 questions built to invite double counting, the model never double
-  counted, so the fan-out check had nothing to catch.
+- **H1 could not be tested.** On 60 questions built to invite double counting, GPT-5 mini never
+  double counted and gpt-oss-120b did so 5 times (precondition: 10). When it happened, the fan-out
+  check caught 4 of 5 with no false alarms, but a strong judge caught as many.
 - **Model-free data checks are not a better warning than an LLM judge.** At the same flag rate they
   catch about as many wrong answers or fewer (−1.8, CI includes 0), and they add nothing to the
   judge's ranking (H2).
