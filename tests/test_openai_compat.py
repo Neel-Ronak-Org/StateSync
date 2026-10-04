@@ -155,3 +155,67 @@ def test_reasoning_models_get_no_temperature_and_routers_fewer_retries(monkeypat
     assert make("x")._max_retries == 1
     flags_ep = oc.endpoint("local_router")
     assert "zed-hosted/gpt-5-mini" in flags_ep.omit_temperature and flags_ep.max_retries == 1
+
+
+def _fake_create(sent, model, provider):
+    from types import SimpleNamespace
+
+    async def create(**kw):
+        sent.append(kw)
+        comp = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content="ok"), finish_reason="stop")],
+                               usage=SimpleNamespace(prompt_tokens=1, completion_tokens=1), model=model,
+                               **({"provider": provider} if provider else {}))
+        return SimpleNamespace(headers={}, parse=lambda: comp)
+    return SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(with_raw_response=SimpleNamespace(create=create))))
+
+
+def test_a_pinned_provider_is_sent_recorded_and_enforced(monkeypatch, tmp_path):
+    (tmp_path / "k").write_text("sk-test")
+    monkeypatch.setenv(oc.SECRETS_DIR_ENV, str(tmp_path))
+    pin = {"provider": {"order": ["deepinfra/bf16"], "allow_fallbacks": False}, "reasoning": {"enabled": False}}
+    ep = oc.Endpoint("openrouter", "https://openrouter.ai/api/v1", "k", {}, extra_body={"qwen/qwen3.8-27b": pin})
+    sent = []
+
+    def make(model, provider, strict=True):
+        a = oc.OpenAICompatAdapter(model, ep, require_served_match=strict)
+        a._client = _fake_create(sent, model, provider)
+        return a
+
+    out = asyncio.run(make("qwen/qwen3.8-27b", "DeepInfra").complete(system="s", messages=[], max_tokens=5))
+    assert sent[-1]["extra_body"] == pin and out.served_provider == "DeepInfra"
+    with pytest.raises(oc.ServedModelMismatch, match="pinned"):
+        asyncio.run(make("qwen/qwen3.8-27b", "Chutes").complete(system="s", messages=[], max_tokens=5))
+    assert asyncio.run(make("qwen/qwen3.8-27b", "Chutes", strict=False).complete(
+        system="s", messages=[], max_tokens=5)).served_provider == "Chutes"
+    # unpinned model: no extra_body sent, no provider check
+    asyncio.run(make("openai/gpt-oss-120b", "Novita").complete(system="s", messages=[], max_tokens=5))
+    assert "extra_body" not in sent[-1]
+
+
+def test_pins_need_one_provider_and_fallbacks_off():
+    assert oc.pinned_provider({"provider": {"order": ["groq"], "allow_fallbacks": False}}) == "groq"
+    assert oc.pinned_provider({"provider": {"order": ["groq"]}}) is None                 # fallbacks allowed
+    assert oc.pinned_provider({"provider": {"order": ["groq", "novita"], "allow_fallbacks": False}}) is None
+    assert oc.pinned_provider(None) is None
+    assert oc.same_provider("Groq", "groq") and oc.same_provider("DeepInfra", "deepinfra/bf16")
+    assert not oc.same_provider("Novita", "groq")
+
+
+def test_the_call_trace_records_the_provider():
+    from llm.recording import RecordingModel, start_recording, stop_recording
+
+    class _Inner:
+        async def complete(self, **_):
+            return LLMResponse(text="x", tokens_in=1, tokens_out=1, served_model="openai/gpt-oss-120b",
+                               endpoint="openrouter", served_provider="Groq")
+
+    async def run():
+        trace = start_recording()
+        try:
+            await RecordingModel(_Inner(), role="sql", model="openai/gpt-oss-120b").complete(
+                system="s", messages=[], max_tokens=5)
+        finally:
+            stop_recording()
+        return trace
+    trace = asyncio.run(run())
+    assert trace[-1]["served_provider"] == "Groq" and trace[-1]["endpoint"] == "openrouter"

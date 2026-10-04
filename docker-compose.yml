@@ -206,6 +206,7 @@ services:
       # Client key for a local router (demo/omniroute.sh), used only with provider = "openai_compat";
       # a "REPLACE..." placeholder means "not configured".
       - local_router_api_key
+      - openrouter_api_key   # provider = "openai_compat" roles on the openrouter endpoint; same placeholder rule
     depends_on:
       mcp:
         condition: service_healthy
@@ -408,6 +409,10 @@ secrets:
     file: ./secrets/mcp_token
   local_router_api_key:
     file: ./secrets/local_router_api_key
+  openrouter_api_key:
+    # provider = "openai_compat" roles on the openrouter endpoint (config/flags.toml); a placeholder
+    # starting with REPLACE is treated as no key.
+    file: ./secrets/openrouter_api_key
   mcp_token_evaluator:
     file: ./secrets/mcp_token_evaluator
   api_token_evaluator:

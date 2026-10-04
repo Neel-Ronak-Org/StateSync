@@ -697,7 +697,7 @@ async def main():
             r = await adapter.complete(system=req["system"], messages=[{"role": "user", "content": item["prompt"]}],
                                        max_tokens=req["max_tokens"])
             out.append({"id": item["id"], "text": r.text, "served_model": r.served_model, "endpoint": r.endpoint,
-                        "tokens_in": r.tokens_in, "tokens_out": r.tokens_out, "ms": int((time.monotonic() - t) * 1000)})
+                        "served_provider": r.served_provider, "tokens_in": r.tokens_in, "tokens_out": r.tokens_out, "ms": int((time.monotonic() - t) * 1000)})
         except Exception as exc:
             out.append({"id": item["id"], "error": f"{type(exc).__name__}: {str(exc)[:200]}"})
         await asyncio.sleep(req["spacing_s"])

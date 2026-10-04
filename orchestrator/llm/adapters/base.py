@@ -26,6 +26,9 @@ class LLMResponse:
     # (llm/adapters/openai_compat_adapter.py): a router may substitute another model.
     served_model: str | None = None
     endpoint: str | None = None
+    # The upstream provider a router reports having served the call (OpenRouter's "provider"
+    # field, e.g. "Groq"); None when the endpoint is the provider itself.
+    served_provider: str | None = None
 
 
 @runtime_checkable

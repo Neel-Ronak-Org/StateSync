@@ -17,6 +17,10 @@ determinism across models. So:
   4. Keys are Docker secret files named per endpoint (key_secret), never environment values
      in config; a missing key fails when that endpoint is first used, naming the file.
   5. Only https base URLs, except a local router on localhost / host.docker.internal.
+  6. A router that forwards to several upstream providers (OpenRouter) is pinned per model with
+     [llm.endpoints.<name>.extra_body."<model>"] provider = {order = [...], allow_fallbacks =
+     false}: the serving stack is then a known one. The provider the router reports is recorded
+     per call, and with require_served_match = true an answer from another provider is refused.
 Rate-limit handling (retry-after, waiting, reasoning-token headroom) is GroqAdapter's,
 inherited unchanged.
 """
@@ -56,6 +60,7 @@ class Endpoint:
     reasoning_effort: dict
     omit_temperature: tuple = ()     # models that reject a temperature (reasoning models)
     max_retries: int | None = None   # fewer retries for a router that retries itself
+    extra_body: dict | None = None   # {model: request fields the router reads}, e.g. provider pinning
 
 
 def check_base_url(url: str) -> str:
@@ -71,11 +76,41 @@ def endpoint(name: str) -> Endpoint:
         raise OpenAICompatConfigError(f"No [llm.endpoints.{name}] in config/flags.toml.")
     effort = table.get("reasoning_effort", {}) or {}
     retries = table.get("max_retries")
+    extra = table.get("extra_body", {}) or {}
     return Endpoint(name=name, base_url=check_base_url(str(table.get("base_url", ""))),
                     key_secret=str(table.get("key_secret", "")),
                     reasoning_effort=effort.as_dict() if hasattr(effort, "as_dict") else dict(effort),
                     omit_temperature=tuple(table.get("omit_temperature", []) or []),
-                    max_retries=int(retries) if retries is not None else None)
+                    max_retries=int(retries) if retries is not None else None,
+                    extra_body=_plain(extra))
+
+
+def _plain(value: object) -> object:
+    """A config table (or nested tables) as plain dicts and lists, ready for a JSON request body."""
+    if hasattr(value, "as_dict"):
+        value = value.as_dict()
+    if isinstance(value, dict):
+        return {str(k): _plain(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_plain(v) for v in value]
+    return value
+
+
+def pinned_provider(extra_body: dict | None) -> str | None:
+    """The one provider a request is pinned to (OpenRouter provider.order with fallbacks off)."""
+    provider = (extra_body or {}).get("provider") or {}
+    order = provider.get("order") or []
+    return str(order[0]) if len(order) == 1 and provider.get("allow_fallbacks") is False else None
+
+
+def _slug(name: str) -> str:
+    return "".join(ch for ch in name.lower() if ch.isalnum())
+
+
+def same_provider(served: str, pinned: str) -> bool:
+    """OpenRouter reports a display name ('DeepInfra'); a pin names a slug, maybe with a variant
+    ('deepinfra/bf16')."""
+    return _slug(served) == _slug(pinned.split("/", 1)[0])
 
 
 def parse_spec(spec: str) -> tuple[str, str]:
@@ -109,6 +144,8 @@ class OpenAICompatAdapter(GroqAdapter):
                                    timeout=float(cfg.models.groq_timeout_s), max_retries=0)
         self._reasoning_effort = str(ep.reasoning_effort.get(model, "") or "").strip()
         self._omit_temperature = model in ep.omit_temperature
+        self._extra_body = (ep.extra_body or {}).get(model) or None
+        self._pinned_provider = pinned_provider(self._extra_body)
         if ep.max_retries is not None:
             self._max_retries = ep.max_retries
         logger.info("OpenAICompatAdapter ready (endpoint=%s model=%s).", ep.name, model)
@@ -132,6 +169,17 @@ class OpenAICompatAdapter(GroqAdapter):
             logger.warning("endpoint %s answered with %s for %s", self.endpoint.name, served, self.model)
             if self.require_served_match:
                 raise ServedModelMismatch(f"{self.endpoint.name} answered with {served!r}, not {self.model!r}.")
+        if self._pinned_provider:
+            provider = response.served_provider
+            if provider is None:
+                logger.warning("endpoint %s reported no provider for %s (pinned to %s)",
+                               self.endpoint.name, self.model, self._pinned_provider)
+            elif not same_provider(provider, self._pinned_provider):
+                logger.warning("endpoint %s served %s from %s, not %s", self.endpoint.name, self.model, provider,
+                               self._pinned_provider)
+                if self.require_served_match:
+                    raise ServedModelMismatch(f"{self.endpoint.name} served {self.model!r} from {provider!r}, "
+                                              f"not the pinned {self._pinned_provider!r}.")
         return response
 
 

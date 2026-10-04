@@ -175,6 +175,9 @@ class GroqAdapter:
         attempts = int(getattr(self, "_max_retries", cfg.models.groq_max_retries)) + 1
         if not getattr(self, "_omit_temperature", False):
             extra["temperature"] = cfg.models.temperature
+        # A router's own request fields (OpenRouter provider pinning); see openai_compat_adapter.py.
+        if getattr(self, "_extra_body", None):
+            extra["extra_body"] = self._extra_body
         backoff = float(cfg.models.groq_retry_base_delay_s)
         waited_s = 0.0
         retries = 0
@@ -237,4 +240,5 @@ class GroqAdapter:
             waited_ms=int(waited_s * 1000),  # noqa: literals - seconds to milliseconds
             rate_remaining_tokens=remaining,
             served_model=getattr(completion, "model", None),
+            served_provider=getattr(completion, "provider", None),
         )

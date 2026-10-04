@@ -146,3 +146,14 @@ holds a `REPLACE...` placeholder (compose needs the file to exist):
 ```bash
 echo "REPLACE with the client key you create in the OmniRoute dashboard" > secrets/local_router_api_key
 ```
+
+### OpenRouter (optional; provider = "openai_compat")
+
+`openrouter_api_key`: an OpenRouter API key, used only when a role in `[llm.models.openai_compat]`
+names the `openrouter` endpoint. Each model there is pinned to one upstream provider
+(`[llm.endpoints.openrouter.extra_body]`), so the serving stack is a known one. Until a key is added the
+file holds a `REPLACE...` placeholder (compose needs the file to exist). Copy the key, then:
+
+```bash
+pbpaste > secrets/openrouter_api_key && chmod 600 secrets/openrouter_api_key
+```
