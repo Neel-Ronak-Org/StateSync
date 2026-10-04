@@ -128,7 +128,14 @@ It is reported once complete.
 
 ### What the wrong answers are (RQ2)
 
-Blind annotation of all 90 wrong answers (Claude; the owner's 20% is pending):
+Blind annotation of all 90 wrong answers by Claude. A second, independent blind annotation of all 90
+was made by GPT-6 (Codex), run by the owner, on a blank, reshuffled copy:
+- **Agreement:** 70 of 90 (Cohen's kappa 0.74). On the split that matters here, system error vs
+  benchmark or scorer artefact, 85 of 90 (kappa 0.87).
+- **Formatting only:** of the 20 Claude marks formatting-only, GPT-6 agrees on 18. On the other two it
+  says column meaning (judging the text) and gold error.
+- **Deviation from protocol v2 §5:** the second annotator was another model, on all 90 items, not the
+  owner on a 20% sample.
 
 | error type | n | caught by any data check | empty result | needed a retry | Gemini, same k |
 |---|---|---|---|---|---|

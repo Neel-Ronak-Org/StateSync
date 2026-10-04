@@ -13,7 +13,7 @@
   "hint contradicts data",
   "other"
  ],
- "annotator": null,
+ "annotator": "GPT-6 (Codex), 2026-10-04",
  "items": [
   {
    "question_id": 1255,
@@ -34,8 +34,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "For patients with an abnormal Ig M level (IGM \u2264 40 or IGM \u2265 400), the most common diagnosis is RA.",
-   "annotation": null,
-   "note": ""
+   "annotation": "join/fan-out",
+   "note": "Repeated laboratory rows are counted instead of distinct patients when ranking diagnoses."
   },
   {
    "question_id": 137,
@@ -56,8 +56,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "217 accounts have running contracts in Branch location 1.",
-   "annotation": null,
-   "note": ""
+   "annotation": "column meaning",
+   "note": "Branch location 1 is matched to district.a8 instead of account.district_id."
   },
   {
    "question_id": 1281,
@@ -78,8 +78,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The youngest patient with abnormal glutamic oxaloacetic transaminase (GOT \u2265 60) was born on 1987-12-05 (UTC).",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "The birth date is correct but returned as a timestamp with a time zone."
   },
   {
    "question_id": 1387,
@@ -108,8 +108,8 @@
    ],
    "predicted_row_count": 2,
    "answer_text": "The students entrusted to manage the budget for the Yearly Kickoff are Elijah Allen and Sacha Harrison.",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The missing Treasurer filter includes Sacha Harrison alongside the budget manager."
   },
   {
    "question_id": 24,
@@ -154,8 +154,8 @@
    ],
    "predicted_row_count": 1165,
    "answer_text": "I cannot determine which schools meet those criteria from the provided data. The query results include only a single column (School Name) for the first 1,000 rows and do not include Free Meal Count, Enrollment (K-12), test taker counts, or test scores. Without those fields I cannot compute percent eligible for free meals nor filter by test scores \u22651500.",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The missing rtype = 'S' condition includes additional records beyond the gold's school rows."
   },
   {
    "question_id": 1068,
@@ -176,8 +176,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The average overall rating for players with height > 170 between 2010 and 2015 is 68.85402657670379.",
-   "annotation": null,
-   "note": ""
+   "annotation": "hint contradicts data",
+   "note": "The hinted SUM/COUNT(id) includes null ratings in the denominator, unlike the gold's AVG."
   },
   {
    "question_id": 930,
@@ -222,8 +222,8 @@
    ],
    "predicted_row_count": 3,
    "answer_text": "Lewis Hamilton ranked highest (minimum rank) in these races:\n- Chinese Grand Prix (2011), round 3\n- Belgian Grand Prix (2012), round 12\n- Spanish Grand Prix (2016), round 5",
-   "annotation": null,
-   "note": ""
+   "annotation": "hint contradicts data",
+   "note": "Following the hint's MIN(rank) selects different races from the gold's rank = 1 rule."
   },
   {
    "question_id": 1209,
@@ -252,8 +252,8 @@
    "predicted_rows": null,
    "predicted_row_count": null,
    "answer_text": "The SQL query failed and no results were produced, so I cannot list diagnoses. Failure details:\n- Classified failure category: unclassified\n- Attempts: 1\n- Error code: 42P10\n- Error message (verbatim): for SELECT DISTINCT, ORDER BY expressions must appear in select list\nLINE 5: ORDER BY p.birthday::timestamptz ASC\n                 ^\n- Remediation hint (verbatim): Unrecognized failure. Surface the engine message verbatim and do not guess at a repair.\n\nBecause the query did not complete, there is no computed list of patients with GPT > 60 sorted by date of birth to report. If you want, I can retry with a corrected query that includes the ORDER BY expression in the select list (for example selecting p.birthday as well as p.diagnosis) \u2014 tell me to proceed and I will construct the revised query for execution.",
-   "annotation": null,
-   "note": ""
+   "annotation": "other",
+   "note": "The SQL failed because its DISTINCT query ordered by a column absent from the select list."
   },
   {
    "question_id": 98,
@@ -270,8 +270,8 @@
    "predicted_rows": [],
    "predicted_row_count": 0,
    "answer_text": "No accounts match the criteria. The query returned zero rows, so there are no accounts with an approved loan date in 1997 that have the lowest approved amount and chose the weekly issuance statement (POPLATEK TYDNE).",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "An invented approved-status restriction excludes the account selected by the gold."
   },
   {
    "question_id": 880,
@@ -292,8 +292,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Paul di Resta\u2019s fastest-lap speed in race 853 was 32.50155167390781% faster than the fastest-lap speed in race 854.",
-   "annotation": null,
-   "note": ""
+   "annotation": "hint contradicts data",
+   "note": "The prediction follows the hint's race-853 denominator while the gold uses race 854."
   },
   {
    "question_id": 1115,
@@ -314,8 +314,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Landon Donovan's overall rating is 25.31645569620253% higher than Jordan Bowery's on 2013/7/12.",
-   "annotation": null,
-   "note": ""
+   "annotation": "hint contradicts data",
+   "note": "The prediction follows the hint's Donovan denominator while the gold uses Bowery."
   },
   {
    "question_id": 273,
@@ -336,8 +336,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The percentage of element chlorine (Cl) in carcinogenic molecules (label = '+') is 0.0314192849404117, i.e., approximately 3.1419%.",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "The SQL returns a fraction rather than a percentage, but the answer correctly converts it."
   },
   {
    "question_id": 1531,
@@ -363,8 +363,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Top spending customer: customerid 19182. Average price per single item for this customer: 24.277577574823944. Currency: CZK.",
-   "annotation": null,
-   "note": ""
+   "annotation": "hint contradicts data",
+   "note": "The prediction follows total Price in the hint while the gold totals Price times Amount."
   },
   {
    "question_id": 829,
@@ -386,8 +386,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Marvel Comics created more superheroes. The difference (DC Comics total minus Marvel Comics total) is -163, i.e., Marvel has 163 more superheroes than DC in this dataset.",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "The difference and prose are correct, but the SQL omits the publisher-name column."
   },
   {
    "question_id": 1317,
@@ -408,8 +408,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "0 students from the Student_Club who attended the event \"Women's Soccer\" indicated a T-shirt size of Medium.",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The invented position = 'Student_Club' filter eliminates the qualifying attendees."
   },
   {
    "question_id": 604,
@@ -432,8 +432,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "For users creating more than 10 posts: average up votes = 182.2832618025751; average user age = 9.127896995708154.",
-   "annotation": null,
-   "note": ""
+   "annotation": "hint contradicts data",
+   "note": "The hinted age denominator counts every user, whereas AVG(age) excludes users with null ages."
   },
   {
    "question_id": 794,
@@ -466,8 +466,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Air-Walker was the fastest (highest Speed).",
-   "annotation": null,
-   "note": ""
+   "annotation": "ordering/top-k",
+   "note": "LIMIT 1 drops the other 39 heroes tied for the maximum Speed."
   },
   {
    "question_id": 1340,
@@ -488,8 +488,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The difference of total amount spent by Student_Club in 2019 minus 2020 is 0.0 (as returned by the query).",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The invented event type = 'Student_Club' condition excludes the spending included by the gold."
   },
   {
    "question_id": 1480,
@@ -511,8 +511,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The peak month for SME gas consumption in 2013 (within the provided data) is April 2013 (month = 201304) with total_consumption = 126047770.0.",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "Both identify April 2013, but the prediction returns YYYYMM and an extra consumption column."
   },
   {
    "question_id": 159,
@@ -637,8 +637,8 @@
    ],
    "predicted_row_count": 140,
    "answer_text": "No withdrawals in cash (operation 'VYBER') for client account_id 3356 appear in the provided query result set. The returned rows shown contain account_id values (example: 2779) but none for account_id 3356 or with k_symbol = 'VYBER'. If you can provide the full result set or filter the query to account_id = 3356 and k_symbol = 'VYBER', I can list the matching transactions.",
-   "annotation": null,
-   "note": ""
+   "annotation": "column meaning",
+   "note": "The answer confuses client_id with account_id and operation with k_symbol, denying the returned withdrawals."
   },
   {
    "question_id": 669,
@@ -659,8 +659,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The first vote by user 'chl' was cast on 2010-08-13 (2010-08-13T00:00:00+00:00).",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "The correct first-vote date is returned as a timestamp rather than a date."
   },
   {
    "question_id": 197,
@@ -681,8 +681,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Average number of oxygen atoms in single-bonded (bond_type = '-') molecules: 69.28152492668622.",
-   "annotation": null,
-   "note": ""
+   "annotation": "join/fan-out",
+   "note": "Joining atoms to every single bond multiplies each molecule's oxygen count."
   },
   {
    "question_id": 1481,
@@ -707,8 +707,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "For 2013 (Between 201301 and 201312) the differences in annual average consumption (CZK) for the customers with the least consumption are:\n- SME minus LAM: -13,820.919616699219 CZK (SME is lower than LAM by this amount)\n- LAM minus KAM: 5,858.199890136719 CZK (LAM is higher than KAM by this amount)\n- KAM minus SME: 7,962.7197265625 CZK (KAM is higher than SME by this amount)",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The prediction omits the required Currency = 'CZK' restriction before finding segment minima."
   },
   {
    "question_id": 136,
@@ -729,8 +729,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Between 1995-01-01 and 1997-12-31, there were 3 approved loans of at least 250,000 per account that chose monthly statement issuance.",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The added status = 'A' condition excludes loans counted by the gold."
   },
   {
    "question_id": 407,
@@ -780,8 +780,8 @@
    ],
    "predicted_row_count": 492,
    "answer_text": "Aus den bereitgestellten Ergebnissen (erste 50 Zeilen) sind die Eintr\u00e4ge, die sowohl Supertyp als auch Subtyp enthalten (Trennzeichen: '\u2014'), die folgenden:\n\nArtefaktkreatur \u2014 Golem, Legende\nArtefaktkreatur \u2014 Zauberer, Legende\nKreatur \u2014 Atog, Legende\nKreatur \u2014 Barbar, Legende\nKreatur \u2014 Baumhirte, Legende\nKreatur \u2014 Baumhirtenlegende\nKreatur \u2014 Diener, Legende\nKreatur \u2014 Drache, Legende\nKreatur \u2014 Drachenlegende\nKreatur \u2014 Druide, Legende\nKreatur \u2014 Elementarwesen, Legende\nKreatur \u2014 Elf, Legende\nKreatur \u2014 Engel, Legende\nKreatur \u2014 Engellegende\nKreatur \u2014 Goblin, Handwerker, Legende\nKreatur \u2014 Goblin, Legende\nKreatur \u2014 Gorgo, Legende\nKreatur \u2014 Illusion, Legende\nKreatur \u2014 Insekt, Druide, Legende\nKreatur \u2014 Katze, Riese, Legende\nKreatur \u2014 Katze, Soldat, Legende\nKreatur \u2014 Klerikerlegende\nKreatur \u2014 Legende\nKreatur \u2014 Meervolk, Legende\nKreatur \u2014 Minotaurus, Legende\nKreatur \u2014 Nomade, Legende\nKreatur \u2014 Rebell, Legende\nKreatur \u2014 Remasuri, Mutant, Legende\nKreatur \u2014 Spruchwandler \u2014 legende\nKreatur \u2014 Spruchwandlerlegende\nKreatur \u2014 Vogel, Soldat, Legende\nKreatur \u2014 Zauberer, Legende\nKreatur \u2014 Zentaur, Druide, Legende\nKreatur \u2014 Zephalid, Legende\nKreatur \u2014 Zombie, Zwerg, Legende\nKreatur \u2014 Zwerg, Legende\nLegend\u00e4re Artefaktkreatur \u2014 Drache\nLegend\u00e4re Artefaktkreatur \u2014 Golem\nLegend\u00e4re Artefaktkreatur \u2014 Handwerker\nLegend\u00e4re Artefaktkreatur \u2014 Konstrukt\nLegend\u00e4re Artefaktkreatur \u2014 Mensch\nLegend\u00e4re Artefaktkreatur \u2014 Mensch, Zauberer\nLegend\u00e4re Artefaktkreatur \u2014 Sphinx\nLegend\u00e4re Artefaktkreatur \u2014 Sp\u00e4her\nLegend\u00e4re Artefaktkreatur \u2014 Thopter\nLegend\u00e4re Artefaktkreatur \u2014 Vogelscheuche\n\nHinweis: Die vollst\u00e4ndige Ergebnismenge umfasst 492 Zeilen; hier sind nur die ersten 50 Zeilen ausgewertet, wie im Kontext gezeigt.",
-   "annotation": null,
-   "note": ""
+   "annotation": "column meaning",
+   "note": "The prediction selects foreign_data.type instead of the subtypes and supertypes specified by the hint."
   },
   {
    "question_id": 1524,
@@ -802,8 +802,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The query result shows currency = \"CZK\" for the customer who spent 548.4 on 2012-08-24. The provided data does not include a nationality field, so the customer's nationality cannot be determined from the given context.",
-   "annotation": null,
-   "note": ""
+   "annotation": "residual gold error",
+   "note": "The gold uses the gas station's country as the customer's nationality without evidence that they coincide."
   },
   {
    "question_id": 1225,
@@ -825,8 +825,8 @@
    "predicted_rows": null,
    "predicted_row_count": null,
    "answer_text": "The query failed and no patient grouping was computed. Classified failure category: unclassified.\n\nDatabase engine error message (verbatim):\nin an aggregate with DISTINCT, ORDER BY expressions must appear in argument list\nLINE 1: ...sex, string_agg(DISTINCT l.id::text, ',' ORDER BY l.id) AS p...\n                                                             ^\n\nAttempted SQL (verbatim):\nSELECT p.sex, string_agg(DISTINCT l.id::text, ',' ORDER BY l.id) AS patient_ids\nFROM cn_be782f3725e34f54.patient p\nJOIN cn_be782f3725e34f54.laboratory l ON l.id = p.id\nWHERE l.\"T-BIL\" IS NOT NULL AND l.\"T-BIL\" >= 2.0\nGROUP BY p.sex\n\nBecause the query failed, no list or grouping of patients with T-BIL >= 2.0 was produced by the system.",
-   "annotation": null,
-   "note": ""
+   "annotation": "other",
+   "note": "The aggregate failed because DISTINCT and ORDER BY used mismatched expressions."
   },
   {
    "question_id": 637,
@@ -847,8 +847,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Tags used by Mark Meckes in posts with zero comments (excluding null tags): books",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "The same books tag is returned as a parsed array rather than the stored '<books>' string."
   },
   {
    "question_id": 405,
@@ -869,8 +869,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "There are 0 Brazilian Portuguese (Portuguese (Brasil)) translated sets in the Commander block (count = 0).",
-   "annotation": null,
-   "note": ""
+   "annotation": "hint contradicts data",
+   "note": "The prediction follows the hint's 'Portuguese (Brasil)' spelling instead of the gold's 'Portuguese (Brazil)'."
   },
   {
    "question_id": 726,
@@ -925,8 +925,8 @@
    ],
    "predicted_row_count": 387,
    "answer_text": "Ranking (descending by height_cm) from the provided results. Null heights appear at rank 1 for many heroes; after those, the tallest recorded heroes are:\n\n- Surtur \u2014 30,480 cm (rank 2)\n- Ymir \u2014 30,480 cm (rank 2)\n- Bloodwraith \u2014 3,050 cm (rank 3)\n- Utgard-Loki \u2014 1,520 cm (rank 4)\n- Fin Fang Foom \u2014 975 cm (rank 5)\n- Galactus \u2014 876 cm (rank 6)\n- Groot \u2014 701 cm (rank 7)\n- MODOK \u2014 366 cm (rank 8)\n- Wolfsbane \u2014 366 cm (rank 8)\n- Onslaught \u2014 305 cm (rank 9)\n- Sasquatch \u2014 305 cm (rank 9)\n- Juggernaut \u2014 287 cm (rank 10)\n- Hulk \u2014 244 cm (rank 11)\n- Anti-Venom \u2014 229 cm (rank 12)\n- Bi-Beast \u2014 229 cm (rank 12)\n- Venom III \u2014 229 cm (rank 12)\n- Cloak \u2014 226 cm (rank 13)\n- Colossus \u2014 226 cm (rank 13)\n- Venompool \u2014 226 cm (rank 13)\n- Bloodaxe \u2014 218 cm (rank 14)\n- Thundra \u2014 218 cm (rank 14)\n- Warpath \u2014 218 cm (rank 14)\n- Apocalypse \u2014 213 cm (rank 15)\n- Hela \u2014 213 cm (rank 15)\n- Man-Thing \u2014 213 cm (rank 15)\n- Red Hulk \u2014 213 cm (rank 15)\n- Ant-Man \u2014 211 cm (rank 16)\n- Frenzy \u2014 211 cm (rank 16)\n- Omega Red \u2014 211 cm (rank 16)\n\nNote: the full result set contains 387 rows; above lists entries shown in the provided excerpt. Several heroes at rank 1 have null height_cm in the excerpt.",
-   "annotation": null,
-   "note": ""
+   "annotation": "ordering/top-k",
+   "note": "Null heights sort first and receive the highest rank ahead of heroes with measured heights."
   },
   {
    "question_id": 125,
@@ -981,8 +981,8 @@
    ],
    "predicted_row_count": 43,
    "answer_text": "Query returned 43 loan contracts (status = 'D') with their district unemployment rate increment from 1995 to 1996 (unemployment_increment_percent). The results include loan_id, district_id and unemployment_increment_percent for each row; example rows from the result set: \n- loan_id 4967, district_id 20, unemployment_increment_percent 40.000009536743164\n- loan_id 4988, district_id 44, unemployment_increment_percent 39.2592579126358\n- loan_id 5060, district_id 60, unemployment_increment_percent 31.76470398902893\n- loan_id 5063, district_id 54, unemployment_increment_percent 22.50000089406967\n- loan_id 5072, district_id 8, unemployment_increment_percent 20.000000298023224\n\nAll 43 rows and their exact unemployment_increment_percent values are in the query results provided.",
-   "annotation": null,
-   "note": ""
+   "annotation": "column meaning",
+   "note": "The prediction uses the client's residential district instead of the loan account's district."
   },
   {
    "question_id": 1394,
@@ -1003,8 +1003,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "There are 0 members of the Student_Club whose major_name is 'Physics Teaching'.",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The invented event type = 'Student_Club' restriction removes the Physics Teaching member."
   },
   {
    "question_id": 260,
@@ -1025,8 +1025,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Total atoms with triple-bond molecules containing phosphorus or bromine: 1.",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The element filter limits counted atoms to phosphorus or bromine instead of all atoms in qualifying molecules."
   },
   {
    "question_id": 138,
@@ -1047,8 +1047,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "There are 339 male clients in that branch.",
-   "annotation": null,
-   "note": ""
+   "annotation": "ordering/top-k",
+   "note": "Descending crime counts include nulls first, shifting OFFSET 1 away from the second-highest numeric count."
   },
   {
    "question_id": 36,
@@ -1076,8 +1076,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The school with the highest number of students scoring \u22651500 on the SAT is under the administration of Michelle King. No other administrators are listed.",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The missing rtype = 'S' restriction lets a non-school record determine the maximum SAT count."
   },
   {
    "question_id": 25,
@@ -1132,8 +1132,8 @@
    ],
    "predicted_row_count": 12,
    "answer_text": "The following Riverside schools meet the criterion (average of average math > 400). Funding types are shown as in the results (null = not provided):\n\n- Arlington High \u2014 fundingtype: null\n- Come Back Kids \u2014 fundingtype: Locally funded\n- Gateway College and Career Academy \u2014 fundingtype: Directly funded\n- John W. North High \u2014 fundingtype: null\n- Martin Luther King Jr. High \u2014 fundingtype: null\n- Opportunity Program \u2014 fundingtype: null\n- Polytechnic High \u2014 fundingtype: null\n- Ramona High \u2014 fundingtype: null\n- River Springs Charter \u2014 fundingtype: Directly funded\n- Riverside County Education Academy \u2014 fundingtype: Locally funded\n- Riverside Virtual \u2014 fundingtype: null\n- Summit View Independent Study \u2014 fundingtype: null",
-   "annotation": null,
-   "note": ""
+   "annotation": "aggregation",
+   "note": "The score threshold is applied to district averages rather than each school's average."
   },
   {
    "question_id": 581,
@@ -1150,8 +1150,8 @@
    "predicted_rows": [],
    "predicted_row_count": 0,
    "answer_text": "No owner found. The query returned zero rows, so there is no DisplayName (owner) available for the post titled 'Open source tools for visualizing multi-dimensional data.'",
-   "annotation": null,
-   "note": ""
+   "annotation": "hint contradicts data",
+   "note": "The prediction follows the hint's title without the question mark required by the gold."
   },
   {
    "question_id": 1457,
@@ -1180,8 +1180,8 @@
    "predicted_rows": [],
    "predicted_row_count": 0,
    "answer_text": "No members. The query returned zero rows, so there are no members who spent more than the average on each expense.",
-   "annotation": null,
-   "note": ""
+   "annotation": "aggregation",
+   "note": "Using MIN(cost) requires every expense to exceed average rather than identifying members with qualifying expenses."
   },
   {
    "question_id": 1432,
@@ -1202,8 +1202,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The percentage is 0%. The query result shows percentage = 0 for Members with t_shirt_size = 'Medium' who received amount = 50.",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The invented income source = 'Student_Club' condition removes the qualifying payments from the numerator."
   },
   {
    "question_id": 47,
@@ -1224,8 +1224,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Monthly average = 0 schools per month. The query result returned monthly_average = 0, which is the count of schools that opened in 1980 (under Alameda County, DOC = 52) divided by 12.",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The county literal 'Alameda County' does not match the gold's stored value 'Alameda'."
   },
   {
    "question_id": 1028,
@@ -1249,8 +1249,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Celtic was the away team that won the most in the 2009/2010 Scotland Premier League season.",
-   "annotation": null,
-   "note": ""
+   "annotation": "ordering/top-k",
+   "note": "LIMIT 1 omits Rangers, which ties Celtic for the most away wins."
   },
   {
    "question_id": 1037,
@@ -1271,8 +1271,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "24.597432905484247% of players born between 1987 and 1992 prefer the left foot (rounded: 24.60%).",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The invented latest-record restriction excludes players with earlier left-foot attribute records."
   },
   {
    "question_id": 894,
@@ -1299,8 +1299,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Best lap time (min(milliseconds)) recorded: 1:07.411 \u2014 Driver: Lewis Hamilton \u2014 Race: Austrian Grand Prix.",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "The same lap is returned as '1:07.411' rather than 67411 milliseconds."
   },
   {
    "question_id": 1189,
@@ -1321,8 +1321,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The query result shows there are 2 patients meeting the criteria (Thrombosis = 2, ANA = 'S', and aCL IgM 20% above the average).",
-   "annotation": null,
-   "note": ""
+   "annotation": "hint contradicts data",
+   "note": "The prediction follows the hint's 0.4-times-average formula instead of the gold's 1.2-times-average threshold."
   },
   {
    "question_id": 744,
@@ -1344,8 +1344,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Marvel Comics has published more superheroes than DC Comics. The difference (Marvel \u2212 DC) is 163 superheroes.",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "The difference and prose identify Marvel correctly, but the SQL omits the publisher-name column."
   },
   {
    "question_id": 1381,
@@ -1395,8 +1395,8 @@
    ],
    "predicted_row_count": 29,
    "answer_text": "Students who attended more than 7 events (full name):\n\nEdwardo Ing\nConnor Hilton\nMccauley Nash\nTrent Smith\nKaty Balentine\nAmy Firth\nAdele Deleon\nAdela O'Gallagher\nTyler Hewitt\nKeith Dunlop\nCasey Mason\nEmily Jaquith\nAnnabella Warren\nPhillip Cullen\nSherri Ramsey\nKevin Pierce\nCarlo Jacobs\nMatthew Snay\nLuisa Guidi\nSacha Harrison\nGrant Gilmour\nMadelyn Nicholson\nKeaton Mccray\nMaya Mclean\nVincent Ratcliffe\nRafi Mckee\nDean O'Reilly\nElijah Allen\nGarrett Gerke",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "The 29 qualifying students are returned with concatenated full names rather than separate name columns."
   },
   {
    "question_id": 994,
@@ -1421,8 +1421,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Between 1980 and 2010, the constructor with the most points at the Monaco Grand Prix was Red Bull with 43.0 points. Nationality: Austrian.",
-   "annotation": null,
-   "note": ""
+   "annotation": "aggregation",
+   "note": "The prediction ranks one race's points instead of summing each constructor's points across the requested years."
   },
   {
    "question_id": 898,
@@ -1446,8 +1446,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The youngest Japanese driver is Kamui Kobayashi, age 40.",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "The age and driver are correct, but the name is combined into one column."
   },
   {
    "question_id": 639,
@@ -1468,8 +1468,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The query returned a single row with the percentage value as null, so the percentage of posts by Community that use the R tag could not be determined from the provided result. Caveat: No matching data \u2014 the result is empty (percentage = null). To compute the percentage you need counts of Community posts and counts of Community posts with TagName = 'r'; re-running the query or checking the underlying counts would be required to obtain a numeric percentage.",
-   "annotation": null,
-   "note": ""
+   "annotation": "column meaning",
+   "note": "The prediction filters posts.ownerdisplayname instead of identifying Community through users and post history."
   },
   {
    "question_id": 1032,
@@ -1500,8 +1500,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The league with the highest matches of all time is: England Premier League with 3,040 matches played.",
-   "annotation": null,
-   "note": ""
+   "annotation": "ordering/top-k",
+   "note": "LIMIT 1 omits France Ligue 1 and Spain LIGA BBVA, which tie for the highest match count."
   },
   {
    "question_id": 1265,
@@ -1522,8 +1522,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The count of distinct patients with a normal anti-ribonuclear protein level (RNP = '-' or '+-') who were admitted to the hospital (Admission = '+') is 0, per the query result.",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The RNP literals '-' and '+-' are used instead of their supplied stored-value mappings 'negative' and '0'."
   },
   {
    "question_id": 1147,
@@ -1544,8 +1544,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Frank Rost",
-   "annotation": null,
-   "note": ""
+   "annotation": "ordering/top-k",
+   "note": "Descending ratings put nulls first, so LIMIT 1 selects a player without the maximum numeric rating."
   },
   {
    "question_id": 1270,
@@ -1566,8 +1566,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "There are 19 distinct female patients with normal anti-scl70 (SC170 IN ('negative','0')) and no recorded symptoms (symptoms IS NULL).",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The missing requirement for an actual null-symptom examination admits patients with no examination records."
   },
   {
    "question_id": 940,
@@ -1588,8 +1588,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "0 \u2014 the query result shows count = 0, so none of the drivers who finished the 2008 Chinese Grand Prix have participated in Formula_1 races according to the provided data.",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The race-name literal incorrectly includes 2008 instead of filtering the separate year column."
   },
   {
    "question_id": 87,
@@ -1607,8 +1607,8 @@
    "predicted_rows": [],
    "predicted_row_count": 0,
    "answer_text": "No valid administrator e-mail addresses were returned for a school in San Bernardino County (City of San Bernardino City Unified) that opened between 01/01/2009 and 12/31/2010 and is classified as both Intermediate/Middle School (SOC = 62) and Unified School (DOC = 54). The query returned zero rows, so there are no e-mail addresses to list.",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The prediction imposes unmatched district and textual school-type literals instead of the gold's city and classification filters."
   },
   {
    "question_id": 685,
@@ -1631,8 +1631,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Total views (ViewCount) on the post 'Computer Game Datasets' are 1708. The post was last posted by user DisplayName: Menno.",
-   "annotation": null,
-   "note": ""
+   "annotation": "column meaning",
+   "note": "The prediction returns a matching history entry's user instead of the post's LastEditorUserId."
   },
   {
    "question_id": 892,
@@ -1657,8 +1657,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The driver with the most points is Sebastian Vettel with 397.0 points.",
-   "annotation": null,
-   "note": ""
+   "annotation": "aggregation",
+   "note": "The prediction uses the largest standings snapshot instead of summing each driver's race points."
   },
   {
    "question_id": 349,
@@ -1688,8 +1688,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The card with the most ruling information is \"Fork\". Artist: Amy Weber. Promotional printing: ispromo = 0 (not a promotional printing).",
-   "annotation": null,
-   "note": ""
+   "annotation": "aggregation",
+   "note": "Grouping by name, artist and promo status combines printings instead of counting rulings separately by card UUID."
   },
   {
    "question_id": 487,
@@ -1706,8 +1706,8 @@
    "predicted_rows": null,
    "predicted_row_count": null,
    "answer_text": "The query failed and the percentage could not be computed. Classified failure category: unclassified. Error code: 42846. Error message: \"cannot cast type boolean to double precision\nLINE 1: ...oilid IS NOT NULL AND c.cardkingdomid IS NOT NULL)::double p...\n                                                             ^\".\nThe attempted SQL failed while trying to cast a boolean expression to double precision, so no percentage for 'Coldsnap' was produced.",
-   "annotation": null,
-   "note": ""
+   "annotation": "other",
+   "note": "The SQL failed when casting a boolean expression directly to double precision."
   },
   {
    "question_id": 587,
@@ -1772,8 +1772,8 @@
    ],
    "predicted_row_count": 9,
    "answer_text": "Every post tagged as '<humor>' in the result has an average view count (AVG(ViewCount)) of 50215.88888888889. Listed below are the title and comment (Text) for each row returned:\n\n1) Title: What is your favorite \"data analysis\" cartoon?\n   Comment: @Sharpie, feel free to close or reopen according to your feelings! I agree with Shane, a bit is ok, but not too much. For example, this question already included a funny cartoon. The jokes question not really a funny joke....\n\n2) Title: What is your favorite \"data analysis\" cartoon?\n   Comment: These cartoons are useful too; they can be included in a lecture on a particular topic where you are trying to explain a concept (e.g. correlation/causation above).  A little humor can help to keep an audience engaged.\n\n3) Title: What is your favorite \"data analysis\" cartoon?\n   Comment: Could we clarify the problem with hotlinking referenced in the P.S.? Might need to fix some of these answers, if it's worth worrying about.\n\n4) Title: What is your favorite \"data analysis\" cartoon?\n   Comment: I do have to ask though- how come cartoons are in and jokes are out?\n\n5) Title: What is your favorite \"data analysis\" cartoon?\n   Comment: @sharpie: are jokes out?  We obviously don't want the entire site to be humor, but everyone benefits from a little educational humor in small doses.\n\n6) Title: What is your favorite \"data analysis\" cartoon?\n   Comment: This question is awesome! it's basically a best of list of xckd and dilbert\n\n7) Title: So how many staticians *does* it take to screw in a lightbulb?\n   Comment: Probably better asked on meta.  People feel like they have to downvote it because it is an off-topic question.  But then the downvotes make it look like staticians have no sense of humor :(\n\n8) Title: So how many staticians *does* it take to screw in a lightbulb?\n   Comment: @Jason Punyon in particular gets a humorless downvote for removing my \"verboten\" tag! ;-)\n\n9) Title: What is your favorite \"data analysis\" cartoon?\n   Comment: Also my question on the source of a statistical quote was closed too. See here.http://stats.stackexchange.com/questions/15739/who-said-tell-a-story-with-the-data",
-   "annotation": null,
-   "note": ""
+   "annotation": "aggregation",
+   "note": "A global window average replaces the separate averages for each post and comment."
   },
   {
    "question_id": 944,
@@ -1790,8 +1790,8 @@
    "predicted_rows": [],
    "predicted_row_count": 0,
    "answer_text": "No result available: the query returned zero rows, so there are no finished times (including the champion\u2019s time and the last finisher\u2019s time) in the provided data. Therefore the requested percentage difference cannot be computed from the given context. To compute this you must provide the champion\u2019s finish time (HH:MM:SS.mmm) and the last finisher\u2019s incremental time (or the last finisher\u2019s total finish time).",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The race-name literal incorrectly includes 1988 instead of using 'Australian Grand Prix' with a year filter."
   },
   {
    "question_id": 93,
@@ -1812,8 +1812,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "There are 0 male customers living in North Bohemia with average salary greater than 8000, according to the query result.",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The case-sensitive region literal 'North Bohemia' differs from the stored 'north Bohemia'."
   },
   {
    "question_id": 1227,
@@ -1834,8 +1834,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The average age of male patients with high cholesterol (T-CHO \u2265 250) is 69.5 years.",
-   "annotation": null,
-   "note": ""
+   "annotation": "aggregation",
+   "note": "AVG(DISTINCT age) gives each distinct age equal weight instead of averaging once per patient."
   },
   {
    "question_id": 1175,
@@ -1858,8 +1858,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The patient was 23 years old and the doctor's diagnosis was SJS.",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "An invented same-day examination requirement excludes laboratory measurements considered by the gold."
   },
   {
    "question_id": 26,
@@ -1929,8 +1929,8 @@
    ],
    "predicted_row_count": 6,
    "answer_text": "The following high schools meet the criteria:\n\n- Alisal High \u2014 777 Williams Road, Salinas, CA 93905-1907\n- Everett Alvarez High \u2014 1900 Independence Boulevard, Salinas, CA 93906-5300\n- North Salinas High \u2014 55 Kip Drive, Salinas, CA 93906-2908\n- Salinas High \u2014 726 South Main Street, Salinas, CA 93901-3243\n- North Monterey County High \u2014 13990 Castroville Boulevard, Castroville, CA 95012-9749\n- Soledad High \u2014 425 Gabilan Drive, Soledad, CA 93960-3207",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "The same six schools and addresses are returned, with address components concatenated into one column."
   },
   {
    "question_id": 897,
@@ -1956,8 +1956,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The driver with the most wins is Michael Schumacher. Nationality: German. His maximum points: 148.0.",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "The driver, nationality and points match, but the first and last names are combined."
   },
   {
    "question_id": 23,
@@ -2012,8 +2012,8 @@
    ],
    "predicted_row_count": 1239,
    "answer_text": "I cannot determine which schools have a difference >30 because the provided query results include only the columns school_name and full_address. The enrollment fields required to compute the difference\u2014\"Enrollment (K-12)\" and \"Enrollment (Ages 5-17)\"\u2014are not present in the data context. To produce the requested list and addresses, please provide results (or re-run the query) that include the two enrollment columns for each school. Caveat: the current context shows the first 1,000 rows of a larger result set and contains only school_name and full_address.",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "Using an absolute enrollment difference and omitting the nonnull School filter admits extra rows."
   },
   {
    "question_id": 41,
@@ -2043,8 +2043,8 @@
    ],
    "predicted_row_count": 4,
    "answer_text": "Virtual schools that are among the top 5 in their respective counties (by average reading score):\n\n- California Virtual Academy @ Los Angeles\n- Insight @ Los Angeles\n- Capistrano Connections Academy\n- California Connections Academy @ Ripon",
-   "annotation": null,
-   "note": ""
+   "annotation": "ordering/top-k",
+   "note": "The prediction ranks only virtual schools instead of ranking all county schools before filtering for virtual ones."
   },
   {
    "question_id": 861,
@@ -2071,8 +2071,8 @@
    ],
    "predicted_row_count": 2,
    "answer_text": "The query returned two driver numbers: 3 and 1.",
-   "annotation": null,
-   "note": ""
+   "annotation": "column meaning",
+   "note": "The prediction selects the qualifying entry's number instead of the driver's number."
   },
   {
    "question_id": 1460,
@@ -2096,8 +2096,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Elijah Allen \u2014 cost: 28.15",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "The correct member and cost are returned with the name in one column instead of two."
   },
   {
    "question_id": 173,
@@ -2115,8 +2115,8 @@
    "predicted_rows": [],
    "predicted_row_count": 0,
    "answer_text": "The query returned zero rows, so there are no records in the provided data of account number 3 requesting an account statement. Likewise, there is no data available here about any debit totaling 3539 or about the k_symbol (payment purpose); therefore the aim of debiting 3539 cannot be determined from the returned results.",
-   "annotation": null,
-   "note": ""
+   "annotation": "column meaning",
+   "note": "The debit total is taken from transactions rather than the standing-order table used by the gold."
   },
   {
    "question_id": 962,
@@ -2137,8 +2137,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "64.88474742520843% of drivers in races from 2000 to 2005 were born before 1985 and completed more than 50 laps.",
-   "annotation": null,
-   "note": ""
+   "annotation": "join/fan-out",
+   "note": "The percentage counts driver-race result rows instead of distinct drivers."
   },
   {
    "question_id": 959,
@@ -2183,8 +2183,8 @@
    ],
    "predicted_row_count": 16,
    "answer_text": "The fastest lap numbers for the champions in 2009 (one row is NULL) are: 18, 44, 11, 17, 40, 54, 49, 53, 57, 46, NULL, 46, 54, 42, 46, 49.",
-   "annotation": null,
-   "note": ""
+   "annotation": "column meaning",
+   "note": "Champions are identified by championship standings position instead of the individual race winners."
   },
   {
    "question_id": 118,
@@ -2201,8 +2201,8 @@
    "predicted_rows": null,
    "predicted_row_count": null,
    "answer_text": "The query failed and no percentage was computed. Classified failure category: permission_denied.\n\nDetails from the failure:\n- Attempts: 1\n- Error message: \"[Layer 1 Gate] Rejected: statement reads no table. Queries must read data from the schema rather than compute constants or server introspection. This rejection is based on query shape, not content safety.\"\n- Remediation hint: \"TERMINAL. Rejected before reaching the engine: not a single plain SELECT statement (A4.5 Layer 1). Do not retry; do not attempt an alternative write or multi-statement formulation.\"\n- Attempted SQL (not executed): SELECT (COALESCE(SUM(l.amount) FILTER (WHERE l.status = 'C' AND l.amount < 100000), 0)::numeric / NULLIF(SUM(l.amount) FILTER (WHERE l.amount < 100000), 0) * 100) AS pct_running_by_amount\n\nBecause the query was rejected, I cannot provide the requested percentage of accounts with status = 'C' for loan amount < USD100,000. To get that percentage you or I would need a successful query that reads the relevant table(s) from the allowed schema; once such a query runs successfully, the percentage can be computed as described in your hint.",
-   "annotation": null,
-   "note": ""
+   "annotation": "other",
+   "note": "The attempted SQL omitted a FROM clause and was rejected without producing results."
   },
   {
    "question_id": 239,
@@ -2223,8 +2223,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Atom 'TR%_19' has 754 connections (bond_id).",
-   "annotation": null,
-   "note": ""
+   "annotation": "join/fan-out",
+   "note": "Counting matches at both atom endpoints doubles the connection rows relative to the gold's atom_id-only count."
   },
   {
    "question_id": 988,
@@ -2266,8 +2266,8 @@
    ],
    "predicted_row_count": 3,
    "answer_text": "Top 3 German drivers (born 1980\u20131985) with the shortest average pit stop duration:\n1. Timo Glock \u2014 23689.38888888889 ms\n2. Adrian Sutil \u2014 35102.21551724138 ms\n3. Nico Rosberg \u2014 46321.9125 ms",
-   "annotation": null,
-   "note": ""
+   "annotation": "residual gold error",
+   "note": "The gold appears to average formatted duration values rather than numeric milliseconds, reversing the duration ranking."
   },
   {
    "question_id": 1166,
@@ -2290,8 +2290,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Symptoms observed for the youngest patient: \"CNS susp\". Patient diagnosis: \"SLE\".",
-   "annotation": null,
-   "note": ""
+   "annotation": "ordering/top-k",
+   "note": "The youngest patient is chosen only among those with nonnull symptoms instead of all examined patients."
   },
   {
    "question_id": 474,
@@ -2312,8 +2312,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The query result shows 0 sets. In other words, there are no sets with a non-null Italian translation (language = 'Italian') that have baseSetSize < 10.",
-   "annotation": null,
-   "note": ""
+   "annotation": "hint contradicts data",
+   "note": "The prediction follows the hint's baseSetSize < 10 instead of the question and gold's threshold of 100."
   },
   {
    "question_id": 352,
@@ -2334,8 +2334,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Percentage of cards available in Chinese Simplified: 8.772787168500694% (approximately 8.77%).",
-   "annotation": null,
-   "note": ""
+   "annotation": "join/fan-out",
+   "note": "The percentage counts translation rows rather than distinct cards, changing the denominator."
   },
   {
    "question_id": 937,
@@ -2356,8 +2356,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The finish time for the driver who ranked second in the 2008 Chinese Grand Prix is \"+16.445\".",
-   "annotation": null,
-   "note": ""
+   "annotation": "column meaning",
+   "note": "The prediction uses fastest-lap rank instead of race finishing position to identify second place."
   },
   {
    "question_id": 1001,
@@ -2379,8 +2379,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Felipe Massa",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "The correct racer is returned with first and last names concatenated into one column."
   },
   {
    "question_id": 263,
@@ -2401,8 +2401,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Chlorine (element = 'cl') makes up 3.482368449961551% of atoms among molecules with a single bond (bond_type = '-').",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "The SQL returns the chlorine fraction, and the prose correctly converts it to the gold's percentage."
   },
   {
    "question_id": 1476,
@@ -2423,8 +2423,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "Difference in gas consumption (CZK-paying customers minus EUR-paying customers) for 2012 = 402,531,300.0 (as returned by the query).",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "Equivalent consumption sums differ in numeric precision, with the prose also slightly misstating the returned total."
   },
   {
    "question_id": 1149,
@@ -2447,8 +2447,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "There are more male outpatients. The deviation (ratio expressed as a percentage per your formula) is 83.18%.",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "The majority and ratio match, with the percentage rounded to two decimal places."
   },
   {
    "question_id": 750,
@@ -2469,8 +2469,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "The average weight of all female superheroes is 60.77956989247312 kg.",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The missing weight_kg > 0 condition includes zero or invalid weights in the average."
   },
   {
    "question_id": 772,
@@ -2535,8 +2535,8 @@
    ],
    "predicted_row_count": 5,
    "answer_text": "Female superheroes (Dark Horse Comics) \u2014 eye_colour / hair_colour / skin_colour (one per row):\n1. Green / Blond / No Colour\n2. Brown / Brown / No Colour\n3. No Colour / No Colour / No Colour\n4. No Colour / No Colour / Silver\n5. Violet / Black / No Colour",
-   "annotation": null,
-   "note": ""
+   "annotation": "output format only",
+   "note": "The same five colour combinations are returned as names rather than colour IDs."
   },
   {
    "question_id": 1187,
@@ -2572,8 +2572,8 @@
    ],
    "predicted_row_count": 2,
    "answer_text": "Two patients match the criteria. Their IDs are: 460574, 1043570.",
-   "annotation": null,
-   "note": ""
+   "annotation": "time window",
+   "note": "The date range is applied to Examination Date instead of the laboratory measurement Date."
   },
   {
    "question_id": 881,
@@ -2621,8 +2621,8 @@
    ],
    "predicted_row_count": 29,
    "answer_text": "Summary for race on 1983-07-16:\n- Total drivers listed: 29\n- Drivers who completed the race (completion_rate = 100.0): 5\n  \u2022 Nigel Mansell\n  \u2022 Alain Prost\n  \u2022 Nelson Piquet\n  \u2022 Ren\u00e9 Arnoux\n  \u2022 Patrick Tambay\n- Overall race completion percentage: 5 / 29 = 17.24% (rounded to two decimals)\n\nPer-driver completion_rate values are provided in the data rows.",
-   "annotation": null,
-   "note": ""
+   "annotation": "aggregation",
+   "note": "The SQL produces one completion percentage per driver instead of the gold's single overall percentage."
   },
   {
    "question_id": 48,
@@ -2643,8 +2643,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "I cannot compute the ratio because the query returned no matching data for merged Unified School District (DOC = 54) or merged Elementary School District (DOC = 52) in Orange County; the result is null. Caveat: the result set was empty, so no numeric ratio is available.",
-   "annotation": null,
-   "note": ""
+   "annotation": "column meaning",
+   "note": "Merged status is matched against doctype instead of StatusType."
   },
   {
    "question_id": 89,
@@ -2665,8 +2665,8 @@
    ],
    "predicted_row_count": 1,
    "answer_text": "There are 0 accounts in the East Bohemia region that choose issuance after transaction (POPLATEK PO OBRATU).",
-   "annotation": null,
-   "note": ""
+   "annotation": "filter value",
+   "note": "The case-sensitive region literal 'East Bohemia' differs from the stored 'east Bohemia'."
   }
  ]
 }
