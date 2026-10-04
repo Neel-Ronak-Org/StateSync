@@ -98,5 +98,5 @@ async def sample(complete: Callable[[], Awaitable[Any]], run: Callable[[str], Aw
         same = same_result(result.get("rows") or [], answer_rows)
         agree += int(same)
         samples.append({"sql": sql, "ok": True, "same": same, "rows": len(result.get("rows") or [])})
-    return {"k": k, "agree": agree, "failed": failed, "risk": round(1 - agree / k, 4) if k else None,
+    return {"k": k, "agree": agree, "failed": failed, "risk": round(1 - agree / k, 4) if k else None,  # noqa: literals - display rounding
             "tokens_in": tokens_in, "tokens_out": tokens_out, "samples": samples}

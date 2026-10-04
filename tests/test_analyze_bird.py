@@ -89,3 +89,32 @@ def test_h4_is_untestable_below_its_precondition():
              "signals": {"repair_triggered": i < 3}} for i in range(20)]
     out = ab.analyse(rows, judges={})
     assert out["tests"]["H4"]["status"].startswith("untestable") and "H4" not in out["holm"]["pvalues"]
+
+
+def _row(qid, correct, **signals):
+    return {"question_id": qid, "db_id": "d", "correct": correct, "correct_strict": correct,
+            "answer_correct_before": None, "signals": signals}
+
+
+def test_flip_rate_counts_label_and_signal_changes_on_shared_questions():
+    first = [_row(1, True), _row(2, False, empty_result=True), _row(3, True), _row(4, False)]
+    second = [_row(1, False), _row(2, False), _row(3, True), _row(9, True)]   # 4 not repeated; 9 not in the first run
+    out = ab.flip_rate(first, second)
+    assert out["questions"] == 3
+    c = out["labels"]["correct"]
+    assert (c["n"], c["flips"], c["right_to_wrong"], c["wrong_to_right"]) == (3, 1, 1, 0)
+    assert (c["accuracy_first"], c["accuracy_second"]) == (round(2 / 3, 4), round(1 / 3, 4))
+    assert out["labels"]["answer_correct_before"]["n"] == 0        # unlabelled in both runs: not counted
+    assert out["signals"]["empty_result"]["flips"] == 1 and out["signals"]["no_sql"]["flips"] == 0
+
+
+def test_final_holm_takes_h1_from_the_fanout_set_and_the_rest_from_held_out():
+    fanout = {"holm": {"pvalues": {"H1": 0.01, "H2": 0.9}}, "tests": {"H1": {}, "H2": {}}}
+    heldout = {"holm": {"pvalues": {"H2": 0.42, "H3": 0.0004}},
+               "tests": {"H2": {}, "H3": {}, "H4": {"status": "untestable: 2 repairs triggered (precondition 10)"}}}
+    out = ab.confirmatory_holm(fanout, heldout)
+    assert out["pvalues"] == {"H1": 0.01, "H2": 0.42, "H3": 0.0004}
+    assert out["rejected"] == {"H1": True, "H2": False, "H3": True} and out["untestable"] == ["H4"]
+    fanout_untestable = {"holm": {"pvalues": {}}, "tests": {"H1": {"status": "untestable: 3 double-counting errors"}}}
+    out = ab.confirmatory_holm(fanout_untestable, heldout)
+    assert "H1" not in out["pvalues"] and out["untestable"] == ["H1", "H4"]

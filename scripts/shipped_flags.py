@@ -134,8 +134,8 @@ def read_flag_state(flags_text: str | None = None) -> dict[str, str | None]:
     reads as None, which never equals an expected value, so a parse failure
     fails the guard rather than silently passing it.
 
-    The value alternation (true|false|quoted-string) covers both flag shapes
-    in SHIPPED_DEFAULTS. The skip-group changed from `?` to `*` (audit 001
+    The value alternation (true|false|quoted-string|integer) covers the flag
+    shapes in SHIPPED_DEFAULTS; an integer reads as its digits (self_consistency_k). The skip-group changed from `?` to `*` (audit 001
     F-001-1) so a key can sit behind more than one comment line before it --
     `schema_retriever.target_schema` has five; the four boolean flags this
     guarded before all have zero, so their match is unchanged."""
@@ -147,7 +147,7 @@ def read_flag_state(flags_text: str | None = None) -> dict[str, str | None]:
             state[f"{section}.{key}"] = _statesync_value(section, key)
             continue
         pattern = (rf"\[{re.escape(section)}\]\s*\n(?:[^\[]*?\n)*\s*"
-                   rf"{re.escape(key)}\s*=\s*(true|false|\"[^\"]*\")")
+                   rf"{re.escape(key)}\s*=\s*(true|false|\"[^\"]*\"|-?\d+\b)")
         m = re.search(pattern, flags_text)
         if m is None:
             state[f"{section}.{key}"] = None

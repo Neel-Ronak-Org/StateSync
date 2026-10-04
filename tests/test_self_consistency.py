@@ -73,3 +73,11 @@ def test_the_flag_ships_off_and_the_field_is_last_write_wins():
     from state import _LAST_WRITE_WINS_FIELDS, StateSyncState
     assert SHIPPED_DEFAULTS[("pipeline", "self_consistency_k")] == "0"
     assert "self_consistency" in _LAST_WRITE_WINS_FIELDS and "self_consistency" in StateSyncState.model_fields
+
+
+def test_the_guard_reads_the_integer_flag():
+    from shipped_flags import read_flag_state
+    text = "[pipeline]\n# comment\nself_consistency_k              = 0          # 0 = off\n"
+    assert read_flag_state(text)["pipeline.self_consistency_k"] == "0"
+    assert read_flag_state(text.replace("= 0 ", "= 5 "))["pipeline.self_consistency_k"] == "5"
+    assert read_flag_state(text.replace("= 0 ", "= 05x "))["pipeline.self_consistency_k"] is None

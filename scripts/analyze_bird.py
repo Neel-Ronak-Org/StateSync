@@ -22,7 +22,10 @@ What it computes:
   accuracy gain, with its precondition (>= H4_MIN_TRIGGERS repairs);
 - paired bootstrap, BOOTSTRAP_RESAMPLES resamples stratified by database, seed SEED; Holm across
   the confirmatory tests present. H1 is computed on the fan-out set (--fanout-set), with its
-  precondition (>= H1_MIN_ERRORS wrong answers on the risky questions).
+  precondition (>= H1_MIN_ERRORS wrong answers on the risky questions); with --heldout-analysis, the
+  final Holm step over H1 (fan-out set) and H2-H4 (held-out);
+- run-to-run variation (--repeat-of): the label and signal flip rates between two runs of the same
+  questions.
 Questions marked excluded, or whose gold failed, are left out.
 """
 
@@ -49,6 +52,7 @@ H1_MIN_ERRORS = 10                  # noqa: literals - protocol v2 H1 preconditi
 PRIMARY_JUDGE = "zed-hosted/gemini-3.8-flash"
 DATA_CHECKS = ("fanout_retry", "truncation", "null_heavy", "grounding_before_repair", "any_data_check")
 BASELINES = ("no_sql", "empty_result", "any_sql_retry", "refusal")
+REPEAT_LABELS = ("correct", "correct_strict", "answer_correct_before")
 
 
 # ── exact expectations under random tie-breaking ───────────────────────────────
@@ -179,8 +183,12 @@ def one_sided_p(values: list[float]) -> float:
 
 # ── the analysis ──────────────────────────────────────────────────────────────
 
+def scored_rows(scores_path: Path) -> list[dict]:
+    return [r for r in json.loads(scores_path.read_text())["rows"] if not r.get("excluded") and not r.get("gold_failed")]
+
+
 def load(scores_path: Path, label: str) -> tuple[list[dict], dict[str, list[float]]]:
-    rows = [r for r in json.loads(scores_path.read_text())["rows"] if not r.get("excluded") and not r.get("gold_failed")]
+    rows = scored_rows(scores_path)
     judges: dict[str, list[float]] = {}
     for f in sorted(glob.glob(str(EVAL / f"bird_judge_{label}_*.json"))):
         d = json.loads(Path(f).read_text())
@@ -292,6 +300,43 @@ def analyse(rows: list[dict], judges: dict[str, list[float]], fanout_ids: set[in
     return out
 
 
+def flip_rate(first: list[dict], second: list[dict]) -> dict[str, Any]:
+    """Run-to-run variation (protocol v2 §5): over the questions scored in both runs, how often each label
+    and each signal differs between the first run and the second."""
+    by_id = {str(r["question_id"]): r for r in first}
+    pairs = [(by_id[str(r["question_id"])], r) for r in second if str(r["question_id"]) in by_id]
+
+    def count(get: Callable[[dict], Any]) -> dict[str, Any]:
+        both = [(get(a), get(b)) for a, b in pairs if get(a) is not None and get(b) is not None]
+        flips = sum(x != y for x, y in both)
+        return {"n": len(both), "flips": flips, "rate": round(flips / len(both), 4) if both else None}
+
+    out: dict[str, Any] = {"questions": len(pairs), "labels": {}, "signals": {}}
+    for key in REPEAT_LABELS:
+        out["labels"][key] = count(lambda r, key=key: r.get(key))
+    if pairs:
+        out["labels"]["correct"].update(
+            right_to_wrong=sum(1 for a, b in pairs if a["correct"] and not b["correct"]),
+            wrong_to_right=sum(1 for a, b in pairs if not a["correct"] and b["correct"]),
+            accuracy_first=round(sum(a["correct"] for a, _ in pairs) / len(pairs), 4),
+            accuracy_second=round(sum(b["correct"] for _, b in pairs) / len(pairs), 4))
+    for name in DATA_CHECKS + BASELINES:
+        out["signals"][name] = count(lambda r, name=name: bool(r["signals"].get(name)))
+    return out
+
+
+def confirmatory_holm(fanout: dict[str, Any], heldout: dict[str, Any]) -> dict[str, Any]:
+    """The final Holm step (protocol v2 §6): H1 from the fan-out set's analysis, H2-H4 from the held-out
+    analysis; untestable tests carry no p-value and are left out. The p-values are the files' (4 places)."""
+    pvalues = {k: v for k, v in heldout["holm"]["pvalues"].items() if k != "H1"}
+    if "H1" in fanout["holm"]["pvalues"]:
+        pvalues["H1"] = fanout["holm"]["pvalues"]["H1"]
+    pvalues = dict(sorted(pvalues.items()))
+    tests = {"H1": fanout["tests"].get("H1", {}), **{t: heldout["tests"].get(t, {}) for t in ("H2", "H3", "H4")}}
+    return {"pvalues": pvalues, "rejected": holm(pvalues),
+            "untestable": [t for t, v in tests.items() if str(v.get("status", "")).startswith("untestable")]}
+
+
 FORMAT_ONLY = "output format only"      # annotate_bird.ERROR_TYPES: a scorer false negative
 
 
@@ -313,6 +358,10 @@ def main() -> int:
     ap.add_argument("--scores", type=Path, required=True)
     ap.add_argument("--label", required=True, help="the answers' label, to find the judge files")
     ap.add_argument("--fanout-set", type=Path, help="the frozen fan-out set (risky question ids), for H1")
+    ap.add_argument("--heldout-analysis", type=Path, help="with --fanout-set: the held-out analysis file, for the final "
+                                                         "Holm step over H1-H4")
+    ap.add_argument("--repeat-of", type=Path, help="the first run's scores, when --scores is a repeat run: run-to-run "
+                                                  "variation")
     ap.add_argument("--out", type=Path)
     args = ap.parse_args()
     rows, judges = load(args.scores, args.label)
@@ -334,6 +383,11 @@ def main() -> int:
         sens = analyse(relabelled, judges)
         report["sensitivity_format_only_correct"] = {k: sens[k] for k in ("n", "wrong", "accuracy", "signals", "matched_k", "risk_coverage")}
         report["sensitivity_format_only_correct"]["tests_exploratory"] = sens["tests"]
+    if args.fanout_set and args.heldout_analysis:
+        report["holm_confirmatory"] = {"heldout_analysis": str(args.heldout_analysis),
+                                       **confirmatory_holm(report, json.loads(args.heldout_analysis.read_text()))}
+    if args.repeat_of:
+        report["run_to_run"] = {"first_run": str(args.repeat_of), **flip_rate(scored_rows(args.repeat_of), rows)}
     out = args.out or EVAL / f"bird_analysis_v2_{args.scores.stem.removeprefix('bird_scores_')}.json"
     out.write_text(json.dumps(report, indent=1) + "\n")
     print(json.dumps(report, indent=1))
