@@ -61,8 +61,10 @@ system, and asked whether they earn their place. This paper reports a pre-regist
 4. **A frozen, owner-reviewed fan-out question set** (60 risky and 33 control questions on the BIRD
    databases), each with a verified gold query, an independent check query and the naive
    double-counting query. [PENDING: results.]
-5. **A measurement note.** On corrected labels, a fifth of execution-match errors are formatting
-   differences the scorer misses. Correction itself moves accuracy by 10.7 points.
+5. **A measurement note.** It confirms known benchmark and metric problems (Wretblad et al., 2024;
+   Pourreza and Rafiei, 2023; FLEX, 2025; Jin et al., 2026) on corrected labels, and quantifies them:
+   - correction moves accuracy by 10.7 points;
+   - even then, a fifth of execution-match errors are formatting differences the scorer misses.
 
 ## 2 Related work
 
@@ -89,9 +91,22 @@ We differ in four ways:
 - we pre-register the hypotheses;
 - we annotate every error to explain what the checks can and cannot see.
 
-**Benchmark label quality.** Jin et al. (2026) report annotation errors in 52.8% of BIRD Mini-Dev
-examples and release corrected annotations. We score against them, and quantify how much correction
-and scorer formatting change the picture.
+**Benchmark and metric quality.**
+- Wretblad et al. (2024) document noise in BIRD's questions and gold SQL, and show that correcting the
+  gold changes which methods look best.
+- Jin et al. (2026) report annotation errors in 52.8% of BIRD Mini-Dev examples and release corrected
+  annotations, including corrected hints ("external knowledge"). We score against them.
+- On the metric side, execution accuracy has both false negatives and false positives:
+  - FLEX (2025) re-judges with an LLM and finds that underestimation on BIRD and Spider stems mainly
+    from annotation quality;
+  - Pourreza and Rafiei (2023) find that most failed predictions of a strong model on Spider are
+    judged correct by humans, citing underspecified questions and non-deterministic outputs such as
+    ties.
+
+Our measurement note confirms these on corrected labels, and adds three points:
+- the share of execution-match errors that are formatting only;
+- dialect artefacts when a SQLite-born benchmark is run on PostgreSQL;
+- documentation gaps in the released files.
 
 **Self-consistency** (Wang et al., 2023) is our strongest model-based baseline. It is applied here as
 agreement between the execution results of resampled queries.
@@ -270,10 +285,22 @@ says which was meant.
 In practice we would show process signals and self-consistency, and keep data checks as explanations
 attached to a flagged answer rather than as detectors.
 
-**What the benchmark measures.** Correcting the gold moves accuracy by 10.7 points. A fifth of the
-remaining "errors" are formatting differences: a fraction for a percentage, a timestamp for a date, a
-name in one column instead of two. Studies of warning signals on BIRD should report corrected labels,
-and ideally an answer-level label, because the user reads the text.
+**What the benchmark measures.** These problems are known (Section 2); our numbers show they persist
+after correction:
+- **Correction.** Correcting the gold moves accuracy by 10.7 points.
+- **Formatting.** A fifth of the remaining "errors" are formatting differences: a fraction for a
+  percentage, a timestamp for a date, a name in one column instead of two.
+- **Hints.** Eight more involve a hint that contradicts the data or the gold. The corrections fix SQL
+  and some hints, but not all.
+- **Dialect.** Running a SQLite-born benchmark on its PostgreSQL copy adds artefacts:
+  - 7 of 498 golds disagree across the two engines;
+  - PostgreSQL sorts NULLs first in descending order, which turned 2 answers wrong.
+- **Documentation.** The released "SQL-only" correction file rewords 81 questions and 68 hints, and two
+  Mini-Dev ids are duplicated.
+
+Studies of warning signals on BIRD should report corrected labels, and ideally an answer-level label,
+because the user reads the text. An LLM-based re-judge of execution matches, as in FLEX, would also
+help.
 
 ## 7 Limitations
 
@@ -309,12 +336,19 @@ authors reviewed the outputs and take responsibility for them.
   Framework for Error Detection and Correction in Text-to-SQL. arXiv:2506.04494.
 - Jin, T., Choi, Y., Zhu, Y., Kang, D. (2026). Pervasive Annotation Errors Break Text-to-SQL Benchmarks
   and Leaderboards. PVLDB 19. arXiv:2601.08778.
+- Kim, H., et al. (2025). FLEX: Expert-level False-Less EXecution Metric for Text-to-SQL Benchmark.
+  NAACL 2025. arXiv:2409.19014. [author list to confirm]
 - Li, J., et al. (2023). Can LLM Already Serve as a Database Interface? A BIg Bench for Large-Scale
   Database Grounded Text-to-SQLs. NeurIPS 2023 Datasets and Benchmarks.
+- Pourreza, M., Rafiei, D. (2023). Evaluating Cross-Domain Text-to-SQL Models and Benchmarks. EMNLP
+  2023. arXiv:2310.18538.
 - Richardson, R. (2026). What Predicts Correctness in Text-to-SQL? A Selective-Prediction Study.
   arXiv:2607.06799.
 - Somov, O., Tutubalina, E. (2025). Confidence Estimation for Error Detection in Text-to-SQL Systems.
   AAAI 2025. arXiv:2501.09527.
+- Wretblad, N., Riseby, F., Biswas, R., Ahmadi, A., Holmström, O. (2024). Understanding the Effects of
+  Noise in Text-to-SQL: An Examination of the BIRD-Bench Benchmark. ACL 2024 (short papers).
+  arXiv:2402.12243.
 - Wang, X., Wei, J., Schuurmans, D., Le, Q., Chi, E., Narang, S., Chowdhery, A., Zhou, D. (2023).
   Self-Consistency Improves Chain of Thought Reasoning in Language Models. ICLR 2023.
 
