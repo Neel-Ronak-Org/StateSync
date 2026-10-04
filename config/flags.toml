@@ -60,6 +60,16 @@ base_url   = "https://openrouter.ai/api/v1"
 key_secret = "openrouter_api_key"
 [llm.endpoints.openrouter.reasoning_effort]
 "openai/gpt-oss-120b" = "low"
+# OpenRouter forwards to many upstream providers, whose serving of the same weights differs (precision,
+# chat template, reasoning handling). Each model is pinned to ONE provider with fallbacks off, and the
+# provider OpenRouter reports is recorded per call (a different one is refused). gpt-oss-120b on Groq
+# is the shipped serving stack. qwen3.8-27b has no Groq route on OpenRouter: DeepInfra's bf16 build,
+# thinking off (Groq's qwen answers without it: normaliser outputs <= 156 tokens on the BIRD runs).
+[llm.endpoints.openrouter.extra_body."openai/gpt-oss-120b"]
+provider = { order = ["groq"], allow_fallbacks = false }
+[llm.endpoints.openrouter.extra_body."qwen/qwen3.8-27b"]
+provider  = { order = ["deepinfra/bf16"], allow_fallbacks = false }
+reasoning = { enabled = false }
 
 [llm.endpoints.gemini_studio]          # Google AI Studio's OpenAI-compatible endpoint
 base_url   = "https://generativelanguage.googleapis.com/v1beta/openai/"
