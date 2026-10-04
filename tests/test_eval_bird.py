@@ -144,3 +144,9 @@ def test_the_fanout_signal_reads_a_retry_or_its_caveat():
     assert eb.signals({**base, "errors": [{"category": "join_cardinality"}]})["fanout_retry"]
     caveat = "These figures may count some rows more than once (join fan-out)."
     assert eb.signals({**base, "caveats": [caveat]})["fanout_retry"] and eb.signals({**base, "caveats": [caveat]})["any_data_check"]
+
+
+def test_norm_v2_makes_arrays_and_json_comparable():
+    # Seen on the held-out run: a predicted query returned a PostgreSQL array, and the scorer crashed.
+    assert eb.norm_v2([1, Decimal("2.0")]) == (1.0, 2.0) and eb.norm_v2({"b": 1, "a": 2}) == '{"a": 2, "b": 1}'
+    assert not eb.rows_match([([1, 2],)], [(1,)], eb.norm_v2)

@@ -211,6 +211,10 @@ def norm_v2(value: Any) -> Any:
     ISO text, so the same value read from SQLite and from PostgreSQL compares equal."""
     if isinstance(value, bool) or value is None:
         return value
+    if isinstance(value, (list, tuple)):        # a PostgreSQL array (array_agg); SQLite gold never has one
+        return tuple(norm_v2(v) for v in value)
+    if isinstance(value, dict):                 # json / jsonb
+        return json.dumps(value, sort_keys=True, default=str)
     if isinstance(value, (int, float, Decimal)):
         return float(f"{float(value):.{SIG_DIGITS}g}")
     if isinstance(value, datetime):
@@ -562,7 +566,7 @@ def cmd_score_v2(label: str, gold_sqlite: Path | None) -> int:
     and after any repair; every v1 and v2 signal. Cross-engine-excluded questions are kept in the file,
     marked, and left out of the summary."""
     answers = json.loads(answers_path(label).read_text())["answers"]
-    gold_file = gold_sqlite or SQLITE_QUESTIONS
+    gold_file = (gold_sqlite or SQLITE_QUESTIONS).resolve()
     gold_sql = {int(q["question_id"]): q["SQL"] for q in json.loads(gold_file.read_text())}
     by_id = {q["question_id"]: q for q in questions()}
     conn = bird_connection()

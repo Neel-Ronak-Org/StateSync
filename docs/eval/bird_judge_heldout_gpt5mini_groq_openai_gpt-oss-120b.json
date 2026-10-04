@@ -1403,6 +1403,806 @@
    "tokens_out": 131,
    "ms": 860,
    "p_correct": 1.0
+  },
+  {
+   "id": "604",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly computes the average upvotes and average age for users with more than 10 posts, and the answer matches the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 757,
+   "tokens_out": 88,
+   "ms": 845,
+   "p_correct": 1.0
+  },
+  {
+   "id": "629",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly calculates the count of votes for 2010 divided by the count for 2011 and the answer reports that ratio.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 683,
+   "tokens_out": 87,
+   "ms": 686,
+   "p_correct": 1.0
+  },
+  {
+   "id": "633",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly selects the post ID with the maximum AnswerCount for user 'slashnick', and the answer matches the returned result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 643,
+   "tokens_out": 89,
+   "ms": 696,
+   "p_correct": 1.0
+  },
+  {
+   "id": "637",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly selects distinct non-null tags from Mark Meckes's posts with zero comments, and the answer reflects the returned tag.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 678,
+   "tokens_out": 103,
+   "ms": 667,
+   "p_correct": 1.0
+  },
+  {
+   "id": "639",
+   "text": "{\"p_correct\": 0.8, \"reason\": \"The answer correctly notes that the query returned null, indicating no applicable data to compute the percentage, which aligns with the result shown.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 726,
+   "tokens_out": 141,
+   "ms": 435,
+   "p_correct": 0.8
+  },
+  {
+   "id": "665",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts 2010 postlinks for posts with \u22642 answers and divides by 12, matching the asked average monthly count.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 748,
+   "tokens_out": 125,
+   "ms": 960,
+   "p_correct": 1.0
+  },
+  {
+   "id": "669",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly returns the earliest vote creation date for user 'chl', matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 661,
+   "tokens_out": 82,
+   "ms": 764,
+   "p_correct": 1.0
+  },
+  {
+   "id": "671",
+   "text": "{\"p_correct\": 0.0, \"reason\": \"The query returns multiple users who earned the earliest Autobiographer badge, but the answer lists only one, so it does not correctly answer the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 692,
+   "tokens_out": 130,
+   "ms": 721,
+   "p_correct": 0.0
+  },
+  {
+   "id": "672",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts distinct UK users with at least one post having FavoriteCount >= 4, and the answer matches the query result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 654,
+   "tokens_out": 89,
+   "ms": 615,
+   "p_correct": 1.0
+  },
+  {
+   "id": "682",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly selects the post from 2010 with the maximum favorite count and returns its id and owner's display name, matching the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 724,
+   "tokens_out": 135,
+   "ms": 729,
+   "p_correct": 1.0
+  },
+  {
+   "id": "685",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result shows the correct viewcount (1708) and the corresponding user displayname (Menno) for the post with Text='Computer Game Datasets'.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 714,
+   "tokens_out": 107,
+   "ms": 742,
+   "p_correct": 1.0
+  },
+  {
+   "id": "694",
+   "text": "{\"p_correct\": 0.2, \"reason\": \"The answer lists comments not present in the query result and adds extra items, so it does not accurately reflect the returned data.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1360,
+   "tokens_out": 147,
+   "ms": 755,
+   "p_correct": 0.2
+  },
+  {
+   "id": "701",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The query returns 0.66445 (\u22480.66%) but the answer claims 66.44%, misinterpreting the percentage value.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 732,
+   "tokens_out": 188,
+   "ms": 1162,
+   "p_correct": 0.1
+  },
+  {
+   "id": "704",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly reports the excerptpostid and wikipostid returned by the query.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 620,
+   "tokens_out": 45,
+   "ms": 512,
+   "p_correct": 1.0
+  },
+  {
+   "id": "705",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly retrieves the reputation and upvote count for the user who made the specified comment, and the answer matches the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 634,
+   "tokens_out": 87,
+   "ms": 774,
+   "p_correct": 1.0
+  },
+  {
+   "id": "707",
+   "text": "{\"p_correct\": 1, \"reason\": \"The returned comment text is exactly the highest\u2011scoring comment for posts with viewcount between 100 and 150.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 877,
+   "tokens_out": 56,
+   "ms": 650,
+   "p_correct": 1.0
+  },
+  {
+   "id": "710",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts comments with score 0 in posts where commentcount = 1, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 624,
+   "tokens_out": 97,
+   "ms": 517,
+   "p_correct": 1.0
+  },
+  {
+   "id": "716",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly computes the percentage of distinct users who commented with scores 5\u201110 and have zero total upvotes\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 732,
+   "tokens_out": 131,
+   "ms": 913,
+   "p_correct": 1.0
+  },
+  {
+   "id": "719",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts distinct superheroes with power 'Super Strength' and height_cm > 200, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 482,
+   "tokens_out": 78,
+   "ms": 563,
+   "p_correct": 1.0
+  },
+  {
+   "id": "723",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts superheroes with eye colour 'Blue' and power 'Agility', matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 497,
+   "tokens_out": 78,
+   "ms": 662,
+   "p_correct": 1.0
+  },
+  {
+   "id": "724",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The answer lists many superheroes without verifying they all have blue eyes and blond hair, so it likely does not correctly answer the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 692,
+   "tokens_out": 94,
+   "ms": 632,
+   "p_correct": 0.1
+  },
+  {
+   "id": "726",
+   "text": "{\"p_correct\": 0.0, \"reason\": \"The answer misinterprets the result, listing specific heights and ranks that are not present in the provided output, which shows many null heights ranked 1\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 975,
+   "tokens_out": 88,
+   "ms": 833,
+   "p_correct": 0.0
+  },
+  {
+   "id": "730",
+   "text": "{\"p_correct\": 0.9, \"reason\": \"The answer correctly lists Marvel superheroes with the 'Super Strength' power as returned by the query, though it may include extra names beyond the shown sample.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 686,
+   "tokens_out": 119,
+   "ms": 752,
+   "p_correct": 0.9
+  },
+  {
+   "id": "732",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly selects the publisher of the superhero with the minimum Speed attribute, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 508,
+   "tokens_out": 79,
+   "ms": 465,
+   "p_correct": 1.0
+  },
+  {
+   "id": "736",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists all superheroes with the minimum Intelligence value as requested.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 569,
+   "tokens_out": 94,
+   "ms": 651,
+   "p_correct": 1.0
+  },
+  {
+   "id": "737",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly retrieves the race 'Mutant' for superhero Copycat, matching the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 392,
+   "tokens_out": 73,
+   "ms": 577,
+   "p_correct": 1.0
+  },
+  {
+   "id": "739",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer lists exactly the superhero names returned by the query, which correctly matches the requested power\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 483,
+   "tokens_out": 79,
+   "ms": 588,
+   "p_correct": 1.0
+  },
+  {
+   "id": "740",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts distinct female superheroes with Strength = 100, and the answer matches the query result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 503,
+   "tokens_out": 85,
+   "ms": 685,
+   "p_correct": 1.0
+  },
+  {
+   "id": "744",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly computes Marvel minus DC superhero counts and the answer matches the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 491,
+   "tokens_out": 77,
+   "ms": 464,
+   "p_correct": 1.0
+  },
+  {
+   "id": "745",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly retrieves the publisher ID for 'Star Trek' and the answer matches the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 370,
+   "tokens_out": 77,
+   "ms": 569,
+   "p_correct": 1.0
+  },
+  {
+   "id": "747",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly reports the count returned by the query (122) as the total number of superheroes with a NULL full_name.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 397,
+   "tokens_out": 83,
+   "ms": 297,
+   "p_correct": 1.0
+  },
+  {
+   "id": "750",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly averages weight_kg for rows where gender = 'Female' and the answer reports that value.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 433,
+   "tokens_out": 75,
+   "ms": 588,
+   "p_correct": 1.0
+  },
+  {
+   "id": "751",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists the distinct superpowers for male superheroes as returned by the query.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 792,
+   "tokens_out": 107,
+   "ms": 667,
+   "p_correct": 1.0
+  },
+  {
+   "id": "753",
+   "text": "{\"p_correct\": 0.0, \"reason\": \"The answer lists many superheroes not present in the query result, so it does not correctly reflect the returned data.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 556,
+   "tokens_out": 83,
+   "ms": 614,
+   "p_correct": 0.0
+  },
+  {
+   "id": "758",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The answer misstates the number of rows and repeats values not matching the displayed result, so it does not correctly answer the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 518,
+   "tokens_out": 83,
+   "ms": 720,
+   "p_correct": 0.1
+  },
+  {
+   "id": "760",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly calculates the percentage of heroes with height 150-180 cm published by Marvel, and the answer reports that percentage accurately.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 531,
+   "tokens_out": 83,
+   "ms": 695,
+   "p_correct": 1.0
+  },
+  {
+   "id": "761",
+   "text": "{\"p_correct\": 0.2, \"reason\": \"The answer only lists one superhero, which is unlikely to be the complete set of male heroes above 79% of the average weight.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 500,
+   "tokens_out": 130,
+   "ms": 404,
+   "p_correct": 0.2
+  },
+  {
+   "id": "764",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists the power_name values returned by the query for hero_id 1.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 442,
+   "tokens_out": 76,
+   "ms": 447,
+   "p_correct": 1.0
+  },
+  {
+   "id": "769",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly selects the superhero with the maximum durability value for Dark Horse Comics, and the returned name matches the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 483,
+   "tokens_out": 77,
+   "ms": 597,
+   "p_correct": 1.0
+  },
+  {
+   "id": "772",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result rows match the query requirements and are presented accurately.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 667,
+   "tokens_out": 72,
+   "ms": 368,
+   "p_correct": 1.0
+  },
+  {
+   "id": "779",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts the number of powers for Amazo and the answer matches the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 409,
+   "tokens_out": 68,
+   "ms": 721,
+   "p_correct": 1.0
+  },
+  {
+   "id": "781",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists the heights returned by the query for heroes with amber eye colour.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 446,
+   "tokens_out": 79,
+   "ms": 285,
+   "p_correct": 1.0
+  },
+  {
+   "id": "782",
+   "text": "{\"p_correct\": 0, \"reason\": \"The answer lists Vulcan, which was not returned by the query result, so it does not correctly reflect the provided result set.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 535,
+   "tokens_out": 120,
+   "ms": 646,
+   "p_correct": 0.0
+  },
+  {
+   "id": "785",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The answer lists many superheroes not shown in the query result, so it does not correctly reflect the actual output.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 527,
+   "tokens_out": 113,
+   "ms": 673,
+   "p_correct": 0.1
+  },
+  {
+   "id": "786",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly counts heroes whose Strength equals the maximum Strength value, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 497,
+   "tokens_out": 74,
+   "ms": 566,
+   "p_correct": 1.0
+  },
+  {
+   "id": "790",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly computes the weight difference and the answer matches the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 495,
+   "tokens_out": 61,
+   "ms": 624,
+   "p_correct": 1.0
+  },
+  {
+   "id": "792",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly lists all superpower names returned by the query for Abomination.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 476,
+   "tokens_out": 89,
+   "ms": 618,
+   "p_correct": 1.0
+  },
+  {
+   "id": "794",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly returns the hero with the maximum Speed, and the answer matches that result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 439,
+   "tokens_out": 73,
+   "ms": 595,
+   "p_correct": 1.0
+  },
+  {
+   "id": "797",
+   "text": "{\"p_correct\": 0.05, \"reason\": \"The answer lists many superheroes not present in the query result, so it does not correctly reflect the SQL output.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 560,
+   "tokens_out": 83,
+   "ms": 621,
+   "p_correct": 0.05
+  },
+  {
+   "id": "800",
+   "text": "{\"p_correct\": 1.0, \"reason\": \"The SQL correctly calculates the percentage of superheroes with eye colour 'Blue' and the answer matches the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 488,
+   "tokens_out": 83,
+   "ms": 602,
+   "p_correct": 1.0
+  },
+  {
+   "id": "801",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly calculates the male-to-female count ratio and the answer matches the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 455,
+   "tokens_out": 93,
+   "ms": 572,
+   "p_correct": 1.0
+  },
+  {
+   "id": "819",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly computes the difference between blue\u2011eyed and no\u2011eye\u2011color superheroes with missing weight, and the answer accurately reports the result.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 529,
+   "tokens_out": 92,
+   "ms": 689,
+   "p_correct": 1.0
+  },
+  {
+   "id": "822",
+   "text": "{\"p_correct\": 1, \"reason\": \"The answer correctly reports the count returned by the query (6) which matches the question criteria.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 468,
+   "tokens_out": 72,
+   "ms": 528,
+   "p_correct": 1.0
+  },
+  {
+   "id": "824",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result correctly lists all superheroes with 'Wind Control' power in alphabetical order.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 462,
+   "tokens_out": 99,
+   "ms": 344,
+   "p_correct": 1.0
+  },
+  {
+   "id": "825",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly returns the gender 'Female' for the superhero with the Phoenix Force ability, matching the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 446,
+   "tokens_out": 93,
+   "ms": 605,
+   "p_correct": 1.0
+  },
+  {
+   "id": "829",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly computes DC minus Marvel count as -163, and the answer accurately interprets this as Marvel having 163 more superheroes.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 486,
+   "tokens_out": 99,
+   "ms": 1525,
+   "p_correct": 1.0
+  },
+  {
+   "id": "846",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly selects the five drivers with the worst q1 times for race 20, matching the request.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 775,
+   "tokens_out": 116,
+   "ms": 763,
+   "p_correct": 1.0
+  },
+  {
+   "id": "850",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The answer includes Luxembourg Grand Prix, which is not on a German circuit, and misrepresents the query results.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 699,
+   "tokens_out": 119,
+   "ms": 778,
+   "p_correct": 0.1
+  },
+  {
+   "id": "857",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query returns the correct latitude and longitude for Abu Dhabi Grand Prix, and the answer states those coordinates\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 800,
+   "tokens_out": 71,
+   "ms": 490,
+   "p_correct": 1.0
+  },
+  {
+   "id": "859",
+   "text": "{\"p_correct\": 1, \"reason\": \"The returned Q1 time matches Bruno Senna's result for raceId 354.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 719,
+   "tokens_out": 65,
+   "ms": 661,
+   "p_correct": 1.0
+  },
+  {
+   "id": "861",
+   "text": "{\"p_correct\": 0.2, \"reason\": \"The answer lists two driver numbers, but the question asks for the single driver number who finished exactly 0:01:54 in Q3, so the result is likely incorrect.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 671,
+   "tokens_out": 141,
+   "ms": 624,
+   "p_correct": 0.2
+  },
+  {
+   "id": "862",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly counts drivers with NULL time for the 2007 Bahrain Grand Prix, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 756,
+   "tokens_out": 79,
+   "ms": 593,
+   "p_correct": 1.0
+  },
+  {
+   "id": "865",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly selects the driver with the earliest date of birth among those who finished race 592, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 826,
+   "tokens_out": 89,
+   "ms": 712,
+   "p_correct": 1.0
+  },
+  {
+   "id": "866",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL returned the correct drivers with the specified lap time and race, and the answer lists them with forename, surname, and URL.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1109,
+   "tokens_out": 58,
+   "ms": 449,
+   "p_correct": 1.0
+  },
+  {
+   "id": "868",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query returns the correct latitude and longitude for the Malaysian Grand Prix and the answer matches those values.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 833,
+   "tokens_out": 78,
+   "ms": 725,
+   "p_correct": 1.0
+  },
+  {
+   "id": "869",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly finds the constructor with max points in race 9 and returns its URL, which matches the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 752,
+   "tokens_out": 53,
+   "ms": 918,
+   "p_correct": 1.0
+  },
+  {
+   "id": "872",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly finds the driver with Q3 time 1:33 in race 45 and returns the code HAM, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 700,
+   "tokens_out": 121,
+   "ms": 937,
+   "p_correct": 1.0
+  },
+  {
+   "id": "875",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly returns the season URL for the year of race ID 901, matching the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 687,
+   "tokens_out": 77,
+   "ms": 777,
+   "p_correct": 1.0
+  },
+  {
+   "id": "877",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly selects the driver with the latest date of birth among those who finished race 872, and the result matches the answer.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 833,
+   "tokens_out": 95,
+   "ms": 763,
+   "p_correct": 1.0
+  },
+  {
+   "id": "880",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly calculates the percent faster of Paul di Resta's fastest lap speed in race 853 versus race 854 and the answer reports that value.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 878,
+   "tokens_out": 170,
+   "ms": 835,
+   "p_correct": 1.0
+  },
+  {
+   "id": "881",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The answer summarizes 29 drivers and lists names not present in the shown result, while the query only returned 10 rows, so the provided summary does not correctly reflect the query output\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 1049,
+   "tokens_out": 153,
+   "ms": 722,
+   "p_correct": 0.1
+  },
+  {
+   "id": "884",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly selects races matching the earliest year and month, and the listed names answer the question.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 730,
+   "tokens_out": 83,
+   "ms": 493,
+   "p_correct": 1.0
+  },
+  {
+   "id": "892",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result correctly returns the driver with the maximum points and includes his full name and point total.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 724,
+   "tokens_out": 109,
+   "ms": 848,
+   "p_correct": 1.0
+  },
+  {
+   "id": "894",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result correctly returns the minimum lap time with the driver and race as requested.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 782,
+   "tokens_out": 78,
+   "ms": 659,
+   "p_correct": 1.0
+  },
+  {
+   "id": "895",
+   "text": "{\"p_correct\": 1, \"reason\": \"The SQL correctly computes the average lap time for Lewis Hamilton in the 2009 Malaysian Grand Prix and the answer reports that value.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 835,
+   "tokens_out": 90,
+   "ms": 356,
+   "p_correct": 1.0
+  },
+  {
+   "id": "896",
+   "text": "{\"p_correct\": 1, \"reason\": \"The query correctly computes the percentage of Hamilton's races since 2010 where his position was not 1st and the answer reports that percentage.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 828,
+   "tokens_out": 86,
+   "ms": 338,
+   "p_correct": 1.0
+  },
+  {
+   "id": "897",
+   "text": "{\"p_correct\": 1, \"reason\": \"The result correctly identifies the driver with the most wins, includes his nationality, and shows his maximum points.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 763,
+   "tokens_out": 101,
+   "ms": 668,
+   "p_correct": 1.0
+  },
+  {
+   "id": "898",
+   "text": "{\"p_correct\": 0.1, \"reason\": \"The query returns Kamui Kobayashi age 40, but there are younger Japanese drivers such as Yuki Tsunoda, so the answer is incorrect.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 731,
+   "tokens_out": 149,
+   "ms": 530,
+   "p_correct": 0.1
+  },
+  {
+   "id": "901",
+   "text": "{\"p_correct\": 0.3, \"reason\": \"The query returned a Brazilian Grand Prix which took place in October 2005, so the result does not fully answer the September 2005 request.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 816,
+   "tokens_out": 130,
+   "ms": 781,
+   "p_correct": 0.3
+  },
+  {
+   "id": "902",
+   "text": "{\"p_correct\": 0.2, \"reason\": \"The answer lists many races not shown in the query result, overstating the output and likely incorrect.\"}",
+   "served_model": "openai/gpt-oss-120b",
+   "endpoint": "groq",
+   "tokens_in": 964,
+   "tokens_out": 134,
+   "ms": 240195,
+   "p_correct": 0.2
   }
  ]
 }

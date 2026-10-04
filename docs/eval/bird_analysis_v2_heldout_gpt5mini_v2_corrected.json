@@ -1,0 +1,241 @@
+{
+ "scores": "docs/eval/bird_scores_heldout_gpt5mini_v2_corrected.json",
+ "label": "heldout_gpt5mini",
+ "n": 393,
+ "wrong": 90,
+ "accuracy": 0.771,
+ "judges": [
+  "zed-hosted/gemini-3.8-flash"
+ ],
+ "signals": {
+  "fanout_retry": {
+   "flagged": 1,
+   "caught": 1,
+   "precision": 1.0,
+   "recall": 0.0111,
+   "false_alarm_rate": 0.0,
+   "auroc": 0.5056
+  },
+  "truncation": {
+   "flagged": 9,
+   "caught": 2,
+   "precision": 0.2222,
+   "recall": 0.0222,
+   "false_alarm_rate": 0.0231,
+   "auroc": 0.4996
+  },
+  "null_heavy": {
+   "flagged": 2,
+   "caught": 2,
+   "precision": 1.0,
+   "recall": 0.0222,
+   "false_alarm_rate": 0.0,
+   "auroc": 0.5111
+  },
+  "grounding_before_repair": {
+   "flagged": 5,
+   "caught": 4,
+   "precision": 0.8,
+   "recall": 0.0444,
+   "false_alarm_rate": 0.0033,
+   "auroc": 0.5206
+  },
+  "any_data_check": {
+   "flagged": 17,
+   "caught": 9,
+   "precision": 0.5294,
+   "recall": 0.1,
+   "false_alarm_rate": 0.0264,
+   "auroc": 0.5368
+  },
+  "no_sql": {
+   "flagged": 4,
+   "caught": 4,
+   "precision": 1.0,
+   "recall": 0.0444,
+   "false_alarm_rate": 0.0,
+   "auroc": 0.5222
+  },
+  "empty_result": {
+   "flagged": 6,
+   "caught": 6,
+   "precision": 1.0,
+   "recall": 0.0667,
+   "false_alarm_rate": 0.0,
+   "auroc": 0.5333
+  },
+  "any_sql_retry": {
+   "flagged": 24,
+   "caught": 19,
+   "precision": 0.7917,
+   "recall": 0.2111,
+   "false_alarm_rate": 0.0165,
+   "auroc": 0.5973
+  },
+  "refusal": {
+   "flagged": 7,
+   "caught": 4,
+   "precision": 0.5714,
+   "recall": 0.0444,
+   "false_alarm_rate": 0.0099,
+   "auroc": 0.5173
+  }
+ },
+ "matched_k": {
+  "fanout_retry": {
+   "k": 1,
+   "check_caught": 1,
+   "judge_caught_expected": 0.64,
+   "difference": 0.36,
+   "difference_ci95": [
+    0.2258,
+    1.3902
+   ],
+   "p_one_sided": 0.0
+  },
+  "truncation": {
+   "k": 9,
+   "check_caught": 2,
+   "judge_caught_expected": 5.73,
+   "difference": -3.73,
+   "difference_ci95": [
+    -7.4333,
+    -0.7273
+   ],
+   "p_one_sided": 0.9945
+  },
+  "null_heavy": {
+   "k": 2,
+   "check_caught": 2,
+   "judge_caught_expected": 1.27,
+   "difference": 0.73,
+   "difference_ci95": [
+    0.25,
+    1.931
+   ],
+   "p_one_sided": 0.0
+  },
+  "grounding_before_repair": {
+   "k": 5,
+   "check_caught": 4,
+   "judge_caught_expected": 3.18,
+   "difference": 0.82,
+   "difference_ci95": [
+    -1.1852,
+    2.7778
+   ],
+   "p_one_sided": 0.2163
+  },
+  "any_data_check": {
+   "k": 17,
+   "check_caught": 9,
+   "judge_caught_expected": 10.82,
+   "difference": -1.82,
+   "difference_ci95": [
+    -6.3333,
+    2.2222
+   ],
+   "p_one_sided": 0.803
+  },
+  "no_sql": {
+   "k": 4,
+   "check_caught": 4,
+   "judge_caught_expected": 2.55,
+   "difference": 1.45,
+   "difference_ci95": [
+    0.3714,
+    2.8889
+   ],
+   "p_one_sided": 0.0
+  },
+  "empty_result": {
+   "k": 6,
+   "check_caught": 6,
+   "judge_caught_expected": 3.82,
+   "difference": 2.18,
+   "difference_ci95": [
+    0.7059,
+    4.1081
+   ],
+   "p_one_sided": 0.0
+  },
+  "any_sql_retry": {
+   "k": 24,
+   "check_caught": 19,
+   "judge_caught_expected": 15.27,
+   "difference": 3.73,
+   "difference_ci95": [
+    -1.7143,
+    8.5714
+   ],
+   "p_one_sided": 0.0895
+  },
+  "refusal": {
+   "k": 7,
+   "check_caught": 4,
+   "judge_caught_expected": 4.45,
+   "difference": -0.45,
+   "difference_ci95": [
+    -2.6757,
+    1.6667
+   ],
+   "p_one_sided": 0.642
+  }
+ },
+ "risk_coverage": {
+  "judge zed-hosted/gemini-3.8-flash": {
+   "auroc": 0.6969,
+   "aurc": 0.1534,
+   "selective_accuracy_80": 0.8537,
+   "selective_accuracy_90": 0.8203
+  },
+  "self-consistency": {
+   "auroc": 0.7387,
+   "aurc": 0.1345,
+   "selective_accuracy_80": 0.8577,
+   "selective_accuracy_90": 0.8223
+  },
+  "checks then judge": {
+   "auroc": 0.6965,
+   "aurc": 0.1523,
+   "selective_accuracy_80": 0.8562,
+   "selective_accuracy_90": 0.8074
+  }
+ },
+ "tests": {
+  "H2": {
+   "aurc_judge_minus_combined": 0.0011,
+   "ci95": [
+    -0.0051,
+    0.0086
+   ],
+   "p_one_sided": 0.423
+  },
+  "H3": {
+   "false_alarms": 2,
+   "of": 242,
+   "rate": 0.0083,
+   "upper_95": 0.0258,
+   "p_one_sided": 0.0004
+  },
+  "H4": {
+   "triggered": 2,
+   "labelled": 298,
+   "fixed": 0,
+   "broken": 0,
+   "accuracy_gain": 0.0,
+   "status": "untestable: 2 repairs triggered (precondition 10)"
+  }
+ },
+ "self_consistency_unsampled": 4,
+ "holm": {
+  "pvalues": {
+   "H2": 0.423,
+   "H3": 0.0004
+  },
+  "rejected": {
+   "H3": true,
+   "H2": false
+  }
+ }
+}
