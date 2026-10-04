@@ -71,6 +71,15 @@ provider = { order = ["groq"], allow_fallbacks = false }
 provider  = { order = ["deepinfra/bf16"], allow_fallbacks = false }
 reasoning = { enabled = false }
 
+# Cheaper Inference (Keak): an OpenAI-compatible reseller of spare provider capacity. It does not
+# disclose or let us pin the upstream that serves a model, so a run through it records the served
+# model name per call (refused if different) and is checked against Groq-direct output.
+[llm.endpoints.cheaperinference]
+base_url   = "https://api.cheaperinference.com/v1"
+key_secret = "cheaperinference_api_key"
+[llm.endpoints.cheaperinference.reasoning_effort]
+"gpt-oss-120b" = "low"
+
 [llm.endpoints.gemini_studio]          # Google AI Studio's OpenAI-compatible endpoint
 base_url   = "https://generativelanguage.googleapis.com/v1beta/openai/"
 key_secret = "gemini_api_key"

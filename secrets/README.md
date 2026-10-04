@@ -157,3 +157,13 @@ file holds a `REPLACE...` placeholder (compose needs the file to exist). Copy th
 ```bash
 pbpaste > secrets/openrouter_api_key && chmod 600 secrets/openrouter_api_key
 ```
+
+### Cheaper Inference (optional; provider = "openai_compat")
+
+`cheaperinference_api_key`: a Cheaper Inference (platform.cheaperinference.com) API key, used only when
+a role in `[llm.models.openai_compat]` names the `cheaperinference` endpoint. The upstream provider is
+not disclosed, so runs through it record the served model per call. Placeholder until a key is added:
+
+```bash
+pbpaste > secrets/cheaperinference_api_key && chmod 600 secrets/cheaperinference_api_key
+```
