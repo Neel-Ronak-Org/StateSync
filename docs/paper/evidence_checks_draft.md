@@ -1,7 +1,7 @@
 # Do Data Checks Tell You When to Trust a Text-to-SQL Answer? A Pre-registered Study on Corrected BIRD Labels
 
-*Draft v0.1, 2026-10-04. Short-paper format (about 4 pages plus references). The run-to-run repeat is
-marked PENDING. Author block, venue and template to follow.*
+*Draft v0.1, 2026-10-04. Short-paper format (about 4 pages plus references). The robustness run with a
+second SQL model (gpt-oss-120b) is pending. Author block, venue and template to follow.*
 
 ## Abstract
 
@@ -262,7 +262,14 @@ The fan-out probe caught none of the four double-counting errors:
 
 **Label quality.** A blind check of 50 random answers found none labelled correct that was wrong.
 
-**Run-to-run variation:** [PENDING: label flip rate on 50 repeated questions.]
+**Run-to-run variation.** 50 random held-out questions were asked a second time:
+- 5 changed label (10%; 95% CI 3–22%): 4 became correct and 1 became wrong.
+- Signals rarely changed: at most 2 of 50 for any signal.
+- Exploratory: all five flipped questions had first-run self-consistency risk of at least 0.4 (mean
+  0.76, vs 0.09 for stable ones).
+
+Run-to-run instability sits where the model's own samples disagree, which is what self-consistency
+measures.
 
 ## 5b Results (fan-out set, n = 93)
 

@@ -356,6 +356,24 @@ only on held-out data.
       answers); where it does, the SQL before the retry is labelled separately
       (`correct_before_fanout_retry`).
     - Decided before any fan-out question was asked.
+16. **Operational changes for the robustness run and the secondary judge** (2026-10-04, after the
+    held-out, fan-out and repeat results; before any robustness question was asked). Groq's free tier
+    (200K tokens per model per day) made the robustness run take about three days, and Groq's paid
+    tier was not open to new accounts. So:
+    - **gpt-oss-120b goes through OpenRouter, pinned to Groq** (provider order `groq`, fallbacks
+      off; the provider is recorded per call and any other is refused). Same model, same serving
+      stack and the same `reasoning_effort = low`; only the route changes.
+    - **The normaliser (qwen3.8-27b) for the robustness run goes through OpenRouter, pinned to
+      DeepInfra's bf16 build, with thinking off.** OpenRouter has no Groq route for this model. This is
+      a change of serving stack for a light role (language detection and proper-noun hints). It is
+      checked on 20 dev questions against Groq's output before the run
+      (`docs/eval/bird_normaliser_route_check.json`). The held-out, fan-out and repeat runs used Groq
+      direct throughout.
+    - **The robustness run uses `self_consistency_k = 0`** (cost; H1 does not use it), the measurement
+      flags, and `fanout_retry_max = 0` as in change 15.
+    - **The secondary judge (gpt-oss-120b) is re-run on all 393 held-out answers through the pinned
+      route,** so its verdicts come from one route. The 260 earlier Groq-direct verdicts are kept and
+      reported as an agreement check of the two routes.
 
 **What the pilot did differently from v1** (recorded in `docs/eval/bird_pilot_report.md`):
 - original labels instead of corrected ones;

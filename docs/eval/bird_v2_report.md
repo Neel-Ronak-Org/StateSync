@@ -1,7 +1,8 @@
 # Evidence-tiers study, protocol v2: results report (DRAFT, methods only)
 
 Status: **draft, 2026-10-04.** The methods were written before any held-out result was looked at.
-Held-out and fan-out set results are complete; the run-to-run repeat is pending.
+Held-out, fan-out set and run-to-run results are complete. The robustness run (fan-out set with
+gpt-oss-120b, protocol v2 §4) is pending.
 
 Protocol: `docs/research/evidence_tiers_study.md` (v2, with changes 1–15 in its §10). Earlier
 development run: `docs/eval/bird_pilot_report.md`.
@@ -215,6 +216,36 @@ model: it uses DISTINCT or a semi-join. The double counting we saw on held-out B
 came through joins that are correct for a different reading of the question, which neither a
 structural probe nor this set targets.
 
+## Results: run-to-run variation (50 questions asked twice)
+
+Files:
+- `bird_scores_heldout_gpt5mini_repeat_v2_corrected.json`
+- `bird_analysis_v2_heldout_gpt5mini_repeat_v2_corrected.json` (`run_to_run`)
+
+The second run used the held-out configuration with self-consistency off (`self_consistency_k = 0`;
+the samples never change the answer). Five questions hit Groq 503s on the normaliser and were asked
+again until answered.
+
+| label | flips | rate (95% CI) |
+|---|---|---|
+| SQL, relaxed | 5 of 50 | **10%** (3.3–21.8) |
+| SQL, strict | 5 of 50 | 10% |
+| answer text | 3 of 37 | 8.1% |
+
+- **Direction:** 4 went wrong → right and 1 right → wrong. Accuracy on these 50 was 80% then 86%;
+  the net change is not significant (sign test p = 0.38).
+- **Signals flip rarely:** retry 2 of 50, every other signal at most 1.
+- **Exploratory: self-consistency predicts the flips.** All 5 flipped questions had a first-run
+  self-consistency risk of at least 0.4 (mean 0.76), against a mean of 0.09 for the 45 stable ones;
+  5 of the 45 stable questions had risk ≥ 0.4.
+
+**What it means:**
+- GPT-5 mini at default sampling changes its answer's correctness on about one question in ten.
+- A single-run accuracy has a matching per-question noise floor. The 95% interval on held-out
+  accuracy (72.5–81.2) covers sampling of questions, not of runs.
+- The instability is concentrated where the model's own samples disagree. That is the signal
+  self-consistency measures, and is consistent with it giving the best ranking.
+
 ### Label quality
 
 - **Answer label vs a blind manual reading of 60 random answers:** 58 of 60 agree (96.7%). The rule
@@ -238,6 +269,8 @@ structural probe nor this set targets.
 
 ### What this says (held-out and fan-out set)
 
+- **Answers are unstable on about 10% of questions run to run,** and those are the questions whose
+  self-consistency samples disagree.
 - **H1 could not be tested.** On 60 questions built to invite double counting, the model never double
   counted, so the fan-out check had nothing to catch.
 - **Model-free data checks are not a better warning than an LLM judge.** At the same flag rate they
