@@ -27,21 +27,18 @@ A Pre-registered Study on Corrected BIRD Labels}
 \maketitle
 
 \begin{abstract}
-A text-to-SQL system that answers wrongly should say so. Besides model-based signals (an LLM judge,
-self-consistency), a deployed system can check an answer against the data with no model call: joins
-that count rows twice, results cut off at a row limit, all-NULL aggregates, figures in the answer that
-do not appear in the result. We test whether such data checks are useful warnings in a pre-registered
-study on 393 held-out BIRD Mini-Dev questions, scored against corrected gold annotations and compared
-with an LLM judge at the same flag rate. The data checks fire on 4\% of answers and catch no more wrong
-answers than the judge does with the same number of warnings (9 vs.\ 10.8; 95\% CI of the difference
-$-6.3$ to $2.2$); ordering by them before the judge does not improve its risk--coverage curve. The
-strongest cheap warnings are process signals (the query failed, returned nothing, or needed a retry:
-79\% precision), and self-consistency ranks answers best (AUROC 0.74 vs.\ 0.70). A blind annotation of
-every error explains why: most errors are semantic, and a fifth of execution-match ``errors'' are
-formatting differences the scorer misses. On 60 questions built to invite double counting, the model
-never double counted and a second model did so only 5 times, so the fan-out hypothesis could not be
-tested; when the error occurred, the check caught it precisely, but so did a strong judge. Answers that change between two
-runs are exactly those whose self-consistency samples disagree.
+A text-to-SQL system that answers wrongly should say so. Beyond model-based signals, a deployed
+system can check an answer against the data with no model call: joins that count rows twice, results
+cut off at a row limit, all-NULL aggregates, figures absent from the result. In a pre-registered study
+on 393 held-out BIRD Mini-Dev questions, scored against corrected gold annotations, we compare such
+data checks with an LLM judge at the same flag rate. The checks fire on 4\% of answers and catch no
+more errors than the judge with as many warnings (9 vs.\ 10.8; 95\% CI of the difference $-6.3$ to
+$2.2$), and do not improve its risk--coverage curve. Process signals (the query failed, returned
+nothing, or needed a retry) are the strongest cheap warnings (79\% precision), and self-consistency
+ranks answers best (AUROC 0.74 vs.\ 0.70). A blind annotation of every error explains why: most errors
+are semantic, and a fifth are formatting differences the scorer misses. On 60 questions built to invite
+double counting, two models erred 0 and 5 times, too rarely to test the fan-out check. Answers that
+change between runs are those whose self-consistency samples disagree.
 \end{abstract}
 
 \section{Introduction}
@@ -179,7 +176,7 @@ lowest risk from every ranking.}
 \end{figure}
 
 \textbf{Warnings} (Table~\ref{tab:signals}). The data checks fire on 17 answers (4\%) and catch 10\%
-of the errors, about as many as the judge's 17 most suspect answers. Process signals are stronger: a
+of the errors, slightly fewer than the judge's 17 most suspect answers (9 vs.\ 10.8). Process signals are stronger: a
 failed, empty or retried query is wrong 79--100\% of the time. Self-consistency gives the best ranking
 (AUROC 0.739, AURC 0.135), ahead of the Gemini judge (0.697, 0.153), the judge ensemble (0.701,
 0.147) and the gpt-oss judge (0.606, 0.186) (Figure~\ref{fig:rc}).
