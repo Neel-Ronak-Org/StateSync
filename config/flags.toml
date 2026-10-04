@@ -79,6 +79,10 @@ base_url   = "https://api.cheaperinference.com/v1"
 key_secret = "cheaperinference_api_key"
 [llm.endpoints.cheaperinference.reasoning_effort]
 "gpt-oss-120b" = "low"
+# Its qwen3.8-27b thinks by default (168-491 output tokens on the normaliser prompt); Groq's does not
+# (<= 156). Thinking off brings it to 63-97 (2026-10-05 check).
+[llm.endpoints.cheaperinference.extra_body."qwen-3-8-27b"]
+reasoning = { enabled = false }
 
 [llm.endpoints.gemini_studio]          # Google AI Studio's OpenAI-compatible endpoint
 base_url   = "https://generativelanguage.googleapis.com/v1beta/openai/"
