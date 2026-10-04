@@ -336,8 +336,8 @@ authors reviewed the outputs and take responsibility for them.
   Framework for Error Detection and Correction in Text-to-SQL. arXiv:2506.04494.
 - Jin, T., Choi, Y., Zhu, Y., Kang, D. (2026). Pervasive Annotation Errors Break Text-to-SQL Benchmarks
   and Leaderboards. PVLDB 19. arXiv:2601.08778.
-- Kim, H., et al. (2025). FLEX: Expert-level False-Less EXecution Metric for Text-to-SQL Benchmark.
-  NAACL 2025. arXiv:2409.19014. [author list to confirm]
+- Kim, H., Jeon, T., Choi, S., Choi, S., Cho, H. (2025). FLEX: Expert-level False-Less EXecution Metric
+  for Text-to-SQL Benchmark. NAACL 2025. arXiv:2409.19014.
 - Li, J., et al. (2023). Can LLM Already Serve as a Database Interface? A BIg Bench for Large-Scale
   Database Grounded Text-to-SQLs. NeurIPS 2023 Datasets and Benchmarks.
 - Pourreza, M., Rafiei, D. (2023). Evaluating Cross-Domain Text-to-SQL Models and Benchmarks. EMNLP
