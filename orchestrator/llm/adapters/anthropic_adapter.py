@@ -17,7 +17,7 @@ import os
 import anthropic as _anthropic
 
 from config_loader import cfg
-from llm.adapters.base import ChatModel, LLMResponse
+from llm.adapters.base import LLMResponse
 
 logger = logging.getLogger(__name__)
 

@@ -16,14 +16,13 @@ never appear in graded reports anyway.
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
 
 import httpx
 
 from config_loader import cfg
-from llm.adapters.base import ChatModel, LLMResponse
+from llm.adapters.base import LLMResponse
 
 logger = logging.getLogger(__name__)
 

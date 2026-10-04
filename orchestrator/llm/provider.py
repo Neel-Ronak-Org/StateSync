@@ -25,7 +25,6 @@ Startup behaviour:
 from __future__ import annotations
 
 import logging
-import os
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
@@ -60,7 +59,7 @@ def _resolve_model(provider: str, role: str) -> str:
 
 
 @lru_cache(maxsize=8)  # noqa: literals — stdlib cache size, not a domain constant
-def get_agent_llm(role: str) -> "ChatModel":
+def get_agent_llm(role: str) -> ChatModel:
     """
     Return the configured ChatModel for the given agent role.
     Result is cached — one adapter instance per role per process lifetime.
