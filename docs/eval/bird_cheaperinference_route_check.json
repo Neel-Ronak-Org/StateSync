@@ -1,0 +1,21 @@
+{
+ "purpose": "Protocol v2 change 16: before the robustness run, check that Cheaper Inference serves gpt-oss-120b and honours reasoning_effort (3 prompts; low vs high effort; the same prompts at low effort on Groq direct for reference). 2026-10-04.",
+ "cheaperinference": [
+  {"prompt": 1, "effort": "low", "served": "gpt-oss-120b", "provider_reported": null, "tokens_in": 107, "tokens_out": 45, "s": 5.2, "answer": "SELECT COUNT(DISTINCT customer_id) ... WHERE amount > 100"},
+  {"prompt": 2, "effort": "low", "served": "gpt-oss-120b", "provider_reported": null, "tokens_in": 125, "tokens_out": 189, "s": 6.1, "answer": "SELECT AVG(lap_cnt) FROM (per-driver lap counts)"},
+  {"prompt": 3, "effort": "low", "served": "gpt-oss-120b", "provider_reported": null, "tokens_in": 104, "tokens_out": 34, "s": 3.5, "answer": "25"},
+  {"prompt": 1, "effort": "high", "served": "gpt-oss-120b", "provider_reported": null, "tokens_in": 107, "tokens_out": 343, "s": 4.9, "answer": "SELECT COUNT(DISTINCT customer_id) ... WHERE amount > 100"},
+  {"prompt": 2, "effort": "high", "served": "gpt-oss-120b", "provider_reported": null, "tokens_in": 125, "tokens_out": 1515, "s": 23.4, "answer": "SELECT AVG(lap_cnt)::numeric FROM (per-driver lap counts)"},
+  {"prompt": 3, "effort": "high", "served": "gpt-oss-120b", "provider_reported": null, "tokens_in": 104, "tokens_out": 147, "s": 3.7, "answer": "25"}
+ ],
+ "groq_direct_low": [
+  {"prompt": 1, "served": "openai/gpt-oss-120b", "tokens_in": 110, "tokens_out": 42, "s": 0.7, "answer": "SELECT COUNT(DISTINCT customer_id) ... WHERE amount > 100"},
+  {"prompt": 2, "served": "openai/gpt-oss-120b", "tokens_in": 128, "tokens_out": 320, "s": 1.1, "answer": "per-driver averages (a different reading of the prompt)"},
+  {"prompt": 3, "served": "openai/gpt-oss-120b", "tokens_in": 107, "tokens_out": 39, "s": 0.5, "answer": "25"}
+ ],
+ "findings": [
+  "Every call reported gpt-oss-120b; no upstream provider is reported.",
+  "High effort used 4-8x the output tokens of low (343 vs 45, 1515 vs 189, 147 vs 34): the effort setting is honoured.",
+  "At low effort, output lengths are of the same order as Groq direct's (45/189/34 vs 42/320/39); answers agree on prompts 1 and 3. Input counts differ by 3 tokens (chat template)."
+ ]
+}
