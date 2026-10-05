@@ -276,7 +276,7 @@ questions), and when one does, a strong judge notices too.
 
 \textbf{What works cheaply.} An agent retry costs nothing and catches a fifth of the errors at 79\%
 precision. Self-consistency and an LLM judge rank answers similarly; self-consistency costs five extra
-calls (two thirds of our generation cost) and partly flags scorer false negatives. A second SQL model
+calls (two thirds of the SQL model's cost) and partly flags scorer false negatives. A second SQL model
 gives the same ordering. In a product we would show the retry signal and a judge, and keep data checks as explanations
 attached to a flagged answer rather than as detectors.
 
