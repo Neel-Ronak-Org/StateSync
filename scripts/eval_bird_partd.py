@@ -79,7 +79,10 @@ def cmd_score() -> int:
             qid = int(key)
             if qid not in golds:
                 golds[qid] = eb.run_sqlite(a["db_id"], gold_sql[qid])
-            res = pool.run(conn, a["db_id"], a.get("executed_sql"))
+            sql = a.get("executed_sql")
+            # the product names a connected database's tables cn_<id>.<table>; Paper A's scorer strips that
+            # (eval_bird.unqualify) and runs it in the BIRD schema, as pool.run does
+            res = pool.run(conn, a["db_id"], eb.unqualify(sql) if sql else None)
             not_answerable = any((e or {}).get("category") == "no_data_source" for e in a.get("errors") or [])
             rows[qid] = {"correct": bool(golds[qid] is not None and res is not None
                                          and eb.rows_match_relaxed(res[1], golds[qid], norm=eb.norm_v2)),
