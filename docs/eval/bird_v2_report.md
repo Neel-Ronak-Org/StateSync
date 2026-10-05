@@ -36,7 +36,9 @@ as written before any repair:
   PostgreSQL. Relaxed rule (primary) and strict, numbers to 5 significant digits.
 - Answer label for answers with small gold results: the automatic rule, validated against a blind
   manual reading of 60 random answers.
-- Error types: blind annotation of every wrong answer (Claude), plus a random 20% blind by the owner.
+- Error types: blind annotation of every wrong answer (Claude), plus a second blind annotation of all 90
+  by GPT-6 (Codex), run by the owner. This deviates from the planned owner annotation of a random 20%;
+  the owner's 18-item sheet is still blank.
 
 ## Operational record (what happened during the runs)
 
