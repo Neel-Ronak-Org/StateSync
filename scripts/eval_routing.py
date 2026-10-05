@@ -102,7 +102,8 @@ def cmd_setup(port: int) -> int:
 
 
 def container_front_door(port: int) -> str:
-    name = {8091: "statesync-orchestrator-paperb", 8092: "statesync-orchestrator-paperb-off"}.get(port)
+    name = {8091: "statesync-orchestrator-paperb", 8092: "statesync-orchestrator-paperb-off",
+            8093: "statesync-orchestrator-paperb-route"}.get(port)
     out = subprocess.run(["docker", "exec", name, "sh", "-c", "grep -E '^(front_door|debug_hooks)' /app/config/flags.toml"],
                          capture_output=True, text=True).stdout
     vals = {line.split("=")[0].strip(): line.split("=")[1].split("#")[0].strip().strip('"') for line in out.splitlines()}
