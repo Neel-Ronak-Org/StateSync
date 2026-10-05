@@ -221,16 +221,16 @@ def test_the_call_trace_records_the_provider():
     assert trace[-1]["served_provider"] == "Groq" and trace[-1]["endpoint"] == "openrouter"
 
 
-def test_same_model_ignores_separators_but_not_other_differences():
-    """Cheaper Inference began labelling qwen-3-8-27b as qwen3.8-27b (2026-10-05): the same model, other
-    separators. A different size, family or version must still be refused."""
-    from llm.adapters.openai_compat_adapter import same_model
-    assert same_model("qwen3.8-27b", "qwen-3-8-27b")
-    assert same_model("openai/gpt-oss-120b", "gpt_oss_120b")
-    assert not same_model("qwen3.8-14b", "qwen-3-8-27b")
-    assert not same_model("qwen3.7-27b", "qwen-3-8-27b")
-    assert not same_model("gpt-oss-20b", "gpt-oss-120b")
-    # digits must not regroup (review by Paper A's session, 2026-10-06)
-    assert not same_model("qwen3-14b", "qwen3.1-4b")
-    assert not same_model("llama-3-70b", "llama-3.7-0b")
-    assert not same_model("gpt-oss-120b", "gpt-oss-12-0b")
+def test_served_labels_need_an_explicit_alias():
+    """Cheaper Inference began labelling qwen-3-8-27b as qwen3.8-27b (2026-10-05). A served label is
+    accepted only as the same model (exact, provider prefix, dated) or when the endpoint lists it;
+    no separator rule guesses (reviews by Paper A's session)."""
+    from llm.adapters.openai_compat_adapter import same_model, served_matches
+    aliases = {"qwen-3-8-27b": ["qwen3.8-27b"]}
+    assert served_matches("qwen3.8-27b", "qwen-3-8-27b", aliases)
+    assert not served_matches("qwen3.8-27b", "qwen-3-8-27b", {})
+    assert served_matches("openai/gpt-oss-120b", "gpt-oss-120b", {})
+    for served, requested in (("qwen3-8b", "qwen3.8b"), ("qwen3-14b", "qwen3.1-4b"), ("llama-3-70b", "llama-3.7-0b"),
+                              ("gpt-oss-120b", "gpt-oss-12-0b"), ("qwen3.8-14b", "qwen-3-8-27b")):
+        assert not served_matches(served, requested, aliases), (served, requested)
+    assert not same_model("qwen3.8-27b", "qwen-3-8-27b")

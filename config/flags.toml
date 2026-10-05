@@ -77,6 +77,9 @@ reasoning = { enabled = false }
 [llm.endpoints.cheaperinference]
 base_url   = "https://api.cheaperinference.com/v1"
 key_secret = "cheaperinference_api_key"
+# Served labels accepted as the requested model (adapter: served_matches; anything not listed is refused).
+# 2026-10-05: the endpoint began answering "qwen3.8-27b" for qwen-3-8-27b (same catalogue entry, new label).
+served_aliases = { "qwen-3-8-27b" = ["qwen3.8-27b"] }
 [llm.endpoints.cheaperinference.reasoning_effort]
 "gpt-oss-120b" = "low"
 # Its qwen3.8-27b thinks by default (168-491 output tokens on the normaliser prompt); Groq's does not

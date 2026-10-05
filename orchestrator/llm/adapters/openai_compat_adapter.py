@@ -63,6 +63,7 @@ class Endpoint:
     omit_temperature: tuple = ()     # models that reject a temperature (reasoning models)
     max_retries: int | None = None   # fewer retries for a router that retries itself
     extra_body: dict | None = None   # {model: request fields the router reads}, e.g. provider pinning
+    served_aliases: dict | None = None   # {requested model: [served labels accepted as that model]}
 
 
 def check_base_url(url: str) -> str:
@@ -79,12 +80,14 @@ def endpoint(name: str) -> Endpoint:
     effort = table.get("reasoning_effort", {}) or {}
     retries = table.get("max_retries")
     extra = table.get("extra_body", {}) or {}
+    aliases = _plain(table.get("served_aliases", {}) or {})
     return Endpoint(name=name, base_url=check_base_url(str(table.get("base_url", ""))),
                     key_secret=str(table.get("key_secret", "")),
                     reasoning_effort=effort.as_dict() if hasattr(effort, "as_dict") else dict(effort),
                     omit_temperature=tuple(table.get("omit_temperature", []) or []),
                     max_retries=int(retries) if retries is not None else None,
-                    extra_body=_plain(extra))
+                    extra_body=_plain(extra),
+                    served_aliases={str(k): [str(v) for v in vs] for k, vs in aliases.items()})
 
 
 def _plain(value: object) -> object:
@@ -124,15 +127,18 @@ def parse_spec(spec: str) -> tuple[str, str]:
 
 
 def same_model(a: str, b: str) -> bool:
-    """The same model under two providers' names ('openai/gpt-oss-120b' vs 'gpt-oss-120b'), a dated
-    variant of it, or the same name spelled with other separators ('qwen3.8-27b' vs 'qwen-3-8-27b':
-    Cheaper Inference changed its served label on 2026-10-05). Names are compared as sequences of
-    letter runs and digit runs, so separators may differ but digits never regroup: 'qwen3-14b' is not
-    'qwen3.1-4b' (review by Paper A's session). It fails closed: anything else is a different model."""
+    """The same model under two providers' names ('openai/gpt-oss-120b' vs 'gpt-oss-120b'),
+    or a dated variant of it."""
     x, y = a.lower().rsplit("/", 1)[-1], b.lower().rsplit("/", 1)[-1]
-    if x == y or x.startswith(y + "-") or y.startswith(x + "-"):
-        return True
-    return re.findall(r"[a-z]+|\d+", x) == re.findall(r"[a-z]+|\d+", y)
+    return x == y or x.startswith(y + "-") or y.startswith(x + "-")
+
+
+def served_matches(served: str, requested: str, aliases: dict | None) -> bool:
+    """Whether a served label is the requested model: same_model, or a label the endpoint's
+    `served_aliases` lists for it. Fails closed: no rule guesses at renamed labels (separators cannot
+    tell 'Qwen3 8B' from 'Qwen 3.8 base'), so a provider's new label is accepted only once it is
+    written into [llm.endpoints.<name>].served_aliases (reviews by Paper A's session, 2026-10-06)."""
+    return same_model(served, requested) or served in (aliases or {}).get(requested, [])
 
 
 class OpenAICompatAdapter(GroqAdapter):
@@ -172,7 +178,7 @@ class OpenAICompatAdapter(GroqAdapter):
         response = replace(await super().complete(system=system, messages=messages, max_tokens=max_tokens),
                            endpoint=self.endpoint.name)
         served = response.served_model
-        if served and not same_model(served, self.model):
+        if served and not served_matches(served, self.model, self.endpoint.served_aliases):
             logger.warning("endpoint %s answered with %s for %s", self.endpoint.name, served, self.model)
             if self.require_served_match:
                 raise ServedModelMismatch(f"{self.endpoint.name} answered with {served!r}, not {self.model!r}.")
