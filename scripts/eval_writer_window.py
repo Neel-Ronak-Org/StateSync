@@ -50,9 +50,11 @@ CONFIGS = {"doc_off": ("document", "off", False), "rel_off": ("relevance", "off"
            "doc_bge": ("document", "bge", False), "rel_bge": ("relevance", "bge", False),
            "rel_bge_titles": ("relevance", "bge", True)}
 PER_ITEM_TIMEOUT_S = 400    # noqa: literals - two re-ranked searches under GPU contention, with margin
+SEARCH_TIMEOUT_S = 180      # noqa: literals - one search, evaluation only (the product's own limit is 20 s)
 
 _SNIPPET = r"""
 import asyncio, json, os, sys, time
+import httpx
 sys.path.insert(0, "/app")
 from config_loader import cfg
 from mcp_client import MCPSession
@@ -64,6 +66,9 @@ order, rerank, titles = req["conf"]
 async def one(item):
     async with MCPSession(tenant_id=req["tenant"], base_url=os.environ.get("MCP_URL"), session_id="writer-window-" + item["id"],
                           workspace_id=item.get("workspace"), dataset=item.get("dataset")) as session:
+        # A search on the 84-filing store can pass the session's 20 s default when the Mac is busy; a
+        # timeout says nothing about ordering, so the evaluation waits longer (the product does not).
+        session._client.timeout = httpx.Timeout(req["timeout_s"], connect=10)
         matches, _ = await _semantic_search_expanded(
             session, item["text"], cfg.retrieval.semantic_top_k, "dense", item.get("dataset"), "all", False,
             rerank, passage_order=order, rerank_titles=titles)
@@ -97,7 +102,8 @@ def items_for(set_name: str, workspace: str | None) -> list[dict]:
 
 
 def run_config(set_name: str, conf: tuple, items: list[dict]) -> dict:
-    payload = {"tenant": TENANT, "conf": list(conf), "content": set_name == "inhouse", "items": items}
+    payload = {"tenant": TENANT, "conf": list(conf), "content": set_name == "inhouse", "items": items,
+               "timeout_s": SEARCH_TIMEOUT_S}
     res = subprocess.run(["docker", "exec", "-i", CONTAINER, "python", "-c", _SNIPPET], input=json.dumps(payload),
                          capture_output=True, text=True, timeout=PER_ITEM_TIMEOUT_S * (len(items) + 1))
     lines = [json.loads(line) for line in res.stdout.splitlines() if line.startswith("{")]
@@ -127,10 +133,16 @@ def cmd_run(sets: list[str], configs: list[str]) -> int:
             items = items_for(set_name, workspace)
             for name in configs:
                 key = f"{set_name}|{name}"
-                if key in record["runs"] and not record["runs"][key].get("errors"):
+                prior = record["runs"].get(key)
+                if prior and not prior.get("errors"):
                     continue
+                todo = items if not prior else [i for i in items if prior["results"].get(i["id"], {}).get("error")
+                                                 or i["id"] not in prior["results"]]
                 t0 = time.time()
-                out = run_config(set_name, CONFIGS[name], items)
+                out = run_config(set_name, CONFIGS[name], todo)
+                if prior:                                 # keep the items that succeeded before
+                    out["results"] = {**prior["results"], **out["results"]}
+                    out["retried"] = len(todo)
                 out["errors"] = sum(1 for r in out["results"].values() if r.get("error"))
                 if CONFIGS[name][1] != "off":   # re-ranker failures over the run's window (paperb_docs change 8)
                     out["rerank"] = pd.rerank_log(t0, time.time())
