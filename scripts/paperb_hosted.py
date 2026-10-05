@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
 scripts/paperb_hosted.py
-Paper B's hosted zero-shot decision models (docs/research/detect_then_fallback_study.md), through Vercel
-AI Gateway's TypeSafe-compatible endpoint: convaiinnovations/laya (free) and typesafe-ai/jev (paid
-credits). Each distinct pool candidate gets one Boolean ("noul") question over the verifiers' input
-text; the answer is P(correct). Resumable; the key is read from secrets/vercel_ai_gateway_key.
+Paper B's hosted zero-shot decision model (docs/research/detect_then_fallback_study.md v2, §5): Jev
+(typesafe-ai/jev, paid credits) through Vercel AI Gateway's TypeSafe-compatible endpoint. Each distinct
+pool candidate gets one Boolean ("noul") question over the verifiers' input text; the answer is
+P(correct). Resumable; the key is read from secrets/vercel_ai_gateway_key. (v2 runs zero-shot Laya
+locally from the pinned checkpoint, scripts/paperb_laya.py, so hosted Laya is no longer offered here.)
 
-    python3 scripts/paperb_hosted.py --model convaiinnovations/laya [--workers 3]
+    python3 scripts/paperb_hosted.py --model typesafe-ai/jev [--workers 3]
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ SAVE_EVERY = 50             # noqa: literals - completions between saves
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--model", required=True, choices=["convaiinnovations/laya", "typesafe-ai/jev"])
+    ap.add_argument("--model", required=True, choices=["typesafe-ai/jev"])
     ap.add_argument("--workers", type=int, default=3)
     args = ap.parse_args()
     key = (REPO / "secrets" / "vercel_ai_gateway_key").read_text().strip()

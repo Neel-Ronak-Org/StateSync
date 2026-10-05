@@ -358,3 +358,18 @@ the other.
    round's training folds. The other 339 questions would have the same prompt in E0 and E1, so E1 − E0
    would mostly measure the threshold, not the use of examples. E1 is kept as the product's behaviour. No
    result informed this; the selection statistics came from the question texts alone.
+5. **2026-10-05, before the pool was built or any candidate was scored by a verifier, Laya or the judge.**
+   Analysis definitions, fixed in `scripts/paperb_analyze.py` and checked on synthetic data only:
+   - **H1–H3 use a one-sided paired sign-flip permutation test** on each question's expected correctness
+     (100,000 draws, seed 20261005). With no fractional outcome it is exact McNemar, and it is then computed
+     exactly. Reason: version 2 scores ties as expected accuracy, which McNemar cannot take.
+   - **The verified label's fixed-sequence search skips thresholds whose verified set is too small ever to
+     pass the bound** (fewer than 59 answers at 5%, 29 at 10%). That depends on the scores only, not on the
+     labels. Without it the highest threshold (one answer) always fails and nothing is ever verified.
+   - **Selectors work on clusters:** verifier-max takes the best member's score and selects that member; a
+     cluster's judge score is that of its first member, which the judge saw; a question with no cluster
+     scores 0.
+   - **P6's τ** is chosen from −1 (always fall back), the calibration fold's risks and 1 (never), taking
+     the largest on a tie.
+   - **A missing score** is skipped in selection and counts as 0.5 in detection; a first answer with no
+     judge score counts as doubted (it did not run).

@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
 scripts/paperb_verifiers.py
-Paper B's fine-tuned verifiers (docs/research/detect_then_fallback_study.md), scored out-of-fold: the
-393 held-out questions are split into 5 folds stratified by database (seed 20261005), and every pool
-candidate gets P(correct) from a model trained only on the other folds' questions ("setup-time"
-training on other reference questions from the same databases). --scheme lodo leaves one database out
-instead (unseen schema).
+Paper B's ModernBERT verifier (docs/research/detect_then_fallback_study.md v2, §5), in rotating rounds
+(paperb_folds.rounds): round r trains on three folds, and scores every distinct candidate of its
+calibration fold (r + 1 mod 5) and of its test fold r. So each question gets one test score, from a model
+that saw neither it nor its calibration fold, and each round's thresholds come from its own calibration
+scores (paperb_analyze.py).
 
-Models:   modernbert = answerdotai/ModernBERT-base, full fine-tune
-          qwen       = Qwen/Qwen3-0.6B with a LoRA classification head (peft)
-Regimes:  real       = the pool candidates of the training questions (docs/eval/paperb_pool.json)
-          mutation   = the reference SQL and its mutants for the training questions (paperb_mutations.json)
+Model:    answerdotai/ModernBERT-base, full fine-tune (version 1's hyperparameters).
+          (qwen = Qwen/Qwen3-0.6B with a LoRA head is kept in the code but dropped from v2.)
+Regimes:  real      = the training questions' pool candidates (docs/eval/paperb_pool.json)
+          mutation  = the training questions' reference SQL and its mutants (paperb_mutations.json)
 
-Input text (identical for every model): question, SQL, and the result preview (row count, columns,
-first rows, or "failed to run"). Training examples are deduplicated by (question, SQL).
+Input text (identical for every verifier, Laya included): question, SQL, and the result text (row count,
+columns, first rows, or "failed to run"). Training examples are deduplicated by (question, SQL).
 Run with the research venv (torch, transformers, peft):
 
     .venv-reranker/bin/python scripts/paperb_verifiers.py --model modernbert --regime real
@@ -25,16 +25,15 @@ import argparse
 import json
 import math
 import random
+import sys
 import time
 from pathlib import Path
 
-import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
-
 REPO = Path(__file__).resolve().parents[1]
 EVAL = REPO / "docs" / "eval"
-SEED = 20261005
-FOLDS = 5                                     # noqa: literals - pre-registered
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from paperb_folds import SEED, folds, rounds  # noqa: E402,F401 - folds re-exported for older callers
+
 MAX_LEN = 512                                 # noqa: literals - pre-registered input cap
 HF = {"modernbert": "answerdotai/ModernBERT-base", "qwen": "Qwen/Qwen3-0.6B"}
 # Fixed before any verifier was trained (not tuned on test folds).
@@ -42,32 +41,15 @@ HP = {"modernbert": {"lr": 3e-5, "epochs": 3, "batch": 16},
       "qwen": {"lr": 2e-4, "epochs": 2, "batch": 8, "lora_r": 16, "lora_alpha": 32, "lora_dropout": 0.05}}
 
 
-def render(question: str, sql: str | None, preview: dict | None) -> str:
+def result_text(sql: str | None, preview: dict | None) -> str:
     if preview is None:
-        result = "failed to run" if sql else "no SQL"
-    else:
-        rows = " | ".join(", ".join(r) for r in preview["rows"]) or "(no rows)"
-        result = f"{preview['row_count']} rows; columns: {', '.join(preview['columns'])}; first rows: {rows}"
-    return f"Question: {question}\nSQL: {sql or '(none)'}\nResult: {result}"
+        return "failed to run" if sql else "no SQL"
+    rows = " | ".join(", ".join(r) for r in preview["rows"]) or "(no rows)"
+    return f"{preview['row_count']} rows; columns: {', '.join(preview['columns'])}; first rows: {rows}"
 
 
-def folds(questions: list[dict], scheme: str) -> dict[int, int]:
-    """question_id -> fold. 5-fold: stratified by database. lodo: one fold per database."""
-    by_db: dict[str, list[int]] = {}
-    for q in questions:
-        by_db.setdefault(q["db_id"], []).append(q["question_id"])
-    if scheme == "lodo":
-        return {qid: k for k, db in enumerate(sorted(by_db)) for qid in by_db[db]}
-    rng = random.Random(SEED)
-    out: dict[int, int] = {}
-    offset = 0
-    for db in sorted(by_db):
-        ids = sorted(by_db[db])
-        rng.shuffle(ids)
-        for i, qid in enumerate(ids):
-            out[qid] = (i + offset) % FOLDS
-        offset += len(ids)
-    return out
+def render(question: str, sql: str | None, preview: dict | None) -> str:
+    return f"Question: {question}\nSQL: {sql or '(none)'}\nResult: {result_text(sql, preview)}"
 
 
 def training_examples(regime: str, questions: dict[int, dict], train_ids: set[int]) -> list[tuple[str, int]]:
@@ -93,6 +75,7 @@ def training_examples(regime: str, questions: dict[int, dict], train_ids: set[in
 
 
 def build(model_name: str, device: str):
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
     tok = AutoTokenizer.from_pretrained(HF[model_name])
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
@@ -115,7 +98,10 @@ def batches(items: list, size: int, shuffle: bool, rng: random.Random):
         yield [items[j] for j in order[i:i + size]]
 
 
-def train_and_score(model_name: str, train: list[tuple[str, int]], test_texts: list[str], device: str) -> list[float]:
+def train_and_score(model_name: str, train: list[tuple[str, int]], score_texts: list[str],
+                    device: str) -> tuple[list[float], float]:
+    """Train on `train`, then P(correct) for each of `score_texts`, and milliseconds per check (batched)."""
+    import torch
     torch.manual_seed(SEED)
     rng = random.Random(SEED)
     hp = HP[model_name]
@@ -142,52 +128,63 @@ def train_and_score(model_name: str, train: list[tuple[str, int]], test_texts: l
                 torch.mps.empty_cache()
     model.eval()
     probs: list[float] = []
+    t0 = time.perf_counter()
     with torch.no_grad():
-        for i in range(0, len(test_texts), 32):
-            enc = tok(test_texts[i:i + 32], truncation=True, max_length=MAX_LEN, padding=True, return_tensors="pt").to(device)
+        for i in range(0, len(score_texts), 32):
+            enc = tok(score_texts[i:i + 32], truncation=True, max_length=MAX_LEN, padding=True, return_tensors="pt").to(device)
             probs += torch.softmax(model(**enc).logits.float(), dim=-1)[:, 1].tolist()
+    per_check_ms = (time.perf_counter() - t0) * 1000 / max(1, len(score_texts))
     del model, opt
     if device == "mps":
         torch.mps.empty_cache()
-    return probs
+    return probs, per_check_ms
 
 
 def main() -> int:
+    import torch
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--model", choices=sorted(HF), required=True)
     ap.add_argument("--regime", choices=["real", "mutation"], required=True)
-    ap.add_argument("--scheme", choices=["5fold", "lodo"], default="5fold")
     args = ap.parse_args()
     device = "mps" if torch.backends.mps.is_available() else "cpu"
     pool = json.loads((EVAL / "paperb_pool.json").read_text())["questions"]
     questions = {q["question_id"]: q for q in pool}
-    fold_of = folds(pool, args.scheme)
-    out_path = EVAL / f"paperb_scores_{args.model}_{args.regime}_{args.scheme}.json"
+    out_path = EVAL / f"paperb_scores_{args.model}_{args.regime}_rotation.json"
     record = json.loads(out_path.read_text()) if out_path.exists() else {
-        "model": HF[args.model], "regime": args.regime, "scheme": args.scheme, "hp": HP[args.model],
-        "seed": SEED, "folds": {}, "scores": {}}
-    for k in sorted(set(fold_of.values())):
-        if str(k) in record["folds"]:
+        "model": HF[args.model], "regime": args.regime, "scheme": "rotation", "hp": HP[args.model],
+        "seed": SEED, "rounds": {}, "test": {}, "calib": {}}
+    for rnd in rounds(folds(pool)):
+        r = str(rnd["round"])
+        if r in record["rounds"]:
             continue
-        test_ids = {qid for qid, f in fold_of.items() if f == k}
-        train = training_examples(args.regime, questions, set(fold_of) - test_ids)
-        keys, texts, index = [], [], {}
-        for qid in sorted(test_ids):
-            q = questions[qid]
-            for i, c in enumerate(q["candidates"]):
-                text = render(q["question"], c["sql"], c["preview"])
-                if text not in index:          # each distinct candidate is scored once
-                    index[text] = len(texts)
-                    texts.append(text)
-                keys.append((f"{qid}|{i}", text))
+        train = training_examples(args.regime, questions, rnd["train"])
+        keys: list[tuple[str, str, str]] = []           # (role, "qid|i", text)
+        texts: list[str] = []
+        index: dict[str, int] = {}
+        for role in ("calib", "test"):
+            for qid in sorted(rnd[role]):
+                q = questions[qid]
+                for i, c in enumerate(q["candidates"]):
+                    text = render(q["question"], c["sql"], c["preview"])
+                    if text not in index:                # each distinct candidate is scored once
+                        index[text] = len(texts)
+                        texts.append(text)
+                    keys.append((role, f"{qid}|{i}", text))
         t0 = time.monotonic()
-        probs = train_and_score(args.model, train, texts, device)
-        for key, text in keys:
-            record["scores"][key] = round(probs[index[text]], 5)
-        record["folds"][str(k)] = {"test_questions": len(test_ids), "train_examples": len(train),
-                                   "train_positive": sum(y for _, y in train), "minutes": round((time.monotonic() - t0) / 60, 1)}
+        probs, per_check_ms = train_and_score(args.model, train, texts, device)
+        record["calib"][r] = {}
+        for role, key, text in keys:
+            p = round(probs[index[text]], 5)
+            if role == "test":
+                record["test"][key] = p
+            else:
+                record["calib"][r][key] = p
+        record["rounds"][r] = {"train_questions": len(rnd["train"]), "train_examples": len(train),
+                               "train_positive": sum(y for _, y in train), "scored_texts": len(texts),
+                               "ms_per_check": round(per_check_ms, 2),
+                               "minutes": round((time.monotonic() - t0) / 60, 1)}
         out_path.write_text(json.dumps(record, indent=1) + "\n")
-        print(f"fold {k}: {record['folds'][str(k)]}", flush=True)
+        print(f"round {r}: {record['rounds'][r]}", flush=True)
     return 0
 
 
