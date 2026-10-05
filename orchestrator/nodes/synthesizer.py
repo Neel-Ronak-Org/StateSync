@@ -500,7 +500,8 @@ def build_citations(
         prov = r["provenance"]
         citation = {"kind": "chunk", "ref": prov["chunk_id"], "page": prov.get("page")}
         if prov.get("title"):
-            citation["title"] = _SECTION_SEP.join(filter(None, (prov["title"], prov.get("section"))))
+            # A7 caps a citation title at title_max_chars; "{title} › {section}" can run longer.
+            citation["title"] = _SECTION_SEP.join(filter(None, (prov["title"], prov.get("section"))))[:cfg.library.title_max_chars]
         citations.append(citation)
 
     return citations
