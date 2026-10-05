@@ -11,7 +11,8 @@ One JSON-RPC method, library.manage (decision D-v3-10), takes an `action`:
   add_chunks, finish_document                            ingestion, driven by the orchestrator
   workspace_folders, set_workspace_folders               which folders a workspace searches
   workspace_documents                                    the READY documents a workspace can search
-                                                         (titles, for the router)
+                                                         (titles, for the router; optional `limit`
+                                                         lifts its router_titles_max cap, T5)
   workspace_chunks                                       their passages, in reading order (for finding
                                                          definitions in documents)
   connections, create_connection, set_connection_schema,  the owner's own Postgres databases
@@ -454,7 +455,16 @@ async def _set_workspace_folders(tenant_id, principal_id, workspace_id=None, fol
     return {"ok": True, "folder_ids": sorted(unique)}
 
 
-async def _workspace_documents(tenant_id, principal_id, workspace_id=None, **_):
+async def _workspace_documents(tenant_id, principal_id, workspace_id=None, limit=None, **_):
+    # The router sees the router_titles_max newest titles. A caller that needs them all (the hybrid
+    # documents half matching titles against entities, T5) passes `limit`, capped at the account's
+    # document limit; without it the answer is what it always was.
+    if limit is None:
+        limit = int(cfg.library.router_titles_max)
+    elif not _is_int(limit) or limit < 1:
+        return _fail("invalid", "limit must be a positive integer.")
+    else:
+        limit = min(limit, int(cfg.library.max_documents))
     async with get_history_connection() as conn:
         if not await _owns_workspace(conn, tenant_id, principal_id, workspace_id):
             return _fail("not_found", "No such workspace.")
@@ -463,7 +473,7 @@ async def _workspace_documents(tenant_id, principal_id, workspace_id=None, **_):
             "JOIN workspace_docs.workspace_folders wf ON wf.folder_id = d.folder_id "
             "WHERE d.tenant_id = %s AND wf.workspace_id = %s AND d.status = 'ready' "
             "ORDER BY d.created_at DESC LIMIT %s",
-            (tenant_id, workspace_id, int(cfg.library.router_titles_max)))).fetchall()
+            (tenant_id, workspace_id, limit))).fetchall()
     return {"ok": True, "documents": [{"document_id": r[0], "title": r[1]} for r in rows]}
 
 

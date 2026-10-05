@@ -319,6 +319,7 @@ query_rewrite                   = "off"      # "off" | "llm": the docs route sea
 passage_order                   = "document" # "document" | "relevance": the answer writer's passages are the most relevant ones (grouped by document), not the first by document order (docs/specs/routing_docs_fixes.md F-D)
 passage_titles                  = "off"      # "off" | "on": the writer's passage label names the document title and page (F-T)
 rerank_titles                   = "off"      # "off" | "on": the re-ranker also reads each passage's document title (F-T; needs rerank on)
+hybrid_entities                 = "off"      # "off" | "on": the hybrid documents half searches only the workspace documents whose titles name entities from the SQL half's result, when the front door says the documents depend on the database (docs/specs/partd_tasks/T5_hybrid_split.md; needs front_door on)
 
 [tenancy]
 enforced                        = false  # D6; threading is mandatory even when false
