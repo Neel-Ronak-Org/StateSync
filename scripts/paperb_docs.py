@@ -54,6 +54,11 @@ EVAL = eb.EVAL
 QUESTIONS = REPO / "data" / "external" / "financebench" / "data" / "financebench_open_source.jsonl"
 INGEST = EVAL / "financebench_ingest_paragraph.json"
 LABELS = {"dense": "off", "bge": "bge"}
+# Part D v3 (docs/specs/routing_docs_fixes.md): the fixed system (front door, every fix on), re-ranker off
+# and bge. Each label runs with exactly its generated flags file (research/paperb/make_flags_v3.py).
+V3_FLAGS = {"v3_dense": REPO / "research" / "paperb" / "flags_partd_v3_final_dense.toml",
+            "v3_bge": REPO / "research" / "paperb" / "flags_partd_v3_final_bge.toml"}
+ALL_LABELS = sorted(LABELS) + sorted(V3_FLAGS)
 WORKSPACE_DATASET = "olist"     # as scripts/eval_retrieval.py and eval_financebench.py
 PAGE_OFFSET = 1                 # FinanceBench pages count from 0, StateSync's from 1
 QUERY_TIMEOUT_S = 300           # noqa: literals - two re-ranked searches plus the answer writer
@@ -106,9 +111,23 @@ def live_flags(container: str) -> dict[str, Any]:
 
 
 def check_config(label: str, container: str = CONTAINER) -> dict[str, Any]:
-    """The run's configuration, refused unless it is Part D's (v2 §4)."""
+    """The run's configuration, refused unless it is Part D's (v2 §4); for a v3 label, unless the live
+    [pipeline] flags are exactly its generated flags file's."""
     live = live_flags(container)
     f = live["flags"]
+    if label in V3_FLAGS:
+        want = tomllib.loads(V3_FLAGS[label].read_text())
+        problems = [f"[pipeline] {k} is {f['pipeline'].get(k)!r}, expected {v!r}" for k, v in want["pipeline"].items()
+                    if f["pipeline"].get(k) != v]
+        problems += [f"[pipeline] {k} is set but not expected" for k in f["pipeline"] if k not in want["pipeline"]]
+        if f["llm"].get("provider") != "openai_compat":
+            problems.append(f"provider is {f['llm'].get('provider')!r}")
+        roles = f["llm"].get("models", {}).get("openai_compat", {})
+        problems += [f"{r} is {roles.get(r)!r}, not {w!r}" for r, w in EXPECTED_ROLES.items() if roles.get(r) != w]
+        if problems:
+            raise RuntimeError(f"not {label}'s configuration: " + "; ".join(problems))
+        return {"container": container, "pipeline": f["pipeline"], "roles": roles, "orchestrator_started": live["started"],
+                "flags_file": str(V3_FLAGS[label].relative_to(REPO))}
     committed = tomllib.loads(subprocess.run(["git", "-C", str(REPO), "show", "HEAD:config/flags.toml"],
                                              capture_output=True, text=True, check=True).stdout)
     problems = []
@@ -224,7 +243,7 @@ def cmd_ask(label: str, spacing_s: float, limit: int | None, container: str = CO
                    "calls": trace.get("calls"), "metrics": trace.get("metrics"), "caveats": trace.get("caveats"),
                    "latency_ms": body.get("latency_ms") or round((time.monotonic() - t0) * 1000),
                    "asked_at": round(asked_at, 3), "finished_at": round(time.time(), 3)}
-            if label == "bge":
+            if label == "bge" or (label in V3_FLAGS and config["pipeline"].get("rerank") == "bge"):
                 rec["rerank"] = rerank_log(rec["asked_at"], rec["finished_at"])
             asked += 1
             if st == 200:   # noqa: literals - HTTP OK
@@ -262,14 +281,15 @@ def grading_items(labels: tuple[str, ...] = tuple(LABELS)) -> list[dict]:
     return items
 
 
-def cmd_grade(shards: int, container: str = CONTAINER, preliminary: str | None = None) -> int:
+def cmd_grade(shards: int, container: str = CONTAINER, preliminary: str | None = None, v3: bool = False) -> int:
     """All answers in one shuffled order (the registered grading), or with `preliminary`, one run's answers
     into their own file: an early look the owner asked for, logged in the protocol, that the registered
     grading never reads."""
-    out = EVAL / ("paperb_docs_grades.json" if preliminary is None else f"paperb_docs_grades_preliminary_{preliminary}.json")
+    out = EVAL / ("paperb_docs_grades_v3.json" if v3 else "paperb_docs_grades.json" if preliminary is None
+                  else f"paperb_docs_grades_preliminary_{preliminary}.json")
     record = json.loads(out.read_text()) if out.exists() else {"endpoint": GRADER_ENDPOINT, "model": GRADER_MODEL,
                                                                "system": GRADER, "seed": SEED, "verdicts": {}}
-    labels = tuple(LABELS) if preliminary is None else (preliminary,)
+    labels = tuple(sorted(V3_FLAGS)) if v3 else tuple(LABELS) if preliminary is None else (preliminary,)
     items = [it for it in grading_items(labels) if record["verdicts"].get(it["id"], {}).get("verdict") is None]
     print(f"{len(items)} answers to grade", flush=True)
 
@@ -376,7 +396,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("ask")
-    a.add_argument("--label", choices=sorted(LABELS), required=True)
+    a.add_argument("--label", choices=ALL_LABELS, required=True)
     a.add_argument("--spacing", type=float, default=1.0)
     a.add_argument("--limit", type=int)
     a.add_argument("--container", default=CONTAINER)
@@ -385,6 +405,7 @@ def main() -> int:
     g.add_argument("--shards", type=int, default=3)
     g.add_argument("--container", default=CONTAINER)
     g.add_argument("--preliminary", choices=sorted(LABELS), help="one run only, into its own file (an early look)")
+    g.add_argument("--v3", action="store_true", help="the v3 runs (fixed system, re-ranker off and bge), in one shuffled order")
     sub.add_parser("rerank-check")
     sub.add_parser("owner-sheet")
     sub.add_parser("analyze")
@@ -392,7 +413,7 @@ def main() -> int:
     if args.cmd == "ask":
         return cmd_ask(args.label, args.spacing, args.limit, args.container, args.api)
     if args.cmd == "grade":
-        return cmd_grade(args.shards, args.container, args.preliminary)
+        return cmd_grade(args.shards, args.container, args.preliminary, args.v3)
     if args.cmd == "rerank-check":
         return cmd_rerank_check()
     return cmd_owner_sheet() if args.cmd == "owner-sheet" else cmd_analyze()
