@@ -38,6 +38,25 @@ the early grading (change 9).
 Checked and **not** a flaw: number grounding checks document answers against their passages
 (`main.py` passes `retrievals`).
 
+### 1b. ONDC tailoring in the general path
+
+The owner's rule, 2026-10-05: *ONDC-related things should be a completely separate thing now.* Anything
+built for the synthetic ONDC corpus must not shape answers on other data.
+
+| ID | ONDC tailoring | Applies to | Where |
+|---|---|---|---|
+| O1 | Normaliser: "query-normalization step for an ONDC logistics analytics system", with seller and Mumbai examples. | **every question** | `language_normalizer.py` |
+| O2 | Answer writer: "a data analytics assistant for an ONDC logistics network" (full and short prompts). FinanceBench answers were written under it. | **every answer** | `synthesizer.py` `_SYSTEM_PROMPT`, `_SYSTEM_PROMPT_SHORT` |
+| O3 | Follow-up rewriter: "for an ONDC logistics analytics system". | **every question** | `nodes/rewrite.py` |
+| O4 | SQL writer and corrector: "logistics data analytics system (ONDC network)". | `public`, **`olist`**, `live` (`synthetic_schemas`) | `sql_agent.py`, `datasets.py` |
+| O5 | The router's ONDC prompt lists every table, its columns and the ONDC document kinds; the general prompt replaced that with a rule and no description. | the ONDC prompt only for `public`; the general prompt for everything else | `supervisor.py` |
+| O6 | Hybrid splitter: ONDC prompt for `public`; the general one elsewhere. | `public` | `unstructured_knowledge.py` |
+| O7 | Hybrid documents half narrows only by `seller_id`/`provider_id` (ONDC columns). | every dataset | `unstructured_knowledge.py` `_extract_party_ids` |
+| O8 | DIGIPIN spatial resolver. | `synthetic_schemas` | `spatial_resolver.py` |
+
+O5 carries the lesson. The ONDC router worked because it was told what each source holds. The general
+version kept the rule and dropped the description, instead of building the description from each dataset.
+
 ## 2. Fixes
 
 Each fix sits behind a `[pipeline]` flag. This keeps the shipped behaviour reproducible, which Paper A's
@@ -76,7 +95,16 @@ defaults once §3's gates pass. They change nothing until then.
 - **F-T (D3).** The re-ranker and the writer see `Document: <title> · page <p>` above each passage. No
   re-embedding.
 - **F-X1 (X1).** The citation schema allows `title`.
-- **F-X2 (X2).** Optional: the SQL prompt's framing follows the dataset.
+- **F-O (O1–O8; replaces F-X2).** ONDC becomes a separate *dataset profile*. Its prompts, table list,
+  document kinds, DIGIPIN and party-ID join move into one module that is loaded only for the ONDC sample
+  dataset.
+  - The core path gets neutral prompts: normaliser, rewriter, writer, SQL writer, router and splitter.
+  - Source descriptions are generated per dataset: the database card and document evidence of F-R.
+  - Multilingual input (Hindi, Hinglish) stays a core feature, with neutral examples, if the owner keeps
+    it.
+  - The ONDC sample keeps working through its profile, so its existing tests still pass and its own
+    regression check runs on it.
+  - `olist` and `live` leave `synthetic_schemas`.
 
 ## 3. Verification: the gates, fixed before any code is written
 
@@ -120,6 +148,18 @@ The set is split dev/test, stratified by class. Prompts and thresholds are fixed
   *needs the database?* and *needs the documents?*, which give P_db and P_docs. The route follows from
   thresholds τ_db and τ_docs fitted on dev: both high is hybrid, one high is that route, neither is
   "neither". A three-way `choice` variant is reported alongside.
+
+**Baselines, one per standard family of router.**
+- the shipped router (blind LLM, titles capped at 20), to measure the fix;
+- a *semantic router*: embedding similarity to labelled dev examples, cheap and deterministic
+  (semantic-router style);
+- the evidence-fed LLM router;
+- Jev, a trained decision model with probabilities (the classifier family, as in Adaptive-RAG,
+  NAACL 2024).
+
+Related: rule-driven routing between a database and documents (Bai et al., arXiv 2510.02388) found the
+two sources complementary. It also found that naively querying both adds noise and cost, which is the
+case for deciding "both" deliberately (§5).
 
 **Measures (test split).**
 - route accuracy and macro-F1 by class, with "an acceptable route" for the *either* class;
