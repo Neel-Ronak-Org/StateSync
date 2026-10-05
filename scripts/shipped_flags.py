@@ -105,6 +105,9 @@ SHIPPED_DEFAULTS: dict[tuple[str, str], str] = {
     ("pipeline", "rerank"): "bge",   # owner decision 2026-10-03 (docs/eval/rag_v3_report.md)
     ("pipeline", "query_rewrite"): "off",
     # Part D v3 (docs/specs/routing_docs_fixes.md F-D, F-T): the writer's passage order and titles.
+    ("pipeline", "sql_no_data"): "off",        # Part D v3 F-S1: the SQL agent may say the data is not here
+    ("pipeline", "plain_failures"): "off",     # F-S3, F-S4: plain-words failures and zero rows
+    ("pipeline", "route_recovery"): "off",     # F-RR: a SQL route with no data falls back to documents
     ("pipeline", "passage_order"): "document",
     ("pipeline", "passage_titles"): "off",
     ("pipeline", "rerank_titles"): "off",

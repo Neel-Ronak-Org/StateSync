@@ -174,7 +174,7 @@ def sql_system_prompt(template: str, max_rows: int, schema: Any, flags_snapshot:
     prompt = template.format(max_rows=max_rows).replace(_ONDC_SQL_DOMAIN, profile_for(schema).sql_domain)
     if sql_outcomes.sql_no_data_on(flags_snapshot):
         # [pipeline] sql_no_data (F-S1): the writer and the corrector may say the database cannot answer.
-        prompt += "\n" + sql_outcomes.NOT_ANSWERABLE_RULE
+        prompt += "\n" + sql_outcomes.not_answerable_rule(prompt)
     return prompt
 
 

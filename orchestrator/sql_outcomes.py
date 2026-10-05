@@ -10,6 +10,8 @@ routing_docs_fixes.md F-S1, F-S2, F-S3). Pure functions only, so they run withou
 
 from __future__ import annotations
 
+import re
+
 from typing import Any
 
 from classifiers.error_classifier import category_hint, classify_error
@@ -18,7 +20,7 @@ NOT_ANSWERABLE_MARKER = "NOT_ANSWERABLE"
 
 # Appended after the prompt template's last rule when [pipeline] sql_no_data is "on".
 NOT_ANSWERABLE_RULE = """\
-8. If the tables described cannot answer the question -- the data it asks about is not in them --
+{n}. If the tables described cannot answer the question -- the data it asks about is not in them --
    reply with exactly NOT_ANSWERABLE: <one short reason> instead of SQL. Never write a query that
    returns a constant, or reads an unrelated table, to stand in for data the database does not hold."""
 
@@ -66,3 +68,10 @@ def classify_engine_failure(
     if category == _NO_DATA_SOURCE and not sql_no_data_on(flags_snapshot):
         return classify_error(sqlstate=sqlstate, message=message, empty_result=False, use_overrides=False)
     return category, hint
+
+
+def not_answerable_rule(prompt: str) -> str:
+    """NOT_ANSWERABLE_RULE numbered after the prompt's last numbered rule (the writer's template ends at
+    7, the corrector's at 8), so neither prompt has two rules with one number."""
+    numbers = [int(m.group(1)) for m in re.finditer(r"(?m)^(\d+)\. ", prompt)]
+    return NOT_ANSWERABLE_RULE.format(n=(max(numbers) + 1) if numbers else 1)

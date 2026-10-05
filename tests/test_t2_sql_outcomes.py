@@ -44,10 +44,13 @@ from state import _LAST_WRITE_WINS_FIELDS, ErrorRecord, StateSyncState  # noqa: 
 NO_TABLE = ("[Layer 1 Gate] Rejected: statement reads no table. Queries must read data from the schema "
             "rather than compute constants or server introspection. This rejection is based on query "
             "shape, not content safety.")
-NOT_ANSWERABLE_TEXT = """\
-8. If the tables described cannot answer the question -- the data it asks about is not in them --
+_RULE_TEXT = """\
+{n}. If the tables described cannot answer the question -- the data it asks about is not in them --
    reply with exactly NOT_ANSWERABLE: <one short reason> instead of SQL. Never write a query that
    returns a constant, or reads an unrelated table, to stand in for data the database does not hold."""
+# Numbered after each template's last rule (lead review): the writer's ends at 7, the corrector's at 8.
+NOT_ANSWERABLE_TEXT = _RULE_TEXT.format(n=8)           # the writer's
+NOT_ANSWERABLE_TEXT_CORRECTOR = _RULE_TEXT.format(n=9)
 ON = {"pipeline.sql_no_data": "on"}
 
 
@@ -141,13 +144,14 @@ from nodes import sql_agent as sa  # noqa: E402
 
 
 def test_prompt_rule_is_appended_exactly_for_writer_and_corrector():
-    for template in (sa._SYSTEM_PROMPT, sa._CORRECTION_SYSTEM_PROMPT):
+    for template, rule in ((sa._SYSTEM_PROMPT, NOT_ANSWERABLE_TEXT), (sa._CORRECTION_SYSTEM_PROMPT, NOT_ANSWERABLE_TEXT_CORRECTOR)):
         base = template.format(max_rows=7).replace(sa._ONDC_SQL_DOMAIN, sa.profile_for("public").sql_domain)
         assert sa.sql_system_prompt(template, 7, "public", {}) == base                              # flag absent
         assert sa.sql_system_prompt(template, 7, "public", {"pipeline.sql_no_data": "off"}) == base
         on = sa.sql_system_prompt(template, 7, "public", ON)
-        assert on == base + "\n" + NOT_ANSWERABLE_TEXT
-        assert on.endswith(NOT_ANSWERABLE_TEXT)
+        assert on == base + "\n" + rule
+        numbers = [line.split(".")[0] for line in on.splitlines() if line[:1].isdigit() and ". " in line[:4]]
+        assert len(numbers) == len(set(numbers)), numbers   # no two rules share a number
 
 
 def test_prompt_with_the_executor_row_cap_still_gets_the_rule_after_the_template():
@@ -236,7 +240,7 @@ def test_corrector_reply_is_parsed_too():
     prompts: list = []
     update = _run_node(_state(ON, errors=[prior]), "NOT_ANSWERABLE: no such column anywhere", selects, prompts)
     assert selects == []
-    assert prompts and prompts[0].endswith(NOT_ANSWERABLE_TEXT)
+    assert prompts and prompts[0].endswith(NOT_ANSWERABLE_TEXT_CORRECTOR)
     [err] = update["errors"]
     assert err["category"] == "no_data_source" and err["attempt"] == 1
 
