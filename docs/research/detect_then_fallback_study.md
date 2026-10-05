@@ -414,3 +414,16 @@ the other.
    following §11's one-GPU-job-at-a-time rule. The 11 answers stand, because sharing the GPU slows the
    re-ranker but does not change its ranking. They are marked (`gpu_shared_before`) and left out of the
    latency and bge-per-search figures.
+9. **2026-10-05, after D-dense, before any registered grading: an early look the owner asked for.** The
+   owner asked how accurate the answers that reached the documents were. D-dense's 150 answers were
+   graded with the fixed GRADER prompt into their own file (`paperb_docs.py grade --preliminary dense`,
+   `docs/eval/paperb_docs_grades_preliminary_dense.json`). The registered grading (all answers, one
+   shuffled order) is unchanged and never reads that file. The owner saw aggregate figures only (by route,
+   question type and retrieval), never per-answer verdicts, so the 30-answer blind check stays blind.
+   Any later change to Part D's design was made after this look, and the paper says so.
+   - Finding: the search returns up to 25 passages, but the answer writer reads only the first 8
+     (`semantic_top_k`). The two-round search orders those by document and then by position in the
+     document, not by relevance.
+   - Of the 82 answers that reached the documents, 60 had a gold page among the 25 but only 31 had one
+     among the 8.
+   - Part D's QD2 split is read on the writer's 8, as well as on the full list.

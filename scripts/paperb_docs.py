@@ -248,10 +248,10 @@ def parse_verdict(text: str) -> str | None:
     return v if v in VERDICTS else None
 
 
-def grading_items() -> list[dict]:
+def grading_items(labels: tuple[str, ...] = tuple(LABELS)) -> list[dict]:
     qs = {q["financebench_id"]: q for q in questions()}
     items = []
-    for label in LABELS:
+    for label in labels:
         for fid, a in json.loads(answers_path(label).read_text())["answers"].items():
             q = qs[fid]
             items.append({"id": f"{label}|{fid}", "prompt": (
@@ -262,11 +262,15 @@ def grading_items() -> list[dict]:
     return items
 
 
-def cmd_grade(shards: int, container: str = CONTAINER) -> int:
-    out = EVAL / "paperb_docs_grades.json"
+def cmd_grade(shards: int, container: str = CONTAINER, preliminary: str | None = None) -> int:
+    """All answers in one shuffled order (the registered grading), or with `preliminary`, one run's answers
+    into their own file: an early look the owner asked for, logged in the protocol, that the registered
+    grading never reads."""
+    out = EVAL / ("paperb_docs_grades.json" if preliminary is None else f"paperb_docs_grades_preliminary_{preliminary}.json")
     record = json.loads(out.read_text()) if out.exists() else {"endpoint": GRADER_ENDPOINT, "model": GRADER_MODEL,
                                                                "system": GRADER, "seed": SEED, "verdicts": {}}
-    items = [it for it in grading_items() if record["verdicts"].get(it["id"], {}).get("verdict") is None]
+    labels = tuple(LABELS) if preliminary is None else (preliminary,)
+    items = [it for it in grading_items(labels) if record["verdicts"].get(it["id"], {}).get("verdict") is None]
     print(f"{len(items)} answers to grade", flush=True)
 
     def run(batch: list[dict]) -> list[dict]:
@@ -380,6 +384,7 @@ def main() -> int:
     g = sub.add_parser("grade")
     g.add_argument("--shards", type=int, default=3)
     g.add_argument("--container", default=CONTAINER)
+    g.add_argument("--preliminary", choices=sorted(LABELS), help="one run only, into its own file (an early look)")
     sub.add_parser("rerank-check")
     sub.add_parser("owner-sheet")
     sub.add_parser("analyze")
@@ -387,7 +392,7 @@ def main() -> int:
     if args.cmd == "ask":
         return cmd_ask(args.label, args.spacing, args.limit, args.container, args.api)
     if args.cmd == "grade":
-        return cmd_grade(args.shards, args.container)
+        return cmd_grade(args.shards, args.container, args.preliminary)
     if args.cmd == "rerank-check":
         return cmd_rerank_check()
     return cmd_owner_sheet() if args.cmd == "owner-sheet" else cmd_analyze()
