@@ -383,3 +383,13 @@ the other.
    §4. Also operational: the ModernBERT verifier builds each batch of 16 from two micro-batches, with
    gradient checkpointing, after its first run ran out of the Mac's GPU memory before any score was
    written.
+7. **2026-10-05, during D-dense, before any Part D answer was graded (operational).** The network dropped
+   for some minutes during the runs. An answer whose trace shows a model call that failed on the network
+   (`APIConnectionError` or `APITimeoutError`) is the error message, not the product's answer, so it is
+   asked again in the same configuration (`paperb_docs.py`: `transport_failure`, `transport_failures`
+   keeps the failed answer). This is decided from the trace alone, never from the answer's content. The
+   first time this applied was 1 of the first 98 D-dense answers. Requests that failed with an HTTP error
+   were never stored and were simply asked again. Calls the product itself retried and then completed
+   count as normal answers. The same drop failed 106 of the judge's 812 calls and 292 of QS3's 3,537
+   generation calls. Those calls failed to connect, so they returned no output, and they were made again;
+   the generation calls kept their prompts and sampling.

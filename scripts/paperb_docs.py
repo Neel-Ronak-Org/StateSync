@@ -9,7 +9,10 @@ pipeline, with the re-ranker off and on, graded against FinanceBench's answers.
                           retrieval harness. Refuses to run unless the orchestrator's live config has
                           [pipeline] rerank = off (dense) or bge (bge), the answer writer and light roles on
                           Cheaper Inference, and every other [pipeline] flag as committed. Resumable; the
-                          workspace is deleted at the end.
+                          workspace is deleted at the end. An answer whose trace shows a model call that
+                          failed on the network (TRANSPORT_ERRORS: the product never saw the question
+                          through) is moved to `transport_failures` and asked again on the next run
+                          (protocol change 7).
   grade                   Gemini 3.8 Flash (Zed) grades all 300 answers in one shuffled order (seed
                           20261005), blind to the configuration, with the fixed GRADER prompt below.
   owner-sheet             30 answers at random from the 300 for the owner's blind check (no verdict, no
@@ -48,6 +51,7 @@ LABELS = {"dense": "off", "bge": "bge"}
 WORKSPACE_DATASET = "olist"     # as scripts/eval_retrieval.py and eval_financebench.py
 PAGE_OFFSET = 1                 # FinanceBench pages count from 0, StateSync's from 1
 QUERY_TIMEOUT_S = 300           # noqa: literals - two re-ranked searches plus the answer writer
+TRANSPORT_ERRORS = frozenset({"APIConnectionError", "APITimeoutError"})   # network, not the product (change 7)
 SEED = 20261005
 RESAMPLES = 2000                # noqa: literals - pre-registered
 OWNER_SAMPLE = 30               # noqa: literals - pre-registered human check
@@ -127,6 +131,11 @@ def api(base: str, method: str, path: str, token: str, body: dict | None = None,
             return exc.code, {}
 
 
+def transport_failure(rec: dict) -> bool:
+    """A model call in the trace failed on the network (the answer is the error, not the product's)."""
+    return any(c.get("error") in TRANSPORT_ERRORS for c in rec.get("calls") or [])
+
+
 def cmd_ask(label: str, spacing_s: float, limit: int | None, container: str = CONTAINER, base: str = API_BASE) -> int:
     from api_auth import api_token
     config = check_config(label, container)
@@ -134,6 +143,11 @@ def cmd_ask(label: str, spacing_s: float, limit: int | None, container: str = CO
     out = answers_path(label)
     record = json.loads(out.read_text()) if out.exists() else {"label": label, "config": config, "answers": {}}
     record.setdefault("configs_seen", []).append(config)
+    moved = [fid for fid, rec in record["answers"].items() if transport_failure(rec)]
+    for fid in moved:                     # asked again below (protocol change 7); the failed answer is kept
+        record.setdefault("transport_failures", {}).setdefault(fid, []).append(record["answers"].pop(fid))
+    if moved:
+        print(f"asking again after a network failure: {', '.join(moved)}", flush=True)
     token = api_token()
     status, body = api(base, "POST", "/workspaces", token, {"name": f"paperb-docs-{label}-{int(time.time())}",
                                                            "target_schema": WORKSPACE_DATASET})
