@@ -237,8 +237,9 @@ P0). The paper does not rest on them. Every Laya and Jev result is descriptive.
 ## 7. Overlap with Paper A
 
 Paper A (to ARR, 12 October) is cited. Part S reuses its held-out questions, its labels and its two
-pipeline runs, and reports none of its detection or data-check results. If the owner agrees, Paper A's
-exploratory fallback simulation moves to this paper, so that the result is not published twice.
+pipeline runs, and reports none of its detection or data-check results. **Owner's decision (2026-10-05):**
+Paper A's exploratory fallback paragraph (the judge-triggered re-vote and the 84.2% ceiling) is removed
+from Paper A and reported here only, as P1 and the oracle, so that the result is not published twice.
 
 ## 8. Deferred (not in this paper)
 
