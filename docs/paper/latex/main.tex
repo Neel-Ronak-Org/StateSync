@@ -279,8 +279,8 @@ One SQL model in the confirmatory study (GPT-5 mini, provider default sampling),
 (gpt-oss-120b) only as an exploratory replication; both may have seen BIRD in training. GPT-5 mini and
 the Gemini judge were reached through an editor's hosted-model service rather than the providers' own
 APIs, so provider-side settings could not be inspected. The checks' coverage, not only their accuracy,
-limits what our tests could show: they fired on 17 answers. Both error annotators are models, blind to the signals; a human sample would strengthen
-this. The fan-out set follows a textbook pattern and was drafted with an AI assistant; its null result
+limits what our tests could show: they fired on 17 answers. Both error annotators are models, blind to the signals; the author reviewed the labels of 18 sampled
+answers (not blind) and agreed with them, but no independent human annotation was made. The fan-out set follows a textbook pattern and was drafted with an AI assistant; its null result
 says nothing about subtler double counting. Free-tier limits forced a change of host for the
 gpt-oss-120b runs to a reseller that does not disclose its upstream; we checked the served model on
 every call and that the reasoning-effort setting was honoured, and the secondary judge's verdicts
