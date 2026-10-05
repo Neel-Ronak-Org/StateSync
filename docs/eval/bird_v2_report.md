@@ -181,6 +181,50 @@ The check's only flag fell on an answer whose fault was output format.
 **Figure grounding:** 3 of its 4 "catches" are answers whose SQL failed (the text quotes error codes).
 It caught one real figure problem.
 
+## Exploratory extensions (protocol change 17; decided after all confirmatory results)
+
+### Do the signals add up? (`scripts/combine_signals_bird.py`, `bird_combination_heldout_gpt5mini_v2_corrected.json`)
+
+Method: an L2 logistic regression on the per-answer signals, scored out-of-fold. Intervals come from
+a paired stratified bootstrap over answers.
+
+| ranking | AUROC (5-fold) | AURC (5-fold) | AUROC (leave one database out) |
+|---|---|---|---|
+| all signals | 0.785 | 0.122 | 0.769 |
+| **all signals except the data checks** | **0.801** | **0.103** | **0.777** |
+| judge + self-consistency | 0.790 | 0.114 | 0.776 |
+| self-consistency alone | 0.739 | 0.135 | 0.739 |
+| judge alone | 0.697 | 0.153 | 0.697 |
+| free signals (process + data checks) | 0.578 | 0.208 | 0.519 |
+
+- **The data checks add nothing to a combined model.** Removing them changes AURC by −0.019 (5-fold;
+  95% CI −0.050 to 0.009).
+- **Judge plus self-consistency carries almost all the value.** Its gain over self-consistency alone
+  is within noise.
+- **Free signals alone are far behind the judge:** AURC worse by 0.054 (CI 0.010 to 0.097).
+- **Standardised coefficients of the full model:**
+  - self-consistency 0.86 and judge 0.64;
+  - empty result 0.50 and retry 0.30;
+  - data checks −0.31 to 0.30, with truncation negative.
+
+### Does a fallback triggered by a warning raise accuracy? (`scripts/fallback_sim_bird.py`, `bird_fallback_sim_heldout_gpt5mini.json`)
+
+Method: no model calls. The fallback re-runs the answer and its 5 self-consistency samples and keeps
+the majority result (ties keep the original). It is scored against the corrected gold.
+
+| policy | accuracy | answers re-voted | fixed | broken |
+|---|---|---|---|---|
+| none (as run) | 77.1% | 0 | | |
+| always vote | 78.6% | 393 | 12 | 6 |
+| vote when the judge doubts (p < 0.5) | 78.6% | 41 | 7 | 1 (sign test p = 0.035) |
+| vote on a process signal | 77.1% | 24 | 1 | 1 |
+| ceiling: right if any candidate is right | 84.2% | | | |
+
+- **A judge-triggered vote gets the full gain of always voting,** on a tenth of the answers.
+- **The candidates hold up to 7.1 more points:** 28 of the 90 wrong answers have a right candidate,
+  which a better selector could reach.
+- **62 have none.** No fallback over these candidates can fix them.
+
 ## Results: fan-out set (93 questions, H1)
 
 Files:
