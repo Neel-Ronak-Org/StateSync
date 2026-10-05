@@ -158,7 +158,8 @@ def cmd_generate(workers: int, limit: int | None) -> int:
                 key = f"{qid}|{arm}|{i}"
                 rec = record["candidates"].get(key)
                 if rec is None or rec.get("error"):
-                    schemas.setdefault(db, eb.schema_text(db))
+                    if db not in schemas:          # one docker exec per database, not per call
+                        schemas[db] = eb.schema_text(db)
                     jobs.append((key, prompt(schemas[db], asked[qid]["question_asked"], examples[arm][qid])))
     if limit:
         jobs = jobs[:limit]
