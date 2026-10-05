@@ -104,6 +104,10 @@ SHIPPED_DEFAULTS: dict[tuple[str, str], str] = {
     ("pipeline", "self_consistency_k"): "0",     # the study's baseline; measurement runs only
     ("pipeline", "rerank"): "bge",   # owner decision 2026-10-03 (docs/eval/rag_v3_report.md)
     ("pipeline", "query_rewrite"): "off",
+    # Part D v3 (docs/specs/routing_docs_fixes.md F-D, F-T): the writer's passage order and titles.
+    ("pipeline", "passage_order"): "document",
+    ("pipeline", "passage_titles"): "off",
+    ("pipeline", "rerank_titles"): "off",
     # RAG v2 (docs/specs/rag_v2.md): how an upload is cut into chunks. "paragraph" is
     # today's flat-page chunker; "layout" cuts by heading and keeps tables whole.
     ("library", "chunker"): "paragraph",

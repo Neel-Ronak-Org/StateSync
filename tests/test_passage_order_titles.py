@@ -103,9 +103,15 @@ def test_ties_go_to_the_lower_chunk_id():
     assert _ids(uk.order_passages(chunks, "relevance", 1, [])) == ["a_c1", "a_c9", "b_c2", "c_c1"]
 
 
-def test_the_rerank_score_outranks_the_search_score_when_a_match_has_one():
-    chunks = [_m("a_c1", "a", 0.99), _m("b_c1", "b", 0.10, rerank_score=7.0)]
+def test_the_rerank_score_decides_when_every_match_has_one():
+    chunks = [_m("a_c1", "a", 0.99, rerank_score=1.0), _m("b_c1", "b", 0.10, rerank_score=7.0)]
     assert _ids(uk.order_passages(chunks, "relevance", 1, [])) == ["b_c1", "a_c1"]
+
+
+def test_a_partly_reranked_set_is_ordered_by_the_search_score():
+    """Lead review: a cross-encoder score and a cosine score are not on one scale."""
+    chunks = [_m("a_c1", "a", 0.99), _m("b_c1", "b", 0.10, rerank_score=7.0)]
+    assert _ids(uk.order_passages(chunks, "relevance", 1, [])) == ["a_c1", "b_c1"]
 
 
 def test_document_order_is_exactly_todays_order_on_the_same_input():
@@ -334,3 +340,16 @@ def test_the_new_flags_ship_at_todays_behaviour():
     snap = config_loader.snapshot_flags()
     assert snap["pipeline.passage_order"] == "document"
     assert snap["pipeline.passage_titles"] == "off" and snap["pipeline.rerank_titles"] == "off"
+
+
+def test_relevance_uses_one_scale_when_some_chunks_lack_a_rerank_score():
+    """Lead review: a round whose re-ranking failed keeps cosine scores; they must not be ranked
+    against cross-encoder scores, so the order falls back to the retrieval score for every chunk."""
+    from nodes.unstructured_knowledge import order_passages
+    chunks = [
+        {"document_id": "a", "chunk_id": "a_c001", "score": 0.40, "rerank_score": 9.0},
+        {"document_id": "b", "chunk_id": "b_c001", "score": 0.80},
+        {"document_id": "a", "chunk_id": "a_c002", "score": 0.60, "rerank_score": 1.0},
+    ]
+    order = [c["chunk_id"] for c in order_passages(chunks, "relevance", 3, ["a", "b"])]
+    assert order[0] == "b_c001"            # best cosine first, not the 9.0 cross-encoder score

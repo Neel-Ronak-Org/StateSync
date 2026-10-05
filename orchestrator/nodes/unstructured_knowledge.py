@@ -92,7 +92,12 @@ def order_passages(chunks: list[dict], passage_order: str, window: int, doc_orde
         for doc_id in doc_order:
             ordered.extend(sorted(by_doc.get(doc_id, []), key=lambda c: c["chunk_id"]))
         return ordered
-    ranked = sorted(chunks, key=lambda c: (-_relevance(c), c["chunk_id"]))
+    # One scale for every chunk: the re-ranker's score only when every chunk has one. A round whose
+    # re-ranking failed keeps cosine scores, which must not be compared with cross-encoder scores.
+    if all(c.get("rerank_score") is not None for c in chunks):
+        ranked = sorted(chunks, key=lambda c: (-_relevance(c), c["chunk_id"]))
+    else:
+        ranked = sorted(chunks, key=lambda c: (-float(c.get("score") or 0.0), c["chunk_id"]))
     head, tail = ranked[:max(window, 0)], ranked[max(window, 0):]
     # head is in relevance order, so a document's first appearance in it is its best chunk.
     head_docs = list(dict.fromkeys(c["document_id"] for c in head))
