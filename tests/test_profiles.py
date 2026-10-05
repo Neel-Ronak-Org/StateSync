@@ -78,7 +78,13 @@ def test_the_ondc_sample_gets_the_ondc_profile_and_everything_else_the_neutral_o
 
 def test_the_ondc_schemas_come_from_config():
     assert list(cfg.profiles.ondc_schemas) == ["public"]
-    assert not hasattr(cfg.pipeline, "synthetic_schemas") and not hasattr(cfg.pipeline, "ondc_prompt_schemas")
+    # The two old keys stay in statesync.toml only for images built before T1 (the shared orchestrator
+    # reads the file live); no current code may read them.
+    import re
+    orch = Path(__file__).resolve().parents[1] / "orchestrator"
+    readers = [str(f) for f in orch.rglob("*.py")
+               if re.search(r"\.(synthetic_schemas|ondc_prompt_schemas)\b", f.read_text())]
+    assert not readers, readers
     assert list(cfg.pipeline.document_schemas) == ["public", "olist"]
 
 

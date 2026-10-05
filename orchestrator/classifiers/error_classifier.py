@@ -2,7 +2,7 @@
 orchestrator/classifiers/error_classifier.py
 A3 -- deterministic, non-LLM error classifier (D14 hook).
 
-Loads config/error_taxonomy.json. Maps (sqlstate, message, empty_result) to
+Loads config/error_taxonomy.json (after error_taxonomy_overrides.json's rules). Maps (sqlstate, message, empty_result) to
 (ErrorCategory, remediation_hint). Runs before anything is written to
 state.errors -- a raw engine string never enters state unclassified;
 "unclassified" is itself a classification and carries the fallback hint.
@@ -50,10 +50,23 @@ def _taxonomy_path() -> Path:
     )
 
 
+# Rules only this code reads, checked before error_taxonomy.json's own (routing_docs_fixes.md F-S2). They
+# live in their own file because the shared MCP and orchestrator images read error_taxonomy.json live
+# from the mounted config directory, and images built before 2026-10-05 cannot represent the categories
+# these rules add. Merge them into error_taxonomy.json once both shared images are rebuilt.
+_OVERRIDES_FILENAME = "error_taxonomy_overrides.json"
+
+
 @lru_cache(maxsize=1)
 def _load_taxonomy() -> dict[str, Any]:
-    with open(_taxonomy_path()) as f:
-        return json.load(f)
+    path = _taxonomy_path()
+    with open(path) as f:
+        taxonomy = json.load(f)
+    overrides = path.with_name(_OVERRIDES_FILENAME)
+    if overrides.is_file():
+        with open(overrides) as f:
+            taxonomy = {**taxonomy, "rules": json.load(f)["rules"] + taxonomy["rules"]}
+    return taxonomy
 
 
 def classify_error(

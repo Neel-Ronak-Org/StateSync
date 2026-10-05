@@ -95,7 +95,8 @@ def test_mq_10_join_cardinality_does_not_reach_the_classifier():
 
 def test_every_taxonomy_rule_is_reachable(seeds):
     taxonomy = json.loads((REPO_ROOT / "config" / "error_taxonomy.json").read_text())
-    expected_categories = {rule["category"] for rule in taxonomy["rules"]}
+    overrides = json.loads((REPO_ROOT / "config" / "error_taxonomy_overrides.json").read_text())
+    expected_categories = {rule["category"] for rule in taxonomy["rules"] + overrides["rules"]}
     expected_categories.add(taxonomy["fallback"]["category"])
 
     reached: set[str] = set()
@@ -143,3 +144,10 @@ def test_reads_no_table_is_no_data_source_and_other_gate_rejections_stay_permiss
                     "[Layer 1 Gate] Rejected: expected exactly 1 SQL statement, got 2. Multi-statement submissions are not permitted."):
         assert classify_error(sqlstate=None, message=message)[0] == "permission_denied"
     assert classify_error(sqlstate="42501", message="permission denied for table x")[0] == "permission_denied"
+
+
+def test_shared_taxonomy_file_holds_only_categories_old_images_know():
+    """The shared, live-mounted error_taxonomy.json must stay readable by images built before 2026-10-05
+    (their ErrorCategory has no no_data_source); new categories go in the overrides file."""
+    taxonomy = json.loads((REPO_ROOT / "config" / "error_taxonomy.json").read_text())
+    assert "no_data_source" not in {rule["category"] for rule in taxonomy["rules"]}

@@ -127,6 +127,11 @@ ondc_schemas              = ["public"]
 # pipeline.router_mode = "when_documents": sources (schemas) that have documents;
 # questions on any other source go straight to SQL without the router call.
 document_schemas          = ["public", "olist"]
+# Kept only for images built before T1 (2026-10-05): the shared orchestrator reads this file live and
+# its old code reads these two keys at startup. The current code ignores them ([profiles].ondc_schemas
+# decides). Remove both after the shared orchestrator is rebuilt.
+synthetic_schemas         = ["public", "olist", "live"]
+ondc_prompt_schemas       = ["public"]
 # pipeline.sql_draft_mode = "profiles": example values per text column, sampled once per
 # schema fingerprint and cached, replace the draft call and live sampling.
 profile_sample_rows       = 50

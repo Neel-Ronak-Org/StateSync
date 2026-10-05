@@ -42,11 +42,6 @@
       "hint": "Statement failed to parse before reaching the engine (A4.5 Layer 1). Re-emit valid PostgreSQL; do not change the query's intent."
     },
     {
-      "match": { "message_regex": "(?i)^\\[Layer 1 Gate\\] Rejected: statement reads no table" },
-      "category": "no_data_source",
-      "hint": "TERMINAL. The query read no table: the question asks for something this database does not hold (routing_docs_fixes.md F-S2). Do not retry with a constant or another formulation; say the database does not contain it."
-    },
-    {
       "match": { "message_regex": "(?i)^\\[Layer 1 Gate\\] Rejected" },
       "category": "permission_denied",
       "hint": "TERMINAL. Rejected before reaching the engine: not a single plain SELECT statement (A4.5 Layer 1). Do not retry; do not attempt an alternative write or multi-statement formulation."
