@@ -30,6 +30,8 @@ PREVIEW_ROWS = 3            # noqa: literals - pre-registered verifier input
 CELL_CHARS = 60             # noqa: literals - preview cell truncation
 TIMEOUT_MS = 30000          # noqa: literals - as eval_bird._run
 PIPELINE_RUNS = (("gpt-5-mini", "heldout_gpt5mini"), ("gpt-oss-120b", "heldout_gptoss"))
+SAMPLES = 5                 # noqa: literals - self_consistency_k of both pipeline runs
+POOL_SIZE = 21              # noqa: literals - pre-registered: 6 + 6 + 3 x 3
 
 
 def run(conn: Any, schema: str, sql: str | None) -> tuple[list[str], list[tuple]] | None:
@@ -71,9 +73,13 @@ def main() -> int:
         cands: list[dict[str, Any]] = []
         for model, answers in runs.items():
             a = answers[str(qid)]
-            sqls = [a.get("executed_sql")] + [s["sql"] for s in (a.get("self_consistency") or {}).get("samples", [])]
+            samples = [s.get("sql") for s in (a.get("self_consistency") or {}).get("samples", [])]
+            # When the answer's SQL failed, no samples were drawn (self_consistency.py); the block is padded to
+            # 1 + SAMPLES candidates that did not run, so every model keeps its pool positions.
+            sqls = [a.get("executed_sql")] + samples + [None] * (SAMPLES - len(samples))
             for i, sql in enumerate(sqls):
-                cands.append({"model": model, "source": "pipeline answer" if i == 0 else "pipeline sample",
+                cands.append({"model": model, "source": ("pipeline answer" if i == 0 else "pipeline sample"
+                                                         if i <= len(samples) else "pipeline sample (not drawn)"),
                               "sql": eb.unqualify(sql) if sql else None})
         for model in standalone["models"]:
             for i in range(standalone["samples"]):
@@ -98,6 +104,8 @@ def main() -> int:
                 reps.append(rows)
                 c["cluster"] = len(reps) - 1
             clusters.append(c["cluster"])
+        if len(cands) != POOL_SIZE:
+            raise SystemExit(f"q{qid}: {len(cands)} candidates, not {POOL_SIZE}")
         questions.append({"question_id": qid, "db_id": db, "question": first["question_asked"],
                           "gold_ran": gold is not None, "candidates": cands})
         if n % 25 == 0:
