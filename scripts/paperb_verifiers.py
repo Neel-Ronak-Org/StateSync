@@ -145,6 +145,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--model", choices=sorted(HF), required=True)
     ap.add_argument("--regime", choices=["real", "mutation"], required=True)
+    ap.add_argument("--max-rounds", type=int, help="stop after this many new rounds (task time limits)")
     args = ap.parse_args()
     device = "mps" if torch.backends.mps.is_available() else "cpu"
     pool = json.loads((EVAL / "paperb_pool.json").read_text())["questions"]
@@ -153,10 +154,14 @@ def main() -> int:
     record = json.loads(out_path.read_text()) if out_path.exists() else {
         "model": HF[args.model], "regime": args.regime, "scheme": "rotation", "hp": HP[args.model],
         "seed": SEED, "rounds": {}, "test": {}, "calib": {}}
+    done_now = 0
     for rnd in rounds(folds(pool)):
         r = str(rnd["round"])
         if r in record["rounds"]:
             continue
+        if args.max_rounds is not None and done_now >= args.max_rounds:
+            break
+        done_now += 1
         train = training_examples(args.regime, questions, rnd["train"])
         keys: list[tuple[str, str, str]] = []           # (role, "qid|i", text)
         texts: list[str] = []

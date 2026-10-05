@@ -79,17 +79,21 @@ def cmd_zeroshot(pool: list[dict]) -> int:
     return 0
 
 
-def cmd_finetune(pool: list[dict]) -> int:
+def cmd_finetune(pool: list[dict], max_rounds: int | None = None) -> int:
     import laya_verifier as lv
     out = EVAL / "paperb_scores_laya_finetuned_rotation.json"
     record = json.loads(out.read_text()) if out.exists() else {
         "model": f"{lv.MODEL_ID}/{lv.SUBFOLDER}@{lv.REVISION}", "objective": OBJECTIVE, "epochs": EPOCHS,
         "scheme": "rotation", "rounds": {}, "test": {}, "calib": {}}
     questions = {q["question_id"]: q for q in pool}
+    done_now = 0
     for rnd in rounds(folds(pool)):
         r = str(rnd["round"])
         if r in record["rounds"]:
             continue
+        if max_rounds is not None and done_now >= max_rounds:
+            break
+        done_now += 1
         seen: set[tuple[int, str]] = set()
         train = []
         for qid in sorted(rnd["train"]):
@@ -122,9 +126,10 @@ def cmd_finetune(pool: list[dict]) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("cmd", choices=["zeroshot", "finetune"])
+    ap.add_argument("--max-rounds", type=int, help="finetune: stop after this many new rounds (task time limits)")
     args = ap.parse_args()
     pool = json.loads((EVAL / "paperb_pool.json").read_text())["questions"]
-    return cmd_zeroshot(pool) if args.cmd == "zeroshot" else cmd_finetune(pool)
+    return cmd_zeroshot(pool) if args.cmd == "zeroshot" else cmd_finetune(pool, args.max_rounds)
 
 
 if __name__ == "__main__":
