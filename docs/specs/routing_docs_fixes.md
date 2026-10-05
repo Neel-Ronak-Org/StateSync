@@ -322,3 +322,38 @@ gate), the routing set's labels, the thresholds, and all measurement.
 - **Could:** documents to SQL recovery.
 
 If 8 Oct slips, T5 goes to future work, rather than squeezing the verification.
+
+## 8. Notes for T4 (decided 2026-10-05, not yet specified as a task)
+
+- **Split.** T4a: Step 1 evidence, front door (a), out-of-scope handling and the test hooks. T4b: the Jev
+  client (OpenRouter Decisions API, `typesafe/jev-1.13`) and front door (b). T4a starts only after T2 is
+  merged, because both touch `graph.py`, `state.py` and `main.py`.
+- **Database card.** Built from `mcp_client.schema_list_tables` and `schema_describe_table`, cached per
+  dataset, plus the workspace's `business_context` (`workspaces_manage` "context", as the SQL agent
+  gets it).
+- **Out of scope.** A state field `out_of_scope: bool` sends the graph straight to the writer with a
+  fixed config message and no model call. The `Route` literal stays three routes, and the turn record
+  stores route `"neither"`.
+- **Mapping for front door (a).** The answers to "needs database" and "needs documents" map to a route:
+
+  | needs database | needs documents | route |
+  |---|---|---|
+  | yes | yes | hybrid |
+  | yes | no or unsure | sql |
+  | no or unsure | yes | docs |
+  | unsure | unsure | hybrid |
+  | unsure | no | sql |
+  | no | unsure | docs |
+  | no | no | neither |
+
+  `out_of_scope` true means neither. An unreadable reply is treated as unsure on both, so hybrid, and
+  the trace flags it. There is never a silent SQL default.
+- **Jev failure.** If the Jev call fails, front door (a) answers instead, and the trace records the
+  fallback.
+- **Test hooks.** Off unless `[pipeline] debug_hooks = "on"`, which only Part D's own container sets:
+  - `debug_route_only`: return after routing, with the trace, run no specialist, write no turn;
+  - `debug_history`: gold earlier turns, used instead of the stored history.
+
+  The routing evaluation (`scripts/eval_routing.py`, in-house) uses both, for every arm.
+- **New config is additive only:** a `[front_door]` section for the thresholds and caps, and new
+  `[pipeline]` flags. config/ is mounted live into older images.
