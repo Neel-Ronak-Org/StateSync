@@ -112,4 +112,9 @@ setup-time training on other reference questions from the same databases.
 
 ## Change log
 
-(none yet)
+1. **2026-10-05, during candidate generation, before any candidate was scored.** The generation budget
+   is raised from 3,000 to 8,000 tokens for all three standalone models. deepseek-v4.1-flash reasons
+   before answering, and on 11 of its first 45 calls it used the whole budget and returned no text.
+   Calls that hit the old cap with no SQL are regenerated with the new budget. Calls whose model
+   answered without SQL keep that answer (it counts as a candidate that fails). No result informed
+   this.

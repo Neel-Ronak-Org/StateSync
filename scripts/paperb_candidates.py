@@ -26,7 +26,8 @@ import eval_bird as eb  # noqa: E402
 
 MODELS = ("deepseek-v4.1-flash", "qwen3-coder-30b-a3b-instruct", "glm-5.3-flash")
 SAMPLES = 3                 # noqa: literals - pre-registered (detect_then_fallback_study.md)
-MAX_TOKENS = 3000           # noqa: literals - room for models that reason before answering
+MAX_TOKENS = 8000           # noqa: literals - room for models that reason before answering (change 1)
+OLD_CAP = 3000              # noqa: literals - the first budget; calls that hit it with no SQL are redone
 BASE_URL = "https://api.cheaperinference.com/v1"
 KEY_FILE = eb.REPO / "secrets" / "cheaperinference_api_key"
 OUT = eb.EVAL / "paperb_candidates.json"
@@ -70,7 +71,10 @@ def main() -> int:
         for model in MODELS:
             for i in range(SAMPLES):
                 key = f"{qid}|{model}|{i}"
-                if key not in done["candidates"] or done["candidates"][key].get("error"):
+                rec = done["candidates"].get(key)
+                # Redo: missing, failed, or cut off by the first budget before writing any SQL (change 1).
+                if (rec is None or rec.get("error")
+                        or (not rec.get("sql") and (rec.get("tokens_out") or 0) >= OLD_CAP)):
                     jobs.append((key, model, prompt(schemas[db], a["question_asked"])))
     if args.limit:
         jobs = jobs[:args.limit]
