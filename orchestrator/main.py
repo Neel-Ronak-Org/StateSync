@@ -587,6 +587,9 @@ async def answer_question(
         # Only when pipeline.front_door ran: the shipped trace has neither key.
         state_trace["front_door"] = final_state.front_door
         state_trace["out_of_scope"] = final_state.out_of_scope
+    if final_state.hybrid_entities is not None:
+        # Only when pipeline.hybrid_entities ran the entity step in the hybrid documents half.
+        state_trace["hybrid_entities"] = final_state.hybrid_entities
 
     # Recomputed here from final_state's typed fields, not read off the
     # synthesizer node's own return value: graph.ainvoke()'s return is

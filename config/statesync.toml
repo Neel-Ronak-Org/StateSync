@@ -630,3 +630,9 @@ value_index_max_words     = 4        # longer values are prose, not entities, an
 value_index_time_budget_s = 20       # building it may delay the first question on a schema by at most this
 value_min_token_chars     = 3        # shorter question words never match a value
 value_tables              = 2        # value-matched tables added after the top tables (never displacing them)
+
+# The hybrid documents half narrowed by the SQL half's entities (docs/specs/partd_tasks/T5_hybrid_split.md;
+# flags.toml [pipeline] hybrid_entities).
+[hybrid]
+entity_rows               = 5        # entities are read from this many of the SQL result's first rows
+max_entities              = 5        # and at most this many distinct text values are kept, in row order

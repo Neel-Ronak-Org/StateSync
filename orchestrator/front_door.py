@@ -516,6 +516,7 @@ async def front_door_node(state_dict: dict[str, Any], mode: str | None = None) -
         "turn_index": evidence.next_turn_index,
         "rewrite_applied": p.standalone_question != question,
         "out_of_scope": out_of_scope,
+        "docs_depend_on_sql": p.documents_depend_on_database,
         "front_door": build_trace(decision, evidence),
         "metrics": {
             "tokens_in": decision.tokens_in, "tokens_out": decision.tokens_out,

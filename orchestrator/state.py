@@ -108,6 +108,8 @@ _LAST_WRITE_WINS_FIELDS: frozenset[str] = frozenset({
     "recovered_from",
     "out_of_scope",
     "front_door",
+    "docs_depend_on_sql",
+    "hybrid_entities",
 })
 
 # Fields whose reducer is "append" (list concatenation)
@@ -234,6 +236,11 @@ class StateSyncState(BaseModel):
     out_of_scope: bool = False
     front_door: dict | None = None
     debug_history: list[dict] | None = None
+    # Hybrid documents half narrowed by the SQL half's entities (pipeline.hybrid_entities, docs/specs/partd_tasks/
+    # T5_hybrid_split.md): docs_depend_on_sql is the front door's documents_depend_on_database (False on the legacy
+    # path); hybrid_entities is the step's trace {entities, matched_documents, narrowed} (None when it did not run).
+    docs_depend_on_sql: bool = False
+    hybrid_entities: dict | None = None
 
     # --- output (Part E2) ---
     answer_text: str | None = None

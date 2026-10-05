@@ -22,8 +22,9 @@ same agent as a data-only question, with the workspace's approved knowledge, the
 templates and the correction loop -- instead of the single-shot generation that used to live here.
 hybrid_docs_node runs the doc sub-task last: if the SQL result exposes one of the dataset profile's
 party-id columns (the ONDC sample's seller_id/provider_id), it is narrowed via vector.hybrid_select
-(a real ss_embed(...) usage, A4.7) to only that party's documents; otherwise the two-round semantic
-search runs. Both state.sql_rows/executed_sql
+(a real ss_embed(...) usage, A4.7) to only that party's documents; otherwise, with pipeline.hybrid_entities
+on and a documents half that depends on the SQL result (T5), it is narrowed to the workspace's documents whose
+titles name entities from the result's text columns; otherwise the two-round semantic search runs. Both state.sql_rows/executed_sql
 and state.retrievals get populated; the Synthesizer emits both citation kinds.
 """
 
@@ -40,7 +41,7 @@ from llm.provider import get_agent_llm
 from profiles import profile_for
 from query_rewrite import rewrite_for_search
 from mcp_client import (
-    MCPSession, vector_hybrid_select, vector_semantic_search,
+    MCPSession, library_manage, vector_hybrid_select, vector_semantic_search,
 )
 
 logger = logging.getLogger(__name__)
@@ -107,6 +108,11 @@ def order_passages(chunks: list[dict], passage_order: str, window: int, doc_orde
     return grouped + tail
 
 
+def _rerank_titles_extra(rerank: str | None, rerank_titles: bool) -> dict[str, Any]:
+    """rerank_titles is sent only when on (and re-ranking is on), so an older MCP never sees it."""
+    return {"rerank_titles": True} if rerank_titles and rerank not in (None, "off") else {}
+
+
 async def _semantic_search_expanded(
     session: MCPSession, query_text: str, top_k: int, mode: str | None = None, dataset: str | None = None,
     scope: str | None = None, abstain: bool = False, rerank: str | None = None,
@@ -127,8 +133,7 @@ async def _semantic_search_expanded(
     and unanswerable questions) and abstained. With abstain on and should_abstain true on those
     two scores, the second round is skipped and matches is empty (Phase E).
     """
-    # rerank_titles is sent only when on (and re-ranking is on), so an older MCP never sees it.
-    extra: dict[str, Any] = {"rerank_titles": True} if rerank_titles and rerank not in (None, "off") else {}
+    extra = _rerank_titles_extra(rerank, rerank_titles)
     first = await vector_semantic_search(session, query_text, top_k=top_k, mode=mode, dataset=dataset, scope=scope,
                                          rerank=rerank, **extra)
     matches = first.get("matches", [])
@@ -155,12 +160,25 @@ async def _semantic_search_expanded(
     if not doc_order:
         return [], meta
 
+    ordered = await _search_within_documents(
+        session, query_text, doc_order, matches, mode, dataset, scope, rerank, passage_order, extra,
+    )
+    return ordered, meta
+
+
+async def _search_within_documents(
+    session: MCPSession, query_text: str, doc_order: list[str], first_round: list[dict], mode: str | None,
+    dataset: str | None, scope: str | None, rerank: str | None, passage_order: str, extra: dict[str, Any],
+) -> list[dict]:
+    """The second round of the two-round search: every relevant chunk of the given documents
+    (top_k = retrieval.semantic_top_k_max), the first round's own matches (if any) keeping their score,
+    in the writer's order (order_passages)."""
     expanded = await vector_semantic_search(
         session, query_text, top_k=cfg.retrieval.semantic_top_k_max, document_ids=doc_order,
         mode=mode, dataset=dataset, scope=scope, rerank=rerank, **extra,
     )
     by_chunk_id = {m["chunk_id"]: m for m in expanded.get("matches", [])}
-    for m in matches:
+    for m in first_round:
         by_chunk_id[m["chunk_id"]] = m  # first call's score is the authoritative one for these
 
     # Document-major ordering, not a flat re-sort by raw chunk score: a
@@ -176,8 +194,7 @@ async def _semantic_search_expanded(
     # context limit doesn't split them apart.
     # pipeline.passage_order = "relevance" instead puts the most relevant passages in the writer's
     # window (order_passages).
-    ordered = order_passages(list(by_chunk_id.values()), passage_order, cfg.retrieval.semantic_top_k, doc_order)
-    return ordered, meta
+    return order_passages(list(by_chunk_id.values()), passage_order, cfg.retrieval.semantic_top_k, doc_order)
 
 
 async def _targeted_doc_search(
@@ -231,6 +248,54 @@ def _extract_party_ids(rows: list[dict], columns: list[str], target_schema: str 
             if ids:
                 return ids
     return []
+
+
+def _letters_digits(text: str) -> str:
+    """Lower-cased, with everything but letters and digits removed ("Coca-Cola" and "COCACOLA" agree)."""
+    return "".join(ch for ch in text.lower() if ch.isalnum())
+
+
+def narrowing_wanted(flag: str, docs_depend_on_sql: bool, party_ids: list[str]) -> bool:
+    """Whether the hybrid documents half narrows by the SQL result's entities (pipeline.hybrid_entities, T5):
+    the flag is on, the front door said the documents depend on the database half, and the ids path
+    (the dataset profile's party columns) found nothing to use."""
+    return flag == "on" and docs_depend_on_sql and not party_ids
+
+
+def extract_entities(rows: list[dict], columns: list[str], entity_rows: int, max_entities: int) -> list[str]:
+    """The distinct non-empty string values of the SQL result's text columns, in row order (and column order
+    within a row), from the first `entity_rows` rows, at most `max_entities` of them."""
+    names = columns or (list(rows[0]) if rows else [])
+    entities: list[str] = []
+    for row in rows[:max(entity_rows, 0)]:
+        for name in names:
+            value = row.get(name)
+            if isinstance(value, str) and value.strip() and value.strip() not in entities:
+                entities.append(value.strip())
+                if len(entities) >= max_entities:
+                    return entities
+    return entities
+
+
+def match_titles(entities: list[str], documents: list[dict]) -> list[dict]:
+    """The documents (as {document_id, title}) whose title contains an entity once both are reduced to
+    lower-case letters and digits, in the order given. An entity with no letter or digit matches nothing."""
+    keys = [k for k in (_letters_digits(e) for e in entities) if k]
+    return [d for d in documents
+            if any(k in _letters_digits(str(d.get("title") or "")) for k in keys)]
+
+
+async def _workspace_documents(session: MCPSession, principal_id: str, workspace_id: str) -> list[dict]:
+    """The ready uploaded documents a workspace searches, as {document_id, title}, without the router's
+    retrieval cap: library.manage's workspace_documents takes an optional `limit` (T5; an MCP that does
+    not know it ignores it and answers with its router_titles_max titles, the old behaviour). [] on failure."""
+    try:
+        result = await library_manage(session, principal_id=principal_id, action="workspace_documents",
+                                      workspace_id=workspace_id, limit=int(cfg.library.max_documents))
+    except Exception as exc:
+        logger.warning("Workspace documents unavailable for workspace %s: %s", workspace_id, exc)
+        return []
+    return list(result.get("documents", [])) if result.get("ok") else []
 
 
 _GENERAL_DECOMPOSER_PROMPT = """\
@@ -376,7 +441,11 @@ async def hybrid_plan_node(state_dict: dict[str, Any]) -> dict[str, Any]:
 
 async def hybrid_docs_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     """The documents half, after the SQL agent: narrowed to the parties its rows name when it found
-    ids in the dataset profile's party columns, the two-round search otherwise. Writes only retrievals and metrics."""
+    ids in the dataset profile's party columns; else, with pipeline.hybrid_entities on and the front door
+    having said the documents depend on the database half (docs_depend_on_sql), narrowed to the workspace's
+    documents whose titles name entities from the rows' text columns (one search over those documents, the
+    first round skipped); else the two-round search. Writes retrievals and metrics, and hybrid_entities
+    (the trace) when the entity step ran."""
     query_text: str = state_dict.get("normalized_query") or state_dict.get("raw_query", "")
     subtasks: list[str] = state_dict.get("subtasks") or []
     doc_subtask = subtasks[1] if len(subtasks) > 1 else query_text
@@ -388,6 +457,8 @@ async def hybrid_docs_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     rerank: str = flags_snapshot.get("pipeline.rerank", "off")
     passage_order: str = flags_snapshot.get("pipeline.passage_order", "document")
     rerank_titles: bool = flags_snapshot.get("pipeline.rerank_titles", "off") == "on"
+    hybrid_entities: str = flags_snapshot.get("pipeline.hybrid_entities", "off")
+    entity_trace: dict[str, Any] | None = None
     rows: list[dict] = state_dict.get("sql_rows") or []
     columns: list[str] = state_dict.get("sql_columns") or []
     start_ms = int(time.monotonic() * 1000)
@@ -398,8 +469,24 @@ async def hybrid_docs_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                           workspace_id=state_dict.get("workspace_id"),
                           dataset=state_dict.get("target_schema")) as session:
         party_ids = _extract_party_ids(rows, columns, dataset)
+        narrowed_to: list[dict] = []
+        if narrowing_wanted(hybrid_entities, bool(state_dict.get("docs_depend_on_sql")), party_ids):
+            entities = extract_entities(rows, columns, int(cfg.hybrid.entity_rows), int(cfg.hybrid.max_entities))
+            workspace_id = state_dict.get("workspace_id")
+            documents = (await _workspace_documents(session, state_dict.get("principal_id", ""), workspace_id)
+                         if entities and workspace_id else [])
+            narrowed_to = match_titles(entities, documents)
+            entity_trace = {"entities": entities, "matched_documents": [d["title"] for d in narrowed_to],
+                            "narrowed": bool(narrowed_to)}
         if party_ids:
             matches = await _targeted_doc_search(session, doc_subtask, party_ids, cfg.retrieval.semantic_top_k)
+            trajectory_steps += 1
+        elif narrowed_to:
+            # The first round (which documents are relevant) is skipped: the titles named them.
+            matches = await _search_within_documents(
+                session, doc_subtask, [d["document_id"] for d in narrowed_to], [], retrieval_mode, dataset,
+                doc_scope, rerank, passage_order, _rerank_titles_extra(rerank, rerank_titles),
+            )
             trajectory_steps += 1
         else:
             matches, meta = await _semantic_search_expanded(
@@ -412,8 +499,11 @@ async def hybrid_docs_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     elapsed_ms = int(time.monotonic() * 1000) - start_ms
     logger.info("UKE hybrid docs: query_id=%s party_ids=%s sql_rows=%d doc_matches=%d elapsed_ms=%d",
                 state_dict.get("query_id", ""), party_ids, len(rows), len(matches), elapsed_ms)
-    return {
+    update: dict[str, Any] = {
         "retrievals": _to_retrievals(matches),
         "metrics": {"tokens_in": 0, "tokens_out": 0, "llm_calls": 0,
                     "trajectory_steps": trajectory_steps, "latency_ms": elapsed_ms},
     }
+    if entity_trace is not None:
+        update["hybrid_entities"] = entity_trace
+    return update
