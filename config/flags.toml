@@ -295,6 +295,8 @@ enabled                         = false  # D11 stretch; resolved at process star
 # Groq baseline (scripts/eval_groq.py) shows accuracy holds and cost falls.
 # Guarded by scripts/shipped_flags.py SHIPPED_DEFAULTS.
 [pipeline]
+front_door                      = "off"      # "off" | "llm": one model call before routing replaces the normaliser, the follow-up rewriter and the router; it reads the database's tables and the best-matching documents and returns the standalone question, the route (sql, docs, hybrid or neither) and the split (docs/specs/partd_tasks/T4a_front_door.md, F-FD; T4b adds "jev")
+debug_hooks                     = "off"      # "off" | "on": /query accepts debug_route_only and debug_history (evaluation only; "on" only in Part D's own container; HTTP 400 when "off")
 language_gate                   = "llm"      # "llm": ask the model every time | "script": only for non-English text
 router_mode                     = "always"   # "always" | "when_documents": skip routing for sources without documents
 sql_draft_mode                  = "llm"      # "llm": draft + live sampling | "profiles": one SQL call with column profiles

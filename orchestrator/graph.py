@@ -39,6 +39,14 @@ Graph structure (Phase B + C2 + D + E1 + cycle 007 Workstream A):
       |
   synthesizer_node  (always runs; generates answer_text)
 
+With [pipeline] front_door on ("llm"), build_graph() wires entry -> front_door -> [routing dispatch]
+instead of entry -> normalize -> rewrite -> supervisor -> [routing dispatch]: one model call that
+reads the database card and the best-matching documents (front_door.py, T4a). A question neither
+source can answer (state.out_of_scope) goes straight from the front door to the synthesizer, which
+answers with a fixed message and no model call. With "off" (shipped) the graph is exactly the one above.
+route_graph is the same entry as far as the routing decision only, for the evaluation hook
+debug_route_only.
+
 The correction cycle (C2 Deliverable 2) is a real, visible graph edge --
 not a loop or try/except hidden inside sql_agent_node -- so the Supervisor
 (and anyone reading the graph) can see a failing SQL sub-task retry and
@@ -63,9 +71,10 @@ from typing import Any
 
 from langgraph.graph import StateGraph, END
 
-from config_loader import cfg
+from config_loader import cfg, flags as config_flags
 from classifiers.error_classifier import TERMINAL_CATEGORIES
 from state import StateSyncState, merge, reset_lww_writers
+from front_door import front_door_enabled, front_door_node
 from nodes.entry import entry_node
 from nodes.error_exit import error_exit_node
 from nodes.normalize import normalize_node
@@ -111,6 +120,16 @@ def _route_after_supervisor(state: StateSyncState) -> str:
 
     # LangGraph node names match route names here by convention.
     return route
+
+
+def _route_after_front_door(state: StateSyncState) -> str:
+    """After the front door: out of scope goes to the writer; otherwise its route dispatches exactly as
+    the supervisor's does. A front door that set neither is a defect, never a default to SQL."""
+    if state.out_of_scope:
+        return "synthesizer"
+    if state.route is None:
+        raise RuntimeError("The front door set neither a route nor out_of_scope.")
+    return _route_after_supervisor(state)
 
 
 def _timeout_retry_max() -> int:
@@ -209,6 +228,15 @@ async def _rewrite(state: StateSyncState) -> dict[str, Any]:
     return _merge_with_scratch(state, update, "rewrite")
 
 
+def _front_door_step(mode: str):
+    """The front door node for one pipeline.front_door setting: the strategy is chosen here, when the
+    graph is built, not read back from the state."""
+    async def _front_door(state: StateSyncState) -> dict[str, Any]:
+        update = await front_door_node(state.model_dump(), mode)
+        return _merge_with_scratch(state, update, "front_door")
+    return _front_door
+
+
 async def _supervisor(state: StateSyncState) -> dict[str, Any]:
     update = await supervisor_node(state.model_dump())
     return _merge_with_scratch(state, update, "supervisor")
@@ -304,18 +332,29 @@ async def _error_exit(state: StateSyncState) -> dict[str, Any]:
 
 
 # ── Graph builder ─────────────────────────────────────────────────────────────
-def build_graph() -> StateGraph:
+def _front_door_mode(front_door: str | None) -> str:
+    """The front door setting a graph is built for: the argument, else [pipeline] front_door."""
+    return str(front_door if front_door is not None else config_flags.pipeline.get("front_door", "off"))
+
+
+def build_graph(front_door: str | None = None) -> StateGraph:
     """
     Build and compile the LangGraph (Phase B skeleton + C2 correction loop).
-    Returns the compiled graph ready for .ainvoke().
+    `front_door` is [pipeline] front_door ("off" | "llm") unless given. Returns the compiled graph
+    ready for .ainvoke().
     """
+    mode = _front_door_mode(front_door)
+    use_front_door = front_door_enabled(mode)
     builder = StateGraph(StateSyncState)
 
     # Add nodes
     builder.add_node("entry", _entry)
-    builder.add_node("normalize", _normalize)
-    builder.add_node("rewrite", _rewrite)
-    builder.add_node("supervisor", _supervisor)
+    if use_front_door:
+        builder.add_node("front_door", _front_door_step(mode))
+    else:
+        builder.add_node("normalize", _normalize)
+        builder.add_node("rewrite", _rewrite)
+        builder.add_node("supervisor", _supervisor)
     builder.add_node("sql", _sql_specialist)
     builder.add_node("docs", _docs_specialist)
     builder.add_node("hybrid", _hybrid_specialist)
@@ -327,26 +366,41 @@ def build_graph() -> StateGraph:
     # Entry point
     builder.set_entry_point("entry")
 
-    # entry → normalize → rewrite → supervisor. D1: normalize always runs
-    # first, direct non-conditional edge, so normalized_query survives intact
-    # (Callout 1). Cycle 007 (Workstream A) inserts rewrite the same way,
-    # for the same structural reason: it always runs, always sets
-    # normalized_query (possibly unchanged), and supervisor's existing
-    # "reads normalized_query only" assertion needs no change.
-    builder.add_edge("entry", "normalize")
-    builder.add_edge("normalize", "rewrite")
-    builder.add_edge("rewrite", "supervisor")
+    if use_front_door:
+        # entry → front_door → routing dispatch (or, out of scope, the writer). Normalise, rewrite and
+        # the supervisor do not run: the front door returns the standalone question and the route.
+        builder.add_edge("entry", "front_door")
+        builder.add_conditional_edges(
+            "front_door",
+            _route_after_front_door,
+            {
+                "sql":         "sql",
+                "docs":        "docs",
+                "hybrid":      "hybrid",
+                "synthesizer": "synthesizer",
+            },
+        )
+    else:
+        # entry → normalize → rewrite → supervisor. D1: normalize always runs
+        # first, direct non-conditional edge, so normalized_query survives intact
+        # (Callout 1). Cycle 007 (Workstream A) inserts rewrite the same way,
+        # for the same structural reason: it always runs, always sets
+        # normalized_query (possibly unchanged), and supervisor's existing
+        # "reads normalized_query only" assertion needs no change.
+        builder.add_edge("entry", "normalize")
+        builder.add_edge("normalize", "rewrite")
+        builder.add_edge("rewrite", "supervisor")
 
-    # supervisor → routing dispatch
-    builder.add_conditional_edges(
-        "supervisor",
-        _route_after_supervisor,
-        {
-            "sql":    "sql",
-            "docs":   "docs",
-            "hybrid": "hybrid",
-        },
-    )
+        # supervisor → routing dispatch
+        builder.add_conditional_edges(
+            "supervisor",
+            _route_after_supervisor,
+            {
+                "sql":    "sql",
+                "docs":   "docs",
+                "hybrid": "hybrid",
+            },
+        )
 
     # sql → [correction-cycle dispatch] — C2 Deliverable 2, the real graph
     # edge replacing "no retry at all" (Phase B). "retry" targets "sql"
@@ -382,5 +436,29 @@ def build_graph() -> StateGraph:
     return builder.compile()
 
 
-# ── Module-level compiled graph (singleton) ───────────────────────────────────
+def build_route_graph(front_door: str | None = None) -> StateGraph:
+    """The graph as far as the routing decision and no further: entry → front door, or entry → normalize
+    → rewrite → supervisor. For the evaluation hook debug_route_only (pipeline.debug_hooks), which
+    measures every routing arm, the shipped router included. No specialist runs and nothing is written."""
+    builder = StateGraph(StateSyncState)
+    builder.add_node("entry", _entry)
+    builder.set_entry_point("entry")
+    mode = _front_door_mode(front_door)
+    if front_door_enabled(mode):
+        builder.add_node("front_door", _front_door_step(mode))
+        builder.add_edge("entry", "front_door")
+        builder.add_edge("front_door", END)
+    else:
+        builder.add_node("normalize", _normalize)
+        builder.add_node("rewrite", _rewrite)
+        builder.add_node("supervisor", _supervisor)
+        builder.add_edge("entry", "normalize")
+        builder.add_edge("normalize", "rewrite")
+        builder.add_edge("rewrite", "supervisor")
+        builder.add_edge("supervisor", END)
+    return builder.compile()
+
+
+# ── Module-level compiled graphs (singletons) ─────────────────────────────────
 graph = build_graph()
+route_graph = build_route_graph()

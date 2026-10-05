@@ -356,7 +356,11 @@ async def hybrid_plan_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     flags_snapshot: dict[str, Any] = state_dict.get("flags_snapshot", {})
     start_ms = int(time.monotonic() * 1000)
     tokens_in = tokens_out = llm_calls = 0
-    if bool(flags_snapshot.get("retrieval.hybrid_decomposition.enabled", True)):
+    given: list[str] = state_dict.get("subtasks") or []
+    if len(given) == 2:  # noqa: literals - a split is exactly [database question, documents question]
+        # The front door (pipeline.front_door) already split the question: no decomposer call.
+        sql_subtask, doc_subtask = given
+    elif bool(flags_snapshot.get("retrieval.hybrid_decomposition.enabled", True)):
         sql_subtask, doc_subtask, tokens_in, tokens_out = await _decompose(query_text, state_dict.get("target_schema"))
         llm_calls = 1
     else:

@@ -574,6 +574,24 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     )
     plain_failures = state_dict.get("flags_snapshot", {}).get("pipeline.plain_failures", "off") == "on"
 
+    if state_dict.get("out_of_scope"):
+        # The front door (pipeline.front_door) found that neither the database nor the documents could
+        # answer. The answer is the fixed message: no model call, no citations and no chart, as for the
+        # abstention below; it still goes through the A7 validator.
+        start_ms = int(time.monotonic() * 1000)
+        safe_out = safe_synthesizer_output({
+            "answer_text": cfg.front_door.out_of_scope_message, "chart": None, "citations": [],
+        })
+        logger.info("Synthesizer: out of scope for query_id=%s (no model call).", query_id)
+        return {
+            "answer_text": safe_out["answer_text"],
+            "vega_spec": None,
+            "metrics": {
+                "tokens_in": 0, "tokens_out": 0, "llm_calls": 0, "trajectory_steps": 1,
+                "latency_ms": int(time.monotonic() * 1000) - start_ms,
+            },
+        }
+
     if state_dict.get("doc_abstained"):
         # RAG v2 Phase E: the docs route found nothing relevant (pipeline.doc_abstain). The answer
         # is the fixed message: no model call, so nothing to invent; no citations (there is no
