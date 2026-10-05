@@ -1,128 +1,349 @@
-# Detect, then fall back: candidate selection and verified labels for text-to-SQL (pre-registration)
+# StateSync system paper: document answers and SQL fallback, measured (Paper B protocol, version 2)
 
-Status: **pre-registered 2026-10-05, before any candidate below was generated or scored.** Changes are
-logged at the end with a date and whether any result informed them. Paper B. It builds on the
-evidence-tiers study (`evidence_tiers_study.md`, "Paper A") and the setup-time verifier pilot
-(`research/verifier/README.md`).
+Status: **version 2, 2026-10-05.** Paper B, re-scoped by the owner after an independent audit. Written
+before any verifier was trained, before any judge or decision model scored the pool, and before any
+standalone candidate was executed. Version 1 (commit `4ed5805`; changes 1–2 in `724f9d7` and `88ca99c`)
+is summarised in §12, and its full text is in git history.
 
-## Why
+**Correction to version 1.** Its status line said it was written "before any candidate below was
+generated or scored". That held for the 9 standalone candidates per question. It did not hold for the 12
+pipeline candidates (GPT-5 mini and gpt-oss): Paper A's exploratory fallback simulation had already
+executed and scored them. Version 2 is written knowing these results about the SQL candidates:
+- the single-answer accuracy of both pipeline models (Paper A: GPT-5 mini 77.1%; gpt-oss 77.9% at
+  temperature 0), and Paper A's detection results for GPT-5 mini's answers;
+- a majority vote over GPT-5 mini's 6 candidates, triggered when Paper A's judge doubts the answer:
+  +1.5 points; some candidate of the 6 is right for 84.2% of questions;
+- from the audit: switching from GPT-5 mini's answer to gpt-oss's temperature-0 answer when Paper A's
+  judge doubts it gives 77.9%; the other way round, 79.9%; one of the two answers is right for 83.7%.
 
-Paper A's exploratory fallback simulation found two things:
-- A right SQL candidate often exists when the answer is wrong. For GPT-5 mini's 393 held-out answers,
-  a right candidate exists for 28 of the 90 wrong ones (a ceiling of 84.2%, against 77.1%).
-- Majority voting captures little of that headroom (+1.5 points). For a model that agrees with itself
-  (gpt-oss-120b), voting changes nothing.
+**Type and venue.** An applied system paper for MoSICom 2026 (IEEE; deadline 15 October 2026). It
+describes StateSync and measures two of its parts. It claims no new method: every technique here has
+prior work (§10).
 
-The verifier pilot found that a classifier trained on synthetic SQL mutations does not transfer to real
-LLM errors, while training on real candidates helps.
+## 1. What the paper reports
 
-**The question.** Can a cheap trained verifier:
-- **select** the right candidate from a pool drawn from several models,
-- **trigger** a fallback only when the first answer is doubtful, and
-- give a **"verified" label** with a stated error rate,
+1. **The system** (descriptive): one assistant over a relational database and uploaded documents; the
+   credential-holding MCP service and the three-layer SQL gate; routing; the SQL agent; document search
+   with re-ranking; the answer writer; evidence tiers and checks.
+2. **Part D, document answers** (FinanceBench): retrieval with and without the re-ranker (done,
+   `docs/eval/rag_v3_report.md`) and, new here, the answers those searches lead to.
+3. **Part S, SQL answers** (BIRD): what falling back recovers when the first answer may be wrong, how to
+   trigger it and choose the replacement, and what it costs.
+4. **Cost and latency** of each part.
 
-better than voting or an LLM judge, and at what cost?
+## 2. Questions
 
-## Data
+- **QD1.** Does the re-ranker that raised page hit@5 from 43.3% to 59.3% also raise answer accuracy, and
+  at what latency?
+- **QD2** (descriptive). How accurate are answers when a gold page was, and was not, among the passages
+  the answer writer was given?
+- **QS1.** How much accuracy do fallback policies recover on the 393 held-out BIRD questions, out of how
+  much is available, and at what extra cost?
+- **QS2.** Can a small model trained at setup on labelled questions from the same databases (a plain
+  classifier, ModernBERT; or a decision model, Laya) replace the LLM judge as the trigger and as the
+  selector? How do decision models do with no training (Laya, Jev)?
+- **QS3.** Given the same labelled questions, does more accuracy come from showing them to the SQL writer
+  as approved examples (an existing StateSync feature) or from training a verifier on them?
+- **QS4.** What share of first answers can carry a "verified" label at a 5% error target, measured out of
+  sample?
 
-- **Questions:** the 393 held-out BIRD Mini-Dev questions of Paper A (`docs/eval/bird_heldout_sample.json`),
-  asked in the corrected file's wording.
-- **Labels:** corrected gold (Jin et al. 2026), run on SQLite. A candidate runs on the PostgreSQL copy and
-  is labelled correct under the relaxed rule (`eval_bird.rows_match_relaxed`, `norm_v2`), exactly as in
-  Paper A. A candidate that fails to run is wrong.
-- The 100 pilot questions stay development data and are excluded.
+## 3. Data
 
-**Candidate pool, 21 per question:**
+**Part D: the FinanceBench open sample** (150 questions, 84 filings; `docs/eval/external_datasets.md`).
+- The RAG v3 ingest: paragraph chunker, all 84 filings ready (44,918 chunks). `[library] max_pages` is
+  600, raised from 300 by the owner on 2026-10-02 so that the six longest filings could be read.
+- Questions verbatim. Question types: metrics-generated, domain-relevant, novel-generated (50 each).
+- Gold: FinanceBench's answer and justification for each question.
 
-| source | per question | how |
+**Part S: the BIRD Mini-Dev held-out set** (393 questions; `docs/eval/bird_heldout_sample.json`), as in
+Paper A:
+- asked in the corrected file's wording;
+- labelled with the corrected gold (Jin et al. 2026) run on SQLite against predictions run on
+  PostgreSQL, under Paper A's relaxed rule (numbers to 5 significant digits);
+- a candidate that fails to run is wrong;
+- the 100 pilot questions stay excluded.
+
+## 4. Part D method (documents)
+
+**Runs.** The 150 questions go through the full pipeline twice, in one workspace linked only to the
+FinanceBench folder:
+- **D-dense:** `[pipeline] rerank = "off"`;
+- **D-bge:** `rerank = "bge"` (shipped).
+
+Everything else is as shipped: `retrieval_mode = "dense"`, `query_rewrite = "off"`, `doc_abstain = "off"`,
+paragraph chunker. Only the hosts differ:
+- the answer writer is gpt-oss-120b (the shipped model) through Cheaper Inference, reasoning effort low;
+- the light roles are qwen3.8-27b through Cheaper Inference, thinking off (Paper A, change 16);
+- reason: Groq's free tier cannot take 300 answers in the time available;
+- the served model is recorded per call.
+
+The route is the product's own decision; a question sent down another route is scored as answered.
+
+**Grading.** Gemini 3.8 Flash (Zed) grades each answer against FinanceBench's answer and justification.
+- Verdicts: correct, partly correct, incorrect, refused. The primary label is "correct".
+- A number counts when it agrees with the gold within 1%, or within the rounding the gold shows.
+- The grader sees the question, the gold answer, the justification and the system's answer, but not the
+  configuration. The 300 answers are graded in one shuffled order (seed 20261005).
+- The grader prompt is fixed, and committed, before any answer is graded.
+
+**Human check.** The owner grades 30 answers drawn at random from the 300, blind to the grader and the
+configuration. Agreement with the grader is reported. Below 80%, the paper says so next to every Part D
+number.
+
+**Measures.**
+- answer accuracy per configuration, overall and by question type, with the paired difference (exact
+  McNemar, two-sided) and a bootstrap interval (2,000 resamples, seed 20261005);
+- refusals; latency per answer (p50, p90); model tokens;
+- QD2: accuracy split by whether any passage given to the answer writer is on a gold page (from the
+  run's record of passages; if a run records only citations, citations are used and the paper says so).
+
+Expected, not hypothesised: a smaller gain in answers than in retrieval.
+
+## 5. Part S method (SQL)
+
+**Candidate pool: 21 per question, in this order.**
+
+| source | per question | sampling |
 |---|---|---|
-| GPT-5 mini (Zed) | 6 | the pipeline answer + its 5 self-consistency samples (existing, Paper A) |
-| gpt-oss-120b (Cheaper Inference) | 6 | the same, from Paper A's replication (existing) |
-| deepseek-v4.1-flash, qwen3-coder-30b-a3b-instruct, glm-5.3-flash (Cheaper Inference) | 3 each | a standalone prompt (schema of the question's database, hint, question; PostgreSQL SQL only), default sampling (`scripts/paperb_candidates.py`) |
+| GPT-5 mini (Zed): the pipeline answer, then its 5 self-consistency samples (Paper A) | 6 | provider default (the model accepts no temperature) |
+| gpt-oss-120b (Cheaper Inference): the pipeline answer, then its 5 samples, from Paper A's rerun (`heldout_gptoss`, change 18) | 6 | provider default. The temperature-0 run (`heldout_gptoss_t0`) is not used. |
+| deepseek-v4.1-flash, qwen3-coder-30b-a3b-instruct, glm-5.3-flash (Cheaper Inference), standalone prompt (`paperb_candidates.json`) | 3 each | provider default, no temperature sent |
 
-The three new models are from families other than the judge's (Gemini). Generation settings are fixed
-before any candidate is scored.
+Candidates whose results agree under the relaxed rule, in either direction, form a cluster.
 
-## Signals and selectors
+**Folds.** The 393 questions are split into 5 folds stratified by database, seed 20261005, by
+`paperb_verifiers.folds` as committed in `88ca99c`. Round r:
+- tests fold r;
+- calibrates on fold (r + 1) mod 5;
+- trains on the other three.
 
-Each candidate is scored by:
-1. **Majority vote:** the size of its result cluster (candidates whose results agree under the relaxed rule, both ways).
-2. **LLM judge:** Gemini 3.8 Flash (Zed), the same prompt as Paper A, P(correct). It is scored once per
-   distinct result cluster per question, on the cluster's first candidate.
-3. **Trained verifiers**, with input `question + SQL + result preview` (row count, columns, first 3 rows):
-   - **ModernBERT-base**, fine-tuned as a binary classifier;
-   - **Qwen3-0.6B** with a LoRA classification head;
-   - **Laya**, fine-tuned (the pilot's recipe, cross-entropy);
-   - **Laya hosted, zero-shot** (Vercel AI Gateway);
-   - **Jev, zero-shot** (Vercel AI Gateway), if paid credits are available. Otherwise it is reported as not run.
-4. **Training regimes for the fine-tuned verifiers:**
-   - **real:** candidates of training questions, labelled by execution;
-   - **mutation:** rule-based mutations of the training questions' gold SQL (the pilot's generator), labelled by execution.
+Every question is tested once, by a model that saw neither it nor its round's calibration fold. Every
+threshold comes from the calibration fold of the same round.
 
-**Out-of-fold scoring (same schema).** The 393 questions are split into 5 folds, stratified by database,
-seed 20261005. Each candidate is scored by verifiers trained on the other 4 folds. This simulates
-setup-time training on other reference questions from the same databases.
+**Signals.**
+1. **ModernBERT verifier** (primary): ModernBERT-base, full fine-tune, with version 1's hyperparameters
+   (learning rate 3e-5, 3 epochs, batch 16, input capped at 512 tokens; about 0.4% of inputs are longer).
+   Input: the question, the SQL and the result preview (row count, columns, first 3 rows). Two regimes:
+   - **real** (primary): the training folds' pool candidates, labelled by execution;
+   - **mutation** (secondary): the training folds' reference SQL and its rule-based mutants
+     (`paperb_mutations.json`).
+2. **Laya, fine-tuned at setup** (secondary): the verifier pilot's code and recipe
+   (`research/verifier/laya_verifier.py train --loss rlcd`: Laya's RLCD objective plus cross-entropy,
+   effective batch 64, correct and wrong weighted equally, temperature fitted on 10% of the training
+   questions), from the pinned checkpoint (`convaiinnovations/laya`, `typed-decisions`, revision
+   `55cf4c4e`), on the real regime, in the same rounds.
+   - **One epoch**, not the pilot's four: a round has roughly 3–4 times the pilot's 1,118 training rows,
+     so one epoch gives about as many updates. With one epoch, the RLCD noise scale stays at its starting
+     value (0.4) instead of annealing to 0.1.
+   - Same input content as the ModernBERT verifier, in Laya's QUESTION / SQL / RESULT format.
+3. **LLM judge:** Gemini 3.8 Flash (Zed).
+   - One call per distinct result cluster, on the cluster's first candidate.
+   - It is shown the question with its hint, the tables, the SQL and the first 10 rows.
+   - System prompt, fixed here: *"You check SQL written for a question about a PostgreSQL database. You
+     are given the question (with an optional hint), the database's tables and columns, the SQL, and the
+     first rows of its result. Rate how likely it is that the result correctly answers the question, from
+     0 (certainly wrong) to 100 (certainly right). Reply with JSON only: {"score": <integer 0-100>,
+     "reason": "<one sentence>"}."* Paper A's judge, asked for a probability, gave 1.0 to 328 of 393
+     answers, so most selections would have been ties.
+   - A candidate that failed to run scores 0 without a call.
+4. **Decision models with no training:**
+   - **Laya, zero-shot:** the same pinned checkpoint, run locally, with the pilot's question
+     ("Does the SQL correctly answer the QUESTION?", options correct and wrong);
+   - **Jev, zero-shot:** through Vercel AI Gateway (the owner is adding credits), one yes/no question per
+     distinct candidate over the verifier's input; the model version returned is recorded.
+5. **Vote:** the size of the candidate's cluster.
 
-**Unseen schema (secondary).** Leave one database out, for ModernBERT only (compute).
+**Policies.** Each policy gives one answer per question.
 
-## Measures
+| | policy | extra work |
+|---|---|---|
+| P0 | first answer: GPT-5 mini's pipeline answer | none |
+| P1 | judge-triggered re-vote: if the judge scores P0 below 50, the majority over GPT-5 mini's 6 | 5 samples + judge, on trigger |
+| P2 | judge-triggered escalation: if the judge scores P0 below 50, gpt-oss's pipeline answer | one more pipeline run + judge, on trigger |
+| P3 | pool vote | all 21 |
+| P4 | pool judge-max | all 21 + judge |
+| P5 | pool verifier-max: ModernBERT, real regime | all 21 + verifier |
+| P5m | pool verifier-max: ModernBERT, mutation regime | all 21 + verifier |
+| P5v | ModernBERT + vote: scores summed per cluster | all 21 + verifier |
+| P5L | pool verifier-max: Laya fine-tuned | all 21 + Laya |
+| P6 | ModernBERT-triggered cascade: P0 unless its verifier risk exceeds τ, else P5. τ maximises accuracy on the calibration fold. | verifier always; all 21 on trigger |
+| P7 | judge-triggered cascade: P0 unless the judge scores it below 50, else P4 | judge always; all 21 on trigger |
+| – | oracle: right if any candidate is right | the ceiling |
 
-- **Selection accuracy:** per question, the share whose selected candidate is correct (ties broken by
-  the first candidate in pool order). Selectors:
-  - the first answer (GPT-5 mini's pipeline answer);
-  - majority vote;
-  - judge-max;
-  - each verifier's max;
-  - verifier + vote (verifier score summed per cluster);
-  - **oracle** (any correct).
-- **Detection:** AUROC and AURC of each signal for the first answer.
-- **Cascade:** keep the first answer unless its verifier risk exceeds a threshold, else select. The
-  threshold is chosen on the training folds to maximise training accuracy. Reported: accuracy, the share
-  of questions falling back, and extra calls and cost.
-- **Verified label:** split-conformal on out-of-fold scores. Label an answer "verified" when
-  P(correct) ≥ t, with t chosen on the training folds so that the verified answers' error is ≤ 5%
-  (Clopper-Pearson upper bound). Reported: verified coverage and observed error on the held-out fold.
-- **Cost and latency per check:** local verifiers measured on this Mac; API judges at list price.
+The threshold 50 is fixed here, not tuned. Ties between top-scoring clusters are scored as the expected
+accuracy under uniform random tie-breaking (exact), for every selector, votes included.
 
-## Confirmatory hypotheses (Holm across H1–H3, α = 0.05)
+**Approved examples against a verifier (QS3).** gpt-oss-120b (Cheaper Inference, provider default
+sampling, reasoning effort low) with the standalone candidates' prompt, in two arms, **three samples per
+question per arm**:
+- **E0:** schema, hint, question;
+- **E1:** the same, plus up to 3 approved examples.
 
-- **H1 (selection).** ModernBERT trained on real candidates (named in advance; change 2) selects a correct
-  candidate more often than majority vote. McNemar, one-sided.
-- **H2 (training signal).** For ModernBERT, the real-candidate regime gives higher selection accuracy than
-  the mutation regime. McNemar, one-sided.
-- **H3 (cascade).** The verifier-triggered cascade is more accurate than the first answer alone. McNemar,
-  one-sided.
+The examples:
+- are chosen as StateSync chooses them (`mcp/tools/workspace_tools.py`: Jaccard similarity of content
+  words, at least 0.3, at most 3), comparing question texts without their hints;
+- come from the same database's questions in the round's three training folds;
+- are shown as the product shows them ("Approved examples of similar questions and their SQL"), each a
+  question without its hint and its SQL;
+- use a question only if its PostgreSQL reference SQL is correct under the corrected labels (the
+  `reference` rows of `paperb_mutations.json`).
 
-**Reported but not tested:**
-- judge-max vs vote;
-- hosted zero-shot models;
-- unseen-schema results;
-- the verified label's coverage at a 5% error target;
-- per-model breakdowns.
+A question's accuracy in an arm is the share of its three samples that are right. Reported: E1 − E0 with a
+paired bootstrap interval, next to the verifiers' gains (P5 − P3 and P6 − P0). All of them come from the
+same labelled training folds.
 
-## Threats
+**Verified label (QS4).**
+- Per round, a threshold on the first answer's score is set on the calibration fold by fixed-sequence
+  testing. Start at the highest score and keep lowering the threshold while the verified set's one-sided
+  95% Clopper–Pearson upper error bound stays at or below the target; stop at the first failure.
+- The threshold is applied to the test fold.
+- Targets: 5% (primary) and 10%.
+- Scores: ModernBERT (real), Laya fine-tuned, and the judge.
+- Reported: coverage and observed error over all test folds.
+- With about 79 calibration questions per round the bound is strict, so coverage may be small. It is
+  reported as it is.
 
-- **Candidate pool:** pipeline candidates (GPT-5 mini, gpt-oss) and standalone candidates differ in
-  prompt. The pool is a pool; selection does not depend on the source.
-- **Contamination:** models may have seen BIRD. This affects all selectors alike.
-- **Overlap with Paper A:** the same 393 questions and two of its runs are reused. Paper B's contribution
-  is selection, fallback and verification, not detection, and it cites Paper A.
-- **Hosts:** Cheaper Inference does not disclose its upstream provider (Paper A, change 16). The served
-  model name is recorded per call.
+**Measures.**
+- the accuracy of every policy, with paired bootstrap intervals against P0 (2,000 resamples stratified
+  by database, seed 20261005);
+- the share of questions that trigger a fallback;
+- extra model calls, tokens, list-price cost and added latency per question, including generating the
+  candidates a policy uses;
+- detection of P0's errors: AUROC and AURC of ModernBERT, Laya fine-tuned, Laya zero-shot, Jev and the
+  judge;
+- the accuracy of each pool source.
 
-## Change log
+**Pre-specified comparisons.** Version 1's H1–H3 are kept, tested with one-sided McNemar and Holm across
+the three:
+- **H1:** P5 > P3;
+- **H2:** P5 > P5m;
+- **H3:** P6 > P0.
 
-1. **2026-10-05, during candidate generation, before any candidate was scored.** The generation budget
-   is raised from 3,000 to 8,000 tokens for all three standalone models. deepseek-v4.1-flash reasons
-   before answering, and on 11 of its first 45 calls it used the whole budget and returned no text.
-   Calls that hit the old cap with no SQL are regenerated with the new budget. Calls whose model
-   answered without SQL keep that answer (it counts as a candidate that fails). No result informed
-   this.
-2. **2026-10-05, before any verifier was trained or any candidate scored.** H1's verifier is named in
-   advance instead of "chosen by training-fold accuracy": **ModernBERT, real-candidate regime, 5-fold.**
-   The folds save scores only for each model's held-out questions, so a training-fold choice would need
-   extra in-sample scoring that the design does not include.
-   - Qwen3-0.6B, fine-tuned Laya and the hosted models are reported as secondary comparisons.
+H2 and H3 are expected to hold (H2 from the verifier pilot; H3 because P6 sees 20 more candidates than
+P0). The paper does not rest on them. Every Laya and Jev result is descriptive.
+
+## 6. Cost and latency
+
+- model calls: list price per million tokens, as published on the run date, with tokens recorded per
+  call;
+- local: training minutes and milliseconds per check on this Mac's GPU for ModernBERT and Laya; bge
+  milliseconds per search (Part D);
+- reported per 1,000 questions.
+
+## 7. Overlap with Paper A
+
+Paper A (to ARR, 12 October) is cited. Part S reuses its held-out questions, its labels and its two
+pipeline runs, and reports none of its detection or data-check results. If the owner agrees, Paper A's
+exploratory fallback simulation moves to this paper, so that the result is not published twice.
+
+## 8. Deferred (not in this paper)
+
+- **A verifier trained on another company's database** (the FIBEN-trained Laya checkpoints scored on
+  BIRD). The owner's view: a deployment would train on its own data.
+- Qwen3-0.6B (LoRA) and Laya with cross-entropy only; leave-one-database-out.
+- A fallback for documents that do not answer the question (abstention or a wider search).
+
+## 9. Threats
+
+- one benchmark per part (BIRD, FinanceBench), English only; the models may have seen both;
+- an LLM grades Part D (with a human check on 30 answers);
+- small calibration folds; hyperparameters are not tuned;
+- Laya is larger than ModernBERT-base (421M against 149M parameters) and is trained by its own recipe,
+  so the two are not a controlled comparison of architectures; its one epoch and untuned noise schedule
+  may undersell it;
+- the pool mixes pipeline candidates (StateSync's prompt and retries) with standalone candidates;
+- hosts:
+  - GPT-5 mini and Gemini are reached through a local router to an editor subscription (Zed);
+  - gpt-oss and the standalone models are reached through Cheaper Inference, which does not name its
+    upstream;
+  - Jev is reached through Vercel AI Gateway;
+  - the served model is recorded per call;
+- the gpt-oss pipeline answers will have been scored for Paper A before the pool is built.
+
+## 10. Prior work the paper positions against
+
+- verifier re-ranking with execution results: LEVER (Ni et al., 2023);
+- execution-labelled outcome reward models for text-to-SQL that beat majority vote: GradeSQL (Tritto et
+  al.);
+- trained candidate selection: CHASE-SQL (Pourreza et al., 2025);
+- parser-independent error detection for re-ranking and triggering (Chen et al., 2023);
+- trained verifiers on and off their training schemas (Richardson, 2026);
+- LLM cascades: FrugalGPT; Mixture-of-Thought cascades (Yue et al., 2024); AutoMix;
+- retrieval evaluators that trigger corrective actions: CRAG (Yan et al., 2024); adaptive retrieval:
+  Adaptive-RAG (Jeong et al., 2024);
+- abstention for text-to-SQL: TrustSQL; RTS (Chen et al., 2025);
+- example selection: DAIL-SQL;
+- FinanceBench (Islam et al., 2023), and page-level retrieval on its open sample (arXiv 2602.17981);
+- decision models: Laya (Convai Innovations) and Jev (TypeSafe), with no published evaluation on SQL
+  answers that we found.
+
+## 11. Schedule and budget (estimates)
+
+| step | when | time | cost |
+|---|---|---|---|
+| this protocol committed and pushed | 5 Oct | – | – |
+| gpt-oss rerun (Paper A's session) | 5 Oct | hours | Paper A's budget |
+| build and label the pool | 5 Oct | 1–2 h | $0 |
+| approved-examples arms E0 and E1 (2,358 calls) | 5 Oct | about 1–2 h | about $1–2 |
+| ModernBERT: real and mutation, 5 rounds each | 5 Oct | about 4–5 h on the Mac | $0 |
+| Laya fine-tuned, 5 rounds (overnight); Laya zero-shot | night of 5–6 Oct | about 6–7 h on the Mac | $0 |
+| judge, one call per cluster (about 1,600–2,500) | 6 Oct | 1–2 h | about $1–2 (Zed) |
+| Jev, once credits are added | 6 Oct | about 1 h | about $0.15 |
+| Part D: two runs of 150 answers, then 300 gradings | 6–7 Oct | about 3 h | about $1–2 |
+| analysis | 8 Oct | 1 day | – |
+| writing (IEEE) and the owner's review | 9–14 Oct | – | – |
+| submission | 15 Oct | – | – |
+
+Part D and the judge use the orchestrator container, which Paper A's session also uses: they run after
+its rerun has finished. ModernBERT and Laya each need the Mac's GPU to themselves, so they run one after
+the other.
+
+## 12. Version 1 and the change log
+
+**Version 1** (2026-10-05, `4ed5805`): candidate selection, verifier-triggered fallback and a conformal
+"verified" label, on BIRD only.
+- Pool: 21 candidates per question, including gpt-oss's existing temperature-0 samples.
+- Verifiers: ModernBERT and Qwen3-0.6B (LoRA), fine-tuned Laya, hosted Laya, Jev.
+- Scoring: 5-fold out-of-fold; leave one database out for ModernBERT.
+- Tests: H1–H3 with Holm.
+
+**Changes.**
+1. **2026-10-05, during candidate generation, before any candidate was scored** (`724f9d7`). The
+   generation budget was raised from 3,000 to 8,000 tokens for all three standalone models.
+   deepseek-v4.1-flash reasons before answering, and on 11 of its first 45 calls it used the whole budget
+   and returned no text. Calls that hit the old cap with no SQL were regenerated with the new budget.
+   Calls whose model answered without SQL keep that answer (it counts as a candidate that fails). No
+   result informed this.
+2. **2026-10-05, before any verifier was trained or any candidate scored** (`88ca99c`). H1's verifier was
+   named in advance instead of "chosen by training-fold accuracy": **ModernBERT, real-candidate regime,
+   5-fold.** The folds save scores only for each model's held-out questions, so a training-fold choice
+   would have needed extra in-sample scoring that the design did not include.
+   - Qwen3-0.6B, fine-tuned Laya and the hosted models became secondary comparisons.
    - In H3's cascade, the fallback selects with the same verifier's highest score.
-   - Its threshold is chosen per fold on the other folds' out-of-fold scores.
+   - Its threshold was chosen per fold on the other folds' out-of-fold scores (replaced in change 3).
+
    No result informed this.
+3. **2026-10-05, version 2.** Made before any verifier, judge or decision model scored the pool, and
+   before any standalone candidate was executed. The owner re-scoped Paper B after an independent audit,
+   and decided its scope.
+   - **An applied system paper with a document part (Part D)**: the owner's choice. No novelty claims,
+     because each component has prior work (§10).
+   - **gpt-oss candidates come from the default-sampling rerun.** Version 1's six were near-copies from
+     temperature-0 decoding (all five samples identical on 180 of 389 questions), and would have cast six
+     votes for one answer.
+   - **Train, calibrate and test folds rotate.** Version 1 set its thresholds on out-of-fold scores from
+     models that had trained on the test fold.
+   - **The verified label uses fixed-sequence testing.** Version 1's search did not stop at its first
+     failure, so its 5% bound did not hold.
+   - **The judge gives a 0–100 score, and ties are scored as exact expected accuracy.** Version 1's
+     judge-max would have been decided by ties.
+   - **New policies P1, P2 and P7, and the approved-examples comparison (QS3)**, with three samples per
+     arm because single answers flip between runs (Paper A: 10%). These are the cheaper fallbacks a
+     product would try first, and a direct alternative use of the same labelled questions.
+   - **Laya (owner's decision):** zero-shot from the pinned checkpoint, run locally instead of hosted;
+     fine-tuned at setup with its own recipe in every round, for one epoch, overnight. A Laya trained on
+     another company's database is deferred (§8).
+   - **Jev:** in, once the owner adds credits.
+   - **Cost includes generating the candidates.**
+   - **Dropped, for time:** Qwen3-0.6B, Laya with cross-entropy only, leave-one-database-out.
+   - H1–H3 are kept as pre-specified comparisons.
