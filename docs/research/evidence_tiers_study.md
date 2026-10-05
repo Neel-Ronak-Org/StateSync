@@ -383,6 +383,27 @@ only on held-out data.
       and agreement on them is reported.
     - OpenRouter pinned to Groq was prepared (`[llm.endpoints.openrouter.extra_body]`) but not used.
 
+17. **Exploratory extensions, decided 2026-10-05 after all confirmatory results** (none of them re-runs
+    or replaces a pre-registered test):
+    - **Second-model replication on the held-out set.**
+      - Setup: the 393 questions asked again with gpt-oss-120b writing SQL and answers. The run uses
+        the held-out settings: measurement flags, `self_consistency_k = 5`, `fanout_retry_max = 1`.
+      - Code: the orchestrator code the study measured (commit `c49d5e7`), not the post-study product
+        changes, so that only the model differs.
+      - Hosts (as in change 16): Cheaper Inference for gpt-oss and for the normaliser (qwen,
+        thinking off); the Gemini judge on Zed.
+      - Reported: the same descriptive analysis, labelled exploratory.
+    - **Signal combination.**
+      - Model: L2-regularised logistic regression on the per-answer signals (process, data checks,
+        judge, self-consistency).
+      - Scoring: out-of-fold. Answers are split into 5 folds stratified by correctness, and also
+        leave-one-database-out.
+      - Compared: all signals vs no data checks vs free signals only. AUROC and AURC with a stratified
+        bootstrap.
+      - Run on both models' held-out runs.
+    - **Fallback simulation** (`scripts/fallback_sim_bird.py`): majority vote over each answer and its
+      self-consistency samples, triggered by each warning.
+
 **What the pilot did differently from v1** (recorded in `docs/eval/bird_pilot_report.md`):
 - original labels instead of corrected ones;
 - no manual review;
