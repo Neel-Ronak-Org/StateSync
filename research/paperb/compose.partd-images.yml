@@ -1,0 +1,14 @@
+# research/paperb/compose.partd-images.yml
+# Part D v3's images (docs/specs/routing_docs_fixes.md §7): the same services, built from the current
+# code under their own tag, so the shared stack's images are never rebuilt or replaced.
+#
+# Used ONLY by research/paperb/partd_stack.sh, with `docker compose run --no-deps --name ...`.
+# NEVER use it with `docker compose up`: that would recreate the shared statesync-mcp-1 and
+# statesync-orchestrator-1 on the Part D images.
+services:
+  mcp:
+    image: statesync-mcp:partd
+    pull_policy: never
+  orchestrator:
+    image: statesync-orchestrator:partd
+    pull_policy: never
