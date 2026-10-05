@@ -88,7 +88,8 @@ from table_selection import tables_in_sql
 from mcp_client import MCPSession, data_run_select, data_sample_rows, schema_describe_table, schema_list_tables, workspaces_manage
 from memory_store import get_trajectory_store
 from schema_retriever import get_schema_retriever, target_schema
-from datasets import frame_prompt, synthetic_features
+from profiles import profile_for
+from profiles_ondc import SQL_DOMAIN as _ONDC_SQL_DOMAIN
 from spatial_resolver import get_spatial_resolver
 from workspace_context import format_context, system_suffix
 
@@ -165,10 +166,11 @@ _EXECUTOR_LIMIT_RULE = ('Use LIMIT only when the question asks for a number of r
 
 
 def sql_system_prompt(template: str, max_rows: int, schema: Any, flags_snapshot: dict[str, Any]) -> str:
-    """The SQL writer's system prompt: the row-cap rule the flags choose, then the dataset's framing."""
+    """The SQL writer's system prompt: the row-cap rule the flags choose, then the dataset profile's
+    domain phrase in place of the ONDC one the two templates are written with."""
     if flags_snapshot.get("pipeline.sql_row_cap", "prompt") == "executor":
         template = template.replace(_PROMPT_LIMIT_RULE, _EXECUTOR_LIMIT_RULE)
-    return frame_prompt(template.format(max_rows=max_rows), schema)
+    return template.format(max_rows=max_rows).replace(_ONDC_SQL_DOMAIN, profile_for(schema).sql_domain)
 
 
 _SUMMARIZER_SYSTEM_PROMPT = """\
@@ -380,6 +382,13 @@ def _format_entity_hint(preserved_entities: dict[str, str]) -> str:
     for original in preserved_entities.keys():
         lines.append(f"  '{original}'")
     return "\n".join(lines)
+
+
+def _spatial_resolution(raw_query: str, schema: str | None) -> dict[str, Any] | None:
+    """The DIGIPIN resolver's result, only for a dataset whose profile has it (the ONDC sample)."""
+    if not profile_for(schema).spatial_resolver:
+        return None
+    return get_spatial_resolver().resolve(raw_query)
 
 
 def _format_spatial_hint(spatial: dict[str, Any]) -> str:
@@ -841,8 +850,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         if entity_hint:
             context_block += "\n\n" + entity_hint
 
-        # DIGIPIN belongs to the synthetic ONDC corpus (datasets.py).
-        spatial_resolution = get_spatial_resolver().resolve(raw_query) if synthetic_features(_schema) else None
+        spatial_resolution = _spatial_resolution(raw_query, _schema)
         if spatial_resolution:
             context_block += "\n\n" + _format_spatial_hint(spatial_resolution)
 

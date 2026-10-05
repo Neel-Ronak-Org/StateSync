@@ -51,7 +51,7 @@ def test_gate_script_calls_model_for_devanagari(monkeypatch):
     calls = []
 
     class _Normalizer:
-        async def normalize(self, text):
+        async def normalize(self, text, target_schema=None):
             calls.append(text)
             return {"detected_language": "hi", "normalized_query": "translated",
                     "preserved_entities": {}, "tokens_in": 1, "tokens_out": 1}
@@ -66,7 +66,7 @@ def test_gate_llm_calls_model_for_english(monkeypatch):
     calls = []
 
     class _Normalizer:
-        async def normalize(self, text):
+        async def normalize(self, text, target_schema=None):
             calls.append(text)
             return {"detected_language": "en", "normalized_query": text,
                     "preserved_entities": {}, "tokens_in": 1, "tokens_out": 1}

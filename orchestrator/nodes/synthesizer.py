@@ -35,12 +35,13 @@ from typing import Any
 
 from config_loader import cfg
 from llm.provider import get_agent_llm
+from profiles import profile_for
 from schemas.synthesizer_output import safe_synthesizer_output
 
 logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = """\
-You are a data analytics assistant for an ONDC logistics network. Answer \
+You are a data analytics assistant. Answer \
 the user's question using only the data context provided below -- SQL \
 query results, retrieved document passages, or both.
 
@@ -87,9 +88,10 @@ Rules:
 # chart instructions at all. The browser draws the chart from the rows (as the
 # dashboards do) and the full table is shown under the answer, so the tokens
 # spent on chart shapes and on restating rows are pure cost. {max_sentences} is
-# filled from config by _short_system_prompt().
+# filled from config by _short_system_prompt(). Both writer prompts here are the neutral ones; the
+# ONDC sample's are in profiles_ondc.py, chosen by profiles.profile_for(target_schema).
 _SYSTEM_PROMPT_SHORT = """\
-You are a data analytics assistant for an ONDC logistics network. Answer \
+You are a data analytics assistant. Answer \
 the user's question using only the data context provided below -- SQL \
 query results, retrieved document passages, or both.
 
@@ -120,8 +122,8 @@ _SECTION_SEP = " › "  # citation title: "{document title} › {section}" for a
 _PCT_NAME_WORDS = ("rate", "share", "ratio", "pct", "percent", "conversion", "fraction")
 
 
-def _short_system_prompt() -> str:
-    return _SYSTEM_PROMPT_SHORT.replace(
+def _short_system_prompt(target_schema: str | None = None) -> str:
+    return profile_for(target_schema).synthesizer_short_prompt.replace(
         "{max_sentences}", str(cfg.pipeline.synth_short_max_sentences)
     )
 
@@ -629,7 +631,9 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     llm = get_agent_llm("synthesizer")
 
     try:
-        call = {"system": _short_system_prompt() if short_style else _SYSTEM_PROMPT,
+        target_schema = state_dict.get("target_schema")
+        call = {"system": _short_system_prompt(target_schema) if short_style
+                else profile_for(target_schema).synthesizer_prompt,
                 "messages": [{"role": "user", "content": user_message}],
                 "max_tokens": cfg.sql.max_tokens_synthesizer}
         result = await llm.complete(**call)

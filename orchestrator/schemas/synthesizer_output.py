@@ -43,6 +43,7 @@ def _build_schema() -> dict[str, Any]:
                         "kind": {"enum": ["sql", "chunk"]},
                         "ref":  {"type": "string"},
                         "page": {"type": ["integer", "null"]},
+                        "title": {"type": "string", "maxLength": cfg.library.title_max_chars},
                     },
                 },
             },
