@@ -27,7 +27,7 @@ ErrorCategory = Literal[
     "syntax", "unknown_column", "unknown_table", "ambiguous_column",
     "type_mismatch", "join_cardinality", "aggregation_misuse",
     "empty_result", "timeout", "permission_denied", "spatial_invalid",
-    "vector_dim_mismatch", "unclassified",
+    "vector_dim_mismatch", "no_data_source", "unclassified",
 ]
 
 

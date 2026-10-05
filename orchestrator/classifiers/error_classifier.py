@@ -30,7 +30,10 @@ _TAXONOMY_FILENAME = "error_taxonomy.json"
 # ("do not guess at a repair"). This pair is a Strategy-level decision (A3
 # prose), not a per-category rule, so it lives here rather than in the
 # taxonomy file's data.
-TERMINAL_CATEGORIES: frozenset[str] = frozenset({"permission_denied", "unclassified"})
+# no_data_source (routing_docs_fixes.md F-S2) is terminal too: the query read no table because the
+# database does not hold what was asked, and a retry only produces another constant or a guess at an
+# unrelated table. It is the signal for route recovery, not for a SQL repair.
+TERMINAL_CATEGORIES: frozenset[str] = frozenset({"permission_denied", "no_data_source", "unclassified"})
 
 
 def _taxonomy_path() -> Path:
