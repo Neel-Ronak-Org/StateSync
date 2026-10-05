@@ -1,5 +1,5 @@
 {
- "label": "heldout_gptoss",
+ "label": "heldout_gptoss_t0",
  "endpoint": "local_router",
  "model": "zed-hosted/gemini-3.8-flash",
  "system": "You check answers from a text-to-SQL system on a PostgreSQL database. You are given the user's question (with an optional hint), the database's tables and columns, the SQL the system ran, the first rows of its result and the answer it wrote. Decide whether the result correctly answers the question. Reply with JSON only: {\"p_correct\": <number between 0 and 1>, \"reason\": \"<one sentence>\"}.",
@@ -4327,5 +4327,6 @@
    "ms": 3196,
    "p_correct": 0.0
   }
- ]
+ ],
+ "note": "First gpt-oss replication, run at temperature 0 (protocol change 18); renamed from heldout_gptoss."
 }

@@ -192,6 +192,8 @@ def load(scores_path: Path, label: str) -> tuple[list[dict], dict[str, list[floa
     judges: dict[str, list[float]] = {}
     for f in sorted(glob.glob(str(EVAL / f"bird_judge_{label}_*.json"))):
         d = json.loads(Path(f).read_text())
+        if d.get("label") != label:     # the glob also matches longer labels (heldout_gptoss_t0 for heldout_gptoss)
+            continue
         p = {str(v["id"]): v.get("p_correct") for v in d["verdicts"]}
         if all(p.get(str(r["question_id"])) is not None for r in rows):
             judges[d["model"]] = [1 - p[str(r["question_id"])] for r in rows]

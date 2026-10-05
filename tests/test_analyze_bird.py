@@ -127,3 +127,15 @@ def test_the_judge_ensemble_is_the_mean_and_needs_two_judges():
     two = ab.analyse(rows, judges={"a": [0.1, 0.9, 0.2, 0.8], "b": [0.3, 0.5, 0.0, 1.0]})
     ens = two["risk_coverage"]["judge ensemble (mean)"]
     assert ens["aurc"] == round(ab.aurc([0.2, 0.7, 0.1, 0.9], [False, True, False, True]), 4)
+
+
+def test_judge_files_are_matched_by_their_recorded_label(tmp_path, monkeypatch):
+    import json as _json
+    monkeypatch.setattr(ab, "EVAL", tmp_path)
+    scores = tmp_path / "s.json"
+    scores.write_text(_json.dumps({"rows": [{"question_id": 1, "db_id": "d", "correct": True, "signals": {}}]}))
+    for label, p in (("run", 0.9), ("run_t0", 0.1)):     # "bird_judge_run_*" also globs the _t0 file
+        (tmp_path / f"bird_judge_{label}_x_m.json").write_text(_json.dumps(
+            {"label": label, "model": "m", "verdicts": [{"id": "1", "p_correct": p}]}))
+    rows, judges = ab.load(scores, "run")
+    assert abs(judges["m"][0] - 0.1) < 1e-9      # risk 1 - 0.9 from "run"; the _t0 file would give 0.9

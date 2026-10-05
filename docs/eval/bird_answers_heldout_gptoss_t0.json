@@ -1,5 +1,5 @@
 {
- "label": "heldout_gptoss",
+ "label": "heldout_gptoss_t0",
  "sample": "heldout",
  "sample_sha256": "62cc4f010d400ecc6a9acba835de7eafe846c1305246582d083d211f7756acd5",
  "question_source": "corrected",
@@ -90320,5 +90320,6 @@
    "latency_ms": 21586,
    "asked_at": "2026-10-05T03:56:27+00:00"
   }
- }
+ },
+ "note": "First gpt-oss replication, run at temperature 0 (protocol change 18); renamed from heldout_gptoss."
 }
