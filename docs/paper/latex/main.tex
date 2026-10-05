@@ -239,14 +239,11 @@ flipped questions had first-run self-consistency risk of at least 0.4 (mean 0.76
 45 stable ones; exploratory). This is close to expected by construction: a second run is one more
 sample from the same distribution, so answers flip where samples disagree.
 
-\textbf{Exploratory: combining signals and acting on them.} Decided after the confirmatory results
-and labelled as such. A logistic regression over all signals, scored out-of-fold, reaches AUROC 0.785
-(AURC 0.122); without the data checks it reaches 0.801 (0.103), so the checks add nothing jointly
-either. Judge plus self-consistency alone gives 0.790, and the free signals alone 0.578. Acting on a
-warning helps a little: re-running each answer's six candidates and keeping the majority result when
-the judge doubts the answer (10\% of answers) raises accuracy from 77.1\% to 78.6\% (7 fixed, 1
-broken), as much as voting on every answer. A right candidate exists for 28 of the 90 wrong answers
-(a ceiling of 84.2\%), so a better selector could gain up to 7 points.
+\textbf{Exploratory: combining signals.} Decided after the confirmatory results and labelled as such.
+A logistic regression over all signals, scored out-of-fold, reaches AUROC 0.785 (AURC 0.122); without
+the data checks it reaches 0.801 (0.103), so the checks add nothing jointly either. Judge plus
+self-consistency alone gives 0.790, and the free signals alone 0.578. Acting on warnings (re-running or
+replacing a doubtful answer) is studied separately.
 
 \textbf{Exploratory: a second SQL model.} \pending{gpt-oss replication at provider default sampling}
 

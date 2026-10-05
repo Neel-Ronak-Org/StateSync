@@ -293,6 +293,9 @@ a paired stratified bootstrap over answers.
   - empty result 0.50 and retry 0.30;
   - data checks −0.31 to 0.30, with truncation negative.
 
+> **Reported in Paper B, not Paper A** (owner's decision, 2026-10-05): this fallback result belongs to
+> the companion paper's question, so it is not published twice. It is kept here as an internal record.
+
 ### Does a fallback triggered by a warning raise accuracy? (`scripts/fallback_sim_bird.py`, `bird_fallback_sim_heldout_gpt5mini.json`)
 
 Method: no model calls. The fallback re-runs the answer and its 5 self-consistency samples and keeps

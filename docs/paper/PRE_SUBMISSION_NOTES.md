@@ -46,8 +46,8 @@ All three are in the report and the paper:
   judge for gpt-oss). Self-consistency's value depends on the model.
 - **Signal combination.** An out-of-fold logistic model does no better with the data checks than
   without them, for both models.
-- **Judge-triggered fallback.** +1.5 points for GPT-5 mini; nothing for gpt-oss, whose samples agree with
-  each other. Ceilings: 84.2% and 79.9%.
+- **Judge-triggered fallback:** moved to Paper B on the owner's decision (2026-10-05), so it is not
+  published twice. It is not in Paper A.
 
 ## Audit corrections (2026-10-05, owner-requested audit; protocol change 18)
 

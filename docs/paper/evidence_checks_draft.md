@@ -311,16 +311,14 @@ precondition, the set was rerun with the second model:
 
 When the textbook error happens, the structural check is precise, and so is a strong judge.
 
-## 5c Exploratory: combining signals and acting on them
+## 5c Exploratory: combining signals
 
-Decided after the confirmatory results (protocol change 17).
-- **Combination.** An out-of-fold logistic regression over all signals reaches AUROC 0.785; without
-  the data checks, 0.801. Judge plus self-consistency gives 0.790; free signals alone give 0.578. The
-  data checks add nothing jointly either.
-- **Fallback.** Re-running each answer's six candidates and keeping the majority result:
-  - when the judge doubts the answer (10% of answers): 77.1% → 78.6% (7 fixed, 1 broken);
-  - on every answer: the same gain.
-- **Headroom.** A right candidate exists for 28 of the 90 wrong answers (ceiling 84.2%).
+Decided after the confirmatory results (protocol change 17). An out-of-fold logistic regression over all
+signals reaches AUROC 0.785; without the data checks, 0.801. Judge plus self-consistency gives 0.790;
+free signals alone give 0.578. The data checks add nothing jointly either.
+
+Acting on warnings (re-running or replacing a doubtful answer) is studied separately, in the companion
+Paper B.
 
 ## 5d Exploratory: a second SQL model (gpt-oss-120b)
 
