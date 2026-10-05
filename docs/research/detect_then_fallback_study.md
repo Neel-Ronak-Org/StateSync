@@ -174,23 +174,27 @@ The threshold 50 is fixed here, not tuned. Ties between top-scoring clusters are
 accuracy under uniform random tie-breaking (exact), for every selector, votes included.
 
 **Approved examples against a verifier (QS3).** gpt-oss-120b (Cheaper Inference, provider default
-sampling, reasoning effort low) with the standalone candidates' prompt, in two arms, **three samples per
+sampling, reasoning effort low) with the standalone candidates' prompt, in three arms, **three samples per
 question per arm**:
 - **E0:** schema, hint, question;
-- **E1:** the same, plus up to 3 approved examples.
+- **E1:** the same, plus up to 3 approved examples chosen as the product chooses them (similarity at least
+  0.3). This gives 54 of the 393 questions at least one example;
+- **E2:** the same, plus the 3 most similar approved examples with no minimum similarity (change 4).
 
 The examples:
-- are chosen as StateSync chooses them (`mcp/tools/workspace_tools.py`: Jaccard similarity of content
-  words, at least 0.3, at most 3), comparing question texts without their hints;
+- are ranked as StateSync ranks them (`mcp/tools/workspace_tools.py`: Jaccard similarity of content
+  words; E1 keeps those at least 0.3, at most 3; E2 keeps the top 3), comparing question texts without
+  their hints, an exact match left out;
 - come from the same database's questions in the round's three training folds;
 - are shown as the product shows them ("Approved examples of similar questions and their SQL"), each a
   question without its hint and its SQL;
 - use a question only if its PostgreSQL reference SQL is correct under the corrected labels (the
   `reference` rows of `paperb_mutations.json`).
 
-A question's accuracy in an arm is the share of its three samples that are right. Reported: E1 − E0 with a
-paired bootstrap interval, next to the verifiers' gains (P5 − P3 and P6 − P0). All of them come from the
-same labelled training folds.
+A question's accuracy in an arm is the share of its three samples that are right. Reported: E1 − E0 (the
+product as configured) and E2 − E0 (examples whenever the database has any), with paired bootstrap
+intervals, next to the verifiers' gains (P5 − P3 and P6 − P0). All of them come from the same labelled
+training folds.
 
 **Verified label (QS4).**
 - Per round, a threshold on the first answer's score is set on the calibration fold by fixed-sequence
@@ -284,7 +288,7 @@ exploratory fallback simulation moves to this paper, so that the result is not p
 | this protocol committed and pushed | 5 Oct | – | – |
 | gpt-oss rerun (Paper A's session) | 5 Oct | hours | Paper A's budget |
 | build and label the pool | 5 Oct | 1–2 h | $0 |
-| approved-examples arms E0 and E1 (2,358 calls) | 5 Oct | about 1–2 h | about $1–2 |
+| approved-examples arms E0, E1 and E2 (3,537 calls) | 5 Oct | about 1–2 h | about $1–2 |
 | ModernBERT: real and mutation, 5 rounds each | 5 Oct | about 4–5 h on the Mac | $0 |
 | Laya fine-tuned, 5 rounds (overnight); Laya zero-shot | night of 5–6 Oct | about 6–7 h on the Mac | $0 |
 | judge, one call per cluster (about 1,600–2,500) | 6 Oct | 1–2 h | about $1–2 (Zed) |
@@ -347,3 +351,10 @@ the other.
    - **Cost includes generating the candidates.**
    - **Dropped, for time:** Qwen3-0.6B, Laya with cross-entropy only, leave-one-database-out.
    - H1–H3 are kept as pre-specified comparisons.
+4. **2026-10-05, after version 2 was pushed (`d496c32`), before any approved-examples call was made.**
+   An arm **E2** is added: the 3 most similar approved examples with no minimum similarity. Building
+   E1's examples showed that the product's threshold (0.3) gives at least one example to only 54 of the
+   393 questions (43 one, 9 two, 2 three), with about 16 usable reference questions per database in a
+   round's training folds. The other 339 questions would have the same prompt in E0 and E1, so E1 − E0
+   would mostly measure the threshold, not the use of examples. E1 is kept as the product's behaviour. No
+   result informed this; the selection statistics came from the question texts alone.
