@@ -260,6 +260,52 @@ fix, `cd37011`, asks once more on an empty answer; the measured code did not.)
 - about 40% of wrong answers have five agreeing samples for both models;
 - grounding's false-alarm rate stays low (H3), and H4 is untestable again (7 repairs, precondition 10).
 
+### Self-consistency at matched cost (`scripts/sc_cost_bird.py`, `bird_sc_cost_heldout.json`; exploratory)
+
+Self-consistency's risk recomputed from m of the 5 recorded samples (AUROC averaged over all C(5, m)
+choices of sample positions; answers whose SQL failed keep risk 1). Differences are from the Gemini
+judge, with paired stratified bootstrap intervals.
+
+| samples (extra calls) | GPT-5 mini AUROC | minus judge (95% CI) | gpt-oss AUROC | minus judge (95% CI) |
+|---|---|---|---|---|
+| 1 | 0.645 | −0.052 (−0.111, 0.004) | 0.614 | **−0.069 (−0.132, −0.009)** |
+| 2 | 0.687 | −0.010 (−0.074, 0.052) | 0.659 | −0.024 (−0.095, 0.043) |
+| 3 | 0.710 | +0.013 (−0.053, 0.077) | 0.684 | +0.001 (−0.073, 0.074) |
+| 4 | 0.726 | +0.029 (−0.040, 0.093) | 0.701 | +0.018 (−0.060, 0.095) |
+| 5 | 0.739 | +0.042 (−0.028, 0.107) | 0.715 | +0.032 (−0.048, 0.112) |
+
+- **At one call each, the judge is ahead;** self-consistency needs about three samples to draw level.
+- **Tokens:** a self-consistency sample averages about 2,020 in and 380 out; a judge call about 790 in
+  and 63 out. (Different models, so token counts are not prices.)
+- **Format-only errors counted as correct (gpt-oss):** judge 0.731, self-consistency 0.709.
+
+### What gpt-oss's wrong answers are (`bird_worksheet_errors_heldout_gptoss.json`; exploratory)
+
+Blind annotation of all 95 wrong answers by Claude, from the worksheet only (no signals, verdicts or
+self-consistency). One annotator: for 9 questions that GPT-5 mini also got wrong, its earlier labels
+were consulted to keep the codebook consistent. A blank, reshuffled copy for an optional second
+annotator is `bird_worksheet_errors_heldout_gptoss_second.json`.
+
+| error type | GPT-5 mini (of 90) | gpt-oss (of 95) | gpt-oss: any data check | empty result | retry | Gemini, same k |
+|---|---|---|---|---|---|---|
+| filter value | 22 | 21 | 2 | 3 | 5 | 4 |
+| column meaning | 15 | 21 | 4 | 5 | 7 | 4 |
+| output format only | 20 | 19 | 0 | 0 | 1 | 0 |
+| hint contradicts data | 8 | 10 | 2 | 0 | 2 | 1 |
+| ordering/top-k | 6 | 9 | 0 | 0 | 0 | 1 |
+| other | 6 | 7 | 0 | 0 | 2 | 0 |
+| aggregation | 8 | 5 | 1 | 0 | 1 | 1 |
+| join/fan-out | 4 | 2 | 0 | 0 | 0 | 0 |
+| residual gold error | 1 | 1 | 0 | 0 | 0 | 0 |
+
+- **The same mix:** semantic errors (filter value, column meaning, aggregation) are 45 of 90 and 47 of
+  95; benchmark or scorer artefacts (format only, hint, gold) 29 of 90 and 30 of 95.
+- **gpt-oss-specific:** 4 errors come from PostgreSQL sorting NULLs first in descending order (GPT-5
+  mini: 2); 4 compute age as exact age rather than the year difference the hint defines; one is float4
+  rounding on the PostgreSQL copy.
+- **Double counting:** 2 (a COUNT(*) over a one-to-many join; lab rows counted instead of patients).
+  The fan-out check caught neither.
+
 ### Superseded: gpt-oss-120b at temperature 0
 
 > **Superseded (protocol change 18).** This run sent `temperature = 0.0` to gpt-oss, while GPT-5 mini

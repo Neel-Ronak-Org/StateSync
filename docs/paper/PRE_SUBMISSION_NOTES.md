@@ -31,12 +31,14 @@ headline.
    18). Everything replicates: the data checks catch no more than the judge, the retry leads the cheap
    signals, and self-consistency and the judge rank about equally (0.715 vs 0.683). The earlier
    "gpt-oss repeats its errors" was the temperature-0 setting and is withdrawn.
-4. **No human error annotation.** Both annotators are models (κ = 0.74). A 20-item human pass would
-   blunt this (see below).
+4. **No human error annotation.** Both annotators are models (κ = 0.74). The owner's partner is doing
+   a blind pass on the same 18 sampled items (`docs/eval/bird_partner_annotation.md`); pending. gpt-oss's
+   95 errors now have one blind annotation (Claude); a second is optional (blank copy prepared).
 5. **Novelty is modest.** SQLens (Gong et al., 2025) combines database and LLM signals. Our angle is
    evaluation (matched rate, corrected labels, pre-registration, error annotation), not a new method.
-6. **Unequal cost.** Self-consistency costs 5 extra calls and the checks cost none. The paper says so;
-   a cost-matched comparison would be stronger.
+6. **Unequal cost.** Answered (2026-10-05, exploratory, `scripts/sc_cost_bird.py`): at one call each
+   the judge is ahead of self-consistency (GPT-5 mini −0.05, CI −0.11 to 0.004; gpt-oss −0.07, CI −0.13
+   to −0.01); self-consistency needs three samples to draw level.
 7. **Hosting.** Proxies and a reseller for some runs. Served model names are logged, and agreement
    checks are reported, but a reviewer may still question reproducibility.
 

@@ -237,6 +237,10 @@ Self-consistency vs the judge is not significant:
 - **The gap:** +0.04 AUROC (95% CI −0.03 to 0.11).
 - **Format-only errors:** counted as correct, 0.761 vs 0.757. Resampled queries vary in format, so
   self-consistency flags scorer false negatives.
+- **At matched cost the judge is ahead** (exploratory, `scripts/sc_cost_bird.py`): from one sample
+  instead of five, self-consistency reaches 0.645 (−0.05 against the judge, CI −0.11 to 0.004); it
+  needs three samples to draw level. A sample also uses about three times the judge's tokens (about
+  2,400 against 850).
 - **Ties:** the judge gives p = 1 to 328 of 393 answers.
 - **Failed and empty queries are wrong by construction:** no corrected gold result is empty.
 
@@ -339,6 +343,12 @@ self-consistency samples were near-copies; it is kept as `heldout_gptoss_t0` and
 - **Empty answer texts:** the host returned none on 39 answers (35 with correct SQL). The judge, shown
   the text, rated them lower; without them its AUROC is 0.713 and self-consistency's 0.725.
 - **H3 and H4:** 3 grounding false alarms on 207 correct texts; 7 repairs, so H4 stays untestable.
+- **Matched cost:** one self-consistency sample gives 0.614, significantly below the judge (−0.07, CI
+  −0.13 to −0.01). With format-only errors counted as correct, the judge leads (0.731 vs 0.709).
+- **Error types** (blind annotation of all 95, one annotator): the same mix as GPT-5 mini. Half are
+  semantic (filter value 21, column meaning 21, aggregation 5); a third are benchmark or scorer
+  artefacts (format only 19, misleading hint 10, gold 1); 2 double counts; 4 are PostgreSQL sorting
+  NULLs first.
 
 ## 6 Discussion
 

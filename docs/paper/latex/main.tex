@@ -184,7 +184,10 @@ and empty queries are always wrong here, but only by construction (no corrected 
 in deployment an empty result can be right). Self-consistency (AUROC 0.739) and the Gemini judge
 (0.697) rank answers about equally: the difference is not significant (95\% CI $-0.03$ to $0.11$) and
 disappears when the 20 format-only errors count as correct (0.761 vs.\ 0.757), because resampled
-queries vary in format and so flag answers the scorer wrongly marks wrong. The judge ensemble reaches
+queries vary in format and so flag answers the scorer wrongly marks wrong. At matched cost the judge
+is ahead (exploratory): from one sample instead of five, self-consistency reaches 0.645 ($-0.05$ against
+the judge, CI $-0.11$ to $0.004$), and it needs three to draw level; a sample also uses about three times
+the judge's tokens. The judge ensemble reaches
 0.701 and the gpt-oss judge 0.606 (Figure~\ref{fig:rc}). The judge is tie-heavy ($p=1$ for 328 of 393
 answers); ties are broken at random in expectation.
 
@@ -257,7 +260,10 @@ $+3.4$ over the judge, CI $-1.5$ to $8.3$). Self-consistency and the judge again
 agreeing samples (40\%, as for GPT-5 mini). The host returned an empty answer text on 39 answers (35
 with correct SQL), which the judge, shown the text, rated lower; without them its AUROC is 0.713 and
 self-consistency's 0.725. Figure grounding raised 3 false alarms on 207 correct texts; 7 repairs
-triggered, so H4 stays untestable.
+triggered, so H4 stays untestable. One self-consistency sample gives 0.614, significantly below the
+judge ($-0.07$, CI $-0.13$ to $-0.01$). A blind annotation of its 95 errors (one annotator) gives the
+same mix as for GPT-5 mini: half semantic (filter value 21, column meaning 21, aggregation 5), a third
+benchmark or scorer artefacts (format only 19, misleading hint 10, gold 1), 2 double counts.
 
 \section{Discussion}
 
