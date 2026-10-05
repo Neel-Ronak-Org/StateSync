@@ -105,6 +105,7 @@ _LAST_WRITE_WINS_FIELDS: frozenset[str] = frozenset({
     "compiled_template",
     "doc_abstained",
     "self_consistency",
+    "recovered_from",
 })
 
 # Fields whose reducer is "append" (list concatenation)
@@ -220,6 +221,9 @@ class StateSyncState(BaseModel):
     # The study's self-consistency baseline (self_consistency.py; [pipeline] self_consistency_k, 0 when shipped).
     self_consistency: dict | None = None
     doc_abstained: bool = False      # the docs route found nothing relevant; the synthesizer answers "not found" with no model call (RAG v2 Phase E)
+    # Route recovery (pipeline.route_recovery, routing_docs_fixes.md F-RR): "sql" when the SQL route ended in
+    # no_data_source and the documents route ran once in its place; None otherwise.
+    recovered_from: str | None = None
 
     # --- output (Part E2) ---
     answer_text: str | None = None

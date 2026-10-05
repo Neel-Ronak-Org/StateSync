@@ -57,13 +57,13 @@ def _taxonomy_path() -> Path:
 _OVERRIDES_FILENAME = "error_taxonomy_overrides.json"
 
 
-@lru_cache(maxsize=1)
-def _load_taxonomy() -> dict[str, Any]:
+@lru_cache(maxsize=2)  # noqa: literals - the two cache keys: with and without the overrides
+def _load_taxonomy(use_overrides: bool = True) -> dict[str, Any]:
     path = _taxonomy_path()
     with open(path) as f:
         taxonomy = json.load(f)
     overrides = path.with_name(_OVERRIDES_FILENAME)
-    if overrides.is_file():
+    if use_overrides and overrides.is_file():
         with open(overrides) as f:
             taxonomy = {**taxonomy, "rules": json.load(f)["rules"] + taxonomy["rules"]}
     return taxonomy
@@ -74,6 +74,7 @@ def classify_error(
     sqlstate: str | None,
     message: str | None,
     empty_result: bool = False,
+    use_overrides: bool = True,
 ) -> tuple[str, str]:
     """
     Classify an engine failure, or an empty-but-ok: true result, per A3.
@@ -85,12 +86,15 @@ def classify_error(
                       empty/None) when classifying an empty_result.
         empty_result: True when the caller is classifying an ok: true
                       response with zero rows, not an engine failure.
+        use_overrides: False skips error_taxonomy_overrides.json, giving the
+                      label the base taxonomy alone gave before F-S2
+                      ([pipeline] sql_no_data = "off").
 
     Returns:
         (category, remediation_hint) -- hint is the taxonomy's verbatim
         text, never LLM-generated (A3, C2-V1 condition 2).
     """
-    taxonomy = _load_taxonomy()
+    taxonomy = _load_taxonomy(use_overrides)
     message = message or ""
 
     for rule in taxonomy["rules"]:
@@ -107,3 +111,13 @@ def classify_error(
 
     fallback = taxonomy["fallback"]
     return fallback["category"], fallback["hint"]
+
+
+def category_hint(category: str) -> str:
+    """The taxonomy's hint for a category: the first rule (overrides first) that names it, else the
+    fallback's. Read from data, so a caller never copies a hint's text (A3)."""
+    taxonomy = _load_taxonomy(True)
+    for rule in taxonomy["rules"]:
+        if rule["category"] == category:
+            return rule["hint"]
+    return taxonomy["fallback"]["hint"]

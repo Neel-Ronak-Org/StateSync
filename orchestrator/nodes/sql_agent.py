@@ -79,6 +79,7 @@ import answer_checks
 import httpx
 import repair_loop
 import self_consistency
+import sql_outcomes
 import templates as sql_templates
 from column_profiles import format_profiles, get_profiles
 from config_loader import cfg
@@ -170,7 +171,11 @@ def sql_system_prompt(template: str, max_rows: int, schema: Any, flags_snapshot:
     domain phrase in place of the ONDC one the two templates are written with."""
     if flags_snapshot.get("pipeline.sql_row_cap", "prompt") == "executor":
         template = template.replace(_PROMPT_LIMIT_RULE, _EXECUTOR_LIMIT_RULE)
-    return template.format(max_rows=max_rows).replace(_ONDC_SQL_DOMAIN, profile_for(schema).sql_domain)
+    prompt = template.format(max_rows=max_rows).replace(_ONDC_SQL_DOMAIN, profile_for(schema).sql_domain)
+    if sql_outcomes.sql_no_data_on(flags_snapshot):
+        # [pipeline] sql_no_data (F-S1): the writer and the corrector may say the database cannot answer.
+        prompt += "\n" + sql_outcomes.NOT_ANSWERABLE_RULE
+    return prompt
 
 
 _SUMMARIZER_SYSTEM_PROMPT = """\
@@ -862,6 +867,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         verified_example = False
         used_debug_sql = False
         sc_prompt: tuple[str, str] | None = None   # the model-written SQL's prompt, for self-consistency
+        not_answerable: str | None = None   # [pipeline] sql_no_data: the writer's NOT_ANSWERABLE reply, never run
         if attempt == 0 and exact_sql:
             candidate_sql = exact_sql
             verified_example = True
@@ -909,6 +915,8 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             tokens_out_total += sql_result.tokens_out
             llm_calls_total += 1
             candidate_sql = sql_result.text
+            if sql_outcomes.sql_no_data_on(flags_snapshot):
+                not_answerable = sql_outcomes.parse_not_answerable(candidate_sql)
 
         candidate_sql = _strip_sql_fences(candidate_sql)
 
@@ -917,17 +925,22 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             query_id, attempt, memory_hit, candidate_sql,
         )
 
-        candidate_sql, script_repairs = _repair_script_column_mismatch(
-            candidate_sql, table_descriptions,
-        )
+        if not_answerable is None:
+            candidate_sql, script_repairs = _repair_script_column_mismatch(
+                candidate_sql, table_descriptions,
+            )
+        else:
+            script_repairs = []
         for repair_note in script_repairs:
             logger.info(
                 "SQL Agent script repair for query_id=%s: %s",
                 query_id, repair_note,
             )
 
-        # Step 5: execute.
-        if compiled_exec is not None and candidate_sql == compiled_sql:
+        # Step 5: execute. A NOT_ANSWERABLE reply is not SQL and never reaches the database.
+        if not_answerable is not None:
+            exec_result = {}
+        elif compiled_exec is not None and candidate_sql == compiled_sql:
             exec_result = compiled_exec  # already executed while deciding to use the template
         else:
             exec_result = await data_run_select(session, candidate_sql, max_rows=max_rows)
@@ -1008,7 +1021,16 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             else:
                 caveats.append("These figures may count some rows more than once (join fan-out).")
 
-        if fanout_retry:
+        if not_answerable is not None:
+            # [pipeline] sql_no_data (F-S1): a typed outcome, terminal (no_data_source), so the loop stops.
+            # There is no statement to report, so candidate_sql is cleared.
+            logger.info("SQL Agent: query_id=%s attempt=%d replied NOT_ANSWERABLE.", query_id, attempt)
+            update["candidate_sql"] = None
+            update["sql_rows"] = []
+            update["sql_columns"] = []
+            update["errors"] = [sql_outcomes.not_answerable_error(attempt, not_answerable)]
+
+        elif fanout_retry:
             # Failure-shaped, like any other failed attempt: no executed_sql, so the graph
             # retries and the correction prompt shows this message and hint.
             logger.warning(
@@ -1099,7 +1121,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             error_obj = exec_result.get("error") or {}
             sqlstate: str | None = error_obj.get("sqlstate")
             message: str = error_obj.get("message", "Unknown error")
-            category, hint = classify_error(sqlstate=sqlstate, message=message, empty_result=False)
+            category, hint = sql_outcomes.classify_engine_failure(sqlstate, message, flags_snapshot)
 
             logger.warning(
                 "SQL Agent failure for query_id=%s attempt=%d: category=%s sqlstate=%s message=%s",

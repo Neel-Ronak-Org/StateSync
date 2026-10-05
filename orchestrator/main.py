@@ -529,6 +529,7 @@ async def answer_question(
         "repair": repair_record,
         "self_consistency": final_state.self_consistency,
         "route":       final_state.route,
+        "recovered_from": final_state.recovered_from,   # "sql" when route_recovery ran the documents route instead
         "executed_sql": final_state.executed_sql,
         # executed_sql is null when a statement was rejected before execution,
         # so candidate_sql is what a caller inspects to see what the agent actually proposed.
