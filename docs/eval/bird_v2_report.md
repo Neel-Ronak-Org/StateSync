@@ -37,8 +37,10 @@ as written before any repair:
 - Answer label for answers with small gold results: the automatic rule, validated against a blind
   manual reading of 60 random answers.
 - Error types: blind annotation of every wrong answer (Claude), plus a second blind annotation of all 90
-  by GPT-6 (Codex), run by the owner. This deviates from the planned owner annotation of a random 20%;
-  the owner's 18-item sheet is still blank.
+  by GPT-6 (Codex), run by the owner. This deviates from the planned owner annotation of a random 20%.
+  The owner later reviewed the labels of the 18 sampled answers, not blind (they had seen GPT-6's
+  labels), and agreed with them. That is a review, not an independent annotation, so no human kappa is
+  reported.
 
 ## Operational record (what happened during the runs)
 
@@ -195,6 +197,19 @@ The check's only flag fell on an answer whose fault was output format.
 It caught one real figure problem.
 
 ## Exploratory extensions (protocol change 17; decided after all confirmatory results)
+
+### Second-model replication at provider default sampling (protocol change 18): first results, judge pending
+
+`bird_answers_heldout_gptoss.json`, `bird_scores_heldout_gptoss_v2_corrected.json`:
+- **Accuracy:** gpt-oss-120b at the provider's default sampling scores 75.8% (relaxed; strict 72.5%).
+  Samples are 26% identical to the answer SQL.
+- **Self-consistency replicates:** AUROC 0.715, against 0.739 for GPT-5 mini and 0.605 in the
+  temperature-0 run.
+  - 38 of its 95 wrong answers have five agreeing samples (40%), the same rate as GPT-5 mini (36 of 90).
+  - The temperature-0 run's "repeats its errors" (63 of 87) was the sampling setting.
+- **Data checks** flag 22 answers (precision 0.41, recall 9%); the agent retry flags 26 (precision 0.69).
+- **Pending:** the Gemini judge on these answers, then the matched-k, combination and fallback
+  analyses. Paused 2026-10-05 for the owner's travel; resume steps are in project memory.
 
 ### Second-model replication: gpt-oss-120b on the 393 held-out questions
 
