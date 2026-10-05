@@ -507,6 +507,38 @@ def build_citations(
     return citations
 
 
+# [pipeline] plain_failures (routing_docs_fixes.md F-S3, F-S4): what the writer is told, in plain words,
+# when the query did not produce an answer. Keyed by the classifier's category, which stays in state.errors
+# and the trace; a category not listed gets _PLAIN_FAILURE_OTHER.
+_PLAIN_FAILURES = {
+    "no_data_source": "the database in this workspace does not hold the data this question asks about.",
+    "permission_denied": "the request was refused, because this system only runs single, read-only queries.",
+    "timeout": "the query took too long and was stopped.",
+    "empty_result": "no records matched.",
+}
+_PLAIN_FAILURE_OTHER = "the query could not be completed."
+
+_PLAIN_FAILURE_CONTEXT = (
+    "The data query did not produce an answer: {plain}\n"
+    "Explain this to the user plainly in one or two sentences. Do not mention internal labels, error\n"
+    "categories or codes. Do not invent a number or fact that was never computed."
+)
+_PLAIN_ZERO_ROWS_CONTEXT = (
+    "The SQL query returned zero rows: no records matched it. Say that no matching records were found. "
+    "Do not turn this into a figure about something the query did not measure."
+)
+# [pipeline] route_recovery: the documents route ran in place of a SQL route whose data the database lacks.
+_RECOVERED_FROM_SQL_CONTEXT = (
+    "The database did not hold this, so the answer comes from the document passages below. "
+    "Say so in one short clause."
+)
+
+
+def plain_failure_context(category: str) -> str:
+    """The failed-query block of the writer's context when plain_failures is on."""
+    return _PLAIN_FAILURE_CONTEXT.format(plain=_PLAIN_FAILURES.get(category, _PLAIN_FAILURE_OTHER))
+
+
 def _format_doc_context(retrievals: list[dict]) -> str:
     parts = [f"Retrieved {len(retrievals)} document passage(s):"]
     for r in retrievals[: cfg.retrieval.semantic_top_k]:
@@ -533,6 +565,7 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     short_style = (
         state_dict.get("flags_snapshot", {}).get("pipeline.synth_style", "full") == "short"
     )
+    plain_failures = state_dict.get("flags_snapshot", {}).get("pipeline.plain_failures", "off") == "on"
 
     if state_dict.get("doc_abstained"):
         # RAG v2 Phase E: the docs route found nothing relevant (pipeline.doc_abstain). The answer
@@ -574,7 +607,9 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     # other's shape.
     context_parts: list[str] = []
 
-    if sql_error:
+    if sql_error and plain_failures:
+        context_parts.append(plain_failure_context(sql_error.get("category", "unclassified")))
+    elif sql_error:
         # Category is C2's classifier output (A3), never LLM-generated.
         category = sql_error.get("category", "unclassified")
         context_parts.append(
@@ -611,9 +646,12 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 f"Results (first {len(rows_preview)} rows):\n{rows_text}"
             )
         else:
-            context_parts.append("The SQL query returned zero rows. The answer may be 'none' or 'zero'.")
+            context_parts.append(_PLAIN_ZERO_ROWS_CONTEXT if plain_failures
+                                 else "The SQL query returned zero rows. The answer may be 'none' or 'zero'.")
 
     if retrievals:
+        if state_dict.get("recovered_from") == "sql":
+            context_parts.append(_RECOVERED_FROM_SQL_CONTEXT)
         context_parts.append(_format_doc_context(retrievals))
 
     caveats: list[str] = state_dict.get("caveats") or []
@@ -706,7 +744,8 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         # Validate against A7
         safe_out = safe_synthesizer_output(parsed)
         answer_text = _strip_executable_content(safe_out["answer_text"], query_id)
-        answer_text = _ensure_category_mentioned(answer_text, sql_error)
+        # plain_failures: the category stays in state.errors and the trace, not in the user's answer.
+        answer_text = _ensure_category_mentioned(answer_text, None if plain_failures else sql_error)
 
         # safe_out["chart"] is the A7-VALIDATED chart: safe_synthesizer_output
         # nullifies it (never repairs it) if it failed the schema or the BD7
@@ -742,7 +781,7 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             "citations": citations,
         }
         safe_out = safe_synthesizer_output(fallback)
-        answer_text = _ensure_category_mentioned(safe_out["answer_text"], sql_error)
+        answer_text = _ensure_category_mentioned(safe_out["answer_text"], None if plain_failures else sql_error)
         return {
             "answer_text": answer_text,
             "vega_spec": None,

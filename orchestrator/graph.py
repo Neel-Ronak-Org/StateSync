@@ -32,6 +32,8 @@ Graph structure (Phase B + C2 + D + E1 + cycle 007 Workstream A):
                                         -> terminal error, or
                                            retry_max exhausted: error_exit_node -> synthesizer_node
       |
+  sql route, terminal no_data_source, [pipeline] route_recovery on, workspace has documents:
+                                        error_exit_node -> recover_docs (the docs node, once) -> synthesizer_node
   docs (unstructured_knowledge_node) -------------------------> synthesizer_node
   hybrid: hybrid_plan_node -> sql_agent_node [C2 loop] -> hybrid_docs_node -> synthesizer_node
       |
@@ -231,6 +233,15 @@ async def _hybrid_specialist(state: StateSyncState) -> dict[str, Any]:
     return _merge_with_scratch(state, update, "hybrid")
 
 
+async def _recover_docs(state: StateSyncState) -> dict[str, Any]:
+    """Route recovery: the documents route, run once, in place of a SQL route whose data the database lacks.
+    unstructured_knowledge_node is unchanged; it is shown the route it is about to run."""
+    node_fn = resolve("docs")
+    update = await node_fn({**state.model_dump(), "route": "docs"})
+    update["recovered_from"] = "sql"
+    return _merge_with_scratch(state, update, "recover_docs")
+
+
 async def _hybrid_docs(state: StateSyncState) -> dict[str, Any]:
     update = await hybrid_docs_node(state.model_dump())
     return _merge_with_scratch(state, update, "hybrid_docs")
@@ -247,9 +258,39 @@ def _after_sql(state: StateSyncState) -> str:
     return "hybrid_docs" if state.route == "hybrid" else "success"
 
 
+def _has_documents(state: StateSyncState) -> bool:
+    """The workspace has documents the docs route can search: uploaded ones, or a source whose sample
+    corpus has documents."""
+    return bool(getattr(state, "library_titles", None)) or (
+        getattr(state, "target_schema", None) in cfg.pipeline.document_schemas
+    )
+
+
+def _recovery_target(state: StateSyncState) -> str:
+    """Where the run goes after the SQL loop's terminal exit (route recovery, routing_docs_fixes.md F-RR).
+    A hybrid question still gets its documents half (as before 2026-10-02). With [pipeline] route_recovery
+    on, a SQL route whose last error is no_data_source, in a workspace with documents, runs the documents
+    route once ("recover_docs"); a question that already recovered never does again. Anything else goes
+    straight to the writer, as it always did."""
+    if state.route == "hybrid":
+        return "hybrid_docs"
+    flags = getattr(state, "flags_snapshot", None) or {}
+    if flags.get("pipeline.route_recovery", "off") != "on":
+        return "synthesizer"
+    errors = getattr(state, "errors", None) or []
+    if (
+        state.route == "sql"
+        and getattr(state, "recovered_from", None) is None
+        and errors and errors[-1].category == "no_data_source"
+        and _has_documents(state)
+    ):
+        return "recover_docs"
+    return "synthesizer"
+
+
 def _after_error_exit(state: StateSyncState) -> str:
-    """A hybrid question whose SQL half failed still gets its documents half (as before 2026-10-02)."""
-    return "hybrid_docs" if state.route == "hybrid" else "synthesizer"
+    """After the loop's terminal exit: the hybrid route's documents half, route recovery, or the writer."""
+    return _recovery_target(state)
 
 
 async def _synthesizer(state: StateSyncState) -> dict[str, Any]:
@@ -279,6 +320,7 @@ def build_graph() -> StateGraph:
     builder.add_node("docs", _docs_specialist)
     builder.add_node("hybrid", _hybrid_specialist)
     builder.add_node("hybrid_docs", _hybrid_docs)
+    builder.add_node("recover_docs", _recover_docs)
     builder.add_node("error_exit", _error_exit)
     builder.add_node("synthesizer", _synthesizer)
 
@@ -323,8 +365,10 @@ def build_graph() -> StateGraph:
     builder.add_conditional_edges(
         "error_exit",
         _after_error_exit,
-        {"synthesizer": "synthesizer", "hybrid_docs": "hybrid_docs"},
+        {"synthesizer": "synthesizer", "hybrid_docs": "hybrid_docs", "recover_docs": "recover_docs"},
     )
+    # route_recovery: the documents route's one run in place of a SQL route whose data was not there.
+    builder.add_edge("recover_docs", "synthesizer")
 
     # docs never fails → synthesizer. hybrid: plan → the SQL agent (with its correction loop) →
     # hybrid_docs → synthesizer (2026-10-02; it used to run its own single-shot SQL).

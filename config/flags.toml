@@ -298,6 +298,9 @@ sql_draft_mode                  = "llm"      # "llm": draft + live sampling | "p
 synth_style                     = "full"     # "full" | "short": <= 3 sentences, no chart proposal, numbers formatted by rule
 answer_checks                   = "off"      # "off" | "on": deterministic checks after the SQL runs (join fan-out, date coverage, truncation, empty aggregates)
 templates                       = "off"      # "off" | "on": answer from a template of an approved query when only the values differ (the "compiled" tier)
+sql_no_data                     = "off"      # "off" | "on": the SQL writer and corrector may reply NOT_ANSWERABLE instead of SQL (terminal no_data_source); with "off", Layer 1's "reads no table" stays permission_denied (docs/specs/partd_tasks/T2_sql_outcomes_recovery.md, F-S1)
+plain_failures                  = "off"      # "off" | "on": the writer explains a failed query or zero rows in plain words, with no internal category (F-S3, F-S4)
+route_recovery                  = "off"      # "off" | "on": a SQL route that ends in no_data_source, in a workspace with documents, runs the documents route once (recovered_from = "sql"; F-RR)
 number_grounding                = "on"       # "off" | "on": trace every figure in the prose to a result cell, total, the question or a cited passage; unmatched figures become a caveat (never changes SQL or rows)
 repair_loop                     = "off"      # "off" | "evidence" | "plain": one repair attempt when figure grounding (or a join fan-out) flags an answer; "plain" withholds the evidence (study control). repair_loop.py, docs/research/evidence_tiers_study.md RQ4
 sql_row_cap                     = "prompt"   # "prompt": the SQL prompt asks for LIMIT max_rows | "executor": LIMIT only when the question asks for a number of results; data.run_select caps rows either way. Study fix F1 (docs/research/evidence_tiers_study.md v2)
