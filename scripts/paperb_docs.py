@@ -12,7 +12,11 @@ pipeline, with the re-ranker off and on, graded against FinanceBench's answers.
                           workspace is deleted at the end. An answer whose trace shows a model call that
                           failed on the network (TRANSPORT_ERRORS: the product never saw the question
                           through) is moved to `transport_failures` and asked again on the next run
-                          (protocol change 7).
+                          (protocol change 7). Each answer records when it was asked; for bge, the
+                          re-ranker's and the MCP's logs over that window give its re-ranked searches,
+                          their milliseconds and any re-ranker failure (the product then silently keeps
+                          the dense order), and an answer with a failure is moved to `rerank_failures`
+                          and asked again (change 8).
   grade                   Gemini 3.8 Flash (Zed) grades all 300 answers in one shuffled order (seed
                           20261005), blind to the configuration, with the fixed GRADER prompt below.
   owner-sheet             30 answers at random from the 300 for the owner's blind check (no verdict, no
@@ -52,6 +56,10 @@ WORKSPACE_DATASET = "olist"     # as scripts/eval_retrieval.py and eval_financeb
 PAGE_OFFSET = 1                 # FinanceBench pages count from 0, StateSync's from 1
 QUERY_TIMEOUT_S = 300           # noqa: literals - two re-ranked searches plus the answer writer
 TRANSPORT_ERRORS = frozenset({"APIConnectionError", "APITimeoutError"})   # network, not the product (change 7)
+MCP_CONTAINER = "statesync-mcp-1"
+RERANKER_CONTAINER = "statesync-reranker-1"
+_RERANKED = re.compile(r"reranked (\d+) passages with (\w+) in (\d+) ms")   # reranker/server.py
+_RERANK_FAILED = re.compile(r"rerank with \w+ failed")                     # mcp/tools/vector_tools.py _rerank
 SEED = 20261005
 RESAMPLES = 2000                # noqa: literals - pre-registered
 OWNER_SAMPLE = 30               # noqa: literals - pre-registered human check
@@ -136,6 +144,22 @@ def transport_failure(rec: dict) -> bool:
     return any(c.get("error") in TRANSPORT_ERRORS for c in rec.get("calls") or [])
 
 
+def rerank_failure(rec: dict) -> bool:
+    """A re-ranked search failed while this answer was asked, so it searched in the dense order (change 8)."""
+    return bool((rec.get("rerank") or {}).get("failed"))
+
+
+def rerank_log(since: float, until: float) -> dict:
+    """The re-ranked searches between two Unix times, from the re-ranker's and the MCP's logs: the answer
+    trace does not carry them, and Part D asks one question at a time, so the window is one answer's."""
+    def lines(container: str) -> list[str]:
+        res = subprocess.run(["docker", "logs", container, "--since", f"{since:.3f}", "--until", f"{until:.3f}"],
+                             capture_output=True, text=True, timeout=60)   # noqa: literals - docker logs timeout
+        return (res.stdout + res.stderr).splitlines()
+    ms = [int(m.group(3)) for line in lines(RERANKER_CONTAINER) if (m := _RERANKED.search(line))]
+    return {"searches": len(ms), "ms": ms, "failed": sum(1 for line in lines(MCP_CONTAINER) if _RERANK_FAILED.search(line))}
+
+
 def cmd_ask(label: str, spacing_s: float, limit: int | None, container: str = CONTAINER, base: str = API_BASE) -> int:
     from api_auth import api_token
     config = check_config(label, container)
@@ -143,11 +167,12 @@ def cmd_ask(label: str, spacing_s: float, limit: int | None, container: str = CO
     out = answers_path(label)
     record = json.loads(out.read_text()) if out.exists() else {"label": label, "config": config, "answers": {}}
     record.setdefault("configs_seen", []).append(config)
-    moved = [fid for fid, rec in record["answers"].items() if transport_failure(rec)]
-    for fid in moved:                     # asked again below (protocol change 7); the failed answer is kept
-        record.setdefault("transport_failures", {}).setdefault(fid, []).append(record["answers"].pop(fid))
+    moved = [fid for fid, rec in record["answers"].items() if transport_failure(rec) or rerank_failure(rec)]
+    for fid in moved:                     # asked again below (protocol changes 7 and 8); the failed answer is kept
+        why = "transport_failures" if transport_failure(record["answers"][fid]) else "rerank_failures"
+        record.setdefault(why, {}).setdefault(fid, []).append(record["answers"].pop(fid))
     if moved:
-        print(f"asking again after a network failure: {', '.join(moved)}", flush=True)
+        print(f"asking again after a network or re-ranker failure: {', '.join(moved)}", flush=True)
     token = api_token()
     status, body = api(base, "POST", "/workspaces", token, {"name": f"paperb-docs-{label}-{int(time.time())}",
                                                            "target_schema": WORKSPACE_DATASET})
@@ -164,6 +189,7 @@ def cmd_ask(label: str, spacing_s: float, limit: int | None, container: str = CO
             if fid in record["answers"] or (limit is not None and asked >= limit):
                 continue
             t0 = time.monotonic()
+            asked_at = time.time()
             st, body = api(base, "POST", "/query", token, {"query": q["question"], "session_id": str(uuid.uuid4()),
                                                           "workspace_id": workspace}, timeout=QUERY_TIMEOUT_S)
             trace = body.get("state_trace") or {}
@@ -172,7 +198,10 @@ def cmd_ask(label: str, spacing_s: float, limit: int | None, container: str = CO
                    "retrievals": [{"provenance": r.get("provenance"), "chars": len(r.get("content") or "")}
                                   for r in trace.get("retrievals") or []],
                    "calls": trace.get("calls"), "metrics": trace.get("metrics"), "caveats": trace.get("caveats"),
-                   "latency_ms": body.get("latency_ms") or round((time.monotonic() - t0) * 1000)}
+                   "latency_ms": body.get("latency_ms") or round((time.monotonic() - t0) * 1000),
+                   "asked_at": round(asked_at, 3), "finished_at": round(time.time(), 3)}
+            if label == "bge":
+                rec["rerank"] = rerank_log(rec["asked_at"], rec["finished_at"])
             asked += 1
             if st == 200:   # noqa: literals - HTTP OK
                 record["answers"][fid] = rec
@@ -180,7 +209,8 @@ def cmd_ask(label: str, spacing_s: float, limit: int | None, container: str = CO
                 print(f"[{fid}] HTTP {st}: {body.get('detail')}", flush=True)
             out.write_text(json.dumps(record, indent=1) + "\n")
             print(f"[{len(record['answers'])}/150] {fid} HTTP {st} route={rec['route']} "
-                  f"{rec['latency_ms'] / 1000:.1f} s", flush=True)
+                  f"{rec['latency_ms'] / 1000:.1f} s" + (f" rerank={rec['rerank']}" if "rerank" in rec else ""),
+                  flush=True)
             time.sleep(spacing_s)
     finally:
         st, _ = api(base, "DELETE", f"/workspaces/{workspace}", token)

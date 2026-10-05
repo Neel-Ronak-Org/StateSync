@@ -393,3 +393,14 @@ the other.
    count as normal answers. The same drop failed 106 of the judge's 812 calls and 292 of QS3's 3,537
    generation calls. Those calls failed to connect, so they returned no output, and they were made again;
    the generation calls kept their prompts and sampling.
+8. **2026-10-05, before D-bge was started (operational).** When the re-ranker times out or fails, the
+   product silently keeps the dense order (`mcp/tools/vector_tools.py` `_rerank`). Under load, bge on the
+   Docker CPU has taken 50–57 s per search, against a 120 s limit. The answer trace does not record
+   whether re-ranking ran. So each answer now records when it was asked and when it finished. For D-bge,
+   the re-ranker's log ("reranked 30 passages with bge in N ms") and the MCP's log (re-rank failures)
+   over that window give its re-ranked searches, their milliseconds and any failure. Part D asks one
+   question at a time, so each window covers one answer. An answer with a re-ranker failure did not run
+   the D-bge configuration, so it is asked again, as in change 7 (`rerank_failures` keeps it). This is
+   decided from the logs alone, before any grading. These records also supply §6's "bge milliseconds per
+   search". Both D runs share the Mac with the GPU jobs (ModernBERT, then Laya), so their latencies are
+   indicative only.
