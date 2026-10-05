@@ -86,8 +86,8 @@ setup-time training on other reference questions from the same databases.
 
 ## Confirmatory hypotheses (Holm across H1–H3, α = 0.05)
 
-- **H1 (selection).** The best fine-tuned verifier (chosen by mean out-of-fold training-fold accuracy, not
-  test accuracy) selects a correct candidate more often than majority vote. McNemar, one-sided.
+- **H1 (selection).** ModernBERT trained on real candidates (named in advance; change 2) selects a correct
+  candidate more often than majority vote. McNemar, one-sided.
 - **H2 (training signal).** For ModernBERT, the real-candidate regime gives higher selection accuracy than
   the mutation regime. McNemar, one-sided.
 - **H3 (cascade).** The verifier-triggered cascade is more accurate than the first answer alone. McNemar,
@@ -118,3 +118,11 @@ setup-time training on other reference questions from the same databases.
    Calls that hit the old cap with no SQL are regenerated with the new budget. Calls whose model
    answered without SQL keep that answer (it counts as a candidate that fails). No result informed
    this.
+2. **2026-10-05, before any verifier was trained or any candidate scored.** H1's verifier is named in
+   advance instead of "chosen by training-fold accuracy": **ModernBERT, real-candidate regime, 5-fold.**
+   The folds save scores only for each model's held-out questions, so a training-fold choice would need
+   extra in-sample scoring that the design does not include.
+   - Qwen3-0.6B, fine-tuned Laya and the hosted models are reported as secondary comparisons.
+   - In H3's cascade, the fallback selects with the same verifier's highest score.
+   - Its threshold is chosen per fold on the other folds' out-of-fold scores.
+   No result informed this.
