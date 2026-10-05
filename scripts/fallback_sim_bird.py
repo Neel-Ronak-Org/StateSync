@@ -8,7 +8,7 @@ prompt). A fallback runs every candidate and keeps the majority result (ties kee
 model calls: candidates are re-executed on PostgreSQL and scored against the corrected gold on
 SQLite, as in eval_bird.py score --labels v2.
 
-    python3 scripts/fallback_sim_bird.py
+    python3 scripts/fallback_sim_bird.py [--label heldout_gpt5mini]
 
 Policies: never (as shipped), always vote, and vote only when a trigger fires (self-consistency
 disagreement, the Gemini judge's doubt, a process signal, or either). "oracle" counts an answer right
@@ -17,6 +17,7 @@ when ANY candidate is right: the ceiling of any selection rule over these candid
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -26,9 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import analyze_bird as ab  # noqa: E402
 import eval_bird as eb  # noqa: E402
 
-LABEL = "heldout_gpt5mini"
-SCORES = eb.EVAL / f"bird_scores_{LABEL}_v2_corrected.json"
-OUT = eb.EVAL / "bird_fallback_sim_heldout_gpt5mini.json"
+DEFAULT_LABEL = "heldout_gpt5mini"
 JUDGE_DOUBT = 0.5           # noqa: literals - the judge's p(correct) below which it doubts an answer
 PROCESS = ("no_sql", "empty_result", "any_sql_retry")
 
@@ -60,8 +59,11 @@ def vote(results: list[list | None]) -> int | None:
 
 
 def main() -> int:
-    answers = json.loads(eb.answers_path(LABEL).read_text())["answers"]
-    rows, judges = ab.load(SCORES, LABEL)
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--label", default=DEFAULT_LABEL, help="a held-out run with self-consistency samples")
+    label = ap.parse_args().label
+    answers = json.loads(eb.answers_path(label).read_text())["answers"]
+    rows, judges = ab.load(eb.EVAL / f"bird_scores_{label}_v2_corrected.json", label)
     judge = dict(zip((str(r["question_id"]) for r in rows), judges[ab.PRIMARY_JUDGE]))
     gold_sql = {int(q["question_id"]): q["SQL"] for q in json.loads(eb.CORRECTED.read_text())}
     by_id = {q["question_id"]: q for q in eb.questions()}
@@ -100,7 +102,7 @@ def main() -> int:
         report["policies"][name] = {"accuracy": round(sum(final) / n, 4), "fired": fired, "fixed": fixed, "broken": broken,
                                     "sign_test_p": round(ab.sign_test_p(fixed, broken), 4) if fixed + broken else None}
     report["oracle_any_candidate"] = round(sum(p["oracle"] for p in per) / n, 4)
-    OUT.write_text(json.dumps({"purpose": __doc__.strip().splitlines()[1], "report": report, "per_question": per}, indent=1) + "\n")
+    (eb.EVAL / f"bird_fallback_sim_{label}.json").write_text(json.dumps({"purpose": __doc__.strip().splitlines()[1], "report": report, "per_question": per}, indent=1) + "\n")
     print(json.dumps(report, indent=1))
     return 0
 
