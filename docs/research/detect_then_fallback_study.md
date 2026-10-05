@@ -404,3 +404,13 @@ the other.
    decided from the logs alone, before any grading. These records also supply §6's "bge milliseconds per
    search". Both D runs share the Mac with the GPU jobs (ModernBERT, then Laya), so their latencies are
    indicative only.
+   **Correction, same day, after 11 D-bge answers, before any grading.** The re-ranker the MCP calls is
+   not the Docker container. It is the process on the Mac's GPU (`scripts/run_reranker_host.sh`, the
+   owner's choice of 2026-10-03, via `docker-compose.override.yml`), which logs to
+   `~/Library/Logs/statesync-reranker.log`. The check now reads that log (`paperb_docs.py rerank-check`
+   recomputed the first answers from their windows). That re-ranker shares the GPU with the verifiers.
+   With ModernBERT training alongside, a search took 12–37 s, against 1.9 s on 2026-10-03 with nothing
+   else running. So D-bge was paused after 11 answers and runs only while the GPU is otherwise free,
+   following §11's one-GPU-job-at-a-time rule. The 11 answers stand, because sharing the GPU slows the
+   re-ranker but does not change its ranking. They are marked (`gpu_shared_before`) and left out of the
+   latency and bge-per-search figures.

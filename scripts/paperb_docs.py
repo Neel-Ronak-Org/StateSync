@@ -19,6 +19,8 @@ pipeline, with the re-ranker off and on, graded against FinanceBench's answers.
                           and asked again (change 8).
   grade                   Gemini 3.8 Flash (Zed) grades all 300 answers in one shuffled order (seed
                           20261005), blind to the configuration, with the fixed GRADER prompt below.
+  rerank-check            recompute each D-bge answer's re-ranked searches and failures from its window
+                          (change 8) and list document answers with none on record.
   owner-sheet             30 answers at random from the 300 for the owner's blind check (no verdict, no
                           configuration); the key is kept in a separate file.
   analyze                 accuracy per configuration and question type, exact McNemar (two-sided),
@@ -57,8 +59,10 @@ PAGE_OFFSET = 1                 # FinanceBench pages count from 0, StateSync's f
 QUERY_TIMEOUT_S = 300           # noqa: literals - two re-ranked searches plus the answer writer
 TRANSPORT_ERRORS = frozenset({"APIConnectionError", "APITimeoutError"})   # network, not the product (change 7)
 MCP_CONTAINER = "statesync-mcp-1"
-RERANKER_CONTAINER = "statesync-reranker-1"
-_RERANKED = re.compile(r"reranked (\d+) passages with (\w+) in (\d+) ms")   # reranker/server.py
+# The MCP calls the re-ranker on the Mac's GPU (scripts/run_reranker_host.sh; RERANKER_URL in
+# docker-compose.override.yml), not the reranker container; it logs here, in local time.
+RERANKER_LOG = Path.home() / "Library" / "Logs" / "statesync-reranker.log"
+_RERANKED = re.compile(r"^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d),(\d{3}) INFO reranked (\d+) passages with (\w+) in (\d+) ms")
 _RERANK_FAILED = re.compile(r"rerank with \w+ failed")                     # mcp/tools/vector_tools.py _rerank
 SEED = 20261005
 RESAMPLES = 2000                # noqa: literals - pre-registered
@@ -150,14 +154,34 @@ def rerank_failure(rec: dict) -> bool:
 
 
 def rerank_log(since: float, until: float) -> dict:
-    """The re-ranked searches between two Unix times, from the re-ranker's and the MCP's logs: the answer
-    trace does not carry them, and Part D asks one question at a time, so the window is one answer's."""
-    def lines(container: str) -> list[str]:
-        res = subprocess.run(["docker", "logs", container, "--since", f"{since:.3f}", "--until", f"{until:.3f}"],
-                             capture_output=True, text=True, timeout=60)   # noqa: literals - docker logs timeout
-        return (res.stdout + res.stderr).splitlines()
-    ms = [int(m.group(3)) for line in lines(RERANKER_CONTAINER) if (m := _RERANKED.search(line))]
-    return {"searches": len(ms), "ms": ms, "failed": sum(1 for line in lines(MCP_CONTAINER) if _RERANK_FAILED.search(line))}
+    """The re-ranked searches between two Unix times, from the re-ranker's log and the MCP's (failures): the
+    answer trace does not carry them, and Part D asks one question at a time, so the window is one answer's."""
+    ms = []
+    for line in RERANKER_LOG.read_text().splitlines():
+        m = _RERANKED.match(line)
+        if m and since <= time.mktime(time.strptime(m.group(1), "%Y-%m-%d %H:%M:%S")) + int(m.group(2)) / 1000 <= until:
+            ms.append(int(m.group(5)))
+    res = subprocess.run(["docker", "logs", MCP_CONTAINER, "--since", f"{since:.3f}", "--until", f"{until:.3f}"],
+                         capture_output=True, text=True, timeout=60)   # noqa: literals - docker logs timeout
+    failed = sum(1 for line in (res.stdout + res.stderr).splitlines() if _RERANK_FAILED.search(line))
+    return {"searches": len(ms), "ms": ms, "failed": failed}
+
+
+def cmd_rerank_check() -> int:
+    """Recompute every D-bge answer's re-rank record from its window (change 8), and list document answers
+    with no re-ranked search on record."""
+    out = answers_path("bge")
+    record = json.loads(out.read_text())
+    for rec in record["answers"].values():
+        rec["rerank"] = rerank_log(rec["asked_at"], rec["finished_at"])
+    out.write_text(json.dumps(record, indent=1) + "\n")
+    ans = record["answers"]
+    failed = [f for f, r in ans.items() if rerank_failure(r)]
+    unseen = [f for f, r in ans.items() if r["route"] in ("docs", "hybrid") and not r["rerank"]["searches"]]
+    ms = [m for r in ans.values() for m in r["rerank"]["ms"]]
+    print(f"{len(ans)} answers; {len(ms)} re-ranked searches; failures in {len(failed)} {failed}; "
+          f"document answers with no re-ranked search: {unseen}")
+    return 0
 
 
 def cmd_ask(label: str, spacing_s: float, limit: int | None, container: str = CONTAINER, base: str = API_BASE) -> int:
@@ -356,6 +380,7 @@ def main() -> int:
     g = sub.add_parser("grade")
     g.add_argument("--shards", type=int, default=3)
     g.add_argument("--container", default=CONTAINER)
+    sub.add_parser("rerank-check")
     sub.add_parser("owner-sheet")
     sub.add_parser("analyze")
     args = ap.parse_args()
@@ -363,6 +388,8 @@ def main() -> int:
         return cmd_ask(args.label, args.spacing, args.limit, args.container, args.api)
     if args.cmd == "grade":
         return cmd_grade(args.shards, args.container)
+    if args.cmd == "rerank-check":
+        return cmd_rerank_check()
     return cmd_owner_sheet() if args.cmd == "owner-sheet" else cmd_analyze()
 
 
