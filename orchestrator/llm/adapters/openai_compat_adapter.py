@@ -27,6 +27,8 @@ inherited unchanged.
 
 from __future__ import annotations
 
+import re
+
 import logging
 import os
 from dataclasses import dataclass, replace
@@ -122,10 +124,14 @@ def parse_spec(spec: str) -> tuple[str, str]:
 
 
 def same_model(a: str, b: str) -> bool:
-    """The same model under two providers' names ('openai/gpt-oss-120b' vs 'gpt-oss-120b'),
-    or a dated variant of it."""
+    """The same model under two providers' names ('openai/gpt-oss-120b' vs 'gpt-oss-120b'), a dated
+    variant of it, or the same name spelled with other separators ('qwen3.8-27b' vs 'qwen-3-8-27b':
+    Cheaper Inference changed its served label on 2026-10-05). Separators only: any other difference
+    (another size, family or version) is still a different model."""
     x, y = a.lower().rsplit("/", 1)[-1], b.lower().rsplit("/", 1)[-1]
-    return x == y or x.startswith(y + "-") or y.startswith(x + "-")
+    if x == y or x.startswith(y + "-") or y.startswith(x + "-"):
+        return True
+    return re.sub(r"[-._ ]", "", x) == re.sub(r"[-._ ]", "", y)
 
 
 class OpenAICompatAdapter(GroqAdapter):

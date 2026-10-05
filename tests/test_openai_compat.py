@@ -219,3 +219,14 @@ def test_the_call_trace_records_the_provider():
         return trace
     trace = asyncio.run(run())
     assert trace[-1]["served_provider"] == "Groq" and trace[-1]["endpoint"] == "openrouter"
+
+
+def test_same_model_ignores_separators_but_not_other_differences():
+    """Cheaper Inference began labelling qwen-3-8-27b as qwen3.8-27b (2026-10-05): the same model, other
+    separators. A different size, family or version must still be refused."""
+    from llm.adapters.openai_compat_adapter import same_model
+    assert same_model("qwen3.8-27b", "qwen-3-8-27b")
+    assert same_model("openai/gpt-oss-120b", "gpt_oss_120b")
+    assert not same_model("qwen3.8-14b", "qwen-3-8-27b")
+    assert not same_model("qwen3.7-27b", "qwen-3-8-27b")
+    assert not same_model("gpt-oss-20b", "gpt-oss-120b")
