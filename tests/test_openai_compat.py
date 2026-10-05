@@ -230,3 +230,7 @@ def test_same_model_ignores_separators_but_not_other_differences():
     assert not same_model("qwen3.8-14b", "qwen-3-8-27b")
     assert not same_model("qwen3.7-27b", "qwen-3-8-27b")
     assert not same_model("gpt-oss-20b", "gpt-oss-120b")
+    # digits must not regroup (review by Paper A's session, 2026-10-06)
+    assert not same_model("qwen3-14b", "qwen3.1-4b")
+    assert not same_model("llama-3-70b", "llama-3.7-0b")
+    assert not same_model("gpt-oss-120b", "gpt-oss-12-0b")

@@ -126,12 +126,13 @@ def parse_spec(spec: str) -> tuple[str, str]:
 def same_model(a: str, b: str) -> bool:
     """The same model under two providers' names ('openai/gpt-oss-120b' vs 'gpt-oss-120b'), a dated
     variant of it, or the same name spelled with other separators ('qwen3.8-27b' vs 'qwen-3-8-27b':
-    Cheaper Inference changed its served label on 2026-10-05). Separators only: any other difference
-    (another size, family or version) is still a different model."""
+    Cheaper Inference changed its served label on 2026-10-05). Names are compared as sequences of
+    letter runs and digit runs, so separators may differ but digits never regroup: 'qwen3-14b' is not
+    'qwen3.1-4b' (review by Paper A's session). It fails closed: anything else is a different model."""
     x, y = a.lower().rsplit("/", 1)[-1], b.lower().rsplit("/", 1)[-1]
     if x == y or x.startswith(y + "-") or y.startswith(x + "-"):
         return True
-    return re.sub(r"[-._ ]", "", x) == re.sub(r"[-._ ]", "", y)
+    return re.findall(r"[a-z]+|\d+", x) == re.findall(r"[a-z]+|\d+", y)
 
 
 class OpenAICompatAdapter(GroqAdapter):
