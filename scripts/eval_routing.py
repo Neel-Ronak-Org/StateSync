@@ -171,10 +171,16 @@ def cmd_report() -> int:
     for key, run in sorted(record["runs"].items()):
         by_class = defaultdict(lambda: [0, 0])
         confusion = Counter()
+        covering = over = 0
         for iid, rec in run["items"].items():
             gold = items[iid]
             p = predicted(rec)
             ok = p in gold["acceptable"]
+            # "covers": the route runs every source the question needs (hybrid runs both), so it can be
+            # answered, at extra cost when it runs a source it does not need ("over").
+            covers = ok or (p == "hybrid" and gold["class"] in ("docs", "either", "sql"))
+            covering += covers
+            over += (p == "hybrid" and gold["class"] in ("docs", "either", "sql"))
             by_class[gold["class"]][0] += ok
             by_class[gold["class"]][1] += 1
             confusion[(gold["class"], p)] += 1
@@ -193,6 +199,7 @@ def cmd_report() -> int:
         lat = sorted(r["ms"] for r in run["items"].values() if r.get("ms") is not None)
         calls = [((r.get("metrics") or {}).get("llm_calls") or 0) for r in run["items"].values()]
         summary[key] = {"questions": n, "route_accuracy": round(acc, 3) if acc is not None else None,
+                        "covers_needed_source": round(covering / n, 3) if n else None, "over_routed_to_hybrid": over,
                         "macro_class_accuracy": round(macro, 3) if macro is not None else None,
                         "by_class": {c: f"{v[0]}/{v[1]}" for c, v in sorted(by_class.items())},
                         "turns": t_n, "turn_route_accuracy": round(t_ok / t_n, 3) if t_n else None,
