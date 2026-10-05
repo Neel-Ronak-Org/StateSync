@@ -404,6 +404,25 @@ only on held-out data.
     - **Fallback simulation** (`scripts/fallback_sim_bird.py`): majority vote over each answer and its
       self-consistency samples, triggered by each warning.
 
+18. **Correction to change 17's replication, 2026-10-05, after an owner-requested audit and after its
+    results had been seen.** The first gpt-oss replication sent `temperature = 0.0` (the shipped
+    `[models] temperature`). Only GPT-5 mini omits a temperature, so it ran at the provider's default.
+    - **The effect:** gpt-oss's self-consistency samples were near-copies (78% identical to the answer
+      SQL, against 14% for GPT-5 mini). So its self-consistency, voting and headroom results reflect the
+      sampling setting, not the model.
+    - **The fix:** the replication is rerun with gpt-oss at the provider's default sampling (no
+      temperature sent; `omit_temperature` on the cheaperinference endpoint). That is the same
+      condition as GPT-5 mini; everything else is as change 17.
+    - **Labels:** the rerun is `heldout_gptoss`. The temperature-0 run is kept, unchanged, as
+      `heldout_gptoss_t0` and reported as such.
+    - **Also corrected in the report and paper** (all exploratory or descriptive; no confirmatory test
+      changes):
+      - "self-consistency ranks best" is not significant against the judge (+0.04 AUROC, 95% CI −0.03
+        to +0.11), and the gap vanishes when format-only errors count as correct;
+      - "empty result" and "query failed" are wrong by construction on this benchmark, since no corrected
+        gold returns an empty result;
+      - each model's sampling setting is stated.
+
 **What the pilot did differently from v1** (recorded in `docs/eval/bird_pilot_report.md`):
 - original labels instead of corrected ones;
 - no manual review;
