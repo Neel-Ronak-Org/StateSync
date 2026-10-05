@@ -47,6 +47,7 @@ from typing import Any
 from config_loader import cfg
 from llm.provider import get_agent_llm
 from mcp_client import MCPSession, history_get_recent_turns
+from front_door import debug_turns
 from profiles import profile_for
 
 logger = logging.getLogger(__name__)
@@ -166,28 +167,34 @@ async def rewrite_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     start_ms = int(time.monotonic() * 1000)
     mcp_base_url = os.environ.get("MCP_URL", "http://mcp:8080")
 
-    # Best-effort, same philosophy as main.py's history WRITE: a history
-    # READ failure (MCP hiccup, pool exhaustion, transient network error)
-    # must degrade to "no context available" -- exactly the turn-1 path
-    # already below -- not fail the whole query. Losing multi-turn context
-    # for one query is a quality regression; turning an MCP blip into a 500
-    # for a question the SQL/docs route could have answered fine on its own
-    # is a much worse outcome, and there is nothing else broken in that
-    # scenario that would make failing loud the right call.
+    debug_history = state_dict.get("debug_history")
     history_result: dict = {}
-    try:
-        async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id) as session:
-            history_result = await history_get_recent_turns(
-                session, session_id, principal_id=principal_id, limit=cfg.sql.rewrite_history_turns,
+    if debug_history is not None:
+        # Evaluation hook (pipeline.debug_hooks = "on"): gold earlier turns instead of the stored history.
+        turns = debug_turns(debug_history)[-cfg.sql.rewrite_history_turns:]
+        history_result = {"next_turn_index": len(debug_history) + 1}
+    else:
+        # Best-effort, same philosophy as main.py's history WRITE: a history
+        # READ failure (MCP hiccup, pool exhaustion, transient network error)
+        # must degrade to "no context available" -- exactly the turn-1 path
+        # already below -- not fail the whole query. Losing multi-turn context
+        # for one query is a quality regression; turning an MCP blip into a 500
+        # for a question the SQL/docs route could have answered fine on its own
+        # is a much worse outcome, and there is nothing else broken in that
+        # scenario that would make failing loud the right call.
+        try:
+            async with MCPSession(tenant_id=tenant_id, base_url=mcp_base_url, session_id=session_id) as session:
+                history_result = await history_get_recent_turns(
+                    session, session_id, principal_id=principal_id, limit=cfg.sql.rewrite_history_turns,
+                )
+            turns = history_result.get("turns", [])
+        except Exception as exc:
+            logger.warning(
+                "rewrite_node: history read failed for query_id=%s session_id=%s (%s) -- "
+                "degrading to no-history (turn 1 shaped), not failing the query.",
+                query_id, session_id, exc,
             )
-        turns = history_result.get("turns", [])
-    except Exception as exc:
-        logger.warning(
-            "rewrite_node: history read failed for query_id=%s session_id=%s (%s) -- "
-            "degrading to no-history (turn 1 shaped), not failing the query.",
-            query_id, session_id, exc,
-        )
-        turns = []
+            turns = []
     # The next turn number comes from MCP, which reads the newest stored turn.
     # Counting `turns` was wrong from the 5th question on: it is a window of
     # rewrite_history_turns (3), so the count stuck at 3 and every later turn

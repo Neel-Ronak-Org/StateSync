@@ -106,6 +106,8 @@ _LAST_WRITE_WINS_FIELDS: frozenset[str] = frozenset({
     "doc_abstained",
     "self_consistency",
     "recovered_from",
+    "out_of_scope",
+    "front_door",
 })
 
 # Fields whose reducer is "append" (list concatenation)
@@ -224,6 +226,14 @@ class StateSyncState(BaseModel):
     # Route recovery (pipeline.route_recovery, routing_docs_fixes.md F-RR): "sql" when the SQL route ended in
     # no_data_source and the documents route ran once in its place; None otherwise.
     recovered_from: str | None = None
+    # The front door (pipeline.front_door, docs/specs/partd_tasks/T4a_front_door.md): out_of_scope sends the graph
+    # straight to the writer, which answers with a fixed message and no model call (route stays None; the trace
+    # and the stored turn say "neither"); front_door is the step's trace (None when the step did not run);
+    # debug_history is the evaluation hook's gold earlier turns (None unless pipeline.debug_hooks = "on" and
+    # the request set it), read by the front door and the legacy rewrite node instead of the stored history.
+    out_of_scope: bool = False
+    front_door: dict | None = None
+    debug_history: list[dict] | None = None
 
     # --- output (Part E2) ---
     answer_text: str | None = None

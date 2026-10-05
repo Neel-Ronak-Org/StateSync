@@ -142,6 +142,18 @@ profile_max_chars         = 1500
 synth_short_preview_rows  = 20
 synth_short_max_sentences = 3
 
+[front_door]
+# pipeline.front_door = "llm" (docs/specs/partd_tasks/T4a_front_door.md; routing_docs_fixes.md F-FD).
+evidence_passages         = 20      # passages fetched for the document evidence (one dense search, no re-ranking)
+evidence_documents        = 5       # documents shown, by best passage score
+excerpt_chars             = 300     # characters of each document's best passage
+card_max_chars            = 4000    # the database card's cap
+history_turns             = 3       # earlier turns given to the front door
+answer_start_chars        = 200     # characters of each earlier answer
+max_tokens                = 1500    # the front door call's output cap
+card_cache_max            = 32      # database cards kept per process, per (tenant, dataset); the oldest is dropped
+out_of_scope_message      = "This workspace's database and documents do not hold that, so I can't answer it from here."
+
 [answer_checks]
 # pipeline.answer_checks = "on". Deterministic checks on an executed SELECT.
 fanout_retry_max          = 1       # retries after a confirmed join fan-out; then the answer ships with a caveat
