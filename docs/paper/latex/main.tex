@@ -30,15 +30,14 @@ A Pre-registered Study on Corrected BIRD Labels}
 A text-to-SQL system that answers wrongly should say so. Beyond model-based signals, a deployed
 system can check an answer against the data with no model call: joins that count rows twice, results
 cut off at a row limit, all-NULL aggregates, figures absent from the result. In a pre-registered study
-on 393 held-out BIRD Mini-Dev questions, scored against corrected gold annotations, we compare such
-data checks with an LLM judge at the same flag rate. The checks fire on 4\% of answers and catch no
-more errors than the judge with as many warnings (9 vs.\ 10.8; 95\% CI of the difference $-6.3$ to
-$2.2$), and do not improve its risk--coverage curve. Process signals (the query failed, returned
-nothing, or needed a retry) are the strongest cheap warnings. Self-consistency ranks answers best for
-this model (AUROC 0.74 vs.\ 0.70) but worst for a second model that repeats its errors (0.61), while a
-second-model replication confirms the rest. A blind annotation of every error explains why checks fail:
-most errors are semantic. On 60 questions built to invite double counting, the models erred 0 and 5
-times, too rarely to test the fan-out check.
+on 393 held-out BIRD Mini-Dev questions, scored against corrected gold annotations, we ask how often
+such checks apply and whether they warn as well as an LLM judge at the same flag rate. They apply to
+only 4\% of answers, and there they catch no more errors than the judge with as many warnings (9 vs.\
+10.8; 95\% CI of the difference $-6.3$ to $2.2$); they improve neither the judge's risk--coverage
+curve nor a combined model. An agent retry is the most useful cheap warning (79\% precision).
+Self-consistency and the judge rank answers about equally (AUROC 0.74 vs.\ 0.70, not significant). A
+blind annotation of every error explains why checks rarely help: most errors are semantic.
+\pending{replication sentence}
 \end{abstract}
 
 \section{Introduction}
@@ -68,9 +67,7 @@ matrix of which signal sees which error.
 self-consistency, because most errors are semantic; structural double-counting checks miss double
 counting that happens through legitimate joins.
 \item A frozen fan-out question set (60 risky, 33 control) on which current models rarely double count
-(0 and 5 of 60); a run-to-run analysis linking answer instability to self-consistency; and a
-second-model replication showing that the data-check result holds while self-consistency's value
-depends on whether the model is consistent when wrong.
+(0 and 5 of 60), and a second-model replication of the main results.
 \end{enumerate}
 
 \section{Related work}
@@ -94,8 +91,9 @@ execution results of resampled queries.
 The system routes each question; for database questions an LLM writes SQL, a read-only gate validates
 it, and it runs with a row cap. The model retries with a classified error message when a query fails
 or returns nothing; a second call writes the answer from the first rows of the result. SQL and answers
-are written by GPT-5 mini (default sampling; it accepts no temperature); Qwen3.8-27B normalises the
-question.
+are written by GPT-5 mini at its provider's default sampling (it accepts no temperature), reached
+through the Zed editor's hosted-model service via a local OpenAI-compatible proxy; Qwen3.8-27B (Groq,
+temperature 0) normalises the question. The served model is recorded on every call.
 
 \textbf{Data checks} (no model call): a \emph{fan-out probe} compares \texttt{COUNT(key)} with
 \texttt{COUNT(DISTINCT key)} per joined table for aggregates over joins; \emph{truncation} (the result
@@ -103,7 +101,8 @@ hit the row cap); \emph{NULL-heavy} (an all-NULL aggregate); \emph{figure ground
 the answer must trace to a result cell, a column aggregate, the question, or the number of rows shown
 to the answer writer); and \emph{any data check}, their union. \textbf{Process baselines}: the query
 failed, the result was empty, the agent needed a retry, the answer refuses. \textbf{Model baselines}:
-an LLM judge (Gemini 3.8 Flash, primary; gpt-oss-120b, secondary; their mean as an ensemble), each
+an LLM judge (Gemini 3.8 Flash via the same service, primary; gpt-oss-120b, secondary; their mean as
+an ensemble), each
 from a different family than the SQL model and shown the question, schema, SQL, first rows and answer;
 and self-consistency (five resamples of the SQL call, each executed; risk is the share whose result
 differs from the answer's).
@@ -165,7 +164,8 @@ refusal & 7 & .57 & .04 & $-0.5$ ($-2.7$, $1.7$) \\
 \bottomrule
 \end{tabular}
 \caption{Warnings on the held-out set (90 of 393 wrong). Last column: wrong answers the signal catches
-minus the judge's expected catch among its $k$ most suspect answers.}
+minus the judge's expected catch among its $k$ most suspect answers. Failed and empty queries are wrong
+by construction here: no corrected gold result is empty.}
 \label{tab:signals}
 \end{table}
 
@@ -178,10 +178,15 @@ lowest risk from every ranking.}
 \end{figure}
 
 \textbf{Warnings} (Table~\ref{tab:signals}). The data checks fire on 17 answers (4\%) and catch 10\%
-of the errors, slightly fewer than the judge's 17 most suspect answers (9 vs.\ 10.8). Process signals are stronger: a
-failed, empty or retried query is wrong 79--100\% of the time. Self-consistency gives the best ranking
-(AUROC 0.739, AURC 0.135), ahead of the Gemini judge (0.697, 0.153), the judge ensemble (0.701,
-0.147) and the gpt-oss judge (0.606, 0.186) (Figure~\ref{fig:rc}).
+of the errors, slightly fewer than the judge's 17 most suspect answers (9 vs.\ 10.8). An agent retry
+is a stronger cheap warning: retried answers are wrong 79\% of the time, a fifth of all errors. Failed
+and empty queries are always wrong here, but only by construction (no corrected gold result is empty;
+in deployment an empty result can be right). Self-consistency (AUROC 0.739) and the Gemini judge
+(0.697) rank answers about equally: the difference is not significant (95\% CI $-0.03$ to $0.11$) and
+disappears when the 20 format-only errors count as correct (0.761 vs.\ 0.757), because resampled
+queries vary in format and so flag answers the scorer wrongly marks wrong. The judge ensemble reaches
+0.701 and the gpt-oss judge 0.606 (Figure~\ref{fig:rc}). The judge is tie-heavy ($p=1$ for 328 of 393
+answers); ties are broken at random in expectation.
 
 \textbf{Hypotheses.} \textbf{H2 is not supported}: AURC gain 0.001 (95\% CI $-0.005$ to $0.009$,
 $p=0.42$). \textbf{H3 is supported} (2 of 242 correct answers flagged; upper bound 2.6\%,
@@ -231,7 +236,8 @@ check (4 vs.\ 4).
 \textbf{Run-to-run variation.} Fifty random held-out questions asked a second time changed label on 5
 (10\%; 95\% CI 3--22\%): four became correct, one became wrong; signals changed on at most 2. All five
 flipped questions had first-run self-consistency risk of at least 0.4 (mean 0.76, vs.\ 0.09 for the
-45 stable ones; exploratory): instability sits exactly where the model's own samples disagree.
+45 stable ones; exploratory). This is close to expected by construction: a second run is one more
+sample from the same distribution, so answers flip where samples disagree.
 
 \textbf{Exploratory: combining signals and acting on them.} Decided after the confirmatory results
 and labelled as such. A logistic regression over all signals, scored out-of-fold, reaches AUROC 0.785
@@ -242,13 +248,7 @@ the judge doubts the answer (10\% of answers) raises accuracy from 77.1\% to 78.
 broken), as much as voting on every answer. A right candidate exists for 28 of the 90 wrong answers
 (a ceiling of 84.2\%), so a better selector could gain up to 7 points.
 
-\textbf{Exploratory: a second SQL model.} We reran the 393 held-out questions with gpt-oss-120b on
-the same code and settings (77.9\% accurate). The data checks again fire on 5\% and catch fewer errors
-than the judge at the same flag rate ($-5.6$, 95\% CI $-11.6$ to $-0.5$), add nothing to the judge's
-ordering or to a combined model, and empty results again beat the judge ($+3.2$). Self-consistency
-does not replicate: AUROC 0.61 against the judge's 0.71, because 63 of gpt-oss's 87 errors come with
-five agreeing samples (36 of 90 for GPT-5 mini); voting over its samples changes no answer, and its
-candidates hold only 2.1 points of headroom.
+\textbf{Exploratory: a second SQL model.} \pending{gpt-oss replication at provider default sampling}
 
 \section{Discussion}
 
@@ -259,14 +259,14 @@ double counting mostly happens through joins that are correct for some reading o
 models also rarely fall into the textbook fan-out trap the probe was built for (0 and 5 of 60 risky
 questions), and when one does, a strong judge notices too.
 
-\textbf{What works cheaply.} Process signals cost nothing and catch a fifth of the errors at high
-precision. Self-consistency helps only when a model is inconsistent when wrong: for GPT-5 mini it
-ranks best and tracks the questions on which the model is unstable, for gpt-oss it is the weakest
-signal, and it costs five extra calls either way. The LLM judge is the steadier choice across models.
-In a product we would show process signals and a judge, add self-consistency where the model's samples
-vary, and keep data checks as explanations attached to a flagged answer rather than as detectors.
+\textbf{What works cheaply.} An agent retry costs nothing and catches a fifth of the errors at 79\%
+precision. Self-consistency and an LLM judge rank answers similarly; self-consistency costs five extra
+calls (two thirds of our generation cost) and partly flags scorer false negatives. \pending{gpt-oss
+sentence} In a product we would show the retry signal and a judge, and keep data checks as explanations
+attached to a flagged answer rather than as detectors.
 
-\textbf{What the benchmark measures.} Correcting the gold moves accuracy by 10.7 points; even after
+\textbf{What the benchmark measures.} Scoring against the corrected gold moves accuracy by 10.7
+points (part of this comes from the 81 questions the correction file rewords); even after
 correction a fifth of the remaining errors are formatting, and 8 involve a hint that contradicts the
 data or the gold. Running a SQLite benchmark on its PostgreSQL copy adds artefacts (7 of 498 golds
 disagree; PostgreSQL sorts NULLs first in descending order, which turned 2 answers wrong), and the
@@ -275,8 +275,11 @@ use corrected labels and, ideally, an answer-level label.
 
 \section*{Limitations}
 
-One SQL model in the confirmatory study (GPT-5 mini, default sampling), with a second model
-(gpt-oss-120b) only as an exploratory replication; both may have seen BIRD in training. Both error annotators are models, blind to the signals; a human sample would strengthen
+One SQL model in the confirmatory study (GPT-5 mini, provider default sampling), with a second model
+(gpt-oss-120b) only as an exploratory replication; both may have seen BIRD in training. GPT-5 mini and
+the Gemini judge were reached through an editor's hosted-model service rather than the providers' own
+APIs, so provider-side settings could not be inspected. The checks' coverage, not only their accuracy,
+limits what our tests could show: they fired on 17 answers. Both error annotators are models, blind to the signals; a human sample would strengthen
 this. The fan-out set follows a textbook pattern and was drafted with an AI assistant; its null result
 says nothing about subtler double counting. Free-tier limits forced a change of host for the
 gpt-oss-120b runs to a reseller that does not disclose its upstream; we checked the served model on

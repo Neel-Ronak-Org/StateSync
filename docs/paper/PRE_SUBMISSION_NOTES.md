@@ -49,6 +49,20 @@ All three are in the report and the paper:
 - **Judge-triggered fallback.** +1.5 points for GPT-5 mini; nothing for gpt-oss, whose samples agree with
   each other. Ceilings: 84.2% and 79.9%.
 
+## Audit corrections (2026-10-05, owner-requested audit; protocol change 18)
+
+- **The gpt-oss replication ran at temperature 0,** which made its self-consistency samples
+  near-copies. It is being rerun at provider default sampling; the temperature-0 run is kept as
+  `heldout_gptoss_t0`.
+- **"Self-consistency ranks best" is withdrawn.** The gap to the judge is not significant (+0.04, CI
+  −0.03 to 0.11) and vanishes with format-only errors counted as correct.
+- **Failed and empty queries are wrong by construction** (no corrected gold result is empty). The
+  substantive cheap signal is the agent retry.
+- **Headline reframed around coverage:** the checks apply to 4% of answers.
+- **Model access is now stated in the paper:** GPT-5 mini and the judge through Zed's hosted-model
+  service via a local proxy. The owner decided no rerun is needed.
+- **Human annotation sheet sent to the owner** (18 items).
+
 ## Before submission (in order)
 
 1. **Venue:** ARR 12 Oct (NAACL 2027) or MoSICom 15 Oct first. Still the owner's call.

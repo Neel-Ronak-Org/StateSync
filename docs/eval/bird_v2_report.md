@@ -110,11 +110,22 @@ wrong, against the judge's k most suspect (ties at random); paired, stratified b
 
 | ranking | AUROC | AURC (lower is better) | accuracy on the 80% kept |
 |---|---|---|---|
-| self-consistency (5 samples) | **0.739** | **0.135** | 85.8% |
+| self-consistency (5 samples) | 0.739 | 0.135 | 85.8% |
 | Gemini 3.8 Flash judge | 0.697 | 0.153 | 85.4% |
 | data checks first, then judge | 0.697 | 0.152 | 85.6% |
 | judge ensemble (mean of the two judges) | 0.701 | 0.147 | 83.3% |
 | gpt-oss-120b judge | 0.606 | 0.186 | 80.8% |
+
+**Self-consistency vs the judge is not a significant difference** (corrected 2026-10-05, protocol change
+18):
+- **The gap:** +0.042 AUROC (95% CI −0.028 to 0.107; paired, stratified bootstrap).
+- **Format-only errors:** counting the 20 format-only errors as correct, self-consistency gets 0.761
+  and the judge 0.757.
+- **Why:** resampled queries vary in format, so self-consistency flags answers the scorer wrongly
+  marks wrong. Mean risk on format-only errors is 0.22 for self-consistency and 0.05 for the judge.
+- **Ties:** the judge gives p = 1 to 328 of 393 answers, so its ranking is dominated by ties.
+- **Failed and empty queries are wrong by construction** on this benchmark: no corrected gold result is
+  empty (§3 of the protocol). Their precision of 1.00 says nothing about deployment.
 
 **The secondary judge, gpt-oss-120b,** was re-run on all 393 answers through Cheaper Inference
 (protocol change 16), after Groq's free tier stopped it at 260.
@@ -185,13 +196,20 @@ It caught one real figure problem.
 
 ### Second-model replication: gpt-oss-120b on the 393 held-out questions
 
+> **Superseded (protocol change 18).** The run described in this subsection sent `temperature = 0.0`
+> to gpt-oss, while GPT-5 mini ran at its provider's default. Its self-consistency samples were
+> near-copies: 78% were identical to the answer SQL, against 14% for GPT-5 mini. So its
+> self-consistency, voting and headroom figures reflect the sampling setting, not the model. Its files
+> are renamed `heldout_gptoss_t0`. The rerun at provider default sampling is reported in the next
+> subsection; the numbers below are kept as the record of the temperature-0 run.
+
 Files:
-- `bird_answers_heldout_gptoss.json` (merged from three parallel shards)
-- `bird_scores_heldout_gptoss_v2_corrected.json`
-- `bird_analysis_v2_heldout_gptoss_v2_corrected.json`
-- `bird_judge_heldout_gptoss_local_router_zed-hosted_gemini-3.8-flash.json`
-- `bird_combination_heldout_gptoss_v2_corrected.json`
-- `bird_fallback_sim_heldout_gptoss.json`
+- `bird_answers_heldout_gptoss_t0.json` (merged from three parallel shards)
+- `bird_scores_heldout_gptoss_t0_v2_corrected.json`
+- `bird_analysis_v2_heldout_gptoss_t0_v2_corrected.json`
+- `bird_judge_heldout_gptoss_t0_local_router_zed-hosted_gemini-3.8-flash.json`
+- `bird_combination_heldout_gptoss_t0_v2_corrected.json`
+- `bird_fallback_sim_heldout_gptoss_t0.json`
 
 **Setup:**
 - the orchestrator code the study measured (`c49d5e7`);
@@ -431,9 +449,10 @@ again until answered.
   catch about as many wrong answers or fewer (−1.8, CI includes 0), and they add nothing to the
   judge's ranking (H2).
 - **They rarely apply:** 17 of 393 answers (4%), catching 10% of the wrong ones.
-- **The strongest cheap signals are process signals:** the query failed, came back empty, or needed a
-  retry (79% precision at 21% recall). Self-consistency is the best ranking. These are ordinary
-  baselines, and they beat the checks the study was built around.
+- **The strongest cheap signal is an agent retry** (79% precision, 21% recall). Failed and empty queries
+  are always wrong here, but only by construction (no corrected gold result is empty).
+- **Self-consistency and the judge rank answers about equally.** The difference is not significant, and
+  it vanishes when format-only errors count as correct.
 - **Most real errors are semantic:** filter values, column meaning, aggregation intent. A check that
   only sees the SQL and its own result cannot see them; the pilot suggested this, and the held-out
   data confirms it on corrected labels.

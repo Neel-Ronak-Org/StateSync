@@ -19,10 +19,9 @@ The data checks fire on only 4% of answers. When they do, they catch no more wro
 judge does with the same number of warnings (9 vs 10.8; 95% CI of the difference −6.3 to 2.2). Ordering
 by the checks before the judge does not improve the judge's risk–coverage curve.
 
-The strongest cheap warnings are ordinary process signals: the query failed, returned nothing, or
-needed a retry (79% precision). Self-consistency gives the best ranking for this model (AUROC 0.74 vs
-0.70 for the judge), but the worst for a second model that repeats its errors (0.61); an exploratory
-replication with that model confirms everything else.
+The most useful cheap warning is an agent retry (79% precision). Failed and empty queries are always
+wrong here, but only by construction. Self-consistency and the judge rank answers about equally (AUROC
+0.74 vs 0.70, not significant). [PENDING: second-model replication at provider default sampling.]
 
 A blind annotation of every wrong answer explains why. Most errors are semantic: wrong filter values,
 wrong columns, wrong aggregation intent. The double-counting errors that a structural probe targets
@@ -233,6 +232,13 @@ temperature). A small model (Qwen3.8-27B) normalises the question.
 | judge ensemble (mean) | 0.701 | 0.147 |
 | gpt-oss-120b judge | 0.606 | 0.186 |
 
+Self-consistency vs the judge is not significant:
+- **The gap:** +0.04 AUROC (95% CI −0.03 to 0.11).
+- **Format-only errors:** counted as correct, 0.761 vs 0.757. Resampled queries vary in format, so
+  self-consistency flags scorer false negatives.
+- **Ties:** the judge gives p = 1 to 328 of 393 answers.
+- **Failed and empty queries are wrong by construction:** no corrected gold result is empty.
+
 **Hypotheses:**
 - **H2 is not supported:** AURC gain 0.001 (95% CI −0.005 to 0.009).
 - **H3 is supported:** 2 of 242 correct answers flagged; upper bound 2.6%. But grounding fired on only
@@ -318,13 +324,9 @@ Decided after the confirmatory results (protocol change 17).
 
 ## 5d Exploratory: a second SQL model (gpt-oss-120b)
 
-The 393 held-out questions were asked again with the same code and settings (77.9% accurate):
-- **The data checks fire on 5%** and catch fewer errors than the judge at the same flag rate (−5.6,
-  95% CI −11.6 to −0.5). They add nothing to the judge's ordering or to a combined model.
-- **Empty results again beat the judge** (+3.2).
-- **Self-consistency does not replicate:** AUROC 0.61 against the judge's 0.71.
-  - 63 of gpt-oss's 87 errors come with five agreeing samples; for GPT-5 mini, 36 of 90.
-  - Voting over its samples changes no answer, and its candidates hold only 2.1 points of headroom.
+[PENDING: rerun at provider default sampling (protocol change 18).] The first replication ran gpt-oss
+at temperature 0, so its self-consistency samples were near-copies; its results are kept as
+`heldout_gptoss_t0` and are not used here.
 
 ## 6 Discussion
 
@@ -339,20 +341,19 @@ the error a structural probe targets, mostly happens through joins that are corr
 reading of the question. "Count lab rows" and "count patients" share a join. Only the question
 says which was meant.
 
-**What does work cheaply.** Signals from the pipeline's own process are surprisingly strong:
-- a query that failed, returned nothing, or needed a retry is wrong 79–100% of the time;
-- these cost nothing and catch about a fifth of the errors;
-- **Self-consistency helps only when a model is inconsistent when wrong.**
-  - For GPT-5 mini it ranks best; for gpt-oss it is the weakest signal.
-  - It costs five extra calls either way.
-- **The judge is the steadier choice across models.**
+**What does work cheaply.**
+- **Agent retry:** costs nothing and catches a fifth of the errors at 79% precision.
+- **Failed and empty queries:** always wrong here, but only by construction.
+- **Self-consistency and the judge:** rank answers similarly. Self-consistency costs five extra calls
+  and partly flags scorer false negatives. [PENDING: gpt-oss.]
 
-In practice we would show process signals and a judge, and add self-consistency where the model's
-samples vary. Data checks belong as explanations attached to a flagged answer, not as detectors.
+In practice we would show the retry signal and a judge. Data checks belong as explanations attached to
+a flagged answer, not as detectors.
 
 **What the benchmark measures.** These problems are known (Section 2); our numbers show they persist
 after correction:
-- **Correction.** Correcting the gold moves accuracy by 10.7 points.
+- **Correction.** Scoring against the corrected gold moves accuracy by 10.7 points. Part of this comes
+  from the 81 questions the correction file rewords.
 - **Formatting.** A fifth of the remaining "errors" are formatting differences: a fraction for a
   percentage, a timestamp for a date, a name in one column instead of two.
 - **Hints.** Eight more involve a hint that contradicts the data or the gold. The corrections fix SQL
