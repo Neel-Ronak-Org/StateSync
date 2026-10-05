@@ -20,9 +20,10 @@ compound question into a SQL sub-task and a doc sub-task (one LLM call, gated by
 retrieval.hybrid_decomposition.enabled). The SQL sub-task then runs through sql_agent_node -- the
 same agent as a data-only question, with the workspace's approved knowledge, the fast path,
 templates and the correction loop -- instead of the single-shot generation that used to live here.
-hybrid_docs_node runs the doc sub-task last: if the SQL result exposes a seller_id/provider_id
-column, it is narrowed via vector.hybrid_select (a real ss_embed(...) usage, A4.7) to only that
-party's documents; otherwise the two-round semantic search runs. Both state.sql_rows/executed_sql
+hybrid_docs_node runs the doc sub-task last: if the SQL result exposes one of the dataset profile's
+party-id columns (the ONDC sample's seller_id/provider_id), it is narrowed via vector.hybrid_select
+(a real ss_embed(...) usage, A4.7) to only that party's documents; otherwise the two-round semantic
+search runs. Both state.sql_rows/executed_sql
 and state.retrievals get populated; the Synthesizer emits both citation kinds.
 """
 
@@ -36,6 +37,7 @@ from typing import Any
 
 from config_loader import cfg
 from llm.provider import get_agent_llm
+from profiles import profile_for
 from query_rewrite import rewrite_for_search
 from mcp_client import (
     MCPSession, vector_hybrid_select, vector_semantic_search,
@@ -43,42 +45,6 @@ from mcp_client import (
 
 logger = logging.getLogger(__name__)
 
-_DECOMPOSER_SYSTEM_PROMPT = """\
-You are decomposing a compound question for an ONDC logistics analytics \
-system into two independent sub-questions: one answerable from the \
-structured database (orders, fulfillments, sellers, disputes, etc.), and \
-one answerable from unstructured documents (supplier agreements, SLA \
-annexures, policies, SOPs).
-
-Rules:
-1. Respond with ONLY a JSON object: {"sql_subtask": "<string>", "doc_subtask": "<string>"}
-2. sql_subtask and doc_subtask are QUESTIONS IN ENGLISH, phrased exactly
-   like the original question -- never SQL, never a table or column name.
-   A separate downstream step writes the actual SQL from your sql_subtask
-   question; your job is only to isolate which part of the compound
-   question that step should answer.
-3. sql_subtask should ask only for structured facts or entities (which
-   database rows meet some condition), and should ask for the relevant ID
-   (seller ID or provider ID) whenever the question concerns specific
-   sellers or logistics providers -- but NEVER ask sql_subtask for a
-   penalty amount, policy figure, or contract clause. Those exist only in
-   documents, never as a database column, and belong in doc_subtask only.
-4. doc_subtask should ask for whatever document-derived information
-   (policy figures, penalty clauses, SLA commitments) the compound question needs.
-5. Preserve entity names/IDs mentioned in the original question in both
-   sub-questions where relevant -- do not translate or paraphrase them away.
-6. No explanation outside the JSON object.
-
-Worked example. Input: "Which sellers breached their contracted delivery
-SLA last quarter, and what penalty does their agreement specify?"
-Correct output:
-{"sql_subtask": "Which sellers had a delivery where the delivered date was
-later than the promised date in the last quarter? Include seller_id.",
-"doc_subtask": "What penalty does a seller's supplier agreement specify for
-a late delivery?"}
-Note sql_subtask asks a plain question about delivery timing (answerable
-from fulfillments' existing delivered_at/promised_at columns) and never
-mentions a penalty -- the penalty question goes to doc_subtask only."""
 
 def _sql_literal(value: str) -> str:
     """Standard SQL-92 string literal escaping (double embedded quotes).
@@ -218,8 +184,10 @@ def _to_retrievals(matches: list[dict]) -> list[dict]:
     ]
 
 
-def _extract_party_ids(rows: list[dict], columns: list[str]) -> list[str]:
-    for col in ("seller_id", "provider_id"):
+def _extract_party_ids(rows: list[dict], columns: list[str], target_schema: str | None = None) -> list[str]:
+    """The ids the SQL rows name in the dataset profile's party columns; none for a profile without
+    any (the neutral one), which sends the documents half to the two-round search."""
+    for col in profile_for(target_schema).party_id_columns:
         if col in columns:
             ids = sorted({str(r[col]) for r in rows if r.get(col)})
             if ids:
@@ -252,8 +220,8 @@ the customer ID.", "doc_subtask": "What does the refund policy say about large r
 
 
 def decomposer_prompt(target_schema: str | None) -> str:
-    """The ONDC-tuned decomposer prompt for the ONDC sample corpus; the general one otherwise."""
-    return _DECOMPOSER_SYSTEM_PROMPT if target_schema in cfg.pipeline.ondc_prompt_schemas else _GENERAL_DECOMPOSER_PROMPT
+    """The dataset profile's decomposer prompt (the ONDC sample's); the general one otherwise."""
+    return profile_for(target_schema).decomposer_prompt or _GENERAL_DECOMPOSER_PROMPT
 
 
 async def _decompose(query_text: str, target_schema: str | None = None) -> tuple[str, str, int, int]:
@@ -364,7 +332,7 @@ async def hybrid_plan_node(state_dict: dict[str, Any]) -> dict[str, Any]:
 
 async def hybrid_docs_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     """The documents half, after the SQL agent: narrowed to the parties its rows name when it found
-    seller/provider ids, the two-round search otherwise. Writes only retrievals and metrics."""
+    ids in the dataset profile's party columns, the two-round search otherwise. Writes only retrievals and metrics."""
     query_text: str = state_dict.get("normalized_query") or state_dict.get("raw_query", "")
     subtasks: list[str] = state_dict.get("subtasks") or []
     doc_subtask = subtasks[1] if len(subtasks) > 1 else query_text
@@ -383,7 +351,7 @@ async def hybrid_docs_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                           session_id=state_dict.get("session_id", ""),
                           workspace_id=state_dict.get("workspace_id"),
                           dataset=state_dict.get("target_schema")) as session:
-        party_ids = _extract_party_ids(rows, columns)
+        party_ids = _extract_party_ids(rows, columns, dataset)
         if party_ids:
             matches = await _targeted_doc_search(session, doc_subtask, party_ids, cfg.retrieval.semantic_top_k)
             trajectory_steps += 1

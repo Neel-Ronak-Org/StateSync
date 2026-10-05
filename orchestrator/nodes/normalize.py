@@ -67,7 +67,7 @@ async def normalize_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         }
 
     normalizer = get_language_normalizer()
-    result = await normalizer.normalize(raw_query)
+    result = await normalizer.normalize(raw_query, state_dict.get("target_schema"))
     elapsed_ms = int(time.monotonic() * 1000) - start_ms
 
     logger.info(

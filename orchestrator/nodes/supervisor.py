@@ -17,67 +17,11 @@ from typing import Any
 from config_loader import cfg
 from datasets import is_connection_dataset
 from llm.provider import get_agent_llm
+from profiles import profile_for
 
 logger = logging.getLogger(__name__)
 
 _VALID_ROUTES = frozenset({"sql", "docs", "hybrid"})
-
-_SYSTEM_PROMPT = """\
-You are a query router for an ONDC analytics system. Classify the user query into exactly one route.
-
-Routes:
-  sql    — answerable entirely from the relational database. The stored
-           columns, so you can recognise a value that simply lives in a table:
-             sellers              display_name, category, contracted_sla_hours
-             orders               placed_at, order_value, channel (b2b/b2c)
-             fulfillments         promised_at, delivered_at, status, attempts
-             delivery_events      event_type, occurred_at, note
-             disputes             category, raised_at, resolved_at, narrative
-             locations            city, state, pincode, digipin, coordinates
-             catalog_items        title, category, unit_price
-             logistics_providers  display_name, hub location, b2b_enabled
-           Any count, sum, average, ranking, or filter over those.
-  docs   — answerable entirely from documents: supplier agreements, SLA
-           annexures, network policies (returns, disputes, data retention,
-           compliance), SOPs (exception handling, damage assessment,
-           escalation, cold chain). These are commitments a document makes
-           (e.g. a zone's penalty percentage, a policy's resolution window)
-           and they exist ONLY in documents, never as a database column.
-  hybrid — needs BOTH: a database fact (e.g. which sellers/orders meet some
-           condition) combined with a document fact (e.g. what a policy or
-           agreement specifies for them). Usually phrased as two connected
-           questions, or one question whose answer requires cross-
-           referencing database entities against document content.
-
-DISAMBIGUATION -- the words "SLA", "category" and "penalty" occur in BOTH
-worlds. Decide by WHERE THE VALUE LIVES, never by which word appears:
-  - sellers.contracted_sla_hours is a DATABASE COLUMN. A question asking for
-    a seller's own stored SLA number is sql, even though it says "SLA".
-  - An agreement's per-zone SLA/penalty TABLE is document content. A question
-    asking what a document commits to, or specifies, for a zone is docs.
-  - sellers.category and catalog_items.category are DATABASE COLUMNS. Asking
-    which category something is in is sql, even though it says "category".
-  - A policy's rules about how a category is handled are docs.
-Test to apply: could this be answered by reading one value out of a table
-row? If yes -> sql. Does it require reading what a written document commits
-to? If yes -> docs. Does it need both -> hybrid.
-
-Examples:
-  "How many orders did seller X place last month?" -> sql
-  "What is seller X's contracted SLA in hours?" -> sql        (stored column)
-  "What category is seller X in?" -> sql                      (stored column)
-  "How many disputes are still unresolved?" -> sql
-  "What is the penalty specified in seller X's supplier agreement for a late delivery?" -> docs
-  "What SLA does supplier X's agreement commit to for the Metro NCR zone?" -> docs   (document commitment)
-  "What is the ONDC network's returns policy for the electronics category?" -> docs
-  "Which sellers breached their contracted SLA last quarter, and what penalty does their agreement specify?" -> hybrid
-
-Rules:
-1. Respond with ONLY a JSON object: {"route": "<sql|docs|hybrid>"}
-2. No explanation, no prose, no markdown. Only the JSON object.
-3. All three routes are fully implemented. Do not default to sql out of
-   caution -- classify on what the question actually needs."""
-
 
 _GENERAL_PROMPT = """\
 You are a query router for a business analytics assistant. The user's data lives in a relational
@@ -104,9 +48,9 @@ Rules:
 
 
 def router_prompt(target_schema: str | None) -> str:
-    """The ONDC-tuned prompt for the ONDC sample corpus (it names that schema's tables and was
-    measured on it); the general prompt for every other dataset, e.g. the owner's own database."""
-    return _SYSTEM_PROMPT if target_schema in cfg.pipeline.ondc_prompt_schemas else _GENERAL_PROMPT
+    """The dataset profile's router prompt (the ONDC sample's names its tables and was measured on
+    it); the general prompt for every other dataset, e.g. the owner's own database."""
+    return profile_for(target_schema).router_prompt or _GENERAL_PROMPT
 
 
 def _extract_route(text: str) -> str:
