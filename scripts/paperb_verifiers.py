@@ -35,6 +35,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from paperb_folds import SEED, folds, rounds  # noqa: E402,F401 - folds re-exported for older callers
 
 MAX_LEN = 512                                 # noqa: literals - pre-registered input cap
+ACCUM = 2                                     # noqa: literals - micro-batches per batch (GPU memory; the batch size is unchanged)
+SCORE_BATCH = 16                              # noqa: literals - scoring batch
 HF = {"modernbert": "answerdotai/ModernBERT-base", "qwen": "Qwen/Qwen3-0.6B"}
 # Fixed before any verifier was trained (not tuned on test folds).
 HP = {"modernbert": {"lr": 3e-5, "epochs": 3, "batch": 16},
@@ -106,33 +108,39 @@ def train_and_score(model_name: str, train: list[tuple[str, int]], score_texts: 
     rng = random.Random(SEED)
     hp = HP[model_name]
     tok, model = build(model_name, device)
+    if hasattr(model, "gradient_checkpointing_enable"):
+        model.gradient_checkpointing_enable()     # activations recomputed in backward: the Mac's GPU memory
     params = [p for p in model.parameters() if p.requires_grad]
     opt = torch.optim.AdamW(params, lr=hp["lr"], weight_decay=0.01)
     steps = hp["epochs"] * math.ceil(len(train) / hp["batch"])
     warm = max(1, steps // 10)
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: min(1.0, (s + 1) / warm) * max(0.0, (steps - s) / max(1, steps - warm)))
+    micro = max(1, hp["batch"] // ACCUM)          # the batch is unchanged; it is built from ACCUM micro-batches
     model.train()
-    step = 0
     for _ in range(hp["epochs"]):
         for batch in batches(train, hp["batch"], True, rng):
-            enc = tok([t for t, _ in batch], truncation=True, max_length=MAX_LEN, padding=True, return_tensors="pt").to(device)
-            labels = torch.tensor([y for _, y in batch], device=device)
-            loss = model(**enc, labels=labels).loss
-            loss.backward()
+            for j in range(0, len(batch), micro):
+                part = batch[j:j + micro]
+                enc = tok([t for t, _ in part], truncation=True, max_length=MAX_LEN, padding=True, return_tensors="pt").to(device)
+                labels = torch.tensor([y for _, y in part], device=device)
+                loss = model(**enc, labels=labels).loss * len(part) / len(batch)
+                loss.backward()
+                del enc, labels, loss
             torch.nn.utils.clip_grad_norm_(params, 1.0)
             opt.step()
             sched.step()
-            opt.zero_grad()
-            step += 1
-            if device == "mps" and step % 50 == 0:
-                torch.mps.empty_cache()
+            opt.zero_grad(set_to_none=True)
+            if device == "mps":
+                torch.mps.empty_cache()           # variable lengths otherwise grow the MPS cache (the Laya pilot)
     model.eval()
     probs: list[float] = []
     t0 = time.perf_counter()
     with torch.no_grad():
-        for i in range(0, len(score_texts), 32):
-            enc = tok(score_texts[i:i + 32], truncation=True, max_length=MAX_LEN, padding=True, return_tensors="pt").to(device)
+        for i in range(0, len(score_texts), SCORE_BATCH):
+            enc = tok(score_texts[i:i + SCORE_BATCH], truncation=True, max_length=MAX_LEN, padding=True, return_tensors="pt").to(device)
             probs += torch.softmax(model(**enc).logits.float(), dim=-1)[:, 1].tolist()
+            if device == "mps":
+                torch.mps.empty_cache()
     per_check_ms = (time.perf_counter() - t0) * 1000 / max(1, len(score_texts))
     del model, opt
     if device == "mps":

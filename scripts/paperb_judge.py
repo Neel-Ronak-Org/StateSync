@@ -19,6 +19,7 @@ import json
 import re
 import subprocess
 import sys
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -44,10 +45,13 @@ def parse_score(text: str) -> float | None:
         return None
 
 
-def run_batch(items: list[dict]) -> list[dict]:
+CHUNK = 24                  # noqa: literals - items per docker exec; the record is saved after each chunk
+
+
+def run_batch(items: list[dict], container: str) -> list[dict]:
     req = {"endpoint": ENDPOINT, "model": MODEL, "system": SYSTEM, "max_tokens": eb.JUDGE_MAX_TOKENS,
            "spacing_s": SPACING_S, "items": items}
-    out = subprocess.run(["docker", "exec", "-i", eb.ORCHESTRATOR, "python", "-c", eb._JUDGE_SNIPPET],
+    out = subprocess.run(["docker", "exec", "-i", container, "python", "-c", eb._JUDGE_SNIPPET],  # noqa: SLF001
                          input=json.dumps(req), capture_output=True, text=True,
                          timeout=max(600, len(items) * 120))
     if out.returncode:
@@ -58,13 +62,13 @@ def run_batch(items: list[dict]) -> list[dict]:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--shards", type=int, default=3)
+    ap.add_argument("--shards", type=int, default=3, help="chunks judged in parallel")
+    ap.add_argument("--container", default=eb.ORCHESTRATOR, help="orchestrator container that makes the calls")
     args = ap.parse_args()
     pool = json.loads((eb.EVAL / "paperb_pool.json").read_text())["questions"]
     record = json.loads(OUT.read_text()) if OUT.exists() else {"endpoint": ENDPOINT, "model": MODEL,
                                                                "system": SYSTEM, "verdicts": {}}
-    schemas: dict[str, str] = {}
-    items = []
+    todo = []
     for q in pool:
         firsts: dict[int, dict] = {}
         for c in q["candidates"]:
@@ -72,20 +76,27 @@ def main() -> int:
                 firsts.setdefault(c["cluster"], c)
         for k, c in firsts.items():
             key = f"{q['question_id']}|{k}"
-            if record["verdicts"].get(key, {}).get("p_correct") is not None:
-                continue
-            schemas.setdefault(q["db_id"], eb.schema_text(q["db_id"]))
-            items.append({"id": key, "prompt": f"Question: {q['question']}\n\nTables:\n{schemas[q['db_id']]}\n\n"
-                                               f"SQL:\n{c['sql']}\n\nFirst rows of the result:\n"
-                                               f"{eb.preview(q['db_id'], c['sql'])}"})
-    print(f"{len(items)} clusters to judge", flush=True)
-    shards = [items[i::args.shards] for i in range(args.shards)]
-    with ThreadPoolExecutor(args.shards) as pool_ex:
-        for verdicts in pool_ex.map(run_batch, shards):
+            if record["verdicts"].get(key, {}).get("p_correct") is None:
+                todo.append((key, q, c))
+    schemas = {db: eb.schema_text(db) for db in sorted({q["db_id"] for _, q, _ in todo})}   # once per database
+    print(f"{len(todo)} clusters to judge", flush=True)
+    lock = threading.Lock()
+
+    def job(chunk: list[tuple[str, dict, dict]]) -> None:
+        items = [{"id": key, "prompt": f"Question: {q['question']}\n\nTables:\n{schemas[q['db_id']]}\n\n"
+                                       f"SQL:\n{c['sql']}\n\nFirst rows of the result:\n"
+                                       f"{eb.preview(q['db_id'], c['sql'])}"} for key, q, c in chunk]
+        verdicts = run_batch(items, args.container)
+        with lock:
             for v in verdicts:
                 v["p_correct"] = parse_score(v.get("text", ""))
                 record["verdicts"][v["id"]] = v
             OUT.write_text(json.dumps(record, indent=1) + "\n")
+            done = sum(v.get("p_correct") is not None for v in record["verdicts"].values())
+            print(f"{done} clusters judged", flush=True)
+
+    with ThreadPoolExecutor(args.shards) as ex:
+        list(ex.map(job, [todo[i:i + CHUNK] for i in range(0, len(todo), CHUNK)]))
     ok = sum(v.get("p_correct") is not None for v in record["verdicts"].values())
     print(f"{ok} clusters judged; served: {sorted({v.get('served_model') for v in record['verdicts'].values() if v.get('served_model')})}")
     return 0
