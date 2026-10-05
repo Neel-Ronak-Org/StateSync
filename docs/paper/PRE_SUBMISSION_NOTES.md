@@ -101,3 +101,11 @@ Measured runs predate these commits:
 - **Zed:** under $0.3 tonight (Gemini judge on 93 robustness answers, GPT-5 mini repeat run of 50).
 - **Cheaper Inference:** about $0.05–0.10 of $15 (0.75M tokens).
 - **Groq:** free tier.
+
+## Reframing (2026-10-05, no numbers changed)
+
+Title, abstract, contributions and the closing recommendation now present the paper as an evaluation
+protocol for correctness warnings (matched flag rate, corrected labels, matched cost), with the data-check
+null as its worked example. Reason: novelty was the main expected criticism (item 5); the protocol
+findings are what a reader can reuse. The old title was "Do Data Checks Tell You When to Trust a
+Text-to-SQL Answer? A Pre-registered Study on Corrected BIRD Labels".

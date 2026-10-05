@@ -18,8 +18,8 @@
 \setlength{\parskip}{0pt}
 \renewcommand{\arraystretch}{1.05}
 
-\title{\Large Do Data Checks Tell You When to Trust a Text-to-SQL Answer?\\
-A Pre-registered Study on Corrected BIRD Labels}
+\title{\Large How Should We Test Text-to-SQL Warning Signals?\\
+A Pre-registered Study of Data Checks, Judges and Self-Consistency}
 \author{Anonymous submission}
 \date{}
 
@@ -27,17 +27,20 @@ A Pre-registered Study on Corrected BIRD Labels}
 \maketitle
 
 \begin{abstract}
-A text-to-SQL system that answers wrongly should say so. Beyond model-based signals, a deployed
-system can check an answer against the data with no model call: joins that count rows twice, results
-cut off at a row limit, all-NULL aggregates, figures absent from the result. In a pre-registered study
-on 393 held-out BIRD Mini-Dev questions, scored against corrected gold annotations, we ask how often
-such checks apply and whether they warn as well as an LLM judge at the same flag rate. They apply to
-only 4\% of answers, and there they catch no more errors than the judge with as many warnings (9 vs.\
-10.8; 95\% CI of the difference $-6.3$ to $2.2$); they improve neither the judge's risk--coverage
-curve nor a combined model. An agent retry is the most useful cheap warning (79\% precision).
-Self-consistency and the judge rank answers about equally (AUROC 0.74 vs.\ 0.70, not significant). A
-blind annotation of every error explains why checks rarely help: most errors are semantic.
-With a second SQL model (exploratory) the checks again catch no more errors than the judge.
+A text-to-SQL system should warn when an answer may be wrong, and many warning signals exist: data
+checks with no model call, process signals, LLM judges, self-consistency. Comparing them fairly is
+harder than it looks. In a pre-registered study on 393 held-out BIRD Mini-Dev questions we show three
+choices that change the conclusions. Rarely-firing yes/no checks look useless under AUROC, so we
+compare every signal with a judge at the same flag rate. Labels matter: corrected gold annotations
+move accuracy by 10.7 points, and counting the remaining format-only errors as correct removes
+self-consistency's lead over the judge. Cost matters: at one extra call each, the judge ranks answers
+better than self-consistency (significantly for one of two models), which needs three samples to
+draw level. Applied to data checks (row-multiplying
+joins, truncated results, all-NULL aggregates, ungrounded figures), the result is negative: they apply
+to 4\% of answers and catch no more errors than the judge at the same rate (9 vs.\ 10.8; 95\% CI of
+the difference $-6.3$ to $2.2$), and a second SQL model gives the same picture. A blind annotation of
+every error explains why: most errors are semantic. An agent retry is the best free warning (79\%
+precision).
 \end{abstract}
 
 \section{Introduction}
@@ -55,19 +58,21 @@ model call. They are free, instant and explainable (``this join repeats each pat
 which makes them attractive in a product.
 
 We built such checks into a self-hosted text-to-SQL system and asked, in a pre-registered study,
-whether they earn their place. Our contributions:
+whether they earn their place. Answering fairly took care that comparisons of such signals usually
+skip, and that care changes the conclusions. Our contributions:
 \begin{enumerate}\setlength{\itemsep}{0pt}
-\item A pre-registered comparison of data checks, process signals, LLM judges and self-consistency as
-correctness warnings on 393 held-out BIRD Mini-Dev questions \citep{li2023bird} scored against
-corrected annotations \citep{jin2026annotation}, with a matched-flag-rate primary measure that is fair
-to rarely-firing yes/no checks.
-\item A blind error-type annotation of every wrong answer (two annotators, $\kappa=0.74$) with a catch
-matrix of which signal sees which error.
-\item A negative result with its reason: data checks rarely apply and do not beat a judge or
-self-consistency, because most errors are semantic; structural double-counting checks miss double
-counting that happens through legitimate joins.
-\item A frozen fan-out question set (60 risky, 33 control) on which current models rarely double count
-(0 and 5 of 60), and a second-model replication of the main results.
+\item An evaluation protocol for correctness warnings: a matched-flag-rate primary measure that is fair
+to rarely-firing yes/no checks, scoring against corrected annotations \citep{jin2026annotation},
+cost-matched comparison of sampling-based signals, and pre-registered hypotheses with Holm correction.
+\item Evidence on BIRD Mini-Dev \citep{li2023bird} that these choices matter: correction moves accuracy
+by 10.7 points; a fifth of the remaining errors are format-only, and counting them as correct removes
+self-consistency's lead over the judge; at equal cost the judge leads.
+\item A negative result with its reason: data checks rarely apply (4--6\% of answers for two models) and
+do not beat a judge; a blind annotation of every wrong answer (two annotators, $\kappa=0.74$; repeated
+for the second model) shows most errors are semantic, and structural double-counting checks miss
+double counting through legitimate joins.
+\item Released resources: a frozen fan-out set (60 risky, 33 control questions) on which current models
+rarely double count (0 and 5 of 60), the annotations, and all run records.
 \end{enumerate}
 
 \section{Related work}
@@ -286,7 +291,8 @@ correction a fifth of the remaining errors are formatting, and 8 involve a hint 
 data or the gold. Running a SQLite benchmark on its PostgreSQL copy adds artefacts (7 of 498 golds
 disagree; PostgreSQL sorts NULLs first in descending order, which turned 2 answers wrong), and the
 released correction file rewords 81 questions and 68 hints. Studies of warning signals on BIRD should
-use corrected labels and, ideally, an answer-level label.
+use corrected labels, compare rarely-firing checks at a matched flag rate and sampling signals at a
+matched cost, and, ideally, use an answer-level label.
 
 \section*{Limitations}
 
