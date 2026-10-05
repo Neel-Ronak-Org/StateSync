@@ -308,6 +308,9 @@ doc_scope                       = "all"      # "all" | "dataset": sample-corpus 
 doc_abstain                     = "off"      # "off" | "on": the docs route answers "not found" without a model call when nothing relevant was retrieved (Phase E; thresholds: retrieval.abstain_min_* in statesync.toml)
 rerank                          = "bge"      # "off" | "minilm" | "bge": re-score the top candidates with a cross-encoder (docs/specs/rag_v3.md). "bge" since 2026-10-03 (owner): +16.0 pts page hit@5 on FinanceBench, ~4.5 s per search on the Mac GPU
 query_rewrite                   = "off"      # "off" | "llm": the docs route searches with a short rewrite of the question from the normaliser model (docs/specs/rag_v3.md)
+passage_order                   = "document" # "document" | "relevance": the answer writer's passages are the most relevant ones (grouped by document), not the first by document order (docs/specs/routing_docs_fixes.md F-D)
+passage_titles                  = "off"      # "off" | "on": the writer's passage label names the document title and page (F-T)
+rerank_titles                   = "off"      # "off" | "on": the re-ranker also reads each passage's document title (F-T; needs rerank on)
 
 [tenancy]
 enforced                        = false  # D6; threading is mandatory even when false

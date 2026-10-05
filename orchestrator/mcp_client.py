@@ -215,10 +215,12 @@ async def vector_semantic_search(
     dataset: str | None = None,
     scope: str | None = None,
     rerank: str | None = None,
+    rerank_titles: bool | None = None,
 ) -> dict[str, Any]:
     """A4.6 vector.semantic_search. mode ("dense" | "hybrid"), dataset and scope ("dataset") are sent
     only when given; scope "all" and rerank "off" are the server's defaults and are not sent, so the
-    shipped request is unchanged."""
+    shipped request is unchanged. rerank_titles (the re-ranker also reads each passage's document
+    title) is sent only as True and only with a re-ranker, so an older MCP never sees it."""
     params: dict[str, Any] = {"query_text": query_text}
     if top_k is not None:
         params["top_k"] = top_k
@@ -232,6 +234,8 @@ async def vector_semantic_search(
         params["scope"] = scope
     if rerank is not None and rerank != "off":
         params["rerank"] = rerank
+        if rerank_titles:
+            params["rerank_titles"] = True
         # A re-ranked search waits on the cross-encoder; the session's 20 s default would time it out
         # and lose the re-ranking. Wait the MCP's own budget: embedding + re-ranking + overhead.
         timeout = (float(cfg.retrieval.embedding_timeout_s) + float(cfg.retrieval.rerank_timeout_s)
