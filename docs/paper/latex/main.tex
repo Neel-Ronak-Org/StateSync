@@ -34,11 +34,11 @@ on 393 held-out BIRD Mini-Dev questions, scored against corrected gold annotatio
 data checks with an LLM judge at the same flag rate. The checks fire on 4\% of answers and catch no
 more errors than the judge with as many warnings (9 vs.\ 10.8; 95\% CI of the difference $-6.3$ to
 $2.2$), and do not improve its risk--coverage curve. Process signals (the query failed, returned
-nothing, or needed a retry) are the strongest cheap warnings (79\% precision), and self-consistency
-ranks answers best (AUROC 0.74 vs.\ 0.70). A blind annotation of every error explains why: most errors
-are semantic, and a fifth are formatting differences the scorer misses. On 60 questions built to invite
-double counting, two models erred 0 and 5 times, too rarely to test the fan-out check. Answers that
-change between runs are those whose self-consistency samples disagree.
+nothing, or needed a retry) are the strongest cheap warnings. Self-consistency ranks answers best for
+this model (AUROC 0.74 vs.\ 0.70) but worst for a second model that repeats its errors (0.61), while a
+second-model replication confirms the rest. A blind annotation of every error explains why checks fail:
+most errors are semantic. On 60 questions built to invite double counting, the models erred 0 and 5
+times, too rarely to test the fan-out check.
 \end{abstract}
 
 \section{Introduction}
@@ -68,7 +68,9 @@ matrix of which signal sees which error.
 self-consistency, because most errors are semantic; structural double-counting checks miss double
 counting that happens through legitimate joins.
 \item A frozen fan-out question set (60 risky, 33 control) on which current models rarely double count
-(0 and 5 of 60), and a run-to-run analysis linking answer instability to self-consistency.
+(0 and 5 of 60); a run-to-run analysis linking answer instability to self-consistency; and a
+second-model replication showing that the data-check result holds while self-consistency's value
+depends on whether the model is consistent when wrong.
 \end{enumerate}
 
 \section{Related work}
@@ -240,6 +242,14 @@ the judge doubts the answer (10\% of answers) raises accuracy from 77.1\% to 78.
 broken), as much as voting on every answer. A right candidate exists for 28 of the 90 wrong answers
 (a ceiling of 84.2\%), so a better selector could gain up to 7 points.
 
+\textbf{Exploratory: a second SQL model.} We reran the 393 held-out questions with gpt-oss-120b on
+the same code and settings (77.9\% accurate). The data checks again fire on 5\% and catch fewer errors
+than the judge at the same flag rate ($-5.6$, 95\% CI $-11.6$ to $-0.5$), add nothing to the judge's
+ordering or to a combined model, and empty results again beat the judge ($+3.2$). Self-consistency
+does not replicate: AUROC 0.61 against the judge's 0.71, because 63 of gpt-oss's 87 errors come with
+five agreeing samples (36 of 90 for GPT-5 mini); voting over its samples changes no answer, and its
+candidates hold only 2.1 points of headroom.
+
 \section{Discussion}
 
 \textbf{Why data checks rarely help.} The checks see the query and its own result, while most errors
@@ -250,10 +260,11 @@ models also rarely fall into the textbook fan-out trap the probe was built for (
 questions), and when one does, a strong judge notices too.
 
 \textbf{What works cheaply.} Process signals cost nothing and catch a fifth of the errors at high
-precision; self-consistency ranks best, at the price of five extra calls (two thirds of our
-generation cost), and it tracks the questions on which the model is unstable. In a product we would
-show process signals and self-consistency, and keep data checks as explanations attached to a flagged
-answer rather than as detectors.
+precision. Self-consistency helps only when a model is inconsistent when wrong: for GPT-5 mini it
+ranks best and tracks the questions on which the model is unstable, for gpt-oss it is the weakest
+signal, and it costs five extra calls either way. The LLM judge is the steadier choice across models.
+In a product we would show process signals and a judge, add self-consistency where the model's samples
+vary, and keep data checks as explanations attached to a flagged answer rather than as detectors.
 
 \textbf{What the benchmark measures.} Correcting the gold moves accuracy by 10.7 points; even after
 correction a fifth of the remaining errors are formatting, and 8 involve a hint that contradicts the
@@ -264,8 +275,8 @@ use corrected labels and, ideally, an answer-level label.
 
 \section*{Limitations}
 
-One SQL model in the main study (GPT-5 mini), which may have seen BIRD in training, at default
-sampling. Both error annotators are models, blind to the signals; a human sample would strengthen
+One SQL model in the confirmatory study (GPT-5 mini, default sampling), with a second model
+(gpt-oss-120b) only as an exploratory replication; both may have seen BIRD in training. Both error annotators are models, blind to the signals; a human sample would strengthen
 this. The fan-out set follows a textbook pattern and was drafted with an AI assistant; its null result
 says nothing about subtler double counting. Free-tier limits forced a change of host for the
 gpt-oss-120b runs to a reseller that does not disclose its upstream; we checked the served model on

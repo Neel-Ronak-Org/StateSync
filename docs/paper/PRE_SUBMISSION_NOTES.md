@@ -26,7 +26,10 @@ headline.
    and they fire on 4%", which the draft does; keep it that way.
 2. **H1, the fan-out hypothesis, was never testable.** The models made 0 and 5 double counts, against
    10 needed. The set is textbook and AI-drafted. This is reported honestly, but it is the weakest part.
-3. **One main SQL model, 393 questions.** The second model appears only on the fan-out set.
+3. **One confirmatory SQL model.** Partly answered by the exploratory replication: gpt-oss-120b on
+   all 393 held-out questions, same code and settings. The data-check result replicates. The
+   self-consistency result does not (0.74 vs 0.61), and the paper now says so and explains why: gpt-oss
+   repeats its errors.
 4. **No human error annotation.** Both annotators are models (κ = 0.74). A 20-item human pass would
    blunt this (see below).
 5. **Novelty is modest.** SQLens (Gong et al., 2025) combines database and LLM signals. Our angle is
@@ -35,6 +38,16 @@ headline.
    a cost-matched comparison would be stronger.
 7. **Hosting.** Proxies and a reseller for some runs. Served model names are logged, and agreement
    checks are reported, but a reviewer may still question reproducibility.
+
+## Added 2026-10-05 (exploratory, protocol change 17)
+
+All three are in the report and the paper:
+- **Second-model replication.** The data checks again add nothing (significantly fewer catches than the
+  judge for gpt-oss). Self-consistency's value depends on the model.
+- **Signal combination.** An out-of-fold logistic model does no better with the data checks than
+  without them, for both models.
+- **Judge-triggered fallback.** +1.5 points for GPT-5 mini; nothing for gpt-oss, whose samples agree with
+  each other. Ceilings: 84.2% and 79.9%.
 
 ## Before submission (in order)
 

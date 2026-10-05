@@ -20,8 +20,9 @@ judge does with the same number of warnings (9 vs 10.8; 95% CI of the difference
 by the checks before the judge does not improve the judge's risk–coverage curve.
 
 The strongest cheap warnings are ordinary process signals: the query failed, returned nothing, or
-needed a retry (79% precision). Self-consistency gives the best ranking (AUROC 0.74 vs 0.70 for the
-judge).
+needed a retry (79% precision). Self-consistency gives the best ranking for this model (AUROC 0.74 vs
+0.70 for the judge), but the worst for a second model that repeats its errors (0.61); an exploratory
+replication with that model confirms everything else.
 
 A blind annotation of every wrong answer explains why. Most errors are semantic: wrong filter values,
 wrong columns, wrong aggregation intent. The double-counting errors that a structural probe targets
@@ -315,6 +316,16 @@ Decided after the confirmatory results (protocol change 17).
   - on every answer: the same gain.
 - **Headroom.** A right candidate exists for 28 of the 90 wrong answers (ceiling 84.2%).
 
+## 5d Exploratory: a second SQL model (gpt-oss-120b)
+
+The 393 held-out questions were asked again with the same code and settings (77.9% accurate):
+- **The data checks fire on 5%** and catch fewer errors than the judge at the same flag rate (−5.6,
+  95% CI −11.6 to −0.5). They add nothing to the judge's ordering or to a combined model.
+- **Empty results again beat the judge** (+3.2).
+- **Self-consistency does not replicate:** AUROC 0.61 against the judge's 0.71.
+  - 63 of gpt-oss's 87 errors come with five agreeing samples; for GPT-5 mini, 36 of 90.
+  - Voting over its samples changes no answer, and its candidates hold only 2.1 points of headroom.
+
 ## 6 Discussion
 
 **Why data checks rarely help.** The checks see the query and its own result; most errors are about
@@ -331,11 +342,13 @@ says which was meant.
 **What does work cheaply.** Signals from the pipeline's own process are surprisingly strong:
 - a query that failed, returned nothing, or needed a retry is wrong 79–100% of the time;
 - these cost nothing and catch about a fifth of the errors;
-- self-consistency gives the best overall ranking, at the price of five extra model calls (two thirds
-  of our generation cost).
+- **Self-consistency helps only when a model is inconsistent when wrong.**
+  - For GPT-5 mini it ranks best; for gpt-oss it is the weakest signal.
+  - It costs five extra calls either way.
+- **The judge is the steadier choice across models.**
 
-In practice we would show process signals and self-consistency, and keep data checks as explanations
-attached to a flagged answer rather than as detectors.
+In practice we would show process signals and a judge, and add self-consistency where the model's
+samples vary. Data checks belong as explanations attached to a flagged answer, not as detectors.
 
 **What the benchmark measures.** These problems are known (Section 2); our numbers show they persist
 after correction:
@@ -356,7 +369,8 @@ help.
 
 ## 7 Limitations
 
-- **One SQL model** (GPT-5 mini) at default sampling; the model may have seen BIRD during training.
+- **One SQL model in the confirmatory study** (GPT-5 mini, default sampling). A second model
+  (gpt-oss-120b) appears only as an exploratory replication. Both may have seen BIRD during training.
 - **Model access** was through a local OpenAI-compatible proxy to a hosted subscription. The server
   reported the served model on every call (all `gpt-5-mini`; judge `gemini-3.8-flash`).
 - **Normaliser host.** In the robustness run the normaliser also ran on the reseller: the same language

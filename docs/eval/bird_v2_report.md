@@ -183,6 +183,57 @@ It caught one real figure problem.
 
 ## Exploratory extensions (protocol change 17; decided after all confirmatory results)
 
+### Second-model replication: gpt-oss-120b on the 393 held-out questions
+
+Files:
+- `bird_answers_heldout_gptoss.json` (merged from three parallel shards)
+- `bird_scores_heldout_gptoss_v2_corrected.json`
+- `bird_analysis_v2_heldout_gptoss_v2_corrected.json`
+- `bird_judge_heldout_gptoss_local_router_zed-hosted_gemini-3.8-flash.json`
+- `bird_combination_heldout_gptoss_v2_corrected.json`
+- `bird_fallback_sim_heldout_gptoss.json`
+
+**Setup:**
+- the orchestrator code the study measured (`c49d5e7`);
+- held-out settings: `self_consistency_k = 5`, `fanout_retry_max = 1`;
+- gpt-oss-120b and the normaliser through Cheaper Inference; every call reported the requested model;
+- Gemini judge on Zed.
+
+The host returned an empty answer text on 25 of 393 answers (22 of them with correct SQL). Excluding
+them changes the AUROCs below by at most 0.004.
+
+| | GPT-5 mini | gpt-oss-120b |
+|---|---|---|
+| accuracy (relaxed, corrected gold) | 77.1% | 77.9% |
+| any data check: flagged / precision | 17 / 0.53 | 20 / 0.40 |
+| data checks vs judge at the same k | −1.8 (−6.3, 2.2) | **−5.6 (−11.6, −0.5)** |
+| empty result vs judge at the same k | +2.2 (0.7, 4.1) | +3.2 (1.4, 5.6) |
+| needed a retry vs judge at the same k | +3.7 (−1.7, 8.6) | +1.0 (−4.5, 5.7) |
+| checks then judge, AURC gain (H2's ordering) | 0.001 (−0.005, 0.009) | 0.001 (−0.008, 0.011) |
+| grounding false alarms on correct texts | 2/242 | 3/211 |
+| repairs triggered | 2 | 6 |
+| Gemini judge AUROC | 0.697 | 0.705 |
+| **self-consistency AUROC** | **0.739** | **0.605** |
+| wrong answers whose 5 samples all agreed | 36/90 | **63/87** |
+| combination: all signals / without data checks | 0.785 / 0.801 | 0.672 / 0.691 |
+| fallback (vote when the judge doubts) | +1.5 points | **0** (no answer changed) |
+| ceiling: right if any candidate is right | 84.2% | 79.9% |
+
+**What replicates:**
+- the data checks fire on about 5% and catch no more than the judge (for gpt-oss, significantly fewer);
+- they add nothing to the judge's ranking or to a combined model;
+- process signals (empty result) beat the judge at their flag rate;
+- grounding's false-alarm rate stays low.
+
+**What does not replicate:** self-consistency is the best ranking for GPT-5 mini and the weakest for
+gpt-oss.
+- **Why:** gpt-oss repeats its errors. 72% of its wrong answers had five agreeing samples, against
+  40% for GPT-5 mini.
+- **Consequences:** voting over its own samples changes nothing, and the candidates hold only 2.1
+  points of headroom.
+- **So:** self-consistency, and fallbacks built on it, help only for models that are inconsistent
+  when wrong.
+
 ### Do the signals add up? (`scripts/combine_signals_bird.py`, `bird_combination_heldout_gpt5mini_v2_corrected.json`)
 
 Method: an L2 logistic regression on the per-answer signals, scored out-of-fold. Intervals come from
