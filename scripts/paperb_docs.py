@@ -63,6 +63,8 @@ GRADER = (
     "{\"verdict\": \"correct\" | \"partly correct\" | \"incorrect\" | \"refused\", \"reason\": \"<one sentence>\"}.")
 VERDICTS = ("correct", "partly correct", "incorrect", "refused")
 COMMITTED_FLAGS = REPO / "config" / "flags.toml"
+CONTAINER = "statesync-orchestrator-paperb"   # Part D's own orchestrator (research/paperb/partd_container.sh)
+API_BASE = "http://127.0.0.1:8091"
 EXPECTED_ROLES = {"synthesizer": "cheaperinference:gpt-oss-120b", "sql": "cheaperinference:gpt-oss-120b",
                   "normalizer": "cheaperinference:qwen-3-8-27b", "supervisor": "cheaperinference:qwen-3-8-27b",
                   "rewriter": "cheaperinference:qwen-3-8-27b", "decomposer": "cheaperinference:qwen-3-8-27b"}
@@ -76,20 +78,20 @@ def answers_path(label: str) -> Path:
     return EVAL / f"paperb_docs_answers_{label}.json"
 
 
-def live_flags() -> dict[str, Any]:
-    out = subprocess.run(["docker", "exec", eb.ORCHESTRATOR, "python", "-c",
+def live_flags(container: str) -> dict[str, Any]:
+    out = subprocess.run(["docker", "exec", container, "python", "-c",
                           "import json, tomllib; print(json.dumps(tomllib.load(open('/app/config/flags.toml', 'rb'))))"],
                          capture_output=True, text=True, timeout=60)
     if out.returncode:
-        raise RuntimeError(f"could not read flags inside {eb.ORCHESTRATOR}: {out.stderr[-300:]}")
-    started = subprocess.run(["docker", "inspect", "-f", "{{.State.StartedAt}}", eb.ORCHESTRATOR],
+        raise RuntimeError(f"could not read flags inside {container}: {out.stderr[-300:]}")
+    started = subprocess.run(["docker", "inspect", "-f", "{{.State.StartedAt}}", container],
                              capture_output=True, text=True, timeout=30).stdout.strip()
     return {"flags": json.loads(out.stdout), "started": started}
 
 
-def check_config(label: str) -> dict[str, Any]:
+def check_config(label: str, container: str = CONTAINER) -> dict[str, Any]:
     """The run's configuration, refused unless it is Part D's (v2 §4)."""
-    live = live_flags()
+    live = live_flags(container)
     f = live["flags"]
     committed = tomllib.loads(subprocess.run(["git", "-C", str(REPO), "show", "HEAD:config/flags.toml"],
                                              capture_output=True, text=True, check=True).stdout)
@@ -105,27 +107,42 @@ def check_config(label: str) -> dict[str, Any]:
             problems.append(f"[pipeline] {k} is {f['pipeline'].get(k)!r}, committed {v!r}")
     if problems:
         raise RuntimeError("not Part D's configuration: " + "; ".join(problems))
-    return {"pipeline": f["pipeline"], "roles": roles, "orchestrator_started": live["started"],
+    return {"container": container, "pipeline": f["pipeline"], "roles": roles, "orchestrator_started": live["started"],
             "temperature_omitted_for": f["llm"].get("endpoints", {}).get("cheaperinference", {}).get("omit_temperature", [])}
 
 
-def cmd_ask(label: str, spacing_s: float, limit: int | None) -> int:
+def api(base: str, method: str, path: str, token: str, body: dict | None = None,
+        timeout: float = 120) -> tuple[int, dict]:   # noqa: literals - default HTTP timeout
+    import urllib.error
+    import urllib.request
+    req = urllib.request.Request(base + path, method=method, data=json.dumps(body).encode() if body is not None else None,
+                                 headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.status, json.loads(r.read() or b"{}")
+    except urllib.error.HTTPError as exc:
+        try:
+            return exc.code, json.loads(exc.read() or b"{}")
+        except json.JSONDecodeError:
+            return exc.code, {}
+
+
+def cmd_ask(label: str, spacing_s: float, limit: int | None, container: str = CONTAINER, base: str = API_BASE) -> int:
     from api_auth import api_token
-    config = check_config(label)
+    config = check_config(label, container)
     ingest = json.loads(INGEST.read_text())
     out = answers_path(label)
     record = json.loads(out.read_text()) if out.exists() else {"label": label, "config": config, "answers": {}}
     record.setdefault("configs_seen", []).append(config)
     token = api_token()
-    import eval_retrieval as er
-    status, body = er.api("POST", "/workspaces", token, body={"name": f"paperb-docs-{label}-{int(time.time())}",
-                                                              "target_schema": WORKSPACE_DATASET})
+    status, body = api(base, "POST", "/workspaces", token, {"name": f"paperb-docs-{label}-{int(time.time())}",
+                                                           "target_schema": WORKSPACE_DATASET})
     if status != 201:   # noqa: literals - HTTP Created
         raise RuntimeError(f"could not create the workspace: {status} {body}")
     workspace = body["workspace"]["workspace_id"]
     asked = 0
     try:
-        status, body = er.api("PUT", f"/workspaces/{workspace}/folders", token, body={"folder_ids": [ingest["folder_id"]]})
+        status, body = api(base, "PUT", f"/workspaces/{workspace}/folders", token, {"folder_ids": [ingest["folder_id"]]})
         if status != 200:   # noqa: literals - HTTP OK
             raise RuntimeError(f"could not link the folder: {status} {body}")
         for q in questions():
@@ -133,8 +150,8 @@ def cmd_ask(label: str, spacing_s: float, limit: int | None) -> int:
             if fid in record["answers"] or (limit is not None and asked >= limit):
                 continue
             t0 = time.monotonic()
-            st, body = eb.api("POST", "/query", {"query": q["question"], "session_id": str(uuid.uuid4()),
-                                                 "workspace_id": workspace}, timeout=QUERY_TIMEOUT_S)
+            st, body = api(base, "POST", "/query", token, {"query": q["question"], "session_id": str(uuid.uuid4()),
+                                                          "workspace_id": workspace}, timeout=QUERY_TIMEOUT_S)
             trace = body.get("state_trace") or {}
             rec = {"http_status": st, "answer_text": body.get("answer_text"), "detail": body.get("detail"),
                    "route": trace.get("route"), "citations": body.get("citations"),
@@ -152,7 +169,7 @@ def cmd_ask(label: str, spacing_s: float, limit: int | None) -> int:
                   f"{rec['latency_ms'] / 1000:.1f} s", flush=True)
             time.sleep(spacing_s)
     finally:
-        st, _ = er.api("DELETE", f"/workspaces/{workspace}", token)
+        st, _ = api(base, "DELETE", f"/workspaces/{workspace}", token)
         print(f"workspace {workspace} deleted: HTTP {st}")
     return 0
 
@@ -177,7 +194,7 @@ def grading_items() -> list[dict]:
     return items
 
 
-def cmd_grade(shards: int) -> int:
+def cmd_grade(shards: int, container: str = CONTAINER) -> int:
     out = EVAL / "paperb_docs_grades.json"
     record = json.loads(out.read_text()) if out.exists() else {"endpoint": GRADER_ENDPOINT, "model": GRADER_MODEL,
                                                                "system": GRADER, "seed": SEED, "verdicts": {}}
@@ -187,7 +204,7 @@ def cmd_grade(shards: int) -> int:
     def run(batch: list[dict]) -> list[dict]:
         req = {"endpoint": GRADER_ENDPOINT, "model": GRADER_MODEL, "system": GRADER,
                "max_tokens": eb.JUDGE_MAX_TOKENS, "spacing_s": 1.0, "items": batch}
-        res = subprocess.run(["docker", "exec", "-i", eb.ORCHESTRATOR, "python", "-c", eb._JUDGE_SNIPPET],  # noqa: SLF001
+        res = subprocess.run(["docker", "exec", "-i", container, "python", "-c", eb._JUDGE_SNIPPET],  # noqa: SLF001
                              input=json.dumps(req), capture_output=True, text=True, timeout=max(600, len(batch) * 120))
         if res.returncode:
             print(res.stderr[-600:], flush=True)
@@ -290,15 +307,18 @@ def main() -> int:
     a.add_argument("--label", choices=sorted(LABELS), required=True)
     a.add_argument("--spacing", type=float, default=1.0)
     a.add_argument("--limit", type=int)
+    a.add_argument("--container", default=CONTAINER)
+    a.add_argument("--api", default=API_BASE)
     g = sub.add_parser("grade")
     g.add_argument("--shards", type=int, default=3)
+    g.add_argument("--container", default=CONTAINER)
     sub.add_parser("owner-sheet")
     sub.add_parser("analyze")
     args = ap.parse_args()
     if args.cmd == "ask":
-        return cmd_ask(args.label, args.spacing, args.limit)
+        return cmd_ask(args.label, args.spacing, args.limit, args.container, args.api)
     if args.cmd == "grade":
-        return cmd_grade(args.shards)
+        return cmd_grade(args.shards, args.container)
     return cmd_owner_sheet() if args.cmd == "owner-sheet" else cmd_analyze()
 
 

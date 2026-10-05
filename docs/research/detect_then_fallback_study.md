@@ -374,3 +374,12 @@ the other.
      the largest on a tie.
    - **A missing score** is skipped in selection and counts as 0.5 in detection; a first answer with no
      judge score counts as doubted (it did not run).
+6. **2026-10-05, before any FinanceBench answer was asked (operational).** Part D runs in its own
+   orchestrator container (`research/paperb/partd_container.sh`: the stack's image, networks and secrets,
+   port 8091), with `research/paperb/flags_partd_{dense,bge}.toml` mounted over its `flags.toml`. Those
+   files are the committed `config/flags.toml` with only `[llm] provider`, the Cheaper Inference roles and
+   `[pipeline] rerank` changed. The shared `config/flags.toml` and orchestrator are never changed, because
+   the machine is shared with Paper A's session and may be closed mid-run. Nothing measured differs from
+   §4. Also operational: the ModernBERT verifier builds each batch of 16 from two micro-batches, with
+   gradient checkpointing, after its first run ran out of the Mac's GPU memory before any score was
+   written.
