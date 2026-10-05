@@ -70,9 +70,42 @@ def should_abstain(
     return (best_dense is None or best_dense < min_dense) and (best_keyword is None or best_keyword < min_keyword)
 
 
+def _relevance(match: dict) -> float:
+    """How relevant a retrieved match is: the re-ranker's score when it has one, else its search score."""
+    score = match.get("rerank_score")
+    return float(score if score is not None else match.get("score", 0.0))
+
+
+def order_passages(chunks: list[dict], passage_order: str, window: int, doc_order: list[str]) -> list[dict]:
+    """The order the writer reads the merged passages in (pipeline.passage_order; F-D).
+
+    "document" (shipped): documents in doc_order (first appearance in the first round), each
+    document's chunks by chunk_id. Anything else is "relevance": the first `window` chunks by
+    relevance (ties: lower chunk_id) are the writer's window and are grouped by document, the
+    documents ordered by their best chunk's relevance and each document's chunks by chunk_id so
+    a table stays next to its narrative; the rest follow the window in relevance order."""
+    if passage_order != "relevance":
+        by_doc: dict[str, list[dict]] = {}
+        for chunk in chunks:
+            by_doc.setdefault(chunk["document_id"], []).append(chunk)
+        ordered: list[dict] = []
+        for doc_id in doc_order:
+            ordered.extend(sorted(by_doc.get(doc_id, []), key=lambda c: c["chunk_id"]))
+        return ordered
+    ranked = sorted(chunks, key=lambda c: (-_relevance(c), c["chunk_id"]))
+    head, tail = ranked[:max(window, 0)], ranked[max(window, 0):]
+    # head is in relevance order, so a document's first appearance in it is its best chunk.
+    head_docs = list(dict.fromkeys(c["document_id"] for c in head))
+    grouped: list[dict] = []
+    for doc_id in head_docs:
+        grouped.extend(sorted((c for c in head if c["document_id"] == doc_id), key=lambda c: c["chunk_id"]))
+    return grouped + tail
+
+
 async def _semantic_search_expanded(
     session: MCPSession, query_text: str, top_k: int, mode: str | None = None, dataset: str | None = None,
     scope: str | None = None, abstain: bool = False, rerank: str | None = None,
+    passage_order: str = "document", rerank_titles: bool = False,
 ) -> tuple[list[dict], dict[str, Any]]:
     """
     Two-round retrieval: first an unrestricted semantic_search to find which
@@ -89,8 +122,10 @@ async def _semantic_search_expanded(
     and unanswerable questions) and abstained. With abstain on and should_abstain true on those
     two scores, the second round is skipped and matches is empty (Phase E).
     """
+    # rerank_titles is sent only when on (and re-ranking is on), so an older MCP never sees it.
+    extra: dict[str, Any] = {"rerank_titles": True} if rerank_titles and rerank not in (None, "off") else {}
     first = await vector_semantic_search(session, query_text, top_k=top_k, mode=mode, dataset=dataset, scope=scope,
-                                         rerank=rerank)
+                                         rerank=rerank, **extra)
     matches = first.get("matches", [])
     meta: dict[str, Any] = {
         "best_dense_score": first.get("best_dense_score"),
@@ -117,7 +152,7 @@ async def _semantic_search_expanded(
 
     expanded = await vector_semantic_search(
         session, query_text, top_k=cfg.retrieval.semantic_top_k_max, document_ids=doc_order,
-        mode=mode, dataset=dataset, scope=scope, rerank=rerank,
+        mode=mode, dataset=dataset, scope=scope, rerank=rerank, **extra,
     )
     by_chunk_id = {m["chunk_id"]: m for m in expanded.get("matches", [])}
     for m in matches:
@@ -134,13 +169,9 @@ async def _semantic_search_expanded(
     # _cNNN suffix sorts correctly as a string) keeps a relevant document's
     # narrative and table chunks adjacent, so truncating to a citation/
     # context limit doesn't split them apart.
-    by_doc: dict[str, list[dict]] = {}
-    for chunk in by_chunk_id.values():
-        by_doc.setdefault(chunk["document_id"], []).append(chunk)
-
-    ordered: list[dict] = []
-    for doc_id in doc_order:
-        ordered.extend(sorted(by_doc.get(doc_id, []), key=lambda c: c["chunk_id"]))
+    # pipeline.passage_order = "relevance" instead puts the most relevant passages in the writer's
+    # window (order_passages).
+    ordered = order_passages(list(by_chunk_id.values()), passage_order, cfg.retrieval.semantic_top_k, doc_order)
     return ordered, meta
 
 
@@ -178,6 +209,8 @@ def _to_retrievals(matches: list[dict]) -> list[dict]:
                 "document_id": m["document_id"], "chunk_id": m["chunk_id"],
                 "page": m.get("page"), "score": float(m.get("score", 0.0)),
                 "title": m.get("title"), "section": m.get("section"),
+                # What pipeline.passage_order read, when the re-ranker scored the match.
+                **({"rerank_score": float(m["rerank_score"])} if m.get("rerank_score") is not None else {}),
             },
         }
         for m in matches
@@ -260,6 +293,8 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
     # RAG v3 (docs/specs/rag_v3.md): cross-encoder re-ranking, and searching with a rewrite.
     rerank: str = flags_snapshot.get("pipeline.rerank", "off")
     rewrite_on: bool = flags_snapshot.get("pipeline.query_rewrite", "off") == "llm"
+    passage_order: str = flags_snapshot.get("pipeline.passage_order", "document")
+    rerank_titles: bool = flags_snapshot.get("pipeline.rerank_titles", "off") == "on"
 
     start_ms = int(time.monotonic() * 1000)
     tokens_in_total = tokens_out_total = llm_calls_total = trajectory_steps = 0
@@ -282,7 +317,7 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
             llm_calls_total += usage["llm_calls"]
         matches, meta = await _semantic_search_expanded(
             session, search_text, cfg.retrieval.semantic_top_k, retrieval_mode, dataset,
-            doc_scope, abstain_on, rerank,
+            doc_scope, abstain_on, rerank, passage_order, rerank_titles,
         )
         trajectory_steps += 1 if meta["abstained"] else 2  # the expanded call is a second round-trip
         elapsed_ms = int(time.monotonic() * 1000) - start_ms
@@ -342,6 +377,8 @@ async def hybrid_docs_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     doc_scope: str = flags_snapshot.get("pipeline.doc_scope", "all")
     abstain_on: bool = flags_snapshot.get("pipeline.doc_abstain", "off") == "on"
     rerank: str = flags_snapshot.get("pipeline.rerank", "off")
+    passage_order: str = flags_snapshot.get("pipeline.passage_order", "document")
+    rerank_titles: bool = flags_snapshot.get("pipeline.rerank_titles", "off") == "on"
     rows: list[dict] = state_dict.get("sql_rows") or []
     columns: list[str] = state_dict.get("sql_columns") or []
     start_ms = int(time.monotonic() * 1000)
@@ -358,7 +395,7 @@ async def hybrid_docs_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         else:
             matches, meta = await _semantic_search_expanded(
                 session, doc_subtask, cfg.retrieval.semantic_top_k, retrieval_mode, dataset,
-                doc_scope, abstain_on, rerank,
+                doc_scope, abstain_on, rerank, passage_order, rerank_titles,
             )
             # Nothing relevant: the doc retrievals are dropped and the answer is built from the SQL
             # result alone, with no fixed message (the SQL half may well be the whole answer).

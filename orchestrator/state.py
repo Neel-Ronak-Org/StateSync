@@ -52,6 +52,8 @@ class Provenance(BaseModel):
     # The heading path of an uploaded chunk ("2. Definitions"), from the layout
     # chunker (docs/specs/rag_v2.md Phase C); None for flat chunks and the sample corpus.
     section:      str | None = None
+    # The re-ranker's score, when it scored this passage (pipeline.passage_order reads it).
+    rerank_score: float | None = None
 
 
 class RetrievalResult(BaseModel):

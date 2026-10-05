@@ -507,10 +507,17 @@ def build_citations(
     return citations
 
 
-def _format_doc_context(retrievals: list[dict]) -> str:
+def _format_doc_context(retrievals: list[dict], with_titles: bool = False) -> str:
     parts = [f"Retrieved {len(retrievals)} document passage(s):"]
     for r in retrievals[: cfg.retrieval.semantic_top_k]:
         prov = r["provenance"]
+        if with_titles:  # pipeline.passage_titles: the writer sees which filing a passage comes from
+            page = prov.get("page")
+            parts.append(
+                f"  [Document: {prov.get('title') or prov['document_id']} · page {'?' if page is None else page} · "
+                f"chunk_id={prov['chunk_id']} · score={prov['score']:.3f}]\n{r['content']}"
+            )
+            continue
         parts.append(
             f"  [chunk_id={prov['chunk_id']} document_id={prov['document_id']} "
             f"page={prov.get('page')} score={prov['score']:.3f}]\n{r['content']}"
@@ -614,7 +621,8 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             context_parts.append("The SQL query returned zero rows. The answer may be 'none' or 'zero'.")
 
     if retrievals:
-        context_parts.append(_format_doc_context(retrievals))
+        context_parts.append(_format_doc_context(
+            retrievals, state_dict.get("flags_snapshot", {}).get("pipeline.passage_titles", "off") == "on"))
 
     caveats: list[str] = state_dict.get("caveats") or []
     if caveats:
