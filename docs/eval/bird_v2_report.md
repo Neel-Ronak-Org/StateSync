@@ -198,76 +198,84 @@ It caught one real figure problem.
 
 ## Exploratory extensions (protocol change 17; decided after all confirmatory results)
 
-### Second-model replication at provider default sampling (protocol change 18): first results, judge pending
-
-`bird_answers_heldout_gptoss.json`, `bird_scores_heldout_gptoss_v2_corrected.json`:
-- **Accuracy:** gpt-oss-120b at the provider's default sampling scores 75.8% (relaxed; strict 72.5%).
-  Samples are 26% identical to the answer SQL.
-- **Self-consistency replicates:** AUROC 0.715, against 0.739 for GPT-5 mini and 0.605 in the
-  temperature-0 run.
-  - 38 of its 95 wrong answers have five agreeing samples (40%), the same rate as GPT-5 mini (36 of 90).
-  - The temperature-0 run's "repeats its errors" (63 of 87) was the sampling setting.
-- **Data checks** flag 22 answers (precision 0.41, recall 9%); the agent retry flags 26 (precision 0.69).
-- **Pending:** the Gemini judge on these answers, then the matched-k, combination and fallback
-  analyses. Paused 2026-10-05 for the owner's travel; resume steps are in project memory.
-
-### Second-model replication: gpt-oss-120b on the 393 held-out questions
-
-> **Superseded (protocol change 18).** The run described in this subsection sent `temperature = 0.0`
-> to gpt-oss, while GPT-5 mini ran at its provider's default. Its self-consistency samples were
-> near-copies: 78% were identical to the answer SQL, against 14% for GPT-5 mini. So its
-> self-consistency, voting and headroom figures reflect the sampling setting, not the model. Its files
-> are renamed `heldout_gptoss_t0`. The rerun at provider default sampling is reported in the next
-> subsection; the numbers below are kept as the record of the temperature-0 run.
+### Second-model replication: gpt-oss-120b at provider default sampling (protocol change 18)
 
 Files:
-- `bird_answers_heldout_gptoss_t0.json` (merged from three parallel shards)
-- `bird_scores_heldout_gptoss_t0_v2_corrected.json`
-- `bird_analysis_v2_heldout_gptoss_t0_v2_corrected.json`
-- `bird_judge_heldout_gptoss_t0_local_router_zed-hosted_gemini-3.8-flash.json`
-- `bird_combination_heldout_gptoss_t0_v2_corrected.json`
-- `bird_fallback_sim_heldout_gptoss_t0.json`
+- `bird_answers_heldout_gptoss.json`
+- `bird_scores_heldout_gptoss_v2_corrected.json`
+- `bird_analysis_v2_heldout_gptoss_v2_corrected.json`
+- `bird_judge_heldout_gptoss_local_router_zed-hosted_gemini-3.8-flash.json` (393 of 393 verdicts, all
+  served by gemini-3.8-flash; judged 2026-10-05 18:25–19:14 IST)
+- `bird_combination_heldout_gptoss_v2_corrected.json`
 
 **Setup:**
 - the orchestrator code the study measured (`c49d5e7`);
 - held-out settings: `self_consistency_k = 5`, `fanout_retry_max = 1`;
+- gpt-oss-120b at the provider's default sampling (no temperature sent), as for GPT-5 mini;
 - gpt-oss-120b and the normaliser through Cheaper Inference; every call reported the requested model;
 - Gemini judge on Zed.
 
-The host returned an empty answer text on 25 of 393 answers (22 of them with correct SQL). Excluding
-them changes the AUROCs below by at most 0.004.
+Answers were generated 11:38–13:09 IST, before the network outage of about 14:20 that the Paper B
+session reported; no answer or verdict records a connection error.
 
-| | GPT-5 mini | gpt-oss-120b |
-|---|---|---|
-| accuracy (relaxed, corrected gold) | 77.1% | 77.9% |
-| any data check: flagged / precision | 17 / 0.53 | 20 / 0.40 |
-| data checks vs judge at the same k | −1.8 (−6.3, 2.2) | **−5.6 (−11.6, −0.5)** |
-| empty result vs judge at the same k | +2.2 (0.7, 4.1) | +3.2 (1.4, 5.6) |
-| needed a retry vs judge at the same k | +3.7 (−1.7, 8.6) | +1.0 (−4.5, 5.7) |
-| checks then judge, AURC gain (H2's ordering) | 0.001 (−0.005, 0.009) | 0.001 (−0.008, 0.011) |
-| grounding false alarms on correct texts | 2/242 | 3/211 |
-| repairs triggered | 2 | 6 |
-| Gemini judge AUROC | 0.697 | 0.705 |
-| **self-consistency AUROC** | **0.739** | **0.605** |
-| wrong answers whose 5 samples all agreed | 36/90 | **63/87** |
-| combination: all signals / without data checks | 0.785 / 0.801 | 0.672 / 0.691 |
-| fallback (vote when the judge doubts) | +1.5 points | **0** (no answer changed) |
-| ceiling: right if any candidate is right | 84.2% | 79.9% |
+| | GPT-5 mini | gpt-oss-120b | gpt-oss-120b, temperature 0 (superseded) |
+|---|---|---|---|
+| accuracy (relaxed, corrected gold) | 77.1% | 75.8% | 77.9% |
+| samples identical to the answer SQL | 14% | 26% | 78% |
+| any data check: flagged / precision | 17 / 0.53 | 22 / 0.41 | 20 / 0.40 |
+| data checks vs judge at the same k | −1.8 (−6.3, 2.2) | −3.3 (−9.0, 1.7) | −5.6 (−11.6, −0.5) |
+| empty result vs judge at the same k | +2.2 (0.7, 4.1) | +3.5 (1.4, 6.1) | +3.2 (1.4, 5.6) |
+| needed a retry vs judge at the same k | +3.7 (−1.7, 8.6) | +3.4 (−1.5, 8.3) | +1.0 (−4.5, 5.7) |
+| needed a retry: flagged / precision | 24 / 0.79 | 26 / 0.69 | |
+| checks then judge, AURC gain (H2's ordering) | 0.001 (−0.005, 0.009) | 0.002 (−0.007, 0.014) | 0.001 (−0.008, 0.011) |
+| grounding false alarms on correct texts | 2/242 | 3/207 | 3/211 |
+| repairs triggered | 2 | 7 | 6 |
+| Gemini judge AUROC | 0.697 | 0.683 | 0.705 |
+| self-consistency AUROC | 0.739 | 0.715 | 0.605 |
+| self-consistency minus judge, AUROC | +0.04 (−0.03, 0.11) | +0.03 (−0.05, 0.11) | |
+| wrong answers whose 5 samples all agreed | 36/90 | 38/95 | 63/87 |
+| combination: all signals / without data checks | 0.785 / 0.801 | 0.774 / 0.792 | 0.672 / 0.691 |
+| empty answer texts from the host (correct SQL) | 0 | 39 (35) | 25 (22) |
 
-**What replicates:**
-- the data checks fire on about 5% and catch no more than the judge (for gpt-oss, significantly fewer);
-- they add nothing to the judge's ranking or to a combined model;
-- process signals (empty result) beat the judge at their flag rate;
-- grounding's false-alarm rate stays low.
+Intervals are 95% paired stratified bootstrap intervals (seed 20261003). The self-consistency minus
+judge intervals come from `scripts/sc_vs_judge_bird.py` (`analyze_bird.stratified_bootstrap` on the AUROC difference); the
+GPT-5 mini figure reproduces the audit's. Fallback, voting and headroom figures belong to Paper B and
+are not computed here.
 
-**What does not replicate:** self-consistency is the best ranking for GPT-5 mini and the weakest for
-gpt-oss.
-- **Why:** gpt-oss repeats its errors. 72% of its wrong answers had five agreeing samples, against
-  40% for GPT-5 mini.
-- **Consequences:** voting over its own samples changes nothing, and the candidates hold only 2.1
-  points of headroom.
-- **So:** self-consistency, and fallbacks built on it, help only for models that are inconsistent
-  when wrong.
+**Empty answer texts.** The host returned an empty answer text on 39 answers, 35 of them with correct
+SQL. The judge is shown the answer text and rated these lower (mean p 0.51 against 0.89 for the rest).
+Without them the judge's AUROC is 0.713, self-consistency's 0.725 and the retry flag's 0.582. The SQL
+labels, and so every check and self-consistency figure, are unaffected. (The post-study synthesizer
+fix, `cd37011`, asks once more on an empty answer; the measured code did not.)
+
+**What replicates (all exploratory):**
+- the data checks fire on about 5% of answers and catch no more errors than the judge at the same flag
+  rate;
+- ordering by the checks first does not improve the judge's curve, and a combined model is better
+  without them (5-fold AURC change −0.020, CI −0.053 to 0.006; leave one database out, AUROC 0.743 vs
+  0.773);
+- the agent retry is the best cheap signal, and empty results beat the judge at their flag rate (by
+  construction);
+- self-consistency and the judge rank answers about equally;
+- about 40% of wrong answers have five agreeing samples for both models;
+- grounding's false-alarm rate stays low (H3), and H4 is untestable again (7 repairs, precondition 10).
+
+### Superseded: gpt-oss-120b at temperature 0
+
+> **Superseded (protocol change 18).** This run sent `temperature = 0.0` to gpt-oss, while GPT-5 mini
+> ran at its provider's default. Its self-consistency samples were near-copies (78% identical to the
+> answer SQL), so its self-consistency figures reflect the sampling setting, not the model. Its
+> figures are kept in the third column of the table above as the record of that run.
+
+Files: `bird_answers_heldout_gptoss_t0.json` (merged from three parallel shards),
+`bird_scores_heldout_gptoss_t0_v2_corrected.json`, `bird_analysis_v2_heldout_gptoss_t0_v2_corrected.json`,
+`bird_judge_heldout_gptoss_t0_local_router_zed-hosted_gemini-3.8-flash.json`,
+`bird_combination_heldout_gptoss_t0_v2_corrected.json`, `bird_fallback_sim_heldout_gptoss_t0.json`.
+
+**Withdrawn conclusion:** this run's "gpt-oss repeats its errors, so self-consistency and fallbacks
+built on it help only for models that are inconsistent when wrong" was an artefact of temperature 0.
+At default sampling gpt-oss's wrong answers agree as often as GPT-5 mini's (40%), and its
+self-consistency ranks as well. Excluding its 25 empty answer texts changed its AUROCs by at most 0.004.
 
 ### Do the signals add up? (`scripts/combine_signals_bird.py`, `bird_combination_heldout_gpt5mini_v2_corrected.json`)
 

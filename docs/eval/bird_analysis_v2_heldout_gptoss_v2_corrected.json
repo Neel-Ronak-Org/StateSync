@@ -1,0 +1,230 @@
+{
+ "scores": "docs/eval/bird_scores_heldout_gptoss_v2_corrected.json",
+ "label": "heldout_gptoss",
+ "n": 393,
+ "wrong": 95,
+ "accuracy": 0.7583,
+ "judges": [
+  "zed-hosted/gemini-3.8-flash"
+ ],
+ "signals": {
+  "fanout_retry": {
+   "flagged": 3,
+   "caught": 1,
+   "precision": 0.3333,
+   "recall": 0.0105,
+   "false_alarm_rate": 0.0067,
+   "auroc": 0.5019
+  },
+  "truncation": {
+   "flagged": 9,
+   "caught": 2,
+   "precision": 0.2222,
+   "recall": 0.0211,
+   "false_alarm_rate": 0.0235,
+   "auroc": 0.4988
+  },
+  "null_heavy": {
+   "flagged": 3,
+   "caught": 3,
+   "precision": 1.0,
+   "recall": 0.0316,
+   "false_alarm_rate": 0.0,
+   "auroc": 0.5158
+  },
+  "grounding_before_repair": {
+   "flagged": 7,
+   "caught": 3,
+   "precision": 0.4286,
+   "recall": 0.0316,
+   "false_alarm_rate": 0.0134,
+   "auroc": 0.5091
+  },
+  "any_data_check": {
+   "flagged": 22,
+   "caught": 9,
+   "precision": 0.4091,
+   "recall": 0.0947,
+   "false_alarm_rate": 0.0436,
+   "auroc": 0.5256
+  },
+  "no_sql": {
+   "flagged": 2,
+   "caught": 2,
+   "precision": 1.0,
+   "recall": 0.0211,
+   "false_alarm_rate": 0.0,
+   "auroc": 0.5105
+  },
+  "empty_result": {
+   "flagged": 8,
+   "caught": 8,
+   "precision": 1.0,
+   "recall": 0.0842,
+   "false_alarm_rate": 0.0,
+   "auroc": 0.5421
+  },
+  "any_sql_retry": {
+   "flagged": 26,
+   "caught": 18,
+   "precision": 0.6923,
+   "recall": 0.1895,
+   "false_alarm_rate": 0.0268,
+   "auroc": 0.5813
+  },
+  "refusal": {
+   "flagged": 0,
+   "caught": 0,
+   "precision": null,
+   "recall": 0.0,
+   "false_alarm_rate": 0.0,
+   "auroc": 0.5
+  }
+ },
+ "matched_k": {
+  "fanout_retry": {
+   "k": 3,
+   "check_caught": 1,
+   "judge_caught_expected": 1.68,
+   "difference": -0.68,
+   "difference_ci95": [
+    -2.6471,
+    0.9623
+   ],
+   "p_one_sided": 0.793
+  },
+  "truncation": {
+   "k": 9,
+   "check_caught": 2,
+   "judge_caught_expected": 5.04,
+   "difference": -3.04,
+   "difference_ci95": [
+    -6.6458,
+    0.0
+   ],
+   "p_one_sided": 0.9765
+  },
+  "null_heavy": {
+   "k": 3,
+   "check_caught": 3,
+   "judge_caught_expected": 1.68,
+   "difference": 1.32,
+   "difference_ci95": [
+    0.3929,
+    2.8571
+   ],
+   "p_one_sided": 0.0
+  },
+  "grounding_before_repair": {
+   "k": 7,
+   "check_caught": 3,
+   "judge_caught_expected": 3.92,
+   "difference": -0.92,
+   "difference_ci95": [
+    -3.9574,
+    1.875
+   ],
+   "p_one_sided": 0.7479
+  },
+  "any_data_check": {
+   "k": 22,
+   "check_caught": 9,
+   "judge_caught_expected": 12.32,
+   "difference": -3.32,
+   "difference_ci95": [
+    -8.9535,
+    1.6905
+   ],
+   "p_one_sided": 0.9055
+  },
+  "no_sql": {
+   "k": 2,
+   "check_caught": 2,
+   "judge_caught_expected": 1.12,
+   "difference": 0.88,
+   "difference_ci95": [
+    0.3469,
+    2.1429
+   ],
+   "p_one_sided": 0.0
+  },
+  "empty_result": {
+   "k": 8,
+   "check_caught": 8,
+   "judge_caught_expected": 4.48,
+   "difference": 3.52,
+   "difference_ci95": [
+    1.3594,
+    6.1132
+   ],
+   "p_one_sided": 0.0
+  },
+  "any_sql_retry": {
+   "k": 26,
+   "check_caught": 18,
+   "judge_caught_expected": 14.56,
+   "difference": 3.44,
+   "difference_ci95": [
+    -1.5,
+    8.2745
+   ],
+   "p_one_sided": 0.0895
+  }
+ },
+ "risk_coverage": {
+  "judge zed-hosted/gemini-3.8-flash": {
+   "auroc": 0.6833,
+   "aurc": 0.1668,
+   "selective_accuracy_80": 0.8423,
+   "selective_accuracy_90": 0.7933
+  },
+  "self-consistency": {
+   "auroc": 0.7153,
+   "aurc": 0.1512,
+   "selective_accuracy_80": 0.8336,
+   "selective_accuracy_90": 0.7997
+  },
+  "checks then judge": {
+   "auroc": 0.6828,
+   "aurc": 0.1646,
+   "selective_accuracy_80": 0.8321,
+   "selective_accuracy_90": 0.7837
+  }
+ },
+ "tests": {
+  "H2": {
+   "aurc_judge_minus_combined": 0.0022,
+   "ci95": [
+    -0.0074,
+    0.0135
+   ],
+   "p_one_sided": 0.3665
+  },
+  "H3": {
+   "false_alarms": 3,
+   "of": 207,
+   "rate": 0.0145,
+   "upper_95": 0.037,
+   "p_one_sided": 0.0069
+  },
+  "H4": {
+   "triggered": 7,
+   "labelled": 298,
+   "fixed": 0,
+   "broken": 0,
+   "accuracy_gain": 0.0,
+   "status": "untestable: 7 repairs triggered (precondition 10)"
+  }
+ },
+ "self_consistency_unsampled": 2,
+ "holm": {
+  "pvalues": {
+   "H2": 0.3665,
+   "H3": 0.0069
+  },
+  "rejected": {
+   "H3": true,
+   "H2": false
+  }
+ }
+}

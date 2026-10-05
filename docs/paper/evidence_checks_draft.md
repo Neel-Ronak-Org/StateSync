@@ -21,7 +21,8 @@ by the checks before the judge does not improve the judge's risk–coverage curv
 
 The most useful cheap warning is an agent retry (79% precision). Failed and empty queries are always
 wrong here, but only by construction. Self-consistency and the judge rank answers about equally (AUROC
-0.74 vs 0.70, not significant). [PENDING: second-model replication at provider default sampling.]
+0.74 vs 0.70, not significant). With a second SQL model (exploratory) the checks again catch no more
+errors than the judge.
 
 A blind annotation of every wrong answer explains why. Most errors are semantic: wrong filter values,
 wrong columns, wrong aggregation intent. The double-counting errors that a structural probe targets
@@ -303,7 +304,7 @@ The five wrong answers (an unblinded, exploratory reading):
 The NULL-heavy check flagged two of them. The judge gave all four genuine errors a probability of 0.
 
 **Robustness model (gpt-oss-120b).** As the protocol requires when the main model fails H1's
-precondition, the set was rerun with the second model:
+precondition, the set was rerun with the second model (at temperature 0):
 - it answered 54 of 60 risky questions correctly and made 5 double-counting errors, still short of 10;
 - the fan-out check fired on 4 answers, all wrong, catching 4 of the 5 with no false alarms (exploratory);
 - at the same flag rate the judge catches 3.2, but 6 answers came back with empty text from the host,
@@ -322,9 +323,22 @@ Paper B.
 
 ## 5d Exploratory: a second SQL model (gpt-oss-120b)
 
-[PENDING: rerun at provider default sampling (protocol change 18).] The first replication ran gpt-oss
-at temperature 0, so its self-consistency samples were near-copies; its results are kept as
-`heldout_gptoss_t0` and are not used here.
+Decided after the confirmatory results. The held-out run was repeated with gpt-oss-120b at its
+provider's default sampling, as for GPT-5 mini. (A first run sent temperature 0, so its
+self-consistency samples were near-copies; it is kept as `heldout_gptoss_t0` and not used here.)
+
+- **Accuracy:** 75.8% (relaxed, corrected gold).
+- **Data checks:** flag 22 answers (6%) and catch 9 errors, against 12.3 for the judge at the same flag
+  rate (−3.3, 95% CI −9.0 to 1.7).
+- **Checks then judge:** no gain over the judge (AURC gain 0.002, CI −0.007 to 0.014). The combined
+  model is better without the checks (AUROC 0.792 vs 0.774).
+- **Agent retry:** again the best cheap signal (26 flags, 69% precision; +3.4 over the judge, CI −1.5
+  to 8.3).
+- **Self-consistency vs judge:** AUROC 0.715 vs 0.683 (+0.03, CI −0.05 to 0.11, not significant).
+  38 of 95 wrong answers had five agreeing samples (40%, as for GPT-5 mini).
+- **Empty answer texts:** the host returned none on 39 answers (35 with correct SQL). The judge, shown
+  the text, rated them lower; without them its AUROC is 0.713 and self-consistency's 0.725.
+- **H3 and H4:** 3 grounding false alarms on 207 correct texts; 7 repairs, so H4 stays untestable.
 
 ## 6 Discussion
 
@@ -343,7 +357,8 @@ says which was meant.
 - **Agent retry:** costs nothing and catches a fifth of the errors at 79% precision.
 - **Failed and empty queries:** always wrong here, but only by construction.
 - **Self-consistency and the judge:** rank answers similarly. Self-consistency costs five extra calls
-  and partly flags scorer false negatives. [PENDING: gpt-oss.]
+  and partly flags scorer false negatives.
+- **A second SQL model** (gpt-oss-120b) gives the same ordering.
 
 In practice we would show the retry signal and a judge. Data checks belong as explanations attached to
 a flagged answer, not as detectors.
@@ -375,7 +390,7 @@ help.
 - **Normaliser host.** In the robustness run the normaliser also ran on the reseller: the same language
   decisions as Groq's on 17 of 17 dev questions, two fewer name hints.
 - **Empty answers from one host.** The reseller returned an empty answer text on 6 of the 93
-  robustness answers. SQL labels are unaffected; the judge comparison is reported with and without them.
+  robustness answers and 39 of the 393 replication answers. SQL labels are unaffected; the judge comparison is reported with and without them.
 - **Hosts.** Free-tier limits forced a change of host for the gpt-oss-120b runs (the secondary judge
   and the robustness run) to a reseller that does not disclose its upstream provider.
   - We checked the served model name on every call, and that the reasoning-effort setting was

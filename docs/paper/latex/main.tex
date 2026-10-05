@@ -37,7 +37,7 @@ only 4\% of answers, and there they catch no more errors than the judge with as 
 curve nor a combined model. An agent retry is the most useful cheap warning (79\% precision).
 Self-consistency and the judge rank answers about equally (AUROC 0.74 vs.\ 0.70, not significant). A
 blind annotation of every error explains why checks rarely help: most errors are semantic.
-\pending{replication sentence}
+With a second SQL model (exploratory) the checks again catch no more errors than the judge.
 \end{abstract}
 
 \section{Introduction}
@@ -227,7 +227,7 @@ formatting differences (a fraction for a percentage, a timestamp for a date).
 \textbf{Fan-out set.} GPT-5 mini answered 59 of 60 risky questions correctly and never double
 counted: 39 of its queries use \texttt{COUNT(DISTINCT)} and 15 a semi-join; the one wrong answer is a
 semi-join that failed on a malformed column name. H1's precondition fails for this model, so the set
-was rerun with gpt-oss-120b: 54 of 60 risky questions correct and 5 double-counting errors, still
+was rerun with gpt-oss-120b (temperature 0): 54 of 60 risky questions correct and 5 double-counting errors, still
 short of 10, so \textbf{H1 is untestable} for both models. Exploratory: the fan-out check fired on 4
 answers, all wrong (4 of the 5 double counts, no false alarms); the judge's 4 most suspect answers
 catch 3.2, but 6 answers came back from the host with empty text, and without them the judge ties the
@@ -245,7 +245,19 @@ the data checks it reaches 0.801 (0.103), so the checks add nothing jointly eith
 self-consistency alone gives 0.790, and the free signals alone 0.578. Acting on warnings (re-running or
 replacing a doubtful answer) is studied separately.
 
-\textbf{Exploratory: a second SQL model.} \pending{gpt-oss replication at provider default sampling}
+\textbf{Exploratory: a second SQL model.} Decided after the confirmatory results. We repeated the
+held-out run with gpt-oss-120b at its provider's default sampling, as for GPT-5 mini (a first run sent
+temperature 0, which made its self-consistency samples near-copies; it is superseded). Accuracy is
+75.8\%. The data checks flag 22 answers (6\%) and catch 9 errors, against 12.3 for the judge at the same
+flag rate (difference $-3.3$, 95\% CI $-9.0$ to $1.7$). Ordering by the checks first does not improve
+the judge's curve (AURC gain 0.002, CI $-0.007$ to $0.014$), and the combined model is better without
+them (AUROC 0.792 vs.\ 0.774). The agent retry again leads the cheap signals (26 flags, 69\% precision;
+$+3.4$ over the judge, CI $-1.5$ to $8.3$). Self-consistency and the judge again rank about equally
+(AUROC 0.715 vs.\ 0.683; difference $+0.03$, CI $-0.05$ to $0.11$); 38 of the 95 wrong answers had five
+agreeing samples (40\%, as for GPT-5 mini). The host returned an empty answer text on 39 answers (35
+with correct SQL), which the judge, shown the text, rated lower; without them its AUROC is 0.713 and
+self-consistency's 0.725. Figure grounding raised 3 false alarms on 207 correct texts; 7 repairs
+triggered, so H4 stays untestable.
 
 \section{Discussion}
 
@@ -258,8 +270,8 @@ questions), and when one does, a strong judge notices too.
 
 \textbf{What works cheaply.} An agent retry costs nothing and catches a fifth of the errors at 79\%
 precision. Self-consistency and an LLM judge rank answers similarly; self-consistency costs five extra
-calls (two thirds of our generation cost) and partly flags scorer false negatives. \pending{gpt-oss
-sentence} In a product we would show the retry signal and a judge, and keep data checks as explanations
+calls (two thirds of our generation cost) and partly flags scorer false negatives. A second SQL model
+gives the same ordering. In a product we would show the retry signal and a judge, and keep data checks as explanations
 attached to a flagged answer rather than as detectors.
 
 \textbf{What the benchmark measures.} Scoring against the corrected gold moves accuracy by 10.7
@@ -282,7 +294,7 @@ says nothing about subtler double counting. Free-tier limits forced a change of 
 gpt-oss-120b runs to a reseller that does not disclose its upstream; we checked the served model on
 every call and that the reasoning-effort setting was honoured, and the secondary judge's verdicts
 agree with the original host's on 93\% of 260 shared answers (AUROC 0.62 vs.\ 0.63). Its normaliser made the same language decisions as Groq's on 17 of 17 dev questions but passed two
-fewer name hints. The same host returned an empty answer text on 6 of the 93 robustness answers; their SQL labels are unaffected, and
+fewer name hints. The same host returned an empty answer text on 6 of the 93 robustness answers and 39 of the 393 replication answers; their SQL labels are unaffected, and
 we report the judge comparison with and without them. English questions, one benchmark, the SQL path
 only.
 

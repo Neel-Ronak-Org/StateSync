@@ -27,9 +27,10 @@ headline.
 2. **H1, the fan-out hypothesis, was never testable.** The models made 0 and 5 double counts, against
    10 needed. The set is textbook and AI-drafted. This is reported honestly, but it is the weakest part.
 3. **One confirmatory SQL model.** Partly answered by the exploratory replication: gpt-oss-120b on
-   all 393 held-out questions, same code and settings. The data-check result replicates. The
-   self-consistency result does not (0.74 vs 0.61), and the paper now says so and explains why: gpt-oss
-   repeats its errors.
+   all 393 held-out questions, same code and settings, at provider default sampling (protocol change
+   18). Everything replicates: the data checks catch no more than the judge, the retry leads the cheap
+   signals, and self-consistency and the judge rank about equally (0.715 vs 0.683). The earlier
+   "gpt-oss repeats its errors" was the temperature-0 setting and is withdrawn.
 4. **No human error annotation.** Both annotators are models (κ = 0.74). A 20-item human pass would
    blunt this (see below).
 5. **Novelty is modest.** SQLens (Gong et al., 2025) combines database and LLM signals. Our angle is
@@ -42,8 +43,8 @@ headline.
 ## Added 2026-10-05 (exploratory, protocol change 17)
 
 All three are in the report and the paper:
-- **Second-model replication.** The data checks again add nothing (significantly fewer catches than the
-  judge for gpt-oss). Self-consistency's value depends on the model.
+- **Second-model replication** (rerun at default sampling, see below). The data checks again add
+  nothing (−3.3 catches against the judge, CI −9.0 to 1.7). Self-consistency replicates (0.715).
 - **Signal combination.** An out-of-fold logistic model does no better with the data checks than
   without them, for both models.
 - **Judge-triggered fallback:** moved to Paper B on the owner's decision (2026-10-05), so it is not
@@ -52,8 +53,10 @@ All three are in the report and the paper:
 ## Audit corrections (2026-10-05, owner-requested audit; protocol change 18)
 
 - **The gpt-oss replication ran at temperature 0,** which made its self-consistency samples
-  near-copies. It is being rerun at provider default sampling; the temperature-0 run is kept as
-  `heldout_gptoss_t0`.
+  near-copies. Rerun at provider default sampling and fully analysed (judge 2026-10-05); the
+  temperature-0 run is kept as `heldout_gptoss_t0`. The host returned empty answer texts on 39 rerun
+  answers; the paper reports the judge's AUROC with and without them (0.683 / 0.713). The gpt-oss
+  fan-out run, also at temperature 0, now says so (it tests H1, not self-consistency).
 - **"Self-consistency ranks best" is withdrawn.** The gap to the judge is not significant (+0.04, CI
   −0.03 to 0.11) and vanishes with format-only errors counted as correct.
 - **Failed and empty queries are wrong by construction** (no corrected gold result is empty). The
