@@ -293,6 +293,17 @@ def title_name(title: str) -> str:
     return _letters_digits(" ".join(name))
 
 
+def title_words(title: str) -> str:
+    """title_name's words as written, not reduced: the title's words before the first year word
+    ("JOHNSON JOHNSON 2023 8K" -> "JOHNSON JOHNSON"); all of them when there is no year word."""
+    name: list[str] = []
+    for word in title.split():
+        if len(word) >= _YEAR_DIGITS and word[:_YEAR_DIGITS].isdigit():
+            break
+        name.append(word)
+    return " ".join(name)
+
+
 def match_titles(entities: list[str], documents: list[dict], title_name_min_chars: int | None = None) -> list[dict]:
     """The documents (as {document_id, title}) that an entity names, in the order given, each once. An entity
     names a document when, once both are reduced to lower-case letters and digits, either the entity occurs

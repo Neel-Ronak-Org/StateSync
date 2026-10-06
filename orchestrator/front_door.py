@@ -778,7 +778,7 @@ async def workspace_names(state_dict: dict[str, Any]) -> list[str]:
         return []
     if workspace_id in _NAMES_CACHE:
         return _NAMES_CACHE[workspace_id]
-    from nodes.unstructured_knowledge import _workspace_documents, title_name    # imported here: heavy, and unused when the flag is off
+    from nodes.unstructured_knowledge import _workspace_documents, title_name, title_words    # imported here: heavy, and unused when the flag is off
     try:
         async with MCPSession(tenant_id=state_dict["tenant_id"], base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
                               session_id=state_dict.get("session_id", ""), workspace_id=workspace_id,
@@ -787,7 +787,11 @@ async def workspace_names(state_dict: dict[str, Any]) -> list[str]:
     except Exception as exc:  # noqa: BLE001 -- the context is a help, never a reason to fail the question
         logger.warning("front door: workspace documents unavailable for context carry (%s)", exc)
         return []
-    names = list(dict.fromkeys(n for n in (title_name(str(d.get("title") or "")) for d in documents) if n))
+    # Each name in the title's own words ("JOHNSON JOHNSON", not title_name's reduced "johnsonjohnson"): matching
+    # reduces both sides anyway (context_carry.entities), and the words are what the search text and the
+    # context line carry. Only titles whose reduced name is non-empty count, as before.
+    names = list(dict.fromkeys(n for n in (title_words(str(d.get("title") or "")) for d in documents)
+                               if n and title_name(n)))
     if names:
         _NAMES_CACHE[workspace_id] = names
     return names

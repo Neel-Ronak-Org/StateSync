@@ -108,6 +108,7 @@ SHIPPED_DEFAULTS: dict[tuple[str, str], str] = {
     ("pipeline", "front_door"): "off",         # Part D v3 T4a: the one-call front door (llm) or Jev (jev)
     ("pipeline", "debug_hooks"): "off",        # T4a: debug_route_only / debug_history, evaluation only
     ("pipeline", "hybrid_entities"): "off",    # T5: the hybrid documents half narrowed by the SQL half's entities
+    ("pipeline", "context_carry"): "off",      # T4d: multi-turn context with no extra LLM call
     ("pipeline", "sql_no_data"): "off",        # Part D v3 F-S1: the SQL agent may say the data is not here
     ("pipeline", "plain_failures"): "off",     # F-S3, F-S4: plain-words failures and zero rows
     ("pipeline", "route_recovery"): "off",     # F-RR: a SQL route with no data falls back to documents

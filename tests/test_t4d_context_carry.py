@@ -47,6 +47,7 @@ from state import _LAST_WRITE_WINS_FIELDS, StateSyncState  # noqa: E402
 
 RUN = asyncio.run
 NAMES = ["cocacola", "pepsico", "generalmills", "3m", "nike"]
+LISTED = ["COCACOLA", "PEPSICO", "GENERAL MILLS", "3M", "NIKE"]     # workspace_names keeps the titles' own words
 FILINGS = [{"document_id": "d_ko", "title": "COCACOLA 2022 10K"}, {"document_id": "d_pep", "title": "PEPSICO 2022 10K"},
            {"document_id": "d_gm", "title": "GENERAL MILLS 2022 10K"}, {"document_id": "d_mmm", "title": "3M 2022 10K"},
            {"document_id": "d_nike", "title": "NIKE 2023 10K"}]
@@ -298,19 +299,19 @@ def _state(question=Q2, **kw):
 
 
 def test_the_names_are_the_workspaces_document_title_names_cached_per_workspace(mcp):
-    assert RUN(front_door.workspace_names(_state())) == NAMES
+    assert RUN(front_door.workspace_names(_state())) == LISTED
     assert mcp.calls[0] == ("library.manage", {"action": "workspace_documents", "principal_id": "p1",
                                                "workspace_id": "w1", "limit": int(cfg.library.max_documents)})
-    assert RUN(front_door.workspace_names(_state())) == NAMES
+    assert RUN(front_door.workspace_names(_state())) == LISTED
     assert len(mcp.calls) == 1                                                     # the second read is the cache
-    assert RUN(front_door.workspace_names(_state(workspace_id="w2"))) == NAMES
+    assert RUN(front_door.workspace_names(_state(workspace_id="w2"))) == LISTED
     assert len(mcp.calls) == 2                                                     # another workspace is another entry
 
 
 def test_the_names_are_distinct_and_skip_titles_with_no_name(mcp):
     mcp.documents = [{"document_id": "a", "title": "NIKE 2022 10K"}, {"document_id": "b", "title": "NIKE 2023 10K"},
                      {"document_id": "c", "title": "2023 10K"}, {"document_id": "d", "title": None}]
-    assert RUN(front_door.workspace_names(_state())) == ["nike"]
+    assert RUN(front_door.workspace_names(_state())) == ["NIKE"]
 
 
 def test_no_workspace_is_no_names_and_no_call(mcp):
@@ -322,7 +323,7 @@ def test_an_unavailable_listing_is_no_names_and_is_not_cached(mcp):
     mcp.fail = True
     assert RUN(front_door.workspace_names(_state())) == []
     mcp.fail = False
-    assert RUN(front_door.workspace_names(_state())) == NAMES
+    assert RUN(front_door.workspace_names(_state())) == LISTED
 
 
 # ── the front door node ─────────────────────────────────────────────────────
@@ -643,3 +644,9 @@ def test_the_narrowed_hybrid_documents_half_search_text_gains_the_carried_slots_
 @pytest.mark.parametrize("extra", [{}, {"carried": CARRIED}, {"conversation_context": None}])
 def test_without_a_context_line_the_hybrid_half_search_text_is_unchanged(mcp, extra):
     assert _hybrid_half(mcp, **extra) == ["any legal battles?"] * 2
+
+
+def test_the_search_text_carries_the_titles_own_words():
+    """The carried company goes into the search text as the title writes it, not reduced."""
+    state = {"conversation_context": "Earlier in this conversation: ...", "carried": {"company": "JOHNSON JOHNSON", "year": "2022"}}
+    assert context_carry.search_suffix(state, "Who are its primary customers?") == " JOHNSON JOHNSON 2022"
