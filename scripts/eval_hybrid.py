@@ -179,7 +179,7 @@ def cmd_report() -> int:
             docs = norm_title(it["filing"]) in cited
             scored.setdefault(arm, {})[iid] = {"route": a.get("route"), "sql": sql, "docs": docs,
                                                "both": sql == "correct" and docs, "dependent": it["dependent"],
-                                               "split": it["split"], "narrowed": bool(a.get("hybrid_entities"))}
+                                               "split": it.get("split", "held_out"), "narrowed": bool(a.get("hybrid_entities"))}
     summary = {}
     for arm, s in scored.items():
         out = {}
