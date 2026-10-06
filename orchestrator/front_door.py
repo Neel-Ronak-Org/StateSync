@@ -686,6 +686,20 @@ JEV_CHOICE_QUESTIONS: dict[str, Any] = {
     "route": JEV_ROUTE_CHOICE,
     "documents_depend_on_database": JEV_QUESTIONS["documents_depend_on_database"],
 }
+
+
+def jev_choice_questions() -> dict[str, Any]:
+    """JEV_CHOICE_QUESTIONS, with any option description overridden by [front_door] jev_choice_<option>
+    (sql | docs | both | neither) when that key is set; unset keys keep the fixed text above. The override
+    exists to test a wording on the routing set's dev split from a mounted settings file, without a rebuild."""
+    criteria = dict(JEV_ROUTE_CHOICE["criteria"])
+    for option in criteria:
+        text = getattr(cfg.front_door, f"jev_choice_{option}", None)
+        if text:
+            criteria[option] = str(text)
+    if criteria == JEV_ROUTE_CHOICE["criteria"]:
+        return JEV_CHOICE_QUESTIONS
+    return {**JEV_CHOICE_QUESTIONS, "route": {**JEV_ROUTE_CHOICE, "criteria": criteria}}
 # The chosen option -> (needs_database, needs_documents, route).
 JEV_CHOICE_READING = {
     "sql": ("yes", "no", "sql"), "docs": ("no", "yes", "docs"),
@@ -700,7 +714,8 @@ async def decide_jev_choice(evidence: Evidence, question: str) -> Decision:
     the chosen option, both being hybrid; there is no threshold on the probabilities, no LLM call, no
     normaliser, no re-check and no split. uses_history is not detected (false). A Jev error falls back to
     decide_llm entirely, recorded in the trace."""
-    first = await jev_client.ask(jev_state(evidence, question), JEV_CHOICE_QUESTIONS)
+    questions = jev_choice_questions()
+    first = await jev_client.ask(jev_state(evidence, question), questions)
     if not first.ok:
         logger.error("front door: Jev failed (%s); falling back to the LLM arm", first.error)
         fallback = await decide_llm(evidence, question)
@@ -713,7 +728,8 @@ async def decide_jev_choice(evidence: Evidence, question: str) -> Decision:
     parsed = Parsed(True, "en", question, False, needs_database, needs_documents, route == "neither", "", "", depends)
     return Decision("jev_choice", parsed, route, jev_calls=1, jev={
         "choice": answer["choice"], "probabilities": answer["probabilities"], "confidence": answer["confidence"],
-        "depends": depends, "model": first.model, "ms": first.ms, "usage": first.usage, "calls": 1})
+        "depends": depends, "model": first.model, "ms": first.ms, "usage": first.usage, "calls": 1,
+        "criteria": "default" if questions is JEV_CHOICE_QUESTIONS else "override"})
 
 
 # One strategy per flag value.

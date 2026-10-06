@@ -199,7 +199,7 @@ def test_the_trace_has_the_choice_probabilities_confidence_depends_model_ms_usag
     assert trace["arm"] == "jev_choice" and trace["route"] == "hybrid" and trace["documents_depend_on_database"] is True
     assert trace["jev"] == {"choice": "both", "probabilities": spread, "confidence": 0.8, "depends": True,
                             "model": "jev-1.13-served", "ms": 11, "usage": {"input_tokens": 100, "output_tokens": 4},
-                            "calls": 1}
+                            "calls": 1, "criteria": "default"}
 
 
 def test_the_node_makes_no_llm_call_and_counts_one_jev_call(monkeypatch, llm):
@@ -327,3 +327,14 @@ def test_a_choice_answer_without_probabilities_or_confidence_keeps_the_choice(ke
     body["answers"]["route"].update(confidence=7, probabilities={"sql": 0.2, "docs": "x", "both": 2})
     answer = RUN(jev_client.ask("s", JEV_CHOICE_QUESTIONS, transport=_transport(httpx.Response(200, json=body))))
     assert answer.choices["route"] == {"choice": "both", "confidence": None, "probabilities": {"sql": 0.2}}
+
+
+def test_choice_wording_can_be_overridden_from_settings(monkeypatch):
+    """[front_door] jev_choice_<option> replaces that option's description; unset options keep the fixed text."""
+    data = object.__getattribute__(front_door.cfg.front_door, "_data")
+    assert front_door.jev_choice_questions() is front_door.JEV_CHOICE_QUESTIONS
+    monkeypatch.setitem(data, "jev_choice_sql", "Only the database, at the granularity its tables hold.")
+    q = front_door.jev_choice_questions()
+    assert q["route"]["criteria"]["sql"] == "Only the database, at the granularity its tables hold."
+    assert q["route"]["criteria"]["docs"] == front_door.JEV_ROUTE_CHOICE["criteria"]["docs"]
+    assert front_door.JEV_ROUTE_CHOICE["criteria"]["sql"].startswith("Only the database: the answer")   # not mutated
