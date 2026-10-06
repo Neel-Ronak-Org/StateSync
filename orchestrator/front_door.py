@@ -485,11 +485,18 @@ def jev_state(evidence: Evidence, question: str) -> str:
     return json.dumps(state, ensure_ascii=False)
 
 
-def need(p: float) -> str:
-    """P(yes) as yes (p >= jev_yes), no (p <= jev_no) or unsure. Both bounds are inclusive."""
-    if p >= float(cfg.front_door.jev_yes):
+def need(p: float, which: str | None = None) -> str:
+    """P(yes) as yes (p >= the yes bound), no (p <= the no bound) or unsure. Both bounds are inclusive.
+    `which` ("db" or "docs") picks that question's own bounds, jev_<which>_yes / jev_<which>_no, when set:
+    Jev's two needs sit on different scales (on the routing set's dev split P(needs_database) had a median
+    of 0.84 even on documents-only questions, P(needs_documents) 0.27-0.60), so one shared pair cannot fit
+    both. Without them, or without `which`, the shared jev_yes / jev_no apply."""
+    fd = cfg.front_door
+    yes = float(getattr(fd, f"jev_{which}_yes", fd.jev_yes)) if which else float(fd.jev_yes)
+    no = float(getattr(fd, f"jev_{which}_no", fd.jev_no)) if which else float(fd.jev_no)
+    if p >= yes:
         return "yes"
-    if p <= float(cfg.front_door.jev_no):
+    if p <= no:
         return "no"
     return "unsure"
 
@@ -497,8 +504,8 @@ def need(p: float) -> str:
 def jev_reading(probabilities: dict[str, float]) -> tuple[str, str, bool, str]:
     """(needs_database, needs_documents, out_of_scope, route) from Jev's probabilities: the two needs
     through need(), out_of_scope at jev_out_of_scope, and the route from route_for, unchanged."""
-    needs_database = need(probabilities["needs_database"])
-    needs_documents = need(probabilities["needs_documents"])
+    needs_database = need(probabilities["needs_database"], "db")
+    needs_documents = need(probabilities["needs_documents"], "docs")
     out_of_scope = probabilities["out_of_scope"] >= float(cfg.front_door.jev_out_of_scope)
     return needs_database, needs_documents, out_of_scope, route_for(needs_database, needs_documents, out_of_scope)
 

@@ -5,8 +5,11 @@ Fits the Jev front door's thresholds on the routing set's DEV split only (docs/s
 amendment 3), from the probabilities each dev run recorded (docs/eval/routing_runs.json, run "<arm>|dev|0"): no new
 Jev call. For the "jev" arm the re-check's probabilities replace the first call's where it was asked.
 
-Grid (shared by both needs): jev_yes in 0.50..0.95, jev_no in 0.05..(jev_yes - 0.05), step 0.05;
-jev_out_of_scope in 0.50..0.95 or never (1.01). Objective, fixed before fitting: route accuracy over dev questions
+Grid, step 0.05, a pair of bounds PER NEED (Jev's two needs sit on different scales; a shared pair reached only
+0.58 on dev): jev_db_yes in 0.50..0.95 and jev_db_no below it; jev_docs_yes in 0.30..0.95 and jev_docs_no below
+it; jev_out_of_scope in 0.50..0.95 or never (1.01). Also writes research/paperb/statesync_jev_<arm>.toml: the
+committed config/statesync.toml with the fitted keys set in [front_door], mounted over the Part D container's
+statesync.toml for the live test run (the shared config is not changed). Objective, fixed before fitting: route accuracy over dev questions
 and dev conversation turns together; ties broken by macro class accuracy, then by distance from the defaults
 (0.6 / 0.4 / 0.5). The test split is then run live with the fitted values (a decision can trigger a call that
 offline replay cannot).
@@ -44,6 +47,19 @@ def route_for(db: str, docs: str, oos: bool) -> str:
     return "docs" if docs == "unsure" else "neither"
 
 
+def set_keys(text: str, values: dict[str, float]) -> str:
+    """config/statesync.toml with [front_door]'s keys set (replaced in place, or added at the section's end)."""
+    import re
+    head = re.search(r"^\[front_door\][^\n]*\n", text, re.M)
+    end = head.end() + (re.search(r"^\[", text[head.end():], re.M).start())
+    body = text[head.end():end]
+    for k, v in values.items():
+        line = re.compile(rf"^{k}\s*=.*$", re.M)
+        body = line.sub(f"{k:<26}= {v}   # fitted on the routing set's dev split (scripts/fit_jev_thresholds.py)", body) \
+            if line.search(body) else body.rstrip("\n") + f"\n{k:<26}= {v}   # fitted on dev (scripts/fit_jev_thresholds.py)\n\n"
+    return text[:head.end()] + body + text[end:]
+
+
 def need(p: float, yes: float, no: float) -> str:
     return "yes" if p >= yes else "no" if p <= no else "unsure"
 
@@ -74,26 +90,33 @@ def main() -> int:
         rows = [(gold[k], probs(r)) for k, r in {**run["items"], **run["turns"]}.items()]
         usable = [(g, p) for g, p in rows if p]
         best = None
-        for yes in grid(0.5, 0.95):
-            for no in grid(0.05, round(yes - STEP, 2)):
-                for oos in grid(0.5, 0.95) + [NEVER]:
-                    by = defaultdict(lambda: [0, 0])
-                    for g, p in usable:
-                        r = route_for(need(p["needs_database"], yes, no), need(p["needs_documents"], yes, no),
-                                      p["out_of_scope"] >= oos)
-                        by[g["class"]][0] += r in g["acceptable"]
-                        by[g["class"]][1] += 1
-                    acc = sum(a for a, _ in by.values()) / len(usable)
-                    macro = sum(a / b for a, b in by.values()) / len(by)
-                    dist = abs(yes - DEFAULTS[0]) + abs(no - DEFAULTS[1]) + abs(min(oos, 1.0) - DEFAULTS[2])
-                    key = (round(acc, 6), round(macro, 6), -dist)
-                    if best is None or key > best[0]:
-                        best = (key, {"jev_yes": yes, "jev_no": no, "jev_out_of_scope": oos},
-                                {c: f"{a}/{b}" for c, (a, b) in sorted(by.items())})
+        for dy in grid(0.5, 0.95):
+            for dn in grid(0.05, round(dy - STEP, 2)):
+                for oy in grid(0.3, 0.95):
+                    for on in grid(0.05, round(oy - STEP, 2)):
+                        for oos in grid(0.5, 0.95) + [NEVER]:
+                            by = defaultdict(lambda: [0, 0])
+                            for g, p in usable:
+                                r = route_for(need(p["needs_database"], dy, dn), need(p["needs_documents"], oy, on),
+                                              p["out_of_scope"] >= oos)
+                                by[g["class"]][0] += r in g["acceptable"]
+                                by[g["class"]][1] += 1
+                            acc = sum(a for a, _ in by.values()) / len(usable)
+                            macro = sum(a / b for a, b in by.values()) / len(by)
+                            dist = (abs(dy - DEFAULTS[0]) + abs(dn - DEFAULTS[1]) + abs(oy - DEFAULTS[0])
+                                    + abs(on - DEFAULTS[1]) + abs(min(oos, 1.0) - DEFAULTS[2]))
+                            key = (round(acc, 6), round(macro, 6), -dist)
+                            if best is None or key > best[0]:
+                                best = (key, {"jev_db_yes": dy, "jev_db_no": dn, "jev_docs_yes": oy, "jev_docs_no": on,
+                                              "jev_out_of_scope": oos},
+                                        {c: f"{a}/{b}" for c, (a, b) in sorted(by.items())})
         (acc, macro, _), thresholds, by_class = best
         result[arm] = {"thresholds": thresholds, "dev_route_accuracy": acc, "dev_macro": macro, "dev_by_class": by_class,
                        "n": len(usable), "excluded_fallback_or_error": len(rows) - len(usable)}
         print(arm, json.dumps(result[arm]))
+        (REPO / "research" / "paperb" / f"statesync_jev_{arm}.toml").write_text(
+            "# GENERATED by scripts/fit_jev_thresholds.py from config/statesync.toml -- do not edit by hand.\n"
+            + set_keys((REPO / "config" / "statesync.toml").read_text(), thresholds))
     OUT.write_text(json.dumps({"objective": "dev route accuracy (questions + turns), then macro, then closeness to defaults",
                                "fits": result}, indent=1) + "\n")
     return 0

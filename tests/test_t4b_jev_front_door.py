@@ -688,3 +688,18 @@ def test_jev_llm_and_off_are_unchanged_by_jev_rw(monkeypatch):
 
     assert drawn(graph.build_graph("off")) == drawn(graph.graph)
     assert drawn(graph.build_graph("jev_rw")) == drawn(graph.build_graph("llm"))
+
+
+def test_need_uses_each_questions_own_bounds_when_set(monkeypatch):
+    """Jev's two needs sit on different scales: per-question bounds (jev_db_*, jev_docs_*) override the
+    shared pair when present; absent, the shared jev_yes / jev_no apply (as above)."""
+    data = object.__getattribute__(front_door.cfg.front_door, "_data")
+    monkeypatch.setitem(data, "jev_db_yes", 0.95)
+    monkeypatch.setitem(data, "jev_db_no", 0.9)
+    monkeypatch.setitem(data, "jev_docs_yes", 0.4)
+    monkeypatch.setitem(data, "jev_docs_no", 0.25)
+    assert [need(0.94, "db"), need(0.95, "db"), need(0.9, "db"), need(0.92, "db")] == ["unsure", "yes", "no", "unsure"]
+    assert [need(0.4, "docs"), need(0.25, "docs"), need(0.3, "docs")] == ["yes", "no", "unsure"]
+    assert need(0.94) == "yes"                      # no `which`: the shared bounds (0.6 / 0.4)
+    reading = front_door.jev_reading({"needs_database": 0.93, "needs_documents": 0.45, "out_of_scope": 0.1})
+    assert reading[:2] == ("unsure", "yes") and reading[3] == "docs"

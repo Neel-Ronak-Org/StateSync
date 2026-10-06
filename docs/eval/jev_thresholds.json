@@ -1,0 +1,45 @@
+{
+ "objective": "dev route accuracy (questions + turns), then macro, then closeness to defaults",
+ "fits": {
+  "jev": {
+   "thresholds": {
+    "jev_db_yes": 0.95,
+    "jev_db_no": 0.9,
+    "jev_docs_yes": 0.4,
+    "jev_docs_no": 0.25,
+    "jev_out_of_scope": 0.85
+   },
+   "dev_route_accuracy": 0.773723,
+   "dev_macro": 0.690673,
+   "dev_by_class": {
+    "docs": "48/54",
+    "either": "31/40",
+    "hybrid": "2/12",
+    "neither": "10/12",
+    "sql": "15/19"
+   },
+   "n": 137,
+   "excluded_fallback_or_error": 0
+  },
+  "jev_rw": {
+   "thresholds": {
+    "jev_db_yes": 0.95,
+    "jev_db_no": 0.9,
+    "jev_docs_yes": 0.5,
+    "jev_docs_no": 0.2,
+    "jev_out_of_scope": 0.85
+   },
+   "dev_route_accuracy": 0.759124,
+   "dev_macro": 0.713421,
+   "dev_by_class": {
+    "docs": "45/54",
+    "either": "29/40",
+    "hybrid": "4/12",
+    "neither": "10/12",
+    "sql": "16/19"
+   },
+   "n": 137,
+   "excluded_fallback_or_error": 0
+  }
+ }
+}
