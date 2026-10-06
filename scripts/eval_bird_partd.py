@@ -67,7 +67,8 @@ def mcnemar_exact(b: int, c: int) -> float:
     return min(1.0, 2 * sum(math.comb(n, i) for i in range(min(b, c) + 1)) / 2 ** n)
 
 
-def cmd_score(reps: dict[str, int] | None = None, out: Path = OUT) -> int:
+def cmd_score(reps: dict[str, int] | None = None, out: Path = OUT, on_arm: str = "on") -> int:
+    """Pairs the off arm with the on arm; on_arm="off" pairs two runs of the off arm (the noise floor)."""
     reps = reps or {"off": 0, "on": 0}
     import paperb_pool as pool
     gold_sql = {int(q["question_id"]): q["SQL"] for q in json.loads(eb.CORRECTED.read_text())}
@@ -75,7 +76,7 @@ def cmd_score(reps: dict[str, int] | None = None, out: Path = OUT) -> int:
     golds: dict[int, list | None] = {}
     result: dict[str, dict] = {}
     for arm in ("off", "on"):
-        answers = json.loads(eb.answers_path(label(arm, reps[arm])).read_text())["answers"]
+        answers = json.loads(eb.answers_path(label(on_arm if arm == "on" else arm, reps[arm])).read_text())["answers"]
         rows = {}
         for key, a in answers.items():
             qid = int(key)
@@ -86,9 +87,10 @@ def cmd_score(reps: dict[str, int] | None = None, out: Path = OUT) -> int:
             # (eval_bird.unqualify) and runs it in the BIRD schema, as pool.run does
             res = pool.run(conn, a["db_id"], eb.unqualify(sql) if sql else None)
             errs = [e or {} for e in a.get("errors") or []]
-            # T2b: a NOT_ANSWERABLE left unconfirmed because no attempt remained also ends the question unanswered
+            # T2b: a NOT_ANSWERABLE left unconfirmed because no attempt remained also ends the question unanswered;
+            # one followed by SQL that ran (the confirmation succeeded) does not
             not_answerable = (any(e.get("category") == "no_data_source" for e in errs)
-                              or bool(errs and errs[-1].get("category") == "not_answerable_unconfirmed"))
+                              or bool(errs and errs[-1].get("category") == "not_answerable_unconfirmed" and not sql))
             rows[qid] = {"correct": bool(golds[qid] is not None and res is not None
                                          and eb.rows_match_relaxed(res[1], golds[qid], norm=eb.norm_v2)),
                          "not_answerable": not_answerable, "ran": res is not None,
@@ -106,7 +108,7 @@ def cmd_score(reps: dict[str, int] | None = None, out: Path = OUT) -> int:
                "t2b_confirmations_on": sum(on[i].get("confirmations", 0) for i in ids),
                "bar": "false NOT_ANSWERABLE <= 1% of questions; no significant accuracy drop"}
     summary["false_not_answerable_rate_on"] = round(summary["false_not_answerable"]["on"] / max(1, len(ids)), 4)
-    out.write_text(json.dumps({"seed": SEED, "n": N, "reps": reps, "summary": summary, "per_question": result}, indent=1, default=str) + "\n")
+    out.write_text(json.dumps({"seed": SEED, "n": N, "reps": reps, "on_slot_arm": on_arm, "summary": summary, "per_question": result}, indent=1, default=str) + "\n")
     print(json.dumps(summary, indent=1))
     return 0
 
@@ -123,10 +125,11 @@ def main() -> int:
     sc.add_argument("--off-rep", type=int, default=0)
     sc.add_argument("--on-rep", type=int, default=0)
     sc.add_argument("--out", type=Path, default=OUT)
+    sc.add_argument("--on-arm", choices=["on", "off"], default="on", help="off: pair two off runs (noise floor)")
     args = ap.parse_args()
     if args.cmd == "ask":
         return cmd_ask(args.arm, args.port, args.limit, args.rep)
-    return cmd_score({"off": args.off_rep, "on": args.on_rep}, args.out)
+    return cmd_score({"off": args.off_rep, "on": args.on_rep}, args.out, args.on_arm)
 
 
 if __name__ == "__main__":
