@@ -534,9 +534,9 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 254,
-   "tokens_out": 2,
-   "ms": 4554,
+   "tokens_in": 298,
+   "tokens_out": 25,
+   "ms": 7617,
    "verdict": "missing"
   },
   "v3_entities|h02": {
@@ -545,9 +545,9 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 431,
-   "tokens_out": 2,
-   "ms": 4146,
+   "tokens_in": 382,
+   "tokens_out": 115,
+   "ms": 4973,
    "verdict": "correct"
   },
   "v3_entities|h03": {
@@ -556,54 +556,54 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 395,
-   "tokens_out": 2,
-   "ms": 4399,
+   "tokens_in": 412,
+   "tokens_out": 108,
+   "ms": 4558,
    "verdict": "correct"
   },
   "v3_entities|h04": {
    "id": "v3_entities|h04",
-   "text": "PARTLY",
-   "served_model": "gemini-3.8-flash",
-   "endpoint": "local_router",
-   "served_provider": null,
-   "tokens_in": 355,
-   "tokens_out": 385,
-   "ms": 6593,
-   "verdict": "partly correct"
-  },
-  "v3_entities|h05": {
-   "id": "v3_entities|h05",
    "text": "CORRECT",
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 343,
-   "tokens_out": 73,
-   "ms": 5225,
+   "tokens_in": 333,
+   "tokens_out": 68,
+   "ms": 4436,
    "verdict": "correct"
   },
-  "v3_entities|h06": {
-   "id": "v3_entities|h06",
+  "v3_entities|h05": {
+   "id": "v3_entities|h05",
    "text": "MISSING",
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 412,
+   "tokens_in": 315,
    "tokens_out": 2,
-   "ms": 3870,
+   "ms": 3453,
    "verdict": "missing"
   },
-  "v3_entities|h07": {
-   "id": "v3_entities|h07",
+  "v3_entities|h06": {
+   "id": "v3_entities|h06",
    "text": "CORRECT",
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 429,
-   "tokens_out": 383,
-   "ms": 5716,
+   "tokens_in": 417,
+   "tokens_out": 2,
+   "ms": 3930,
    "verdict": "correct"
+  },
+  "v3_entities|h07": {
+   "id": "v3_entities|h07",
+   "text": "MISSING",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 281,
+   "tokens_out": 2,
+   "ms": 4083,
+   "verdict": "missing"
   },
   "v3_entities|h08": {
    "id": "v3_entities|h08",
@@ -611,9 +611,9 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 308,
-   "tokens_out": 2,
-   "ms": 3573,
+   "tokens_in": 274,
+   "tokens_out": 62,
+   "ms": 4920,
    "verdict": "missing"
   },
   "v3_entities|h09": {
@@ -624,7 +624,7 @@
    "served_provider": null,
    "tokens_in": 242,
    "tokens_out": 48,
-   "ms": 4593,
+   "ms": 71,
    "verdict": "missing"
   },
   "v3_entities|h10": {
@@ -633,21 +633,21 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 435,
+   "tokens_in": 445,
    "tokens_out": 2,
-   "ms": 3814,
+   "ms": 3531,
    "verdict": "correct"
   },
   "v3_entities|h11": {
    "id": "v3_entities|h11",
-   "text": "CORRECT",
+   "text": "PARTLY",
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 383,
-   "tokens_out": 127,
-   "ms": 5135,
-   "verdict": "correct"
+   "tokens_in": 391,
+   "tokens_out": 290,
+   "ms": 5465,
+   "verdict": "partly correct"
   },
   "v3_entities|h12": {
    "id": "v3_entities|h12",
@@ -655,9 +655,9 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 372,
+   "tokens_in": 361,
    "tokens_out": 2,
-   "ms": 4029,
+   "ms": 4551,
    "verdict": "correct"
   },
   "v3_entities|h13": {
@@ -666,9 +666,9 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 386,
-   "tokens_out": 105,
-   "ms": 4596,
+   "tokens_in": 365,
+   "tokens_out": 88,
+   "ms": 4074,
    "verdict": "incorrect"
   },
   "v3_entities|h14": {
@@ -677,9 +677,9 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 276,
-   "tokens_out": 74,
-   "ms": 32,
+   "tokens_in": 278,
+   "tokens_out": 71,
+   "ms": 3980,
    "verdict": "incorrect"
   },
   "v3_entities|h15": {
@@ -688,9 +688,9 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 394,
-   "tokens_out": 70,
-   "ms": 4943,
+   "tokens_in": 426,
+   "tokens_out": 2,
+   "ms": 3689,
    "verdict": "missing"
   },
   "v3_entities|h16": {
@@ -699,9 +699,9 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 388,
-   "tokens_out": 264,
-   "ms": 4852,
+   "tokens_in": 368,
+   "tokens_out": 373,
+   "ms": 5777,
    "verdict": "correct"
   },
   "v3_entities|h17": {
@@ -710,9 +710,9 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 765,
-   "tokens_out": 307,
-   "ms": 5658,
+   "tokens_in": 827,
+   "tokens_out": 2,
+   "ms": 4389,
    "verdict": "correct"
   },
   "v3_entities|h18": {
@@ -721,9 +721,9 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 624,
+   "tokens_in": 653,
    "tokens_out": 2,
-   "ms": 4074,
+   "ms": 3735,
    "verdict": "correct"
   },
   "v3_entities|h19": {
@@ -732,9 +732,9 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 618,
-   "tokens_out": 2,
-   "ms": 3400,
+   "tokens_in": 582,
+   "tokens_out": 274,
+   "ms": 6062,
    "verdict": "correct"
   },
   "v3_entities|h20": {
@@ -743,9 +743,9 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 437,
-   "tokens_out": 150,
-   "ms": 4499,
+   "tokens_in": 470,
+   "tokens_out": 52,
+   "ms": 4156,
    "verdict": "missing"
   },
   "v3_entities|h21": {
@@ -754,21 +754,21 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 515,
+   "tokens_in": 601,
    "tokens_out": 2,
-   "ms": 4262,
+   "ms": 3547,
    "verdict": "missing"
   },
   "v3_entities|h22": {
    "id": "v3_entities|h22",
-   "text": "MISSING",
+   "text": "CORRECT",
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 496,
+   "tokens_in": 506,
    "tokens_out": 2,
-   "ms": 3696,
-   "verdict": "missing"
+   "ms": 3445,
+   "verdict": "correct"
   },
   "v3_entities|h23": {
    "id": "v3_entities|h23",
@@ -776,9 +776,9 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 609,
-   "tokens_out": 235,
-   "ms": 5412,
+   "tokens_in": 571,
+   "tokens_out": 2,
+   "ms": 4020,
    "verdict": "correct"
   },
   "v3_entities|h24": {
@@ -787,9 +787,9 @@
    "served_model": "gemini-3.8-flash",
    "endpoint": "local_router",
    "served_provider": null,
-   "tokens_in": 518,
+   "tokens_in": 531,
    "tokens_out": 2,
-   "ms": 3283,
+   "ms": 4023,
    "verdict": "correct"
   }
  },
@@ -873,26 +873,26 @@
   "v3_entities": {
    "all": {
     "n": 24,
-    "both": 10,
+    "both": 11,
     "database_correct": 13,
     "database_partly": 1,
     "filing_cited": 18,
-    "neither_half": 3,
+    "neither_half": 4,
     "routed_hybrid": 21
    },
    "dependent": {
     "n": 12,
     "both": 4,
-    "database_correct": 7,
+    "database_correct": 6,
     "database_partly": 1,
     "filing_cited": 6,
-    "neither_half": 3,
+    "neither_half": 4,
     "routed_hybrid": 9
    },
    "independent": {
     "n": 12,
-    "both": 6,
-    "database_correct": 6,
+    "both": 7,
+    "database_correct": 7,
     "database_partly": 0,
     "filing_cited": 12,
     "neither_half": 0,
@@ -900,19 +900,19 @@
    },
    "test": {
     "n": 12,
-    "both": 4,
-    "database_correct": 4,
+    "both": 6,
+    "database_correct": 6,
     "database_partly": 1,
-    "filing_cited": 10,
-    "neither_half": 2,
+    "filing_cited": 11,
+    "neither_half": 1,
     "routed_hybrid": 12
    }
   },
   "v3_entities_vs_v3": {
    "n": 24,
    "wins": 4,
-   "losses": 2,
-   "p_mcnemar": 0.6875
+   "losses": 1,
+   "p_mcnemar": 0.375
   },
   "v3_vs_shipped": {
    "n": 24,
@@ -1388,16 +1388,16 @@
    },
    "h04": {
     "route": "hybrid",
-    "sql": "partly correct",
+    "sql": "correct",
     "docs": true,
-    "both": false,
+    "both": true,
     "dependent": true,
     "split": "test",
     "narrowed": true
    },
    "h05": {
     "route": "sql",
-    "sql": "correct",
+    "sql": "missing",
     "docs": false,
     "both": false,
     "dependent": true,
@@ -1406,16 +1406,16 @@
    },
    "h06": {
     "route": "hybrid",
-    "sql": "missing",
-    "docs": false,
-    "both": false,
+    "sql": "correct",
+    "docs": true,
+    "both": true,
     "dependent": true,
     "split": "test",
     "narrowed": true
    },
    "h07": {
     "route": "sql",
-    "sql": "correct",
+    "sql": "missing",
     "docs": false,
     "both": false,
     "dependent": true,
@@ -1451,9 +1451,9 @@
    },
    "h11": {
     "route": "hybrid",
-    "sql": "correct",
+    "sql": "partly correct",
     "docs": true,
-    "both": true,
+    "both": false,
     "dependent": true,
     "split": "test",
     "narrowed": true
@@ -1461,8 +1461,8 @@
    "h12": {
     "route": "hybrid",
     "sql": "correct",
-    "docs": true,
-    "both": true,
+    "docs": false,
+    "both": false,
     "dependent": true,
     "split": "dev",
     "narrowed": true
@@ -1550,9 +1550,9 @@
    },
    "h22": {
     "route": "hybrid",
-    "sql": "missing",
+    "sql": "correct",
     "docs": true,
-    "both": false,
+    "both": true,
     "dependent": false,
     "split": "test",
     "narrowed": false
@@ -1841,6 +1841,400 @@
    "tokens_out": 2,
    "ms": 4443,
    "verdict": "correct"
+  }
+ },
+ "grades_v3_entities_t5": {
+  "v3_entities|h01": {
+   "id": "v3_entities|h01",
+   "text": "MISSING",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 254,
+   "tokens_out": 2,
+   "ms": 4554,
+   "verdict": "missing"
+  },
+  "v3_entities|h02": {
+   "id": "v3_entities|h02",
+   "text": "CORRECT",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 431,
+   "tokens_out": 2,
+   "ms": 4146,
+   "verdict": "correct"
+  },
+  "v3_entities|h03": {
+   "id": "v3_entities|h03",
+   "text": "CORRECT",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 395,
+   "tokens_out": 2,
+   "ms": 4399,
+   "verdict": "correct"
+  },
+  "v3_entities|h04": {
+   "id": "v3_entities|h04",
+   "text": "PARTLY",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 355,
+   "tokens_out": 385,
+   "ms": 6593,
+   "verdict": "partly correct"
+  },
+  "v3_entities|h05": {
+   "id": "v3_entities|h05",
+   "text": "CORRECT",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 343,
+   "tokens_out": 73,
+   "ms": 5225,
+   "verdict": "correct"
+  },
+  "v3_entities|h06": {
+   "id": "v3_entities|h06",
+   "text": "MISSING",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 412,
+   "tokens_out": 2,
+   "ms": 3870,
+   "verdict": "missing"
+  },
+  "v3_entities|h07": {
+   "id": "v3_entities|h07",
+   "text": "CORRECT",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 429,
+   "tokens_out": 383,
+   "ms": 5716,
+   "verdict": "correct"
+  },
+  "v3_entities|h08": {
+   "id": "v3_entities|h08",
+   "text": "MISSING",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 308,
+   "tokens_out": 2,
+   "ms": 3573,
+   "verdict": "missing"
+  },
+  "v3_entities|h09": {
+   "id": "v3_entities|h09",
+   "text": "MISSING",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 242,
+   "tokens_out": 48,
+   "ms": 4593,
+   "verdict": "missing"
+  },
+  "v3_entities|h10": {
+   "id": "v3_entities|h10",
+   "text": "CORRECT",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 435,
+   "tokens_out": 2,
+   "ms": 3814,
+   "verdict": "correct"
+  },
+  "v3_entities|h11": {
+   "id": "v3_entities|h11",
+   "text": "CORRECT",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 383,
+   "tokens_out": 127,
+   "ms": 5135,
+   "verdict": "correct"
+  },
+  "v3_entities|h12": {
+   "id": "v3_entities|h12",
+   "text": "CORRECT",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 372,
+   "tokens_out": 2,
+   "ms": 4029,
+   "verdict": "correct"
+  },
+  "v3_entities|h13": {
+   "id": "v3_entities|h13",
+   "text": "INCORRECT",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 386,
+   "tokens_out": 105,
+   "ms": 4596,
+   "verdict": "incorrect"
+  },
+  "v3_entities|h14": {
+   "id": "v3_entities|h14",
+   "text": "INCORRECT",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 276,
+   "tokens_out": 74,
+   "ms": 32,
+   "verdict": "incorrect"
+  },
+  "v3_entities|h15": {
+   "id": "v3_entities|h15",
+   "text": "MISSING",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 394,
+   "tokens_out": 70,
+   "ms": 4943,
+   "verdict": "missing"
+  },
+  "v3_entities|h16": {
+   "id": "v3_entities|h16",
+   "text": "CORRECT",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 388,
+   "tokens_out": 264,
+   "ms": 4852,
+   "verdict": "correct"
+  },
+  "v3_entities|h17": {
+   "id": "v3_entities|h17",
+   "text": "CORRECT",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 765,
+   "tokens_out": 307,
+   "ms": 5658,
+   "verdict": "correct"
+  },
+  "v3_entities|h18": {
+   "id": "v3_entities|h18",
+   "text": "CORRECT",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 624,
+   "tokens_out": 2,
+   "ms": 4074,
+   "verdict": "correct"
+  },
+  "v3_entities|h19": {
+   "id": "v3_entities|h19",
+   "text": "CORRECT",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 618,
+   "tokens_out": 2,
+   "ms": 3400,
+   "verdict": "correct"
+  },
+  "v3_entities|h20": {
+   "id": "v3_entities|h20",
+   "text": "MISSING",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 437,
+   "tokens_out": 150,
+   "ms": 4499,
+   "verdict": "missing"
+  },
+  "v3_entities|h21": {
+   "id": "v3_entities|h21",
+   "text": "MISSING",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 515,
+   "tokens_out": 2,
+   "ms": 4262,
+   "verdict": "missing"
+  },
+  "v3_entities|h22": {
+   "id": "v3_entities|h22",
+   "text": "MISSING",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 496,
+   "tokens_out": 2,
+   "ms": 3696,
+   "verdict": "missing"
+  },
+  "v3_entities|h23": {
+   "id": "v3_entities|h23",
+   "text": "CORRECT",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 609,
+   "tokens_out": 235,
+   "ms": 5412,
+   "verdict": "correct"
+  },
+  "v3_entities|h24": {
+   "id": "v3_entities|h24",
+   "text": "CORRECT",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "served_provider": null,
+   "tokens_in": 518,
+   "tokens_out": 2,
+   "ms": 3283,
+   "verdict": "correct"
+  }
+ },
+ "summary_t5": {
+  "shipped": {
+   "all": {
+    "n": 24,
+    "both": 4,
+    "database_correct": 13,
+    "database_partly": 2,
+    "filing_cited": 12,
+    "neither_half": 3,
+    "routed_hybrid": 23
+   },
+   "dependent": {
+    "n": 12,
+    "both": 1,
+    "database_correct": 8,
+    "database_partly": 0,
+    "filing_cited": 2,
+    "neither_half": 3,
+    "routed_hybrid": 12
+   },
+   "independent": {
+    "n": 12,
+    "both": 3,
+    "database_correct": 5,
+    "database_partly": 2,
+    "filing_cited": 10,
+    "neither_half": 0,
+    "routed_hybrid": 11
+   },
+   "test": {
+    "n": 12,
+    "both": 1,
+    "database_correct": 5,
+    "database_partly": 1,
+    "filing_cited": 5,
+    "neither_half": 3,
+    "routed_hybrid": 11
+   }
+  },
+  "v3": {
+   "all": {
+    "n": 24,
+    "both": 8,
+    "database_correct": 11,
+    "database_partly": 3,
+    "filing_cited": 16,
+    "neither_half": 5,
+    "routed_hybrid": 20
+   },
+   "dependent": {
+    "n": 12,
+    "both": 1,
+    "database_correct": 4,
+    "database_partly": 2,
+    "filing_cited": 4,
+    "neither_half": 5,
+    "routed_hybrid": 8
+   },
+   "independent": {
+    "n": 12,
+    "both": 7,
+    "database_correct": 7,
+    "database_partly": 1,
+    "filing_cited": 12,
+    "neither_half": 0,
+    "routed_hybrid": 12
+   },
+   "test": {
+    "n": 12,
+    "both": 2,
+    "database_correct": 3,
+    "database_partly": 3,
+    "filing_cited": 9,
+    "neither_half": 2,
+    "routed_hybrid": 12
+   }
+  },
+  "v3_entities": {
+   "all": {
+    "n": 24,
+    "both": 10,
+    "database_correct": 13,
+    "database_partly": 1,
+    "filing_cited": 18,
+    "neither_half": 3,
+    "routed_hybrid": 21
+   },
+   "dependent": {
+    "n": 12,
+    "both": 4,
+    "database_correct": 7,
+    "database_partly": 1,
+    "filing_cited": 6,
+    "neither_half": 3,
+    "routed_hybrid": 9
+   },
+   "independent": {
+    "n": 12,
+    "both": 6,
+    "database_correct": 6,
+    "database_partly": 0,
+    "filing_cited": 12,
+    "neither_half": 0,
+    "routed_hybrid": 12
+   },
+   "test": {
+    "n": 12,
+    "both": 4,
+    "database_correct": 4,
+    "database_partly": 1,
+    "filing_cited": 10,
+    "neither_half": 2,
+    "routed_hybrid": 12
+   }
+  },
+  "v3_entities_vs_v3": {
+   "n": 24,
+   "wins": 4,
+   "losses": 2,
+   "p_mcnemar": 0.6875
+  },
+  "v3_vs_shipped": {
+   "n": 24,
+   "wins": 6,
+   "losses": 2,
+   "p_mcnemar": 0.2891
   }
  }
 }
