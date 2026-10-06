@@ -34,10 +34,8 @@ standalone question equals the raw one):
      question's, else the previous answer's), and `line`, exactly:
      `Earlier in this conversation: "<previous question>"; its answer began: "<first 200 characters of the answer>".`
      followed, when carried, by ` Carried from it: company <company>; year <year>.` (each part only if carried).
-2. **`names`**: the workspace's document title names (`title_name`, T5b) plus, when the dataset has a column named
-   like `company`, `name`, `ticker` or `financebench_name` in the front door's database card, nothing more: titles
-   only for now. Built once per question from the documents the front door already lists or the workspace listing
-   (`_workspace_documents`); cache per workspace for the process.
+2. **`names`**: the workspace's document title names (`title_name`, T5b), and nothing else for now (no database
+   lookup). Taken from the workspace listing (`_workspace_documents`), cached per workspace for the process.
 3. **Where it runs**: in `front_door_node`, after the decision, when the flag is on, the evidence has a previous
    turn, and the standalone question equals the raw question (whitespace-collapsed). It sets two new state fields:
    - `conversation_context` (the `line`) when `follow_up` is true, else unset;
