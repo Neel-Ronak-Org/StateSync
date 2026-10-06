@@ -50,13 +50,15 @@ def set_value(text: str, key: str, value: str, section: str | None = None) -> st
 
 
 def build(base: str, fixes: bool, front_door: str, debug_hooks: bool, rerank: str | None,
-          without: tuple[str, ...] = ()) -> str:
+          without: tuple[str, ...] = (), hybrid_entities: bool = False) -> str:
     text = base
     if fixes:
         for key, value in FIXES_ON.items():
             if key not in without:          # a fix left at its shipped value (e.g. F-S1, which failed gate G1)
                 text = set_value(text, key, value)
     text = set_value(text, "front_door", front_door)
+    if hybrid_entities:
+        text = set_value(text, "hybrid_entities", "on")
     text = set_value(text, "debug_hooks", "on" if debug_hooks else "off")
     if rerank is not None:
         text = set_value(text, "rerank", rerank)
@@ -72,6 +74,7 @@ def main() -> int:
     ap.add_argument("--rerank", choices=["off", "bge"])
     ap.add_argument("--without", action="append", default=[], choices=sorted(FIXES_ON),
                     help="with --fixes on, leave this fix at its shipped value (repeatable)")
+    ap.add_argument("--hybrid-entities", action="store_true", help="T5: the hybrid documents half narrows by the SQL result's entities")
     args = ap.parse_args()
     base = SRC.read_text()
     base = set_value(base, "provider", "openai_compat", section="llm")
@@ -82,10 +85,11 @@ def main() -> int:
     if args.name:
         arm = (f"fixes {args.fixes}, front_door {args.front_door}, debug_hooks {'on' if args.debug_hooks else 'off'}"
                + (f", rerank {args.rerank}" if args.rerank else "")
-               + (f", without {', '.join(args.without)}" if args.without else ""))
+               + (f", without {', '.join(args.without)}" if args.without else "")
+               + (", hybrid_entities on" if args.hybrid_entities else ""))
         out = OUT / f"flags_partd_v3_{args.name}.toml"
         out.write_text(header.format(arm=arm) + build(base, args.fixes == "on", args.front_door, args.debug_hooks, args.rerank,
-                                                        tuple(args.without)))
+                                                        tuple(args.without), args.hybrid_entities))
         print(f"wrote {out.name}: {arm}")
         return 0
     for name, fixes in (("off", False), ("on", True)):
