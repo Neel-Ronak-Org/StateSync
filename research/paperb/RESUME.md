@@ -5,6 +5,11 @@ loses at most the one answer in flight per arm.
 
 ## Held-out hybrid set (100 questions, `docs/eval/hybrid_set.json`)
 
+**State at the stop (2026-10-06):** all three arms answered 100/100 (committed). Only grading and the
+report remain (step 3); grading was stopped mid-batch and saves nothing until a batch ends, so it starts over.
+The four Part D containers were stopped, not removed: `docker start statesync-mcp-paperb` first, then the three
+orchestrators, keeps their images and flags.
+
 1. If the Mac restarted, start the Part D containers again on the images in `partd_images.json`
    (MCP first, then the three orchestrators; see `partd_stack.sh` and the flags files):
    - 8092 `statesync-orchestrator-paperb-off`, flags `flags_partd_v3_off.toml` (shipped)
