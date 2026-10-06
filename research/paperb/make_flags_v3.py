@@ -69,7 +69,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--name", help="write one variant, flags_partd_v3_<name>.toml, instead of the off/on pair")
     ap.add_argument("--fixes", choices=["off", "on"], default="on")
-    ap.add_argument("--front-door", choices=["off", "llm", "jev"], default="off")
+    ap.add_argument("--front-door", choices=["off", "llm", "jev", "jev_rw"], default="off")
     ap.add_argument("--debug-hooks", action="store_true")
     ap.add_argument("--rerank", choices=["off", "bge"])
     ap.add_argument("--without", action="append", default=[], choices=sorted(FIXES_ON),
