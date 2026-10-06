@@ -17,7 +17,9 @@ call) and "jev" (T4b, docs/specs/partd_tasks/T4b_jev_front_door.md: Jev, a decis
 typed questions with probabilities and makes every routing decision; the LLM is called only to write
 text: resolve a follow-up, split a two-source question, translate), and "jev_rw" (the same Jev, but the
 text comes from the shipped normaliser and follow-up rewriter, run before one Jev request; the LLM front
-door is only the fallback when Jev fails). None changes the routing table or the graph. The routing table (route_for), the parser (parse_reply) and the text
+door is only the fallback when Jev fails), and "jev_choice" (T4c, docs/specs/partd_tasks/T4c_jev_choice_and_context.md:
+one Jev choice question names the sources needed; no LLM call, no normaliser, no fitted threshold; the LLM
+front door is only the fallback when Jev fails). None changes the routing table or the graph. The routing table (route_for), the parser (parse_reply) and the text
 builders are pure.
 
 Also here: the evaluation hooks' checks (debug_route_only, debug_history; accepted only when
@@ -663,8 +665,56 @@ async def decide_jev_rw(evidence: Evidence, question: str) -> Decision:
                     llm_calls=text.llm_calls, jev_calls=1, jev=jev)
 
 
+# ── The "jev_choice" arm: one choice question, no LLM call, no fitted threshold ──
+JEV_ROUTE_CHOICE = {
+    "type": "choice",
+    "instructions": "Which sources are needed to answer the new question?",
+    "criteria": {
+        "sql": "Only the database: the answer is a stored figure, or a calculation over the database's tables.",
+        "docs": ("Only the documents: the answer is in what the filings say (explanations, risks, segments, "
+                 "or figures the database does not hold)."),
+        "both": "Both: one part of the answer comes from the database and another part from the documents.",
+        "neither": ("Neither: the database and the documents do not hold it (other companies, the future, "
+                    "live data, or not about this data)."),
+    },
+}
+JEV_CHOICE_QUESTIONS: dict[str, Any] = {
+    "route": JEV_ROUTE_CHOICE,
+    "documents_depend_on_database": JEV_QUESTIONS["documents_depend_on_database"],
+}
+# The chosen option -> (needs_database, needs_documents, route).
+JEV_CHOICE_READING = {
+    "sql": ("yes", "no", "sql"), "docs": ("no", "yes", "docs"),
+    "both": ("yes", "yes", "hybrid"), "neither": ("no", "no", "neither"),
+}
+
+
+async def decide_jev_choice(evidence: Evidence, question: str) -> Decision:
+    """Arm "jev_choice" (T4c, docs/specs/partd_tasks/T4c_jev_choice_and_context.md). ONE Jev request over
+    the raw question (the conversation is in the state) asks a choice question, which sources are needed
+    (sql, docs, both, neither), and the noul documents_depend_on_database (P >= jev_depends). The route is
+    the chosen option, both being hybrid; there is no threshold on the probabilities, no LLM call, no
+    normaliser, no re-check and no split. uses_history is not detected (false). A Jev error falls back to
+    decide_llm entirely, recorded in the trace."""
+    first = await jev_client.ask(jev_state(evidence, question), JEV_CHOICE_QUESTIONS)
+    if not first.ok:
+        logger.error("front door: Jev failed (%s); falling back to the LLM arm", first.error)
+        fallback = await decide_llm(evidence, question)
+        return replace(fallback, arm="jev_choice", jev_calls=1, jev={
+            "choice": None, "probabilities": {}, "confidence": None, "depends": None, "model": first.model,
+            "ms": first.ms, "usage": {}, "calls": 1, "llm_used": True, "fallback": "llm", "jev_error": first.error})
+    answer = first.choices["route"]
+    needs_database, needs_documents, route = JEV_CHOICE_READING[answer["choice"]]
+    depends = first.probabilities["documents_depend_on_database"] >= float(cfg.front_door.jev_depends)
+    parsed = Parsed(True, "en", question, False, needs_database, needs_documents, route == "neither", "", "", depends)
+    return Decision("jev_choice", parsed, route, jev_calls=1, jev={
+        "choice": answer["choice"], "probabilities": answer["probabilities"], "confidence": answer["confidence"],
+        "depends": depends, "model": first.model, "ms": first.ms, "usage": first.usage, "calls": 1})
+
+
 # One strategy per flag value.
-DECIDERS: dict[str, Decide] = {"llm": decide_llm, "jev": decide_jev, "jev_rw": decide_jev_rw}
+DECIDERS: dict[str, Decide] = {"llm": decide_llm, "jev": decide_jev, "jev_rw": decide_jev_rw,
+                               "jev_choice": decide_jev_choice}
 # A strategy that needs the text made before the evidence is gathered (so the search uses it).
 PREPARERS: dict[str, Callable[[dict[str, Any]], Awaitable[TextPrep]]] = {"jev_rw": prepare_text}
 

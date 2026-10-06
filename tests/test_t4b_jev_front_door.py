@@ -663,7 +663,7 @@ def test_jev_rw_a_failed_text_step_is_recorded_and_the_question_goes_on(monkeypa
 
 
 def test_jev_llm_and_off_are_unchanged_by_jev_rw(monkeypatch):
-    assert set(front_door.DECIDERS) == {"llm", "jev", "jev_rw"} and set(front_door.PREPARERS) == {"jev_rw"}
+    assert set(front_door.DECIDERS) - {"jev_choice"} == {"llm", "jev", "jev_rw"} and set(front_door.PREPARERS) == {"jev_rw"}
     assert front_door.DECIDERS["jev"] is decide_jev and front_door.DECIDERS["llm"] is front_door.decide_llm
     # "jev": no text steps; a follow-up goes to the LLM front door, never to the rewriter; five questions, uses_history among them.
     world = RwWorld(monkeypatch, history=[_EARLIER], rewriter=_REWRITE,

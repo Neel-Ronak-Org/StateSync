@@ -8,9 +8,12 @@ yes/no ("noul") questions about an application state with a probability, and wri
 is the one HTTP call. It is pure apart from that call, and it never raises to the caller: a failure is
 a JevAnswer with `error` set, so the front door can fall back to the LLM arm and record why.
 
-The request is {"model", "state", "questions": {name: {"type": "noul", "instructions": text}}}; the
-reply's answers.<name>.noul is P(yes) in [0, 1], and `model` and `usage` (input_tokens, output_tokens)
-describe the call. Answers are rounded to two decimals by the server and are not deterministic; nothing
+The request is {"model", "state", "questions": {name: question}}. A question is either a noul
+instruction string (sent as {"type": "noul", "instructions": text}; the reply's answers.<name>.noul is P(yes)
+in [0, 1]) or a choice dict {"type": "choice", "instructions": text, "criteria": {option: description}}
+(T4c, docs/specs/partd_tasks/T4c_jev_choice_and_context.md; the reply's answers.<name> is {"type": "choice",
+"choice": option, "confidence": float, "probabilities": {option: float}}). `model` and `usage`
+(input_tokens, output_tokens) describe the call. Answers are rounded to two decimals by the server and are not deterministic; nothing
 here caches them. The bearer key is read from a file at call time and is never logged.
 """
 
@@ -39,8 +42,10 @@ _RETRY_STATUS_FLOOR = 500       # noqa: literals - 5xx is a server error, worth 
 
 @dataclass
 class JevAnswer:
-    """One Jev request's result. `error` is None on success; then every asked question has a probability."""
-    probabilities: dict[str, float] = field(default_factory=dict)
+    """One Jev request's result. `error` is None on success; then every asked noul question has a
+    probability and every asked choice question has a choice."""
+    probabilities: dict[str, float] = field(default_factory=dict)      # the noul questions' P(yes)
+    choices: dict[str, dict[str, Any]] = field(default_factory=dict)   # the choice questions: {"choice", "confidence", "probabilities"}
     model: str = ""                   # the reply's model if it names one, else the requested one
     ms: int = 0
     error: str | None = None
@@ -62,34 +67,64 @@ def _key() -> str:
     return key
 
 
-def request_body(model: str, state: str, questions: dict[str, str]) -> dict[str, Any]:
+Question = str | dict[str, Any]     # a noul instruction text, or a choice question dict
+
+
+def is_choice(question: Question) -> bool:
+    return isinstance(question, dict) and question.get("type") == "choice"
+
+
+def request_body(model: str, state: str, questions: dict[str, Question]) -> dict[str, Any]:
+    """The request. A string question is a noul instruction; a dict question is sent as it is (a choice:
+    {"type": "choice", "instructions": text, "criteria": {option: description}})."""
     return {"model": model, "state": state,
-            "questions": {name: {"type": "noul", "instructions": text} for name, text in questions.items()}}
+            "questions": {name: dict(q) if isinstance(q, dict) else {"type": "noul", "instructions": q}
+                          for name, q in questions.items()}}
 
 
-def parse_reply(reply: Any, questions: dict[str, str], requested_model: str) -> JevAnswer:
-    """The reply's probabilities, served model and usage; an error value when an asked question has no
-    probability in [0, 1]."""
+def _probability(value: Any) -> bool:
+    return not isinstance(value, bool) and isinstance(value, (int, float)) and 0 <= value <= 1
+
+
+def parse_reply(reply: Any, questions: dict[str, Question], requested_model: str) -> JevAnswer:
+    """The reply's answers, served model and usage; an error value when an asked noul question has no
+    probability in [0, 1], or an asked choice question has no choice among its criteria. A choice answer is
+    kept as {"choice", "confidence", "probabilities"}: the option probabilities that are numbers in [0, 1]
+    ({} when the reply has none) and the confidence as a float (None when the reply has none)."""
     if not isinstance(reply, dict) or not isinstance(reply.get("answers"), dict):
         return JevAnswer(model=requested_model, error="reply has no answers")
     probabilities: dict[str, float] = {}
-    for name in questions:
+    choices: dict[str, dict[str, Any]] = {}
+    for name, question in questions.items():
         entry = reply["answers"].get(name)
+        if is_choice(question):
+            picked = entry.get("choice") if isinstance(entry, dict) else None
+            if not isinstance(picked, str) or picked not in (question.get("criteria") or {}):
+                return JevAnswer(model=requested_model, error=f"reply has no valid choice for {name!r}")
+            by_option = entry.get("probabilities")
+            confidence = entry.get("confidence")
+            choices[name] = {
+                "choice": picked,
+                "confidence": float(confidence) if _probability(confidence) else None,
+                "probabilities": ({str(k): float(v) for k, v in by_option.items() if _probability(v)}
+                                  if isinstance(by_option, dict) else {})}
+            continue
         value = entry.get("noul") if isinstance(entry, dict) else None
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 1:
+        if not _probability(value):
             return JevAnswer(model=requested_model, error=f"reply has no probability for {name!r}")
         probabilities[name] = float(value)
     served = reply.get("model")
     usage = reply.get("usage") if isinstance(reply.get("usage"), dict) else {}
     return JevAnswer(
-        probabilities=probabilities, model=served if isinstance(served, str) and served else requested_model,
+        probabilities=probabilities, choices=choices,
+        model=served if isinstance(served, str) and served else requested_model,
         usage={k: int(usage[k]) for k in ("input_tokens", "output_tokens")
                if isinstance(usage.get(k), (int, float)) and not isinstance(usage.get(k), bool)})
 
 
-async def ask(state: str, questions: dict[str, str], *,
+async def ask(state: str, questions: dict[str, Question], *,
               transport: httpx.AsyncBaseTransport | None = None) -> JevAnswer:
-    """One Jev request: every question in `questions` ({name: instructions}) over `state`. One retry, after
+    """One Jev request: every question in `questions` ({name: noul text | choice dict}) over `state`. One retry, after
     front_door.jev_retry_wait_s, on HTTP 429 or 5xx; then an error value. Never raises. `transport` is for tests."""
     url, model = str(cfg.front_door.jev_url), str(cfg.front_door.jev_model)
     start = time.monotonic()
