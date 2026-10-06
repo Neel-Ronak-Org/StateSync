@@ -19,6 +19,7 @@ Each answer is scored on two halves, fixed before any run:
     python3 scripts/eval_hybrid.py ask --arm v3 --port 8093
     python3 scripts/eval_hybrid.py grade
     python3 scripts/eval_hybrid.py report
+    python3 scripts/eval_hybrid.py --set held_out ask --arm v3 --port 8093     the held-out 100 (build_hybrid_set.py)
 """
 
 from __future__ import annotations
@@ -41,12 +42,19 @@ import eval_bird as eb  # noqa: E402
 import eval_routing as er  # noqa: E402
 import paperb_docs as pd  # noqa: E402
 
-OUT = REPO / "docs" / "eval" / "partd_hybrid.json"                 # grades and the report
+# --set routing: the routing set's 24 hybrid questions (T5 and T5b were designed on them);
+# --set held_out: docs/eval/hybrid_set.json, 100 generated questions built before any run (build_hybrid_set.py).
+SETS = {"routing": ("partd_hybrid", None), "held_out": ("partd_hybrid_heldout", REPO / "docs" / "eval" / "hybrid_set.json")}
+SET_NAME = "routing"
+
+
+def out_path() -> Path:
+    return REPO / "docs" / "eval" / f"{SETS[SET_NAME][0]}.json"          # grades and the report
 
 
 def run_path(arm: str) -> Path:
     """One file per arm, so the arms can be asked in parallel."""
-    return REPO / "docs" / "eval" / f"partd_hybrid_answers_{arm}.json"
+    return REPO / "docs" / "eval" / f"{SETS[SET_NAME][0]}_answers_{arm}.json"
 FLAGS = {"shipped": "flags_partd_v3_off.toml", "v3": "flags_partd_v3_final_bge.toml",
          "v3_entities": "flags_partd_v3_final_bge_entities.toml"}
 CONTAINERS = {8091: "statesync-orchestrator-paperb", 8092: "statesync-orchestrator-paperb-off",
@@ -64,7 +72,8 @@ VERDICTS = {"CORRECT": "correct", "PARTLY": "partly correct", "INCORRECT": "inco
 
 
 def items() -> list[dict]:
-    return [i for i in json.loads(er.SET.read_text())["items"] if i["class"] == "hybrid"]
+    path = SETS[SET_NAME][1] or er.SET
+    return [i for i in json.loads(path.read_text())["items"] if i["class"] == "hybrid"]
 
 
 def norm_title(s: str) -> str:
@@ -87,13 +96,13 @@ def check_flags(arm: str, port: int) -> dict:
 
 
 def load() -> dict:
-    record = json.loads(OUT.read_text()) if OUT.exists() else {"grades": {}}
+    record = json.loads(out_path().read_text()) if out_path().exists() else {"grades": {}}
     record["runs"] = {arm: json.loads(run_path(arm).read_text()) for arm in FLAGS if run_path(arm).exists()}
     return record
 
 
 def save(record: dict) -> None:
-    OUT.write_text(json.dumps({k: v for k, v in record.items() if k != "runs"}, indent=1) + "\n")
+    out_path().write_text(json.dumps({k: v for k, v in record.items() if k != "runs"}, indent=1) + "\n")
 
 
 def cmd_ask(arm: str, port: int) -> int:
@@ -197,7 +206,9 @@ def cmd_report() -> int:
 
 
 def main() -> int:
+    global SET_NAME
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--set", choices=sorted(SETS), default="routing")
     sub = ap.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("ask")
     a.add_argument("--arm", choices=sorted(FLAGS), required=True)
@@ -206,6 +217,7 @@ def main() -> int:
     g.add_argument("--container", default="statesync-orchestrator-paperb")
     sub.add_parser("report")
     args = ap.parse_args()
+    SET_NAME = args.set
     if args.cmd == "ask":
         return cmd_ask(args.arm, args.port)
     return cmd_grade(args.container) if args.cmd == "grade" else cmd_report()
