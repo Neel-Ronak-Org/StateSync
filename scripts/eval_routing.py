@@ -117,7 +117,10 @@ def route_one(port: int, workspace: str, question: str, history: list[dict] | No
     if history is not None:
         body["debug_history"] = history
     t0 = time.monotonic()
-    st, resp = api(port, "POST", "/query", body)
+    try:
+        st, resp = api(port, "POST", "/query", body)
+    except Exception as exc:  # noqa: BLE001 - a hung or dropped request is recorded and asked again on resume
+        return {"http_status": None, "detail": f"{type(exc).__name__}: {exc}"[:300], "ms": round((time.monotonic() - t0) * 1000)}
     trace = resp.get("state_trace") or {}
     return {"http_status": st, "detail": resp.get("detail"), "route": trace.get("route"),
             "out_of_scope": trace.get("out_of_scope"), "normalized_query": trace.get("normalized_query"),
@@ -136,7 +139,7 @@ def cmd_route(arm: str, port: int, split: str, repeat: int) -> int:
         key = f"{arm}|{split}|{rep}"
         run = record["runs"].setdefault(key, {"arm": arm, "split": split, "repeat": rep, "images": images, "items": {}, "turns": {}})
         for it in rs["items"]:
-            if (split != "all" and it["split"] != split) or it["id"] in run["items"]:
+            if (split != "all" and it["split"] != split) or run["items"].get(it["id"], {}).get("http_status") == 200:
                 continue
             run["items"][it["id"]] = route_one(port, workspace, it["question"], None)
             OUT.write_text(json.dumps(record, indent=1) + "\n")
@@ -145,7 +148,7 @@ def cmd_route(arm: str, port: int, split: str, repeat: int) -> int:
                 continue
             for t in conv["turns"]:
                 tid = f"{conv['id']}|{t['turn']}"
-                if tid in run["turns"]:
+                if run["turns"].get(tid, {}).get("http_status") == 200:
                     continue
                 history = [{"question": p["standalone"], "route": HISTORY_ROUTE[p["class"]],
                             "answered": p["class"] != "neither", "answer": p.get("gold_answer") or ""}
