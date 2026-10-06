@@ -128,7 +128,7 @@ def route_one(port: int, workspace: str, question: str, history: list[dict] | No
             "ms": round((time.monotonic() - t0) * 1000)}
 
 
-def cmd_route(arm: str, port: int, split: str, repeat: int, history_mode: str = "gold") -> int:
+def cmd_route(arm: str, port: int, split: str, repeat: int, history_mode: str = "gold", tag: str = "") -> int:
     """history_mode "gold": earlier turns are given as their gold standalone questions (what a rewriter would
     have produced); "raw": as the user typed them, which is all a pipeline that rewrites nothing ever has
     (docs/specs/partd_tasks/T4c_jev_choice_and_context.md). Raw runs are stored as "<arm>@raw|split|rep"."""
@@ -139,7 +139,7 @@ def cmd_route(arm: str, port: int, split: str, repeat: int, history_mode: str = 
     record = json.loads(OUT.read_text()) if OUT.exists() else {"runs": {}}
     images = json.loads((REPO / "research" / "paperb" / "partd_images.json").read_text())
     for rep in range(repeat):
-        label = arm if history_mode == "gold" else f"{arm}@raw"
+        label = (arm if history_mode == "gold" else f"{arm}@raw") + (f"+{tag}" if tag else "")   # tag: a variant of the arm
         key = f"{label}|{split}|{rep}"
         run = record["runs"].setdefault(key, {"arm": label, "history": history_mode, "split": split, "repeat": rep, "images": images, "items": {}, "turns": {}})
         for it in rs["items"]:
@@ -242,12 +242,13 @@ def main() -> int:
     r.add_argument("--split", choices=["dev", "test", "all"], default="dev")
     r.add_argument("--repeat", type=int, default=1)
     r.add_argument("--history", choices=["gold", "raw"], default="gold")
+    r.add_argument("--tag", default="", help="a variant of the arm (e.g. a mounted wording), stored as <arm>+<tag>")
     sub.add_parser("report")
     args = ap.parse_args()
     if args.cmd == "setup":
         return cmd_setup(args.port)
     if args.cmd == "route":
-        return cmd_route(args.arm, args.port, args.split, args.repeat, args.history)
+        return cmd_route(args.arm, args.port, args.split, args.repeat, args.history, args.tag)
     return cmd_report()
 
 
