@@ -1,8 +1,6 @@
 {
  "n": 393,
- "missing": [
-  "jev_zeroshot"
- ],
+ "missing": [],
  "policies": {
   "P0 first answer": 0.771,
   "P1 judge-triggered re-vote (GPT-5 mini's 6)": 0.7786,
@@ -15,6 +13,7 @@
   "P5m pool ModernBERT-max (mutation)": 0.7964,
   "P5L pool Laya-max (fine-tuned)": 0.7799,
   "pool Laya-max (zero-shot)": 0.7074,
+  "pool Jev-max (zero-shot)": 0.7875,
   "P6 ModernBERT-triggered cascade": 0.827,
   "oracle (any candidate right)": 0.9415
  },
@@ -87,6 +86,13 @@
    "ci95": [
     -0.1043,
     -0.0229
+   ]
+  },
+  "pool Jev-max (zero-shot)": {
+   "difference": 0.0165,
+   "ci95": [
+    -0.0216,
+    0.0547
    ]
   },
   "P6 ModernBERT-triggered cascade": {
@@ -204,6 +210,11 @@
   "laya_zeroshot": {
    "auroc": 0.5433,
    "aurc": 0.1891,
+   "missing": 0
+  },
+  "jev_zeroshot": {
+   "auroc": 0.76,
+   "aurc": 0.1091,
    "missing": 0
   }
  },
