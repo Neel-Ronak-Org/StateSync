@@ -128,6 +128,19 @@ def route_one(port: int, workspace: str, question: str, history: list[dict] | No
             "ms": round((time.monotonic() - t0) * 1000)}
 
 
+def done(rec: dict | None) -> bool:
+    """Answered, with a database card (a record made while the database was down is asked again)."""
+    return bool(rec) and rec.get("http_status") == 200 and ((rec.get("front_door") or {}).get("card_status")) != "unavailable"
+
+
+def card_guard(rec: dict) -> None:
+    """Stop the run when the front door had no database card: the database it describes is down (on 2026-10-06
+    the SEC database container stayed stopped after a Docker restart, and every front door decided blind until
+    this guard). The record stays, and done() makes a resume ask it again."""
+    if ((rec.get("front_door") or {}).get("card_status")) == "unavailable":
+        raise SystemExit("the front door had no database card (is statesync-sec-db running?); stopping")
+
+
 def cmd_route(arm: str, port: int, split: str, repeat: int, history_mode: str = "gold", tag: str = "") -> int:
     """history_mode "gold": earlier turns are given as their gold standalone questions (what a rewriter would
     have produced); "raw": as the user typed them, which is all a pipeline that rewrites nothing ever has
@@ -143,22 +156,24 @@ def cmd_route(arm: str, port: int, split: str, repeat: int, history_mode: str = 
         key = f"{label}|{split}|{rep}"
         run = record["runs"].setdefault(key, {"arm": label, "history": history_mode, "split": split, "repeat": rep, "images": images, "items": {}, "turns": {}})
         for it in rs["items"]:
-            if (split != "all" and it["split"] != split) or run["items"].get(it["id"], {}).get("http_status") == 200:
+            if (split != "all" and it["split"] != split) or done(run["items"].get(it["id"])):
                 continue
             run["items"][it["id"]] = route_one(port, workspace, it["question"], None)
             OUT.write_text(json.dumps(record, indent=1) + "\n")
+            card_guard(run["items"][it["id"]])
         for conv in rs["conversations"]:
             if split != "all" and conv["split"] != split:
                 continue
             for t in conv["turns"]:
                 tid = f"{conv['id']}|{t['turn']}"
-                if run["turns"].get(tid, {}).get("http_status") == 200:
+                if done(run["turns"].get(tid)):
                     continue
                 history = [{"question": p["standalone"] if history_mode == "gold" else p["question"], "route": HISTORY_ROUTE[p["class"]],
                             "answered": p["class"] != "neither", "answer": p.get("gold_answer") or ""}
                            for p in conv["turns"] if p["turn"] < t["turn"]]
                 run["turns"][tid] = route_one(port, workspace, t["question"], history)
                 OUT.write_text(json.dumps(record, indent=1) + "\n")
+                card_guard(run["turns"][tid])
         print(f"{key}: {len(run['items'])} questions, {len(run['turns'])} turns", flush=True)
     return 0
 

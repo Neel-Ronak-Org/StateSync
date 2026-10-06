@@ -95,6 +95,8 @@ def cmd_ask(arm: str, port: int) -> int:
                                "normalized_query": trace.get("normalized_query"), "context_carry": fd.get("context_carry"),
                                "citations": body.get("citations"), "metrics": trace.get("metrics"),
                                "ms": round((time.monotonic() - t0) * 1000)}
+        if (fd.get("card_status")) == "unavailable":
+            raise SystemExit("the front door had no database card (is statesync-sec-db running?); stopping")
         path.write_text(json.dumps(run, indent=1) + "\n")
         print(f"{arm} {tid} HTTP {st} route={run['answers'][tid]['route']}", flush=True)
     return 0
