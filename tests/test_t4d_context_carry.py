@@ -650,3 +650,14 @@ def test_the_search_text_carries_the_titles_own_words():
     """The carried company goes into the search text as the title writes it, not reduced."""
     state = {"conversation_context": "Earlier in this conversation: ...", "carried": {"company": "JOHNSON JOHNSON", "year": "2022"}}
     assert context_carry.search_suffix(state, "Who are its primary customers?") == " JOHNSON JOHNSON 2022"
+
+
+def test_a_company_named_two_turns_back_is_carried():
+    names = ["3M", "NIKE"]
+    earlier = [{"question": "What was 3M's capital expenditure in fiscal 2018?", "answer": "$1577.00"}]
+    previous = {"question": "And in fiscal 2022?", "answer": "2022, 1749000000"}
+    c = context_carry.carry("What drove its operating margin change that year?", previous, names, earlier=earlier)
+    assert (c.follow_up, c.company, c.year) == (True, "3M", "2022")
+    assert "company 3M" in c.line and "year 2022" in c.line
+    # without the earlier turns, nothing names a company
+    assert context_carry.carry("What drove its operating margin change that year?", previous, names).company is None

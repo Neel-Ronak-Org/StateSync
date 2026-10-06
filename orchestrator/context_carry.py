@@ -177,24 +177,35 @@ class Carry:
         return {"company": self.company, "year": self.year, "reason": self.reason}
 
 
-def carry(question: str, previous: Mapping[str, Any] | None, names: list[str]) -> Carry:
+def carry(question: str, previous: Mapping[str, Any] | None, names: list[str],
+          earlier: list[Mapping[str, Any]] | None = None) -> Carry:
     """The follow-up verdict, the company and year, and the context line. company: the question's own, else
     the previous answer's first, else the previous question's first. year: the question's own, else the
     previous question's, else the previous answer's. line: `Earlier in this conversation: "<previous
     question>"; its answer began: "<first answer_chars characters of the answer>".`, then, for whatever was
-    carried from the previous turn, ` Carried from it: company <company>; year <year>.`"""
+    carried from the previous turn, ` Carried from it: company <company>; year <year>.`
+    `earlier`: the turns before the previous one, oldest first. When the question and the previous turn name no
+    company (or year), the most recent earlier turn that does supplies it ("3M's capex in 2018?" / "And in
+    2022?" / "What drove its margin that year?": "its" is 3M, named two turns back)."""
     follow_up, reason = is_follow_up(question, previous, names)
     if not previous:
         return Carry(follow_up, reason, None, None, "")
     asked, answered = previous_question(previous), previous_answer(previous)
     company, company_from = None, ""
-    for source, text in (("question", question), ("previous answer", answered), ("previous question", asked)):
+    older = [(f"turn -{len(earlier or []) - i + 1}", t) for i, t in enumerate(earlier or [])][::-1]
+    company_sources = [("question", question), ("previous answer", answered), ("previous question", asked)] + [
+        (f"{tag} {kind}", text) for tag, t in older
+        for kind, text in (("answer", previous_answer(t)), ("question", previous_question(t)))]
+    year_sources = [("question", question), ("previous question", asked), ("previous answer", answered)] + [
+        (f"{tag} {kind}", text) for tag, t in older
+        for kind, text in (("question", previous_question(t)), ("answer", previous_answer(t)))]
+    for source, text in company_sources:
         found = entities(text, names)
         if found:
             company, company_from = found[0], source
             break
     year, year_from = None, ""
-    for source, text in (("question", question), ("previous question", asked), ("previous answer", answered)):
+    for source, text in year_sources:
         found = years(text)
         if found:
             year, year_from = found[0], source

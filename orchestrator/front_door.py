@@ -804,7 +804,8 @@ async def context_update(state_dict: dict[str, Any], evidence: Evidence, parsed:
     question: str = state_dict["raw_query"]
     if not evidence.turns or not _same_question(parsed.standalone_question, question):
         return None
-    result = context_carry.carry(question, evidence.turns[-1], await workspace_names(state_dict))
+    result = context_carry.carry(question, evidence.turns[-1], await workspace_names(state_dict),
+                                 earlier=evidence.turns[:-1])
     update: dict[str, Any] = {"carried": result.carried(), "trace": result.trace()}
     if result.follow_up:
         update["conversation_context"] = result.line
