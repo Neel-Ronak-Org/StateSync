@@ -315,8 +315,12 @@ def cmd_grade(shards: int, container: str = CONTAINER, preliminary: str | None =
     return 0
 
 
-def cmd_owner_sheet() -> int:
-    items = grading_items()
+def cmd_owner_sheet(v3: bool = False) -> int:
+    """30 answers for the owner's blind check. With v3: drawn from the three runs the paper compares (the shipped
+    system, D-dense, and the fixed system's v3_dense and v3_bge), written to *_v3 files."""
+    labels = ("dense", *sorted(V3_FLAGS)) if v3 else tuple(LABELS)
+    suffix = "_v3" if v3 else ""
+    items = grading_items(labels)
     pick = random.Random(SEED + 1).sample(items, OWNER_SAMPLE)
     key = {}
     sheet = []
@@ -324,13 +328,13 @@ def cmd_owner_sheet() -> int:
         token = f"D{n:02d}"
         key[token] = it["id"]
         sheet.append({"item": token, "text": it["prompt"], "owner_verdict": None, "note": ""})
-    (EVAL / "paperb_docs_owner_sheet.json").write_text(json.dumps({
+    (EVAL / f"paperb_docs_owner_sheet{suffix}.json").write_text(json.dumps({
         "instructions": "For each item, read the question, the reference answer and justification, and the system's "
                         "answer. Set owner_verdict to one of: correct, partly correct, incorrect, refused. A number "
                         "counts when it is within 1% of the reference or within its rounding. Do not look at any "
                         "grader output first.", "items": sheet}, indent=1) + "\n")
-    (EVAL / "paperb_docs_owner_key.json").write_text(json.dumps(key, indent=1) + "\n")
-    print(f"wrote {OWNER_SAMPLE} items to paperb_docs_owner_sheet.json (key kept apart)")
+    (EVAL / f"paperb_docs_owner_key{suffix}.json").write_text(json.dumps(key, indent=1) + "\n")
+    print(f"wrote {OWNER_SAMPLE} items to paperb_docs_owner_sheet{suffix}.json (key kept apart)")
     return 0
 
 
@@ -407,7 +411,8 @@ def main() -> int:
     g.add_argument("--preliminary", choices=sorted(LABELS), help="one run only, into its own file (an early look)")
     g.add_argument("--v3", action="store_true", help="the v3 runs (fixed system, re-ranker off and bge), in one shuffled order")
     sub.add_parser("rerank-check")
-    sub.add_parser("owner-sheet")
+    os_ = sub.add_parser("owner-sheet")
+    os_.add_argument("--v3", action="store_true", help="sample from the shipped run and the two v3 runs")
     sub.add_parser("analyze")
     args = ap.parse_args()
     if args.cmd == "ask":
@@ -416,7 +421,7 @@ def main() -> int:
         return cmd_grade(args.shards, args.container, args.preliminary, args.v3)
     if args.cmd == "rerank-check":
         return cmd_rerank_check()
-    return cmd_owner_sheet() if args.cmd == "owner-sheet" else cmd_analyze()
+    return cmd_owner_sheet(args.v3) if args.cmd == "owner-sheet" else cmd_analyze()
 
 
 if __name__ == "__main__":
