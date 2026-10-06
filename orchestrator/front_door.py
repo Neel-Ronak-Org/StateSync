@@ -15,8 +15,9 @@ Layout. Evidence is gathered with no model call (gather_evidence). A strategy th
 evidence: decide(evidence, question) -> Decision, chosen by the flag through DECIDERS: "llm" (one model
 call) and "jev" (T4b, docs/specs/partd_tasks/T4b_jev_front_door.md: Jev, a decision model, answers four
 typed questions with probabilities and makes every routing decision; the LLM is called only to write
-text: resolve a follow-up, split a two-source question, translate). Neither changes the node, the
-routing table or the graph. The routing table (route_for), the parser (parse_reply) and the text
+text: resolve a follow-up, split a two-source question, translate), and "jev_rw" (the same Jev, but the
+text comes from the shipped normaliser and follow-up rewriter, run before one Jev request; the LLM front
+door is only the fallback when Jev fails). None changes the routing table or the graph. The routing table (route_for), the parser (parse_reply) and the text
 builders are pure.
 
 Also here: the evaluation hooks' checks (debug_route_only, debug_history; accepted only when
@@ -317,6 +318,7 @@ class Evidence:
     card: str                         # with the business context, as sent
     card_status: str                  # "ok" | "cached" | "unavailable"
     errors: list[str] = field(default_factory=list)
+    text: "TextPrep | None" = None    # the "jev_rw" arm's normaliser and rewriter result; None for the others
 
 
 def user_message(question: str, turn_lines: list[str], card: str, doc_text: str) -> str:
@@ -566,8 +568,98 @@ async def decide_jev(evidence: Evidence, question: str) -> Decision:
         jev_calls=int(jev["calls"]), jev=jev)
 
 
+# ── The "jev_rw" arm: the shipped normaliser and rewriter write the text, Jev decides ──
+JEV_RW_QUESTIONS = {k: v for k, v in JEV_QUESTIONS.items() if k != "uses_history"}
+
+
+@dataclass
+class TextPrep:
+    """What the shipped text steps made of the question before Jev: the standalone question, the
+    detected language and what the steps cost. `errors` lists a step that failed (its text is the
+    previous step's)."""
+    standalone: str
+    language: str = "en"
+    tokens_in: int = 0
+    tokens_out: int = 0
+    llm_calls: int = 0
+    normaliser_used: bool = False
+    rewriter_used: bool = False
+    errors: list[str] = field(default_factory=list)
+
+
+async def prepare_text(state_dict: dict[str, Any]) -> TextPrep:
+    """The normaliser, only when the script / Hinglish gate fires, then the follow-up rewriter (no
+    model call on turn 1, or when the question needs no context): the shipped nodes, with their prompts,
+    model roles and history read. A step that raises is recorded and skipped, never a failed question."""
+    from nodes.normalize import normalize_node       # imported here: nodes.rewrite imports this module
+    from nodes.rewrite import rewrite_node
+
+    question: str = state_dict["raw_query"]
+    prep = TextPrep(standalone=question)
+
+    def take(update: dict[str, Any]) -> bool:
+        metrics = update.get("metrics") or {}
+        prep.tokens_in += int(metrics.get("tokens_in", 0))
+        prep.tokens_out += int(metrics.get("tokens_out", 0))
+        prep.llm_calls += int(metrics.get("llm_calls", 0))
+        return int(metrics.get("llm_calls", 0)) > 0
+
+    if needs_language_model(question):
+        try:
+            update = await normalize_node(state_dict)
+        except Exception as exc:  # noqa: BLE001 -- the question goes on untranslated, and the trace says so
+            logger.error("front door: normaliser failed (%s); continuing with the original question", exc)
+            prep.errors.append(f"normaliser: {exc}")
+        else:
+            prep.normaliser_used = take(update)
+            prep.standalone = update["normalized_query"]
+            prep.language = update.get("detected_language") or "en"
+    try:
+        update = await rewrite_node({**state_dict, "normalized_query": prep.standalone})
+    except Exception as exc:  # noqa: BLE001
+        logger.error("front door: follow-up rewriter failed (%s); continuing without it", exc)
+        prep.errors.append(f"rewriter: {exc}")
+    else:
+        prep.rewriter_used = take(update)
+        prep.standalone = update["normalized_query"]
+    return prep
+
+
+async def decide_jev_rw(evidence: Evidence, question: str) -> Decision:
+    """Arm "jev_rw". The text is already made (evidence.text, from prepare_text: the evidence was searched
+    with the standalone question). ONE Jev request over the standalone question asks four questions
+    (needs_database, needs_documents, out_of_scope, documents_depend_on_database); no uses_history question,
+    no re-check, no LLM call here, and never a split (no subtasks). uses_history is whether the text steps
+    changed the question. A Jev error falls back to decide_llm entirely, recorded in the trace."""
+    text = evidence.text or TextPrep(standalone=question)
+    standalone = text.standalone
+    first = await jev_client.ask(jev_state(evidence, standalone), JEV_RW_QUESTIONS)
+    jev: dict[str, Any] = {"model": first.model, "ms": first.ms, "calls": 1,
+                           "normaliser_used": text.normaliser_used, "rewriter_used": text.rewriter_used}
+    if text.errors:
+        jev["text_errors"] = text.errors
+    if not first.ok:
+        logger.error("front door: Jev failed (%s); falling back to the LLM arm", first.error)
+        fallback = await decide_llm(evidence, question)
+        jev.update(probabilities={}, usage={}, llm_used=True, fallback="llm", jev_error=first.error)
+        return replace(
+            fallback, arm="jev_rw", jev_calls=1, jev=jev, tokens_in=fallback.tokens_in + text.tokens_in,
+            tokens_out=fallback.tokens_out + text.tokens_out, llm_calls=fallback.llm_calls + text.llm_calls)
+    needs_database, needs_documents, out_of_scope, route = jev_reading(first.probabilities)
+    jev.update(probabilities={"first": first.probabilities}, usage={"first": first.usage},
+               llm_used=text.llm_calls > 0)
+    parsed = Parsed(
+        True, text.language, standalone, not _same_question(standalone, question), needs_database,
+        needs_documents, out_of_scope, "", "",
+        first.probabilities["documents_depend_on_database"] >= float(cfg.front_door.jev_depends))
+    return Decision("jev_rw", parsed, route, tokens_in=text.tokens_in, tokens_out=text.tokens_out,
+                    llm_calls=text.llm_calls, jev_calls=1, jev=jev)
+
+
 # One strategy per flag value.
-DECIDERS: dict[str, Decide] = {"llm": decide_llm, "jev": decide_jev}
+DECIDERS: dict[str, Decide] = {"llm": decide_llm, "jev": decide_jev, "jev_rw": decide_jev_rw}
+# A strategy that needs the text made before the evidence is gathered (so the search uses it).
+PREPARERS: dict[str, Callable[[dict[str, Any]], Awaitable[TextPrep]]] = {"jev_rw": prepare_text}
 
 
 def front_door_enabled(mode: str) -> bool:
@@ -624,7 +716,13 @@ async def front_door_node(state_dict: dict[str, Any], mode: str | None = None) -
         raise ValueError("front_door_node ran with pipeline.front_door = 'off'")
     decide = DECIDERS[mode]
     question: str = state_dict["raw_query"]
-    evidence = await gather_evidence(state_dict)
+    prepare = PREPARERS.get(mode)
+    if prepare is None:
+        evidence = await gather_evidence(state_dict)
+    else:
+        text = await prepare(state_dict)
+        evidence = await gather_evidence({**state_dict, "raw_query": text.standalone})   # searched with the standalone question
+        evidence.text = text
     decision = await decide(evidence, question)
     p = decision.parsed
     out_of_scope = decision.route == "neither"

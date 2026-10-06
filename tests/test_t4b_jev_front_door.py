@@ -460,3 +460,231 @@ def test_the_jev_flag_builds_the_same_graph_as_the_llm_flag():
     assert drawn(graph.build_route_graph("jev")) == drawn(graph.build_route_graph("llm"))
     with pytest.raises(ValueError):
         graph.build_graph("nonsense")
+
+
+# ── "jev_rw": the shipped normaliser and rewriter write the text, then one Jev request ──────────────
+class RwWorld:
+    """The fake world for front_door_node(state, "jev_rw"): the front door's MCP (search texts recorded), the
+    rewriter's history read, and one scripted model per role (normalizer, rewriter, supervisor = the fallback)."""
+
+    def __init__(self, monkeypatch, *, history=(), rewriter='{"needs_context": false, "rewritten_query": "", "guessed": false}',
+                 normalizer=None, supervisor=None):
+        self.rewrite = pytest.importorskip("nodes.rewrite")
+        language_normalizer = pytest.importorskip("language_normalizer")
+        self.roles: list[str] = []
+        self.searches: list[str] = []
+        self.history = {"turns": list(history), "next_turn_index": len(history) + 1}
+        self.replies = {"rewriter": rewriter, "supervisor": supervisor or _llm_reply(), "normalizer": normalizer or json.dumps(
+            {"detected_language": "en", "confidence": 0.99, "normalized_query": "x", "preserved_entities": {}})}
+        self.failing: set[str] = set()
+        world = self
+
+        class _LLM:
+            def __init__(self, role):
+                self.role = role
+
+            async def complete(self, system, messages, max_tokens, **kw):
+                world.roles.append(self.role)
+                if self.role in world.failing:
+                    raise RuntimeError(f"{self.role} down")
+                return SimpleNamespace(text=world.replies[self.role], tokens_in=5, tokens_out=3)
+
+        class _Session:
+            def __init__(self, *a, **kw):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *exc):
+                return False
+
+        async def history_read(session, session_id, principal_id, limit=None):
+            return world.history
+
+        async def search(session, text, **kw):
+            world.searches.append(text)
+            return {"matches": [{"document_id": "d1", "title": "3M 2022 10K", "score": 0.7, "content_md": "p"}]}
+
+        async def list_tables(session, schema=None):
+            return {"tables": [{"name": "annual_metrics"}]}
+
+        async def describe(session, table, schema=None):
+            return {"columns": [{"name": "company"}, {"name": "metric"}]}
+
+        async def context(session, **kw):
+            return {"ok": True, "business_context": ""}
+
+        for module in (language_normalizer, self.rewrite, front_door):
+            monkeypatch.setattr(module, "get_agent_llm", _LLM)
+        for module in (self.rewrite, front_door):
+            monkeypatch.setattr(module, "MCPSession", _Session)
+            monkeypatch.setattr(module, "history_get_recent_turns", history_read)
+        monkeypatch.setattr(front_door, "vector_semantic_search", search)
+        monkeypatch.setattr(front_door, "schema_list_tables", list_tables)
+        monkeypatch.setattr(front_door, "schema_describe_table", describe)
+        monkeypatch.setattr(front_door, "workspaces_manage", context)
+        front_door._CARD_CACHE.clear()
+
+
+def _rw_state(question="What was 3M's FY2018 capex?", **kw):
+    state = {"raw_query": question, "tenant_id": "t1", "principal_id": "p1", "session_id": "s1", "query_id": "q1",
+             "target_schema": "public", "workspace_id": None,
+             "flags_snapshot": {"pipeline.front_door": "jev_rw", "pipeline.retrieval_mode": "dense",
+                                "pipeline.doc_scope": "all", "normalization.enabled": True}}
+    state.update(kw)
+    return state
+
+
+_EARLIER = {"turn_index": 1, "rewritten_query": "What was 3M's FY2018 capex?", "route": "sql",
+            "answer_text": "$1,577 million"}
+_REWRITE = '{"needs_context": true, "rewritten_query": "What was 3M\'s FY2022 capex?", "guessed": false}'
+_HINDI = json.dumps({"detected_language": "hi", "confidence": 0.95, "normalized_query": "What were the sales?",
+                     "preserved_entities": {}})
+
+
+def test_jev_rw_is_registered_and_the_flag_comment_lists_it():
+    assert front_door.DECIDERS["jev_rw"] is front_door.decide_jev_rw and front_door.front_door_enabled("jev_rw")
+    line = next(r for r in (REPO_ROOT / "config" / "flags.toml").read_text().splitlines() if r.startswith("front_door "))
+    assert '"jev_rw"' in line.split("#", 1)[1] and '= "off"' in line
+    assert set(front_door.JEV_RW_QUESTIONS) == {"needs_database", "needs_documents", "out_of_scope",
+                                                "documents_depend_on_database"}
+
+
+def test_jev_rw_turn_one_english_single_source_is_zero_llm_calls_and_one_jev_call(monkeypatch):
+    world = RwWorld(monkeypatch)
+    fake = _jev(monkeypatch, _probs(db=0.9, docs=0.1))
+    update = RUN(front_door.front_door_node(_rw_state(), "jev_rw"))
+    assert world.roles == [] and update["metrics"]["llm_calls"] == 0 and update["metrics"]["jev_calls"] == 1
+    assert update["route"] == "sql" and update["normalized_query"] == "What was 3M's FY2018 capex?"
+    assert update["rewrite_applied"] is False and "subtasks" not in update
+    assert len(fake.calls) == 1 and fake.calls[0][1] == front_door.JEV_RW_QUESTIONS
+    assert world.searches == ["What was 3M's FY2018 capex?"]
+    trace = update["front_door"]
+    assert trace["arm"] == "jev_rw" and trace["uses_history"] is False and trace["language"] == "en"
+    jev = trace["jev"]
+    assert (jev["normaliser_used"], jev["rewriter_used"], jev["llm_used"], jev["calls"]) == (False, False, False, 1)
+    assert "rechecked" not in jev and set(jev["probabilities"]) == {"first"}
+    assert set(jev["probabilities"]["first"]) == set(front_door.JEV_RW_QUESTIONS)
+
+
+def test_jev_rw_a_follow_up_is_one_rewriter_call_jev_sees_the_rewrite_and_the_search_uses_it(monkeypatch):
+    world = RwWorld(monkeypatch, history=[_EARLIER], rewriter=_REWRITE)
+    fake = _jev(monkeypatch, _probs(db=0.9, docs=0.1))
+    update = RUN(front_door.front_door_node(_rw_state("And in FY2022?"), "jev_rw"))
+    assert world.roles == ["rewriter"] and update["metrics"]["llm_calls"] == 1
+    assert update["metrics"]["tokens_in"] == 5 and update["metrics"]["tokens_out"] == 3
+    assert len(fake.calls) == 1 and fake.calls[0][0]["question"] == "What was 3M's FY2022 capex?"
+    assert world.searches == ["What was 3M's FY2022 capex? What was 3M's FY2018 capex?"]   # the standalone question
+    assert update["normalized_query"] == "What was 3M's FY2022 capex?" and update["rewrite_applied"] is True
+    assert update["turn_index"] == 2 and "subtasks" not in update
+    trace = update["front_door"]
+    assert trace["uses_history"] is True and trace["standalone_question"] == "What was 3M's FY2022 capex?"
+    assert (trace["jev"]["rewriter_used"], trace["jev"]["normaliser_used"], trace["jev"]["llm_used"]) == (True, False, True)
+
+
+def test_jev_rw_a_follow_up_that_needs_no_context_is_not_a_rewrite(monkeypatch):
+    world = RwWorld(monkeypatch, history=[_EARLIER])        # the rewriter says needs_context false
+    _jev(monkeypatch, _probs(db=0.9, docs=0.1))
+    update = RUN(front_door.front_door_node(_rw_state("How many suppliers are there?"), "jev_rw"))
+    assert world.roles == ["rewriter"] and update["normalized_query"] == "How many suppliers are there?"
+    assert update["front_door"]["uses_history"] is False and update["front_door"]["jev"]["rewriter_used"] is True
+
+
+def test_jev_rw_a_hindi_question_runs_the_normaliser_and_the_rest_sees_its_english(monkeypatch):
+    world = RwWorld(monkeypatch, normalizer=_HINDI)
+    fake = _jev(monkeypatch, _probs(db=0.9, docs=0.1))
+    update = RUN(front_door.front_door_node(_rw_state("बिक्री कितनी थी?"), "jev_rw"))
+    assert world.roles == ["normalizer"] and update["metrics"]["llm_calls"] == 1
+    assert update["detected_language"] == "hi" and update["normalized_query"] == "What were the sales?"
+    assert fake.calls[0][0]["question"] == "What were the sales?" and world.searches == ["What were the sales?"]
+    jev = update["front_door"]["jev"]
+    assert (jev["normaliser_used"], jev["rewriter_used"]) == (True, False)       # turn 1: the rewriter makes no call
+    assert update["front_door"]["uses_history"] is True                        # the question changed
+
+
+def test_jev_rw_a_hindi_follow_up_runs_the_normaliser_then_the_rewriter(monkeypatch):
+    world = RwWorld(monkeypatch, history=[_EARLIER], normalizer=_HINDI, rewriter=_REWRITE)
+    _jev(monkeypatch, _probs(db=0.9, docs=0.1))
+    update = RUN(front_door.front_door_node(_rw_state("और बिक्री?"), "jev_rw"))
+    assert world.roles == ["normalizer", "rewriter"] and update["metrics"]["llm_calls"] == 2
+    assert update["normalized_query"] == "What was 3M's FY2022 capex?" and update["detected_language"] == "hi"
+
+
+def test_jev_rw_the_normaliser_is_not_run_for_english_even_under_the_llm_language_gate(monkeypatch):
+    world = RwWorld(monkeypatch)
+    _jev(monkeypatch, _probs())
+    state = _rw_state()
+    state["flags_snapshot"]["pipeline.language_gate"] = "llm"       # the shipped gate setting; this arm gates by script itself
+    RUN(front_door.front_door_node(state, "jev_rw"))
+    assert world.roles == []
+
+
+def test_jev_rw_a_hybrid_route_makes_no_llm_call_and_sets_no_subtasks(monkeypatch):
+    world = RwWorld(monkeypatch)
+    _jev(monkeypatch, _probs(db=0.9, docs=0.9, dep=0.5))
+    update = RUN(front_door.front_door_node(_rw_state(), "jev_rw"))
+    assert world.roles == [] and update["route"] == "hybrid" and "subtasks" not in update
+    assert update["docs_depend_on_sql"] is True and update["metrics"]["llm_calls"] == 0
+    _jev(monkeypatch, _probs(db=0.9, docs=0.9, dep=0.4999))
+    assert RUN(front_door.front_door_node(_rw_state(), "jev_rw"))["docs_depend_on_sql"] is False
+
+
+def test_jev_rw_out_of_scope_and_docs_routes_come_from_jev(monkeypatch):
+    RwWorld(monkeypatch)
+    _jev(monkeypatch, _probs(db=0.1, docs=0.9), _probs(oos=0.5))
+    first = RUN(front_door.front_door_node(_rw_state(), "jev_rw"))
+    second = RUN(front_door.front_door_node(_rw_state(), "jev_rw"))
+    assert first["route"] == "docs" and second["out_of_scope"] is True and "route" not in second
+
+
+def test_jev_rw_a_jev_error_falls_back_to_decide_llm_and_keeps_the_text_steps_cost(monkeypatch):
+    world = RwWorld(monkeypatch, history=[_EARLIER], rewriter=_REWRITE,
+                    supervisor=_llm_reply(standalone_question="FALLBACK q", needs_database="yes", needs_documents="no",
+                                          out_of_scope=False))
+    _jev(monkeypatch, "HTTP 503: down")
+    update = RUN(front_door.front_door_node(_rw_state("And in FY2022?"), "jev_rw"))
+    assert world.roles == ["rewriter", "supervisor"] and update["metrics"]["llm_calls"] == 2
+    assert update["metrics"]["tokens_in"] == 5 + 5 and update["route"] == "sql"
+    assert update["normalized_query"] == "FALLBACK q"
+    jev = update["front_door"]["jev"]
+    assert update["front_door"]["arm"] == "jev_rw" and jev["fallback"] == "llm" and jev["jev_error"] == "HTTP 503: down"
+    assert jev["rewriter_used"] is True and jev["probabilities"] == {}
+
+
+def test_jev_rw_a_failed_text_step_is_recorded_and_the_question_goes_on(monkeypatch):
+    world = RwWorld(monkeypatch, history=[_EARLIER], rewriter=_REWRITE)
+    world.failing.add("rewriter")
+    fake = _jev(monkeypatch, _probs(db=0.9, docs=0.1))
+    update = RUN(front_door.front_door_node(_rw_state("And in FY2022?"), "jev_rw"))
+    assert update["normalized_query"] == "And in FY2022?" and fake.calls[0][0]["question"] == "And in FY2022?"
+    assert update["front_door"]["jev"]["text_errors"] == ["rewriter: rewriter down"]
+    assert update["front_door"]["jev"]["rewriter_used"] is False
+
+
+def test_jev_llm_and_off_are_unchanged_by_jev_rw(monkeypatch):
+    assert set(front_door.DECIDERS) == {"llm", "jev", "jev_rw"} and set(front_door.PREPARERS) == {"jev_rw"}
+    assert front_door.DECIDERS["jev"] is decide_jev and front_door.DECIDERS["llm"] is front_door.decide_llm
+    # "jev": no text steps; a follow-up goes to the LLM front door, never to the rewriter; five questions, uses_history among them.
+    world = RwWorld(monkeypatch, history=[_EARLIER], rewriter=_REWRITE,
+                    supervisor=_llm_reply(standalone_question="What was 3M's FY2022 capex?"))
+    fake = _jev(monkeypatch, _probs(history=0.9, db=0.9, docs=0.1), _probs(db=0.9, docs=0.1))
+    update = RUN(front_door.front_door_node(_rw_state("And in FY2022?"), "jev"))
+    assert world.roles == ["supervisor"] and fake.calls[0][1] == JEV_QUESTIONS and "uses_history" in fake.calls[0][1]
+    assert fake.calls[1][1] == JEV_RECHECK_QUESTIONS and update["front_door"]["arm"] == "jev"
+    assert world.searches == ["And in FY2022? What was 3M's FY2018 capex?"]        # searched with the raw question
+    assert "normaliser_used" not in update["front_door"]["jev"] and update["front_door"]["jev"]["rechecked"] is True
+    # "llm": the one model call, no Jev, no "jev" trace key.
+    world = RwWorld(monkeypatch, supervisor=_llm_reply(standalone_question="q", needs_database="yes",
+                                                     needs_documents="no", out_of_scope=False))
+    update = RUN(front_door.front_door_node(_rw_state("q"), "llm"))
+    assert world.roles == ["supervisor"] and "jev" not in update["front_door"] and "jev_calls" not in update["metrics"]
+    # "off": the compiled graph is the shipped one.
+    graph = pytest.importorskip("graph")
+
+    def drawn(compiled):
+        g = compiled.get_graph()
+        return sorted((e.source, e.target, bool(e.conditional)) for e in g.edges), sorted(g.nodes)
+
+    assert drawn(graph.build_graph("off")) == drawn(graph.graph)
+    assert drawn(graph.build_graph("jev_rw")) == drawn(graph.build_graph("llm"))
