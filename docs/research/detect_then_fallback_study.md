@@ -427,3 +427,37 @@ the other.
    - Of the 82 answers that reached the documents, 60 had a gold page among the 25 but only 31 had one
      among the 8.
    - Part D's QD2 split is read on the writer's 8, as well as on the full list.
+10. **2026-10-05 to 2026-10-06: Part D version 3, the design fixes. Made after change 9's early look, and
+    the paper says so.** The owner judged the shipped system's flaws unacceptable for a system paper and
+    asked for them to be fixed before any comparison (`docs/specs/routing_docs_fixes.md`; tasks T1–T5 in
+    `docs/specs/partd_tasks/`). D-bge on the shipped design was dropped; the D-dense answers stay as the
+    shipped baseline.
+    - **Flaws fixed:** the router saw only the 20 most recent document titles and could not see the
+      database (R1–R3); the writer read the first 8 of 25 passages in document order (D1–D3); failures
+      were named to the user by internal category (S3, S4); hybrid questions were split by ONDC IDs only
+      (H1–H2). ONDC-specific behaviour moved behind its own profile (`orchestrator/profiles_ondc.py`).
+    - **Front door (F-FD):** one model call replaces the normaliser, the follow-up rewriter and the router.
+      It reads a database card, the top-5 document evidence and the last 3 turns, and returns the
+      standalone question and per-source answers (yes / no / unsure); a fixed table maps those to sql,
+      docs, hybrid or neither. A Jev decision arm (T4b) waits for its key.
+    - **Development and test sets.** FinanceBench was used to find and fix the flaws, so its numbers are
+      development results. The routing comparison uses a new routing set over the SEC database and filings
+      (`docs/eval/routing_set.json`, built by `scripts/build_routing_set.py`), split dev / test before any
+      run; only the test split is the held-out evidence.
+    - **Gate G1 (SQL must not get worse).** 150 held-out BIRD questions, fixes off vs on. The NOT_ANSWERABLE
+      reply (F-S1) missed its bar of at most 1% false refusals three times (T2 2/150, T2b 3/150, T2c 2/150;
+      `docs/eval/partd_g1_*.json`). The off arm, run twice, gave 0.760 and 0.727 (p = 0.27); with T2c the
+      on arm gave 0.727, within that run-to-run variance. F-S1 is therefore **off** in the evaluated system
+      (`make_flags_v3.py --without sql_no_data`) and is reported as tried and not shipped.
+    - **Evaluated system** (`research/paperb/flags_partd_v3_final_{dense,bge}.toml`, images `d06e8bb`): front
+      door on, passages by relevance with titles, the re-ranker reading titles, plain failures, route
+      recovery; F-S1 off; the hybrid entity split (T5) off until evaluated end to end.
+    - **Results.**
+      - Writer's window (FinanceBench, gold page among the writer's 8): shipped 0.387; relevance order
+        0.533; bge + relevance + titles 0.747 (+57 / −3, p < 0.0001). In-house set: no significant change.
+      - Routing, test split (n = 111): front door 0.838 vs shipped 0.694 (27 vs 11 discordant, p = 0.014);
+        reaches a source holding the answer 0.937 vs 0.703. Its main error is (unsure, unsure) or (yes, yes)
+        → hybrid on questions either source answers; changing that table is a dev-split change, not made.
+      - FinanceBench end to end (same judge, prompt and seed as the shipped run): 0.200 shipped, 0.527
+        v3 dense (+51 / −2), 0.633 v3 bge (+68 / −3); bge vs dense +25 / −9, p = 0.009. Development-set
+        numbers; the owner's 30-answer blind check (`paperb_docs_owner_sheet_v3.md`) is pending.
