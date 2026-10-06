@@ -44,7 +44,7 @@ SET = REPO / "docs" / "eval" / "routing_set.json"
 SETUP = REPO / "docs" / "eval" / "routing_setup.json"
 OUT = REPO / "docs" / "eval" / "routing_runs.json"
 WORKSPACE_NAME = "partd-routing-sec-filings"
-ARMS = {"shipped": "off", "llm": "llm", "jev": "jev", "jev_rw": "jev_rw"}       # arm -> the container's [pipeline] front_door
+ARMS = {"shipped": "off", "llm": "llm", "jev": "jev", "jev_rw": "jev_rw", "jev_choice": "jev_choice"}       # arm -> the container's [pipeline] front_door
 HISTORY_ROUTE = {"docs": "docs", "sql": "sql", "hybrid": "hybrid", "neither": "neither", "either": "docs"}
 DRAFT_POLL_S = 5            # noqa: literals - polling the product's draft job
 ROUTE_TIMEOUT_S = 180       # noqa: literals - a routing-only request (one model call at most, plus evidence)
@@ -128,7 +128,10 @@ def route_one(port: int, workspace: str, question: str, history: list[dict] | No
             "ms": round((time.monotonic() - t0) * 1000)}
 
 
-def cmd_route(arm: str, port: int, split: str, repeat: int) -> int:
+def cmd_route(arm: str, port: int, split: str, repeat: int, history_mode: str = "gold") -> int:
+    """history_mode "gold": earlier turns are given as their gold standalone questions (what a rewriter would
+    have produced); "raw": as the user typed them, which is all a pipeline that rewrites nothing ever has
+    (docs/specs/partd_tasks/T4c_jev_choice_and_context.md). Raw runs are stored as "<arm>@raw|split|rep"."""
     if container_front_door(port) != ARMS[arm]:
         raise SystemExit(f"the container on {port} does not run arm {arm!r}")
     rs = json.loads(SET.read_text())
@@ -136,8 +139,9 @@ def cmd_route(arm: str, port: int, split: str, repeat: int) -> int:
     record = json.loads(OUT.read_text()) if OUT.exists() else {"runs": {}}
     images = json.loads((REPO / "research" / "paperb" / "partd_images.json").read_text())
     for rep in range(repeat):
-        key = f"{arm}|{split}|{rep}"
-        run = record["runs"].setdefault(key, {"arm": arm, "split": split, "repeat": rep, "images": images, "items": {}, "turns": {}})
+        label = arm if history_mode == "gold" else f"{arm}@raw"
+        key = f"{label}|{split}|{rep}"
+        run = record["runs"].setdefault(key, {"arm": label, "history": history_mode, "split": split, "repeat": rep, "images": images, "items": {}, "turns": {}})
         for it in rs["items"]:
             if (split != "all" and it["split"] != split) or run["items"].get(it["id"], {}).get("http_status") == 200:
                 continue
@@ -150,7 +154,7 @@ def cmd_route(arm: str, port: int, split: str, repeat: int) -> int:
                 tid = f"{conv['id']}|{t['turn']}"
                 if run["turns"].get(tid, {}).get("http_status") == 200:
                     continue
-                history = [{"question": p["standalone"], "route": HISTORY_ROUTE[p["class"]],
+                history = [{"question": p["standalone"] if history_mode == "gold" else p["question"], "route": HISTORY_ROUTE[p["class"]],
                             "answered": p["class"] != "neither", "answer": p.get("gold_answer") or ""}
                            for p in conv["turns"] if p["turn"] < t["turn"]]
                 run["turns"][tid] = route_one(port, workspace, t["question"], history)
@@ -237,12 +241,13 @@ def main() -> int:
     r.add_argument("--port", type=int, required=True)
     r.add_argument("--split", choices=["dev", "test", "all"], default="dev")
     r.add_argument("--repeat", type=int, default=1)
+    r.add_argument("--history", choices=["gold", "raw"], default="gold")
     sub.add_parser("report")
     args = ap.parse_args()
     if args.cmd == "setup":
         return cmd_setup(args.port)
     if args.cmd == "route":
-        return cmd_route(args.arm, args.port, args.split, args.repeat)
+        return cmd_route(args.arm, args.port, args.split, args.repeat, args.history)
     return cmd_report()
 
 
