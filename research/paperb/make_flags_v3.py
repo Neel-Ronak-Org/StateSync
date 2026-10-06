@@ -49,11 +49,13 @@ def set_value(text: str, key: str, value: str, section: str | None = None) -> st
     return text[:head.end()] + pattern.sub(lambda m: f'{m.group(1)}"{value}"', body) + text[end:]
 
 
-def build(base: str, fixes: bool, front_door: str, debug_hooks: bool, rerank: str | None) -> str:
+def build(base: str, fixes: bool, front_door: str, debug_hooks: bool, rerank: str | None,
+          without: tuple[str, ...] = ()) -> str:
     text = base
     if fixes:
         for key, value in FIXES_ON.items():
-            text = set_value(text, key, value)
+            if key not in without:          # a fix left at its shipped value (e.g. F-S1, which failed gate G1)
+                text = set_value(text, key, value)
     text = set_value(text, "front_door", front_door)
     text = set_value(text, "debug_hooks", "on" if debug_hooks else "off")
     if rerank is not None:
@@ -68,6 +70,8 @@ def main() -> int:
     ap.add_argument("--front-door", choices=["off", "llm", "jev"], default="off")
     ap.add_argument("--debug-hooks", action="store_true")
     ap.add_argument("--rerank", choices=["off", "bge"])
+    ap.add_argument("--without", action="append", default=[], choices=sorted(FIXES_ON),
+                    help="with --fixes on, leave this fix at its shipped value (repeatable)")
     args = ap.parse_args()
     base = SRC.read_text()
     base = set_value(base, "provider", "openai_compat", section="llm")
@@ -77,9 +81,11 @@ def main() -> int:
               "# Part D v3 (docs/specs/routing_docs_fixes.md): Part D's hosts; {arm}.\n")
     if args.name:
         arm = (f"fixes {args.fixes}, front_door {args.front_door}, debug_hooks {'on' if args.debug_hooks else 'off'}"
-               + (f", rerank {args.rerank}" if args.rerank else ""))
+               + (f", rerank {args.rerank}" if args.rerank else "")
+               + (f", without {', '.join(args.without)}" if args.without else ""))
         out = OUT / f"flags_partd_v3_{args.name}.toml"
-        out.write_text(header.format(arm=arm) + build(base, args.fixes == "on", args.front_door, args.debug_hooks, args.rerank))
+        out.write_text(header.format(arm=arm) + build(base, args.fixes == "on", args.front_door, args.debug_hooks, args.rerank,
+                                                        tuple(args.without)))
         print(f"wrote {out.name}: {arm}")
         return 0
     for name, fixes in (("off", False), ("on", True)):
