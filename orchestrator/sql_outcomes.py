@@ -38,7 +38,7 @@ _BLOCK_SEPARATOR = "\n\n"
 
 NEAR_MATCH_HEADER = "Columns whose names resemble words in the question or your reply:"
 _WORD_RE = re.compile(r"\w{4,}")
-_WORD_SUBSTRING_MIN = 5  # noqa: literals - T2c spec: a normalised word this long also matches by containment
+_WORD_SUBSTRING_MIN = 5  # noqa: literals - T2c spec: a normalised word and column name both this long also match by containment
 
 
 def sql_no_data_on(flags_snapshot: dict[str, Any]) -> bool:
@@ -119,8 +119,9 @@ def _near_words(question: str, reason: str) -> list[str]:
 
 def near_match_columns(question: str, reason: str, descriptions: list[dict[str, Any]], max_lines: int) -> list[str]:
     """`table.column` for each column whose name resembles a word of the question or the reply. A word and a
-    column name are normalised (lowercase, no underscores); they match when equal, or when a word of at
-    least 5 characters is inside the column name or the column name is inside the word. Every table of
+    column name are normalised (lowercase, no underscores); they match when equal, or, when both are at
+    least 5 characters, when one is inside the other (so a short column such as `id` or `name` matches only
+    by equality and cannot fill the list). Every table of
     `descriptions` is searched, in the order given, then column order; each match is listed once, at most
     max_lines."""
     words = _near_words(question, reason)
@@ -132,7 +133,7 @@ def near_match_columns(question: str, reason: str, descriptions: list[dict[str, 
             norm = _normalise(str(name)) if name else ""
             if not norm:
                 continue
-            if any(w == norm or (len(w) >= _WORD_SUBSTRING_MIN and (w in norm or norm in w)) for w in words):
+            if any(w == norm or (min(len(w), len(norm)) >= _WORD_SUBSTRING_MIN and (w in norm or norm in w)) for w in words):
                 found[f"{table}.{name}"] = None
     return list(found)[:max(0, int(max_lines))]
 

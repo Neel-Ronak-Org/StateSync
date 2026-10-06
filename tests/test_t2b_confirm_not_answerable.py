@@ -336,8 +336,8 @@ def test_near_match_underscores_and_case_are_normalised():
 def test_near_match_a_four_character_word_matches_only_by_equality():
     descs = _tables(t=["name", "username", "names", "nam"])
     assert sql_outcomes.near_match_columns("name", "", descs, 20) == ["t.name"]       # not username, not names
-    # a 5-character word also matches a column name inside it ("name", "nam" are inside "names")
-    assert sql_outcomes.near_match_columns("names", "", descs, 20) == ["t.name", "t.names", "t.nam"]
+    # containment needs both sides at 5 characters or more: "name" and "nam" are too short to match "names"
+    assert sql_outcomes.near_match_columns("names", "", descs, 20) == ["t.names"]
 
 
 def test_near_match_five_characters_match_by_containment_both_ways():
@@ -346,7 +346,13 @@ def test_near_match_five_characters_match_by_containment_both_ways():
     assert sql_outcomes.near_match_columns("frequ", "", descs, 20) == ["t.frequency"]
     assert sql_outcomes.near_match_columns("freq?", "", descs, 20) == []                # 4 characters: equality only
     # column name inside the word
-    assert sql_outcomes.near_match_columns("accountidentifier", "", descs, 20) == ["t.account_id", "t.id"]
+    assert sql_outcomes.near_match_columns("accountidentifier", "", descs, 20) == ["t.account_id"]   # not "id"
+
+
+def test_near_match_short_columns_cannot_fill_the_list():
+    descs = _tables(a=["id", "name", "code"], b=["id", "name"], c=["edhrecrank"])
+    assert sql_outcomes.near_match_columns("Which identifier and codename has edhrecRank 1?", "", descs, 20) \
+        == ["c.edhrecrank"]
 
 
 def test_near_match_words_come_from_the_reply_without_its_marker():
