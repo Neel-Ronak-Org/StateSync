@@ -88,7 +88,7 @@ from llm.provider import get_agent_llm
 from table_selection import tables_in_sql
 from mcp_client import MCPSession, data_run_select, data_sample_rows, schema_describe_table, schema_list_tables, workspaces_manage
 from memory_store import get_trajectory_store
-from schema_retriever import get_schema_retriever, target_schema
+from schema_retriever import format_table_block, get_schema_retriever, target_schema
 from profiles import profile_for
 from profiles_ondc import SQL_DOMAIN as _ONDC_SQL_DOMAIN
 from spatial_resolver import get_spatial_resolver
@@ -815,6 +815,28 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 must_include=_example_tables(ws_ctx), fingerprint=schema_fingerprint)
             trajectory_steps += len(table_names)
             context_block = f"Schema:\n{schema_context}"
+            if sql_outcomes.sql_no_data_on(flags_snapshot) and sql_outcomes.confirmation_pending(existing_errors):
+                # T2b: the last attempt said NOT_ANSWERABLE after a partial view. This one is shown every
+                # table of the dataset (the retrieved ones first, so a cut drops the least relevant).
+                shown_names = {d.get("table") for d in table_descriptions}
+                blocks = [format_table_block(str(d.get("table")), d, _schema) for d in table_descriptions]
+                for tname in table_names:
+                    if tname in shown_names:
+                        continue
+                    try:
+                        extra = await schema_describe_table(session, tname, _schema)
+                    except httpx.HTTPStatusError as exc:
+                        logger.warning("SQL Agent: describe_table(%s) refused (%s); left out of the full view",
+                                       tname, exc.response.status_code)
+                        continue
+                    trajectory_steps += 1
+                    table_descriptions = [*table_descriptions, extra]
+                    blocks.append(format_table_block(tname, extra, _schema))
+                view, described = sql_outcomes.cut_schema_view(blocks, int(cfg.sql.full_schema_max_chars))
+                context_block = f"Schema (every table of the dataset):\n{view}"
+                if described < len(blocks):
+                    context_block += (f"\n\n(The description is cut at {cfg.sql.full_schema_max_chars} characters: "
+                                      f"{described} of {len(blocks)} tables are described.)")
             if ws_block:
                 context_block += "\n\n" + ws_block
 
@@ -1028,7 +1050,10 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             update["candidate_sql"] = None
             update["sql_rows"] = []
             update["sql_columns"] = []
-            update["errors"] = [sql_outcomes.not_answerable_error(attempt, not_answerable)]
+            # T2b: after a partial schema view it is the retriable not_answerable_unconfirmed instead, and
+            # the next attempt is shown every table; a second reply is final.
+            update["errors"] = [sql_outcomes.not_answerable_record(
+                attempt, not_answerable, existing_errors, len(table_descriptions), len(table_names))]
 
         elif fanout_retry:
             # Failure-shaped, like any other failed attempt: no executed_sql, so the graph

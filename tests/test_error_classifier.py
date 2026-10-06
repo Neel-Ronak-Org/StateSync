@@ -117,6 +117,8 @@ def test_every_taxonomy_rule_is_reachable(seeds):
     reached.add(classify_error(sqlstate=None, message="expected 1024 dimensions, not 768")[0])
     reached.add(classify_error(sqlstate="99999", message="totally unrecognized engine failure")[0])
     reached.add(classify_error(sqlstate=None, message="[Layer 1 Gate] Rejected: statement reads no table.")[0])
+    # T2b: not an engine failure; the SQL agent records it itself and takes the hint through category_hint.
+    reached.add(classify_error(sqlstate=None, message="NOT_ANSWERABLE_UNCONFIRMED")[0])
 
     missing = expected_categories - reached
     assert not missing, f"Unreachable taxonomy categories: {missing}"

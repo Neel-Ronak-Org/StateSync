@@ -102,6 +102,12 @@ def _format_table(tname: str, desc: dict) -> str:
     )
 
 
+def format_table_block(tname: str, desc: dict, schema: str | None = None) -> str:
+    """One table as DirectSchemaRetriever shows it, qualified when the corpus is not the default schema."""
+    label = tname if not schema or schema == DEFAULT_SCHEMA else f"{schema}.{tname}"
+    return _format_table(label, desc)
+
+
 class DirectSchemaRetriever:
     """schema.describe_table for every candidate table — the Phase B path."""
 

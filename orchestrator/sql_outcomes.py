@@ -6,6 +6,10 @@ routing_docs_fixes.md F-S1, F-S2, F-S3). Pure functions only, so they run withou
 - [pipeline] sql_no_data = "on": the SQL writer may reply NOT_ANSWERABLE: <reason> instead of SQL. The reply
   is never sent to the database; it becomes a terminal no_data_source ErrorRecord.
 - With the flag off, Layer 1's "statement reads no table" stays permission_denied, as before F-S2.
+
+T2b (docs/specs/partd_tasks/T2b_confirm_not_answerable.md): a NOT_ANSWERABLE reply is terminal only when the
+writer saw the whole schema. After a partial view it is the retriable not_answerable_unconfirmed: the next
+attempt is shown every table (cut to [sql] full_schema_max_chars), and a second NOT_ANSWERABLE is final.
 """
 
 from __future__ import annotations
@@ -28,6 +32,8 @@ NOT_ANSWERABLE_RULE = """\
 _MESSAGE_MAX_CHARS = 300  # noqa: literals - display width of a stored message, not a setting
 
 _NO_DATA_SOURCE = "no_data_source"
+_UNCONFIRMED = "not_answerable_unconfirmed"
+_BLOCK_SEPARATOR = "\n\n"
 
 
 def sql_no_data_on(flags_snapshot: dict[str, Any]) -> bool:
@@ -46,16 +52,56 @@ def parse_not_answerable(text: str | None) -> str | None:
     return cleaned[:_MESSAGE_MAX_CHARS]
 
 
-def not_answerable_error(attempt: int, message: str) -> dict[str, Any]:
-    """The ErrorRecord (as a dict, like every other one the SQL agent appends) for a NOT_ANSWERABLE reply."""
+def not_answerable_error(attempt: int, message: str, category: str = _NO_DATA_SOURCE) -> dict[str, Any]:
+    """The ErrorRecord (as a dict, like every other one the SQL agent appends) for a NOT_ANSWERABLE reply:
+    no_data_source (terminal), or not_answerable_unconfirmed (retriable) after a partial schema view."""
     return {
         "attempt": attempt,
-        "category": _NO_DATA_SOURCE,
+        "category": category,
         "engine_code": None,
         "message": message,
         "offending_sql": None,
-        "remediation_hint": category_hint(_NO_DATA_SOURCE),
+        "remediation_hint": category_hint(category),
     }
+
+
+def view_is_partial(shown_tables: int, dataset_tables: int, description_cut: bool = False) -> bool:
+    """Whether the writer saw only part of the schema: fewer tables than the dataset has, or a shown
+    table's description cut."""
+    return shown_tables < dataset_tables or description_cut
+
+
+def confirmation_pending(errors: list[dict[str, Any]]) -> bool:
+    """True when the last attempt ended in not_answerable_unconfirmed, so this attempt is the one that
+    shows every table."""
+    return bool(errors) and errors[-1].get("category") == _UNCONFIRMED
+
+
+def not_answerable_record(
+    attempt: int, message: str, prior_errors: list[dict[str, Any]], shown_tables: int, dataset_tables: int,
+) -> dict[str, Any]:
+    """The ErrorRecord for a NOT_ANSWERABLE reply. A partial view gives the retriable
+    not_answerable_unconfirmed, once per question: a question that already has one gets the final
+    no_data_source, as does a reply made after the whole schema was shown."""
+    asked_before = any(e.get("category") == _UNCONFIRMED for e in prior_errors)
+    partial = view_is_partial(shown_tables, dataset_tables)
+    return not_answerable_error(attempt, message, _UNCONFIRMED if partial and not asked_before else _NO_DATA_SOURCE)
+
+
+def cut_schema_view(blocks: list[str], max_chars: int) -> tuple[str, int]:
+    """The table descriptions joined with a blank line, whole tables only, at most max_chars characters
+    (a first table that alone exceeds it is cut mid-text). Returns (text, tables included)."""
+    included: list[str] = []
+    total = 0
+    for block in blocks:
+        added = len(block) + (len(_BLOCK_SEPARATOR) if included else 0)
+        if total + added > max_chars:
+            if not included:
+                return block[:max_chars], 1
+            break
+        included.append(block)
+        total += added
+    return _BLOCK_SEPARATOR.join(included), len(included)
 
 
 def classify_engine_failure(

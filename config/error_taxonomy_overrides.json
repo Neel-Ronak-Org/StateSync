@@ -7,6 +7,13 @@
       },
       "category": "no_data_source",
       "hint": "TERMINAL. The query read no table: the question asks for something this database does not hold (routing_docs_fixes.md F-S2). Do not retry with a constant or another formulation; say the database does not contain it."
+    },
+    {
+      "match": {
+        "message_regex": "^NOT_ANSWERABLE_UNCONFIRMED$"
+      },
+      "category": "not_answerable_unconfirmed",
+      "hint": "You replied NOT_ANSWERABLE after seeing only part of the schema. Every table is described below: write the SQL if any table holds what the question asks; reply NOT_ANSWERABLE again only if none does."
     }
   ]
 }
