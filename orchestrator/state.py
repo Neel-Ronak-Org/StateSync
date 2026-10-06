@@ -110,6 +110,8 @@ _LAST_WRITE_WINS_FIELDS: frozenset[str] = frozenset({
     "front_door",
     "docs_depend_on_sql",
     "hybrid_entities",
+    "conversation_context",
+    "carried",
 })
 
 # Fields whose reducer is "append" (list concatenation)
@@ -241,6 +243,12 @@ class StateSyncState(BaseModel):
     # path); hybrid_entities is the step's trace {entities, matched_documents, narrowed} (None when it did not run).
     docs_depend_on_sql: bool = False
     hybrid_entities: dict | None = None
+    # Multi-turn context with no extra model call (pipeline.context_carry, docs/specs/partd_tasks/T4d_context_carry.md):
+    # conversation_context is the one line the SQL and documents writers read after the question (set only for a
+    # follow-up); carried is {company, year, reason}: the company and year the question names or the previous turn
+    # gave it (None unless the step ran).
+    conversation_context: str | None = None
+    carried: dict | None = None
 
     # --- output (Part E2) ---
     answer_text: str | None = None

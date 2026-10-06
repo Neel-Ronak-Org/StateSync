@@ -22,6 +22,9 @@ one Jev choice question names the sources needed; no LLM call, no normaliser, no
 front door is only the fallback when Jev fails). None changes the routing table or the graph. The routing table (route_for), the parser (parse_reply) and the text
 builders are pure.
 
+With pipeline.context_carry = "on" (T4d, docs/specs/partd_tasks/T4d_context_carry.md, context_carry.py) a question
+the arm did not rewrite also gets deterministic multi-turn context after the decision: no model call.
+
 Also here: the evaluation hooks' checks (debug_route_only, debug_history; accepted only when
 pipeline.debug_hooks = "on") and the route-only trace, so main.py stays thin.
 """
@@ -40,6 +43,7 @@ from typing import Any, Awaitable, Callable
 
 from pydantic import BaseModel
 
+import context_carry
 import jev_client
 from config_loader import cfg
 from language_gate import needs_language_model
@@ -760,6 +764,49 @@ def build_trace(decision: Decision, evidence: Evidence) -> dict[str, Any]:
     return trace
 
 
+# ── Multi-turn context with no extra model call (pipeline.context_carry; T4d) ─
+# The workspace's document title names, per workspace, for the life of the process (a failed or empty read
+# is not cached). The names are what a question's companies are matched against.
+_NAMES_CACHE: dict[str, list[str]] = {}
+
+
+async def workspace_names(state_dict: dict[str, Any]) -> list[str]:
+    """The workspace's document title names (title_name, T5b), each once, in listing order; [] without a
+    workspace or when the listing is unavailable (the context line is then built without names)."""
+    workspace_id = state_dict.get("workspace_id")
+    if not workspace_id:
+        return []
+    if workspace_id in _NAMES_CACHE:
+        return _NAMES_CACHE[workspace_id]
+    from nodes.unstructured_knowledge import _workspace_documents, title_name    # imported here: heavy, and unused when the flag is off
+    try:
+        async with MCPSession(tenant_id=state_dict["tenant_id"], base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
+                              session_id=state_dict.get("session_id", ""), workspace_id=workspace_id,
+                              dataset=state_dict.get("target_schema") or None) as session:
+            documents = await _workspace_documents(session, state_dict.get("principal_id", ""), workspace_id)
+    except Exception as exc:  # noqa: BLE001 -- the context is a help, never a reason to fail the question
+        logger.warning("front door: workspace documents unavailable for context carry (%s)", exc)
+        return []
+    names = list(dict.fromkeys(n for n in (title_name(str(d.get("title") or "")) for d in documents) if n))
+    if names:
+        _NAMES_CACHE[workspace_id] = names
+    return names
+
+
+async def context_update(state_dict: dict[str, Any], evidence: Evidence, parsed: Parsed) -> dict[str, Any] | None:
+    """The T4d step: for a question the arm did not rewrite (the standalone question is the raw one, whitespace
+    collapsed) that has a previous turn, {conversation_context (a follow-up only), carried, trace}; None when
+    the step does not apply."""
+    question: str = state_dict["raw_query"]
+    if not evidence.turns or not _same_question(parsed.standalone_question, question):
+        return None
+    result = context_carry.carry(question, evidence.turns[-1], await workspace_names(state_dict))
+    update: dict[str, Any] = {"carried": result.carried(), "trace": result.trace()}
+    if result.follow_up:
+        update["conversation_context"] = result.line
+    return update
+
+
 async def front_door_node(state_dict: dict[str, Any], mode: str | None = None) -> dict[str, Any]:
     """The graph's entry step when pipeline.front_door is on. Reads raw_query (no normaliser ran).
     Returns normalized_query (the standalone question), the detected language, route or out_of_scope,
@@ -805,6 +852,11 @@ async def front_door_node(state_dict: dict[str, Any], mode: str | None = None) -
     }
     if decision.jev is not None:
         update["metrics"]["jev_calls"] = decision.jev_calls    # informational: the metrics reducer sums the fixed fields only
+    if str((state_dict.get("flags_snapshot") or {}).get("pipeline.context_carry", "off")) == "on":
+        context = await context_update(state_dict, evidence, p)
+        if context is not None:
+            update["front_door"]["context_carry"] = context.pop("trace")
+            update.update(context)
     if not out_of_scope:
         update["route"] = decision.route
         if decision.route == "hybrid" and p.database_question and p.documents_question:

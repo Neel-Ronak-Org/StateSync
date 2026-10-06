@@ -36,6 +36,7 @@ import os
 import time
 from typing import Any
 
+import context_carry
 from config_loader import cfg
 from llm.provider import get_agent_llm
 from profiles import profile_for
@@ -409,6 +410,7 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
             tokens_in_total += usage["tokens_in"]
             tokens_out_total += usage["tokens_out"]
             llm_calls_total += usage["llm_calls"]
+        search_text += context_carry.search_suffix(state_dict, query_text)   # pipeline.context_carry: the carried company and year
         matches, meta = await _semantic_search_expanded(
             session, search_text, cfg.retrieval.semantic_top_k, retrieval_mode, dataset,
             doc_scope, abstain_on, rerank, passage_order, rerank_titles,
@@ -480,6 +482,7 @@ async def hybrid_docs_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     query_text: str = state_dict.get("normalized_query") or state_dict.get("raw_query", "")
     subtasks: list[str] = state_dict.get("subtasks") or []
     doc_subtask = subtasks[1] if len(subtasks) > 1 else query_text
+    doc_query = doc_subtask + context_carry.search_suffix(state_dict, doc_subtask)   # pipeline.context_carry: the carried company and year
     flags_snapshot: dict[str, Any] = state_dict.get("flags_snapshot", {})
     retrieval_mode: str = flags_snapshot.get("pipeline.retrieval_mode", "dense")
     dataset: str | None = state_dict.get("target_schema")
@@ -510,18 +513,18 @@ async def hybrid_docs_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             entity_trace = {"entities": entities, "matched_documents": [d["title"] for d in narrowed_to],
                             "narrowed": bool(narrowed_to)}
         if party_ids:
-            matches = await _targeted_doc_search(session, doc_subtask, party_ids, cfg.retrieval.semantic_top_k)
+            matches = await _targeted_doc_search(session, doc_query, party_ids, cfg.retrieval.semantic_top_k)
             trajectory_steps += 1
         elif narrowed_to:
             # The first round (which documents are relevant) is skipped: the titles named them.
             matches = await _search_within_documents(
-                session, doc_subtask, [d["document_id"] for d in narrowed_to], [], retrieval_mode, dataset,
+                session, doc_query, [d["document_id"] for d in narrowed_to], [], retrieval_mode, dataset,
                 doc_scope, rerank, passage_order, _rerank_titles_extra(rerank, rerank_titles),
             )
             trajectory_steps += 1
         else:
             matches, meta = await _semantic_search_expanded(
-                session, doc_subtask, cfg.retrieval.semantic_top_k, retrieval_mode, dataset,
+                session, doc_query, cfg.retrieval.semantic_top_k, retrieval_mode, dataset,
                 doc_scope, abstain_on, rerank, passage_order, rerank_titles,
             )
             # Nothing relevant: the doc retrievals are dropped and the answer is built from the SQL

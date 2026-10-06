@@ -649,3 +649,8 @@ value_tables              = 2        # value-matched tables added after the top 
 entity_rows               = 5        # entities are read from this many of the SQL result's first rows
 max_entities              = 5        # and at most this many distinct text values are kept, in row order
 title_name_min_chars      = 4        # a title's name (its words before the year) shorter than this matches an entity only by equality (T5b)
+
+# Multi-turn context with no extra model call (docs/specs/partd_tasks/T4d_context_carry.md;
+# flags.toml [pipeline] context_carry).
+[context_carry]
+answer_chars              = 200      # the context line quotes this many characters of the previous answer

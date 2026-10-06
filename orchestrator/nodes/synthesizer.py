@@ -33,6 +33,7 @@ from decimal import Decimal
 from numbers import Real
 from typing import Any
 
+import context_carry
 from config_loader import cfg
 from llm.provider import get_agent_llm
 from profiles import profile_for
@@ -687,7 +688,9 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     if not context_parts:
         context_parts.append("No data was retrieved for this question.")
 
-    user_message = f"Question: {raw_query}\n\nData context:\n" + "\n\n".join(context_parts)
+    # pipeline.context_carry (T4d): the documents and hybrid writers read the follow-up's context line after the question.
+    context_line = context_carry.question_context(state_dict) if state_dict.get("route") in ("docs", "hybrid") else ""
+    user_message = f"Question: {raw_query}{context_line}\n\nData context:\n" + "\n\n".join(context_parts)
     # The repair loop's single second attempt (repair_loop.py): the previous answer and what failed.
     if state_dict.get("repair_note") and state_dict.get("previous_answer"):
         user_message += (f"\n\nYour previous answer was:\n{state_dict['previous_answer']}\n\n"

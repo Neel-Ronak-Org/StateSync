@@ -76,6 +76,7 @@ import time
 from typing import Any
 
 import answer_checks
+import context_carry
 import httpx
 import repair_loop
 import self_consistency
@@ -631,6 +632,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     decides whether to loop back.
     """
     raw_query: str = question_for(state_dict)
+    context_line: str = context_carry.question_context(state_dict)   # "" unless pipeline.context_carry gave a follow-up its context
     tenant_id: str = state_dict["tenant_id"]
     query_id: str = state_dict.get("query_id", "")
     session_id: str = state_dict.get("session_id", "")
@@ -769,7 +771,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                             system=sql_system_prompt(_SYSTEM_PROMPT, cfg.mcp.max_rows_default,
                                                      _schema, flags_snapshot) + ws_suffix,
                             messages=[{"role": "user", "content": (
-                                f"{context_block}\n\nQuestion: {raw_query}\n\n"
+                                f"{context_block}\n\nQuestion: {raw_query}{context_line}\n\n"
                                 f"Write a single PostgreSQL SELECT query to answer this question."
                             )}],
                             max_tokens=cfg.sql.max_tokens_sql,
@@ -917,7 +919,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             if attempt == 0:
                 system_prompt = sql_system_prompt(_SYSTEM_PROMPT, max_rows, _schema, flags_snapshot) + ws_suffix
                 user_message = (
-                    f"{context_block}\n\nQuestion: {raw_query}\n\n"
+                    f"{context_block}\n\nQuestion: {raw_query}{context_line}\n\n"
                     f"Write a single PostgreSQL SELECT query to answer this question."
                 )
             else:
@@ -928,7 +930,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 # more reliably than burying it after a full multi-table
                 # schema dump.
                 user_message = (
-                    f"Question: {raw_query}\n\n{error_history_text}\n\n"
+                    f"Question: {raw_query}{context_line}\n\n{error_history_text}\n\n"
                     f"Full schema (find the correct column/table/join path here):\n{context_block}\n\n"
                     f"Write a single corrected PostgreSQL SELECT query."
                 )
