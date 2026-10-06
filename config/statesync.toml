@@ -155,6 +155,15 @@ answer_start_chars        = 200     # characters of each earlier answer
 max_tokens                = 1500    # the front door call's output cap
 card_cache_max            = 32      # database cards kept per process, per (tenant, dataset); the oldest is dropped
 out_of_scope_message      = "This workspace's database and documents do not hold that, so I can't answer it from here."
+# pipeline.front_door = "jev" (docs/specs/partd_tasks/T4b_jev_front_door.md): Jev makes every routing decision.
+jev_url                   = "https://opencode.ai/zen/v1/systemone"   # OpenCode Zen's systemone endpoint (key: /run/secrets/opencode_api_key, or the file named by JEV_API_KEY_FILE)
+jev_model                 = "jev-1.13"   # the paid model: the free tier (jev-1.13-free) rate-limits under evaluation load
+jev_timeout_s             = 30      # seconds, per request
+jev_retry_wait_s          = 5       # seconds before the one retry after HTTP 429 or 5xx
+jev_yes                   = 0.6     # P(yes) at or above this: the need is "yes"
+jev_no                    = 0.4     # P(yes) at or below this: the need is "no"; between the two it is "unsure"
+jev_history               = 0.5     # P(uses_history) at or above this: the question depends on earlier turns
+jev_out_of_scope          = 0.5     # P(out_of_scope) at or above this: neither source can answer it
 
 [answer_checks]
 # pipeline.answer_checks = "on". Deterministic checks on an executed SELECT.

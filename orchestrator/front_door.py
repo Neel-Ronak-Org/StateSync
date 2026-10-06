@@ -12,9 +12,12 @@ sources are needed, the split. Nothing routes by silent default: an unreadable r
 both sources (hybrid, flagged in the trace), and a question neither source can answer is out of scope.
 
 Layout. Evidence is gathered with no model call (gather_evidence). A strategy then DECIDES from the
-evidence: decide(evidence, question) -> Decision, chosen by the flag through DECIDERS. Only "llm" exists
-here; T4b adds "jev" by registering one more strategy, with no change to the node, the routing table
-or the graph. The routing table (route_for), the parser (parse_reply) and the text builders are pure.
+evidence: decide(evidence, question) -> Decision, chosen by the flag through DECIDERS: "llm" (one model
+call) and "jev" (T4b, docs/specs/partd_tasks/T4b_jev_front_door.md: Jev, a decision model, answers four
+typed questions with probabilities and makes every routing decision; the LLM is called only to write
+text: resolve a follow-up, split a two-source question, translate). Neither changes the node, the
+routing table or the graph. The routing table (route_for), the parser (parse_reply) and the text
+builders are pure.
 
 Also here: the evaluation hooks' checks (debug_route_only, debug_history; accepted only when
 pipeline.debug_hooks = "on") and the route-only trace, so main.py stays thin.
@@ -29,12 +32,14 @@ import os
 import re
 import time
 from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Awaitable, Callable
 
 from pydantic import BaseModel
 
+import jev_client
 from config_loader import cfg
+from language_gate import needs_language_model
 from llm.provider import get_agent_llm
 from mcp_client import (
     MCPSession, history_get_recent_turns, schema_describe_table, schema_list_tables,
@@ -419,6 +424,8 @@ class Decision:
     tokens_out: int = 0
     llm_calls: int = 0
     llm_error: str | None = None
+    jev_calls: int = 0
+    jev: dict[str, Any] | None = None  # the "jev" arm's trace block; None for the "llm" arm
 
 
 Decide = Callable[[Evidence, str], Awaitable[Decision]]
@@ -443,8 +450,112 @@ async def decide_llm(evidence: Evidence, question: str) -> Decision:
                     tokens_in=result.tokens_in, tokens_out=result.tokens_out, llm_calls=1)
 
 
-# One strategy per flag value. T4b registers "jev" here.
-DECIDERS: dict[str, Decide] = {"llm": decide_llm}
+# ── The "jev" arm: Jev decides, the LLM only writes text ────────────────────
+JEV_QUESTIONS = {
+    "uses_history": "Does the new question depend on the earlier conversation turns to be understood?",
+    "needs_database": "Does answering the new question need facts stored in the database described?",
+    "needs_documents": "Does answering the new question need what the uploaded documents say?",
+    "out_of_scope": "Is the new question about something neither the database nor the documents could answer?",
+}
+# The re-check, after the LLM rewrote the question, asks the three that decide the route.
+JEV_RECHECK_QUESTIONS = {k: v for k, v in JEV_QUESTIONS.items() if k != "uses_history"}
+
+
+def jev_state(evidence: Evidence, question: str) -> str:
+    """The application state Jev reads, as one JSON text: the question, the earlier turns (standalone
+    question, route, whether answered, the start of the answer), the database card and the documents
+    (the best matches: title, score, excerpt). The library's size is not part of the evidence, so it is
+    not sent. The same untrusted data the LLM front door reads; Jev can at worst flip a decision."""
+    answer_chars = int(cfg.front_door.answer_start_chars)
+    state = {
+        "question": question,
+        "conversation": [
+            {"turn": t["turn_index"], "question": t["rewritten_query"], "route": t.get("route"),
+             "answered": turn_answered(t), "answer_start": (t.get("answer_text") or "")[:answer_chars]}
+            for t in evidence.turns],
+        "database": evidence.card,
+        "documents": {"best_matches": [
+            {"title": d.get("title") or d["document_id"], "score": round(d["score"], 2), "excerpt": d["excerpt"]}
+            for d in evidence.documents]},
+    }
+    return json.dumps(state, ensure_ascii=False)
+
+
+def need(p: float) -> str:
+    """P(yes) as yes (p >= jev_yes), no (p <= jev_no) or unsure. Both bounds are inclusive."""
+    if p >= float(cfg.front_door.jev_yes):
+        return "yes"
+    if p <= float(cfg.front_door.jev_no):
+        return "no"
+    return "unsure"
+
+
+def jev_reading(probabilities: dict[str, float]) -> tuple[str, str, bool, str]:
+    """(needs_database, needs_documents, out_of_scope, route) from Jev's probabilities: the two needs
+    through need(), out_of_scope at jev_out_of_scope, and the route from route_for, unchanged."""
+    needs_database = need(probabilities["needs_database"])
+    needs_documents = need(probabilities["needs_documents"])
+    out_of_scope = probabilities["out_of_scope"] >= float(cfg.front_door.jev_out_of_scope)
+    return needs_database, needs_documents, out_of_scope, route_for(needs_database, needs_documents, out_of_scope)
+
+
+def _same_question(a: str, b: str) -> bool:
+    return " ".join(a.split()) == " ".join(b.split())
+
+
+async def decide_jev(evidence: Evidence, question: str) -> Decision:
+    """Arm "jev". One Jev request with four questions makes the decision. The LLM (decide_llm) is called,
+    for its text only, when the question uses history, the route is hybrid, or the language gate says it
+    is not English; its routing fields are ignored. If it changed the question, Jev's needs and
+    out-of-scope questions are asked again over the standalone question (no new search) and the route
+    is read from that. A Jev error falls back to decide_llm entirely, recorded in the trace."""
+    first = await jev_client.ask(jev_state(evidence, question), JEV_QUESTIONS)
+    if not first.ok:
+        logger.error("front door: Jev failed (%s); falling back to the LLM arm", first.error)
+        fallback = await decide_llm(evidence, question)
+        return replace(fallback, arm="jev", jev_calls=1, jev={
+            "probabilities": {}, "model": first.model, "ms": first.ms, "calls": 1, "rechecked": False,
+            "llm_used": True, "fallback": "llm", "jev_error": first.error, "usage": {}})
+
+    needs_database, needs_documents, out_of_scope, route = jev_reading(first.probabilities)
+    uses_history = first.probabilities["uses_history"] >= float(cfg.front_door.jev_history)
+    probabilities = {"first": first.probabilities}
+    usage = {"first": first.usage}
+    jev: dict[str, Any] = {"model": first.model, "ms": first.ms, "calls": 1, "rechecked": False}
+
+    text: Decision | None = None
+    if uses_history or route == "hybrid" or needs_language_model(question):
+        text = await decide_llm(evidence, question)
+    standalone = text.parsed.standalone_question if text else question
+    if text is not None and not _same_question(standalone, question):
+        recheck = await jev_client.ask(jev_state(evidence, standalone), JEV_RECHECK_QUESTIONS)
+        jev["calls"] += 1
+        jev["ms"] += recheck.ms
+        if recheck.ok:
+            jev["rechecked"] = True
+            probabilities["recheck"] = recheck.probabilities
+            usage["recheck"] = recheck.usage
+            needs_database, needs_documents, out_of_scope, route = jev_reading(
+                {**first.probabilities, **recheck.probabilities})
+        else:
+            logger.error("front door: Jev re-check failed (%s); keeping the first reading", recheck.error)
+            jev["jev_error"] = recheck.error
+    jev.update(probabilities=probabilities, usage=usage, llm_used=text is not None)
+
+    if text is not None:
+        parsed = replace(text.parsed, uses_history=uses_history, needs_database=needs_database,
+                         needs_documents=needs_documents, out_of_scope=out_of_scope)
+    else:
+        parsed = Parsed(True, "en", question, uses_history, needs_database, needs_documents, out_of_scope,
+                        "", "", False)
+    return Decision(
+        "jev", parsed, route, tokens_in=text.tokens_in if text else 0, tokens_out=text.tokens_out if text else 0,
+        llm_calls=text.llm_calls if text else 0, llm_error=text.llm_error if text else None,
+        jev_calls=int(jev["calls"]), jev=jev)
+
+
+# One strategy per flag value.
+DECIDERS: dict[str, Decide] = {"llm": decide_llm, "jev": decide_jev}
 
 
 def front_door_enabled(mode: str) -> bool:
@@ -481,6 +592,8 @@ def build_trace(decision: Decision, evidence: Evidence) -> dict[str, Any]:
         trace["missing_keys"] = p.missing_keys
     if decision.llm_error:
         trace["llm_error"] = decision.llm_error
+    if decision.jev is not None:
+        trace["jev"] = decision.jev
     if evidence.errors:
         trace["evidence_errors"] = evidence.errors
     return trace
@@ -523,6 +636,8 @@ async def front_door_node(state_dict: dict[str, Any], mode: str | None = None) -
             "llm_calls": decision.llm_calls, "trajectory_steps": 1, "latency_ms": elapsed_ms,
         },
     }
+    if decision.jev is not None:
+        update["metrics"]["jev_calls"] = decision.jev_calls    # informational: the metrics reducer sums the fixed fields only
     if not out_of_scope:
         update["route"] = decision.route
         if decision.route == "hybrid" and p.database_question and p.documents_question:

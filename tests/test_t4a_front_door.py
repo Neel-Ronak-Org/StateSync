@@ -606,7 +606,7 @@ def test_llm_the_entry_goes_to_the_front_door_and_normalise_rewrite_supervisor_a
 
 def test_an_unknown_front_door_value_fails_the_build(graph):
     with pytest.raises(ValueError):
-        graph.build_graph("jev")             # T4b registers it
+        graph.build_graph("nonsense")        # "jev" is registered by T4b (tests/test_t4b_jev_front_door.py)
     with pytest.raises(ValueError):
         graph.build_route_graph("nonsense")
 
