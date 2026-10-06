@@ -1,0 +1,827 @@
+{
+ "flags_file": "flags_partd_v3_route_jev_choice.toml",
+ "pipeline": {
+  "front_door": "jev_choice",
+  "debug_hooks": "on",
+  "language_gate": "llm",
+  "router_mode": "always",
+  "sql_draft_mode": "llm",
+  "synth_style": "full",
+  "answer_checks": "off",
+  "templates": "off",
+  "sql_no_data": "off",
+  "plain_failures": "on",
+  "route_recovery": "on",
+  "number_grounding": "on",
+  "repair_loop": "off",
+  "sql_row_cap": "prompt",
+  "grounding_version": "v1",
+  "self_consistency_k": 0,
+  "retrieval_mode": "dense",
+  "doc_scope": "all",
+  "doc_abstain": "off",
+  "rerank": "bge",
+  "query_rewrite": "off",
+  "passage_order": "relevance",
+  "passage_titles": "on",
+  "rerank_titles": "on",
+  "hybrid_entities": "off",
+  "context_carry": "off"
+ },
+ "port": 8092,
+ "images": {
+  "commit": "99e78f7",
+  "built_at": "2026-10-06T18:12:34Z",
+  "mcp_image": "sha256:a3d6bcc71cc4ff4633399f8f66a9a3bebffccdecbcf2996f5cdfd1755077d6ec",
+  "orchestrator_image": "sha256:0f5fbc153a7e382dbdd94bf6b8e3d5f26ba1eed098d317ae2f41e83d101742d2"
+ },
+ "answers": {
+  "c01|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "For the fiscal year ending December\u202f31\u202f2022 the dataset provides the following key figures for each company:\n\n**AMD** (ticker\u202fAMD)\n- Revenue: $23.6\u202fbillion\n- Net income: $1.32\u202fbillion\n- Diluted EPS: $0.84\n- Total assets: $67.58\u202fbillion\n- Stockholders\u2019 equity: $54.75\u202fbillion\n\n**American\u202fExpress** (ticker\u202fAXP)\n- Revenue: $34.22\u202fbillion\n- Net income: $7.514\u202fbillion\n- Diluted EPS: $9.85\n- Total assets: $228.35\u202fbillion\n- Stockholders\u2019 equity: $24.71\u202fbillion\n\n**Boeing** (ticker\u202fBA)\n- Revenue: $66.61\u202fbillion\n- Net loss: \u2013$4.935\u202fbillion (negative net income)\n- Diluted EPS: \u2013$8.30\n- Total assets: $137.10\u202fbillion\n- Stockholders\u2019 equity: \u2013$15.88\u202fbillion (negative equity)\n\nThese figures cover a range of metrics (assets, equity, cash flow, debt, etc.) for each firm for FY\u202f2022.\n\nA concise visual summary can be shown with a bar chart of revenue by company.",
+   "route": "sql",
+   "out_of_scope": false,
+   "normalized_query": "And in fiscal 2022?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT am.company, am.ticker, am.metric, am.period_end, am.value, am.unit\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.period_end_year = 2022\nLIMIT 1000",
+     "page": null
+    }
+   ],
+   "metrics": {
+    "tokens_in": 7686,
+    "tokens_out": 1442,
+    "llm_calls": 3,
+    "trajectory_steps": 10,
+    "latency_ms": 26317
+   },
+   "ms": 26458
+  },
+  "c01|3": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The operating\u2011margin shift was the result of several offsetting items.  In 2018 the margin fell 2.3\u202fpercentage points versus 2017, driven primarily by:\u202f\u2022\u202fA gain on the May\u202f2017 divestiture of the identity\u2011management business, which reduced the margin;\u202f\u2022\u202fHigher defined\u2011benefit pension, post\u2011retirement service\u2011cost and defined\u2011contribution expenses, which also pulled the margin down;\u202f\u2022\u202fAcquisition impacts (mainly the Scott Safety purchase) and lower divestiture gains (excluding the identity\u2011management and Communication\u2011Markets sales) that further decreased the margin;\u202f\u2022\u202fRemaining stranded costs from the Communication\u2011Markets divestiture that reduced the margin;\u202f\u2022\u202fConversely, organic local\u2011currency growth, productivity improvements and lower portfolio and supply\u2011chain footprint\u2011optimization charges lifted the margin;\u202f\u2022\u202fThe loss of lower\u2011margin operating income from businesses that were divested added a positive contribution.  The net effect of these opposing forces was the 2.3\u2011point margin decline.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "What drove its operating margin change that year?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_ad50fc78723e4beb_c00118",
+     "page": 29,
+     "title": "3M 2018 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_ad50fc78723e4beb_c00139",
+     "page": 34,
+     "title": "3M 2018 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_2b71f70ae5fa4c6f_c00171",
+     "page": 35,
+     "title": "PAYPAL 2022 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3212,
+    "tokens_out": 450,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 14912
+   },
+   "ms": 14955
+  },
+  "c02|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The provided data contains research and development spending for many companies (e.g., AMD, BA, GLW) across multiple years. To give a specific amount, I need to know which company (ticker) and which year you are referring to.",
+   "route": "sql",
+   "out_of_scope": false,
+   "normalized_query": "How much did it spend on research and development that year?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT am.ticker, am.period_end_year, am.value AS r_and_d_spending, am.unit\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.metric = 'research_and_development'\nLIMIT 1000",
+     "page": null
+    }
+   ],
+   "metrics": {
+    "tokens_in": 6871,
+    "tokens_out": 1486,
+    "llm_calls": 3,
+    "trajectory_steps": 10,
+    "latency_ms": 27232
+   },
+   "ms": 27300
+  },
+  "c03|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The 2022 filing notes that the company is involved in various claims, suits and legal proceedings and has accrued about $22\u202fmillion for those matters as of December\u202f31,\u202f2022. However, the filing does not call out any specific legal battles as being materially important in fiscal\u202f2022; it only references a significant portion of the accrued liabilities relating to regulatory matters and commercial disputes without naming particular cases.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "Has it reported any materially important legal battles in fiscal 2022?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_87236be6651c47ff_c00707",
+     "page": 169,
+     "title": "AES 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_87236be6651c47ff_c00781",
+     "page": 187,
+     "title": "AES 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_d94e00def6b54b39_c00635",
+     "page": 176,
+     "title": "JPMORGAN 2022Q2 10Q"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 2724,
+    "tokens_out": 378,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 13036
+   },
+   "ms": 13073
+  },
+  "c04|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "Its primary customers are grocery stores, mass merchandisers, membership stores, natural\u2011food chains, drug stores, dollar and discount chains, e\u2011commerce retailers, commercial and non\u2011commercial food\u2011service distributors and operators, restaurants, convenience stores, and pet\u2011specialty stores.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "Who are its primary customers?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_c9070fe345984f70_c00009",
+     "page": 4,
+     "title": "GENERALMILLS 2020 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cf0ed055f21b4351_c00047",
+     "page": 10,
+     "title": "AMD 2015 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_4a602e9261f54001_c00043",
+     "page": 11,
+     "title": "AMD 2022 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 2628,
+    "tokens_out": 242,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 13080
+   },
+   "ms": 13128
+  },
+  "c05|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The metrics returned are:\n- accounts_payable\n- accounts_receivable\n- capital_expenditure\n- cash_and_equivalents\n- cost_of_revenue\n- current_assets\n- current_liabilities\n- depreciation_and_amortization\n- dividends_paid\n- eps_diluted\n- gross_profit\n- inventory\n- long_term_debt\n- net_income\n- operating_cash_flow\n- operating_income\n- property_plant_equipment_net\n- research_and_development\n- revenue\n- share_repurchases\n- stockholders_equity\n- total_assets\n- total_liabilities",
+   "route": "sql",
+   "out_of_scope": false,
+   "normalized_query": "Which ones?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT DISTINCT amr.metric FROM cn_4509b5c383744bb6.annual_metrics_restated amr LIMIT 1000",
+     "page": null
+    }
+   ],
+   "metrics": {
+    "tokens_in": 5046,
+    "tokens_out": 793,
+    "llm_calls": 3,
+    "trajectory_steps": 10,
+    "latency_ms": 20455
+   },
+   "ms": 20510
+  },
+  "c06|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The 10\u2011K filings describe inventory as being recorded at the lower of cost (or standard/average cost) or net realizable value, often using FIFO or moving\u2011average methods. Companies emphasize the need to forecast demand accurately; under\u2011estimates can cause shortages, while over\u2011estimates can lead to excess inventory that may become obsolete and require write\u2011downs or reserves. Inventory reserves are based on assumptions about future demand, market conditions, historical sales, and product life\u2011cycle status. Periodic physical counts and shrinkage estimates are used to adjust reserves, and excess or obsolete inventory is written down to its estimated net realizable value. These policies are intended to prevent material impacts on gross profit or operating income.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "What does its 10-K say about inventory levels?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_25cd77dbfcd34c99_c00103",
+     "page": 24,
+     "title": "BLOCK 2016 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_25cd77dbfcd34c99_c00306",
+     "page": 81,
+     "title": "BLOCK 2016 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_20dd86a0693c4791_c00209",
+     "page": 55,
+     "title": "MICROSOFT 2023 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 2806,
+    "tokens_out": 371,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 17209
+   },
+   "ms": 17253
+  },
+  "c07|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "According to the 2017 Form\u202f10\u2011K, the company\u2019s three primary acquisitions were:\n1. Souq Group Ltd., an e\u2011commerce company acquired on May\u202f12\u202f2017 for about $583\u202fmillion (net of cash). \n2. Whole Foods Market, a grocery\u2011store chain acquired on August\u202f28\u202f2017 for about $13.2\u202fbillion (net of cash). \n3. A set of other smaller companies acquired during 2017 for a combined purchase price of roughly $204\u202fmillion (these were not individually named because none was material on its own).",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "What are three main companies it acquired, according to that 10-K?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_ad50fc78723e4beb_c00075",
+     "page": 18,
+     "title": "3M 2018 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_ad50fc78723e4beb_c00318",
+     "page": 73,
+     "title": "3M 2018 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_ad50fc78723e4beb_c00319",
+     "page": 73,
+     "title": "3M 2018 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3078,
+    "tokens_out": 546,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 16234
+   },
+   "ms": 16293
+  },
+  "c08|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The lowest operating cash flow in the data is reported for JPM, with a value of -147,782,000,000.",
+   "route": "sql",
+   "out_of_scope": false,
+   "normalized_query": "And the least?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT am.ticker, am.metric, am.value\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nORDER BY am.value ASC\nLIMIT 1",
+     "page": null
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4775,
+    "tokens_out": 1089,
+    "llm_calls": 3,
+    "trajectory_steps": 10,
+    "latency_ms": 26127
+   },
+   "ms": 26169
+  },
+  "c09|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The revenue for each of the five most recent years was:\n- 2025: $34,639,000,000\n- 2024: $25,785,000,000\n- 2023: $22,680,000,000\n- 2022: $23,601,000,000\n- 2021: $16,434,000,000",
+   "route": "sql",
+   "out_of_scope": false,
+   "normalized_query": "What was its revenue in each of the five years to then?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT amr.period_end_year, amr.value\nFROM cn_4509b5c383744bb6.annual_metrics_restated AS amr\nWHERE amr.metric = 'revenue'\n  AND amr.ticker = 'AMD'\nORDER BY amr.period_end_year DESC\nLIMIT 5",
+     "page": null
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4938,
+    "tokens_out": 1922,
+    "llm_calls": 3,
+    "trajectory_steps": 10,
+    "latency_ms": 28568
+   },
+   "ms": 28610
+  },
+  "c10|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The ticker for American Water Works Company, Inc. is AWK.",
+   "route": "sql",
+   "out_of_scope": false,
+   "normalized_query": "How about American Water Works?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT c.ticker, c.name FROM cn_4509b5c383744bb6.companies AS c WHERE c.name ILIKE '%American Water Works%' OR c.financebench_name ILIKE '%American Water Works%' LIMIT 1000",
+     "page": null
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4295,
+    "tokens_out": 813,
+    "llm_calls": 3,
+    "trajectory_steps": 10,
+    "latency_ms": 23484
+   },
+   "ms": 23588
+  },
+  "c11|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The net income for the year ended December\u202f31,\u202f2021 was $1,906\u202fmillion.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "What was its net income that year?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_a3064876807446c1_c00240",
+     "page": 63,
+     "title": "NETFLIX 2015 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_0de2b33a9e354742_c00107",
+     "page": 25,
+     "title": "CORNING 2021 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_0de2b33a9e354742_c00108",
+     "page": 25,
+     "title": "CORNING 2021 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3245,
+    "tokens_out": 500,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 17626
+   },
+   "ms": 17729
+  },
+  "c12|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "This workspace's database and documents do not hold that, so I can't answer it from here.",
+   "route": "neither",
+   "out_of_scope": true,
+   "normalized_query": "Write me a haiku about that.",
+   "context_carry": null,
+   "citations": [],
+   "metrics": {
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "llm_calls": 0,
+    "trajectory_steps": 2,
+    "latency_ms": 1864
+   },
+   "ms": 1901
+  },
+  "c13|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The provided documents include Boeing's total debt of $57.0\u202fbillion as of December\u202f31\u202f2022, but they do not contain a comparable debt figure for December\u202f31\u202f2021. Without the 2021 debt amount, we cannot determine whether Boeing's debt increased between 2021 and 2022.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "Has it increased its debt between 2021 and 2022?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_862837ee70f4475c_c00067",
+     "page": 18,
+     "title": "BOEING 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_862837ee70f4475c_c00068",
+     "page": 18,
+     "title": "BOEING 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_862837ee70f4475c_c00153",
+     "page": 43,
+     "title": "BOEING 2022 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3092,
+    "tokens_out": 229,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 15425
+   },
+   "ms": 15483
+  },
+  "c14|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "In fiscal year 2017 Netflix (ticker NFLX) reported the following key financial figures:\n- Revenue: $11,692,713,000\n- Net income: $558,929,000\n- EPS diluted: $1.25 per share\n- Operating income: $838,679,000\n- Operating cash flow: -$1,785,948,000 (negative)\n- Cost of revenue: $7,659,666,000\n- Research and development: $981,300,000\n- Capital expenditure: $173,302,000\n- Depreciation and amortization: $71,911,000\n- Cash and equivalents: $2,822,795,000\n- Current assets: $7,669,974,000\n- Current liabilities: $5,466,312,000\n- Total assets: $19,012,742,000\n- Total liabilities: $15,430,786,000\n- Stockholders' equity: $3,581,956,000\n- Long\u2011term debt: $9,048,828,000\n- Accounts payable: $359,555,000\n- Property, plant & equipment (net): $319,404,000",
+   "route": "sql",
+   "out_of_scope": false,
+   "normalized_query": "And Netflix's in fiscal 2017?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT am.ticker, am.metric, am.value, am.unit, am.period_end_year\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.ticker = 'NFLX'\n  AND am.period_end_year = 2017\nLIMIT 1000",
+     "page": null
+    }
+   ],
+   "metrics": {
+    "tokens_in": 5629,
+    "tokens_out": 1409,
+    "llm_calls": 3,
+    "trajectory_steps": 10,
+    "latency_ms": 26068
+   },
+   "ms": 26135
+  },
+  "c15|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "No matching records were found for the query concerning Tesla.",
+   "route": "sql",
+   "out_of_scope": false,
+   "normalized_query": "What about Tesla?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT c.name, c.ticker, f.label, f.period_end, f.value, f.unit, f.filed\nFROM cn_4509b5c383744bb6.companies AS c\nJOIN cn_4509b5c383744bb6.facts AS f ON f.cik = c.cik\nWHERE c.ticker = 'TSLA'\nORDER BY f.period_end DESC\nLIMIT 1000",
+     "page": null
+    }
+   ],
+   "metrics": {
+    "tokens_in": 6735,
+    "tokens_out": 1728,
+    "llm_calls": 4,
+    "trajectory_steps": 17,
+    "latency_ms": 32578
+   },
+   "ms": 32651
+  },
+  "c16|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "No matching records were found.",
+   "route": "sql",
+   "out_of_scope": false,
+   "normalized_query": "Which of those years had the highest operating margin?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT EXTRACT(YEAR FROM af.period_end)::int AS year\nFROM cn_4509b5c383744bb6.annual_facts AS af\nWHERE af.metric = 'operating_margin'\nORDER BY af.value DESC\nLIMIT 1",
+     "page": null
+    }
+   ],
+   "metrics": {
+    "tokens_in": 6741,
+    "tokens_out": 1407,
+    "llm_calls": 4,
+    "trajectory_steps": 17,
+    "latency_ms": 37387
+   },
+   "ms": 37445
+  },
+  "c17|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "Based on the provided documents, the company referenced (Nike) reported that it completed multiple acquisitions in each of fiscal years 2023, 2022 and 2021, but the filings did not list the specific targets or transaction details for any of those years. \n\nOther companies mentioned in the same set of documents provide more detail: \n- AMD disclosed two major acquisitions in fiscal 2022 \u2013 Xilinx (completed February\u202f14\u202f2022) and Pensando Systems (completed May\u202f26\u202f2022). \n- Amcor reported two acquisitions that fall within its fiscal 2023 period (which ends June\u202f30): the purchase of a Czech Republic flexible\u2011packaging plant (closed August\u202f1\u202f2022) and the acquisition of a medical\u2011device packaging site in Shanghai, China (closed March\u202f17\u202f2023). \n- 3M stated that it had no acquisitions that closed during fiscal 2022 or fiscal 2021. \n- American Water Works noted that it grows primarily through acquisitions of water and wastewater systems, but no specific deals were identified for the recent years.\n\nThus, for the company in question (Nike), the filings confirm the occurrence of multiple acquisitions in FY2023, FY2022 and FY2021, though the specific acquisitions are not enumerated in the excerpts provided.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "What major acquisitions has it done in FY2023, FY2022 and FY2021?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_6b7724405eff4f5c_c00374",
+     "page": 93,
+     "title": "NIKE 2023 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_f46e3371082f4d87_c00241",
+     "page": 64,
+     "title": "AMCOR 2023 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_f46e3371082f4d87_c00243",
+     "page": 64,
+     "title": "AMCOR 2023 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 2939,
+    "tokens_out": 753,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 21067
+   },
+   "ms": 21131
+  },
+  "c18|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The retrieved documents do not specify which of 3M's business segments will be treated as a discontinued operation starting on August 30, 2023. The passages mention divestitures and a planned spin\u2011off of the Health Care segment, but no explicit statement about a discontinued\u2011operation classification on that date is provided.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "Which of its business segments will be treated as a discontinued operation from August 30, 2023?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_cb7c25859be84c85_c00023",
+     "page": 10,
+     "title": "3M 2023Q2 10Q"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cb7c25859be84c85_c00223",
+     "page": 52,
+     "title": "3M 2023Q2 10Q"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cb7c25859be84c85_c00230",
+     "page": 54,
+     "title": "3M 2023Q2 10Q"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 2916,
+    "tokens_out": 748,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 18175
+   },
+   "ms": 18216
+  },
+  "c19|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "AMD\u2019s operating margin declined because operating income fell sharply, mainly due to the amortization of intangible assets tied to its 2022 acquisition of Xilinx. The amortization expense reduced operating profit despite higher revenue, driving the margin drop.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "For AMD, what drove its operating margin change that year?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_cf0ed055f21b4351_c00181",
+     "page": 36,
+     "title": "AMD 2015 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cf0ed055f21b4351_c00182",
+     "page": 36,
+     "title": "AMD 2015 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cf0ed055f21b4351_c00183",
+     "page": 36,
+     "title": "AMD 2015 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3095,
+    "tokens_out": 437,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 14223
+   },
+   "ms": 14258
+  },
+  "c20|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "Boeing reported a net loss of $4.935\u202fbillion in fiscal 2022.",
+   "route": "sql",
+   "out_of_scope": false,
+   "normalized_query": "OK. What was Boeing's net income in fiscal 2022?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT amr.value\nFROM cn_4509b5c383744bb6.annual_metrics_restated AS amr\nJOIN cn_4509b5c383744bb6.companies AS c ON amr.ticker = c.ticker\nWHERE c.name ILIKE '%Boeing%'\n  AND amr.metric = 'net_income'\n  AND amr.period_end_year = 2022\nLIMIT 1000",
+     "page": null
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4837,
+    "tokens_out": 1050,
+    "llm_calls": 3,
+    "trajectory_steps": 10,
+    "latency_ms": 21461
+   },
+   "ms": 21542
+  },
+  "c21|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The filings for 2022, 2021 and 2020 note that JPMorgan has numerous ongoing legal proceedings and reports legal expenses for each year, but they do not identify any specific legal battles as materially important. In each document the firm states that, based on its current knowledge and litigation reserves, the pending matters are not expected to have a material adverse effect on its consolidated financial condition.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "Has it reported any materially important legal battles from 2022, 2021 and 2020?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_f9ec399c86f148c4_c00585",
+     "page": 159,
+     "title": "JPMORGAN 2021Q1 10Q"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_f9ec399c86f148c4_c00586",
+     "page": 159,
+     "title": "JPMORGAN 2021Q1 10Q"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_f9521a40687b4391_c01223",
+     "page": 287,
+     "title": "JPMORGAN 2022 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 2668,
+    "tokens_out": 337,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 20584
+   },
+   "ms": 20648
+  },
+  "c21|3": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "I\u2019m unable to retrieve the revenue data for comparison with Walmart for fiscal 2022.",
+   "route": "sql",
+   "out_of_scope": false,
+   "normalized_query": "How did its revenue compare with Walmart's in fiscal 2022?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT \n    MAX(CASE WHEN am.ticker = $1 THEN am.value END) AS company_revenue,\n    MAX(CASE WHEN am.ticker = 'WMT' THEN am.value END) AS walmart_revenue,\n    MAX(CASE WHEN am.ticker = $1 THEN am.value END) - MAX(CASE WHEN am.ticker = 'WMT' THEN am.value END) AS revenue_difference\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.metric = 'revenue'\n  AND am.period_end_year = 2022\n  AND am.ticker IN ($1, 'WMT')\nLIMIT 1000",
+     "page": null
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4819,
+    "tokens_out": 2398,
+    "llm_calls": 3,
+    "trajectory_steps": 10,
+    "latency_ms": 27691
+   },
+   "ms": 27745
+  },
+  "c22|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "No matching records were found for the requested query, so there is no data available to assess whether Adobe's operating margin profile improved as of FY2022.",
+   "route": "sql",
+   "out_of_scope": false,
+   "normalized_query": "Does Adobe have an improving operating margin profile as of FY2022?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT amr.period_end_year, amr.value\nFROM cn_4509b5c383744bb6.annual_metrics_restated AS amr\nJOIN cn_4509b5c383744bb6.metric_tags AS mt\n  ON amr.tag = mt.tag\nWHERE amr.ticker = 'ADOB'\n  AND mt.metric = 'operating_margin'\n  AND amr.period_end_year <= 2022\nORDER BY amr.period_end_year\nLIMIT 1000",
+     "page": null
+    }
+   ],
+   "metrics": {
+    "tokens_in": 6787,
+    "tokens_out": 1712,
+    "llm_calls": 4,
+    "trajectory_steps": 17,
+    "latency_ms": 36237
+   },
+   "ms": 36315
+  },
+  "c23|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The provided documents do not contain FY2022 EBITDAR figures broken out by region, so I cannot determine which region had the highest EBITDAR contribution for the company in FY2022.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "Which region had the highest EBITDAR contribution for it during FY2022?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_ba8f90f2a07540b8_c00252",
+     "page": 46,
+     "title": "MGMRESORTS 2020 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_a78870ad8fc74b94_c00208",
+     "page": 42,
+     "title": "ADOBE 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_a78870ad8fc74b94_c00326",
+     "page": 75,
+     "title": "ADOBE 2022 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3338,
+    "tokens_out": 233,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 24819
+   },
+   "ms": 24896
+  },
+  "c24|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The fiscal year\u202f2022 effective tax rate was 9.1\u202fpercentage points higher than the fiscal year\u202f2021 effective tax rate.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "And how much has its effective tax rate changed between FY2021 and FY2022?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_3956a69bebb84704_c00260",
+     "page": 68,
+     "title": "JOHNSON JOHNSON 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_3956a69bebb84704_c00261",
+     "page": 68,
+     "title": "JOHNSON JOHNSON 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cbd639f9fce44454_c00094",
+     "page": 22,
+     "title": "3M 2022 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 2899,
+    "tokens_out": 111,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 18642
+   },
+   "ms": 18703
+  }
+ }
+}
