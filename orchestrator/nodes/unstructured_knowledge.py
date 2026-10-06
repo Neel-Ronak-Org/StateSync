@@ -277,12 +277,36 @@ def extract_entities(rows: list[dict], columns: list[str], entity_rows: int, max
     return entities
 
 
-def match_titles(entities: list[str], documents: list[dict]) -> list[dict]:
-    """The documents (as {document_id, title}) whose title contains an entity once both are reduced to
-    lower-case letters and digits, in the order given. An entity with no letter or digit matches nothing."""
+_YEAR_DIGITS = 4  # noqa: literals - a year word is four digits ("2022") or starts with four ("2023Q2")
+
+
+def title_name(title: str) -> str:
+    """The name a document title carries: its words before the first word that is a 4-digit year or starts
+    with one ("2022", "2023Q2"), reduced to lower-case letters and digits ("COCACOLA 2022 10K" -> "cocacola",
+    "JOHNSON JOHNSON 2023 8K dated ..." -> "johnsonjohnson"). A title with no year word uses all its words."""
+    name: list[str] = []
+    for word in title.split():
+        if len(word) >= _YEAR_DIGITS and word[:_YEAR_DIGITS].isdigit():
+            break
+        name.append(word)
+    return _letters_digits(" ".join(name))
+
+
+def match_titles(entities: list[str], documents: list[dict], title_name_min_chars: int | None = None) -> list[dict]:
+    """The documents (as {document_id, title}) that an entity names, in the order given, each once. An entity
+    names a document when, once both are reduced to lower-case letters and digits, either the entity occurs
+    in the title, or the title's name (title_name) occurs in the entity and is at least `title_name_min_chars`
+    long (default [hybrid] title_name_min_chars) or equals it ("JPMORGAN CHASE & CO" names "JPMORGAN 2022 10K").
+    An entity with no letter or digit matches nothing."""
+    min_chars = int(cfg.hybrid.title_name_min_chars) if title_name_min_chars is None else title_name_min_chars
     keys = [k for k in (_letters_digits(e) for e in entities) if k]
-    return [d for d in documents
-            if any(k in _letters_digits(str(d.get("title") or "")) for k in keys)]
+    matched: list[dict] = []
+    for d in documents:
+        title = str(d.get("title") or "")
+        reduced, name = _letters_digits(title), title_name(title)
+        if any(k in reduced or (name and name in k and (len(name) >= min_chars or name == k)) for k in keys):
+            matched.append(d)
+    return matched
 
 
 async def _workspace_documents(session: MCPSession, principal_id: str, workspace_id: str) -> list[dict]:
@@ -415,6 +439,9 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
 # half, narrowed to the parties the SQL result names. Until 2026-10-02 the hybrid route ran its own
 # single-shot SQL here with none of those.
 
+_ASK_FOR_NAMES = "Return each entity's full name as well as any code or identifier."
+
+
 async def hybrid_plan_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     """Split the question into its SQL part and its documents part (subtasks = [sql, docs])."""
     query_text: str = state_dict.get("normalized_query") or state_dict.get("raw_query", "")
@@ -430,6 +457,10 @@ async def hybrid_plan_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         llm_calls = 1
     else:
         sql_subtask = doc_subtask = query_text
+    if (flags_snapshot.get("pipeline.hybrid_entities", "off") == "on" and state_dict.get("docs_depend_on_sql")
+            and not sql_subtask.endswith(_ASK_FOR_NAMES)):
+        # The documents half is narrowed by the entities the rows name (T5b): ask for names, not only codes.
+        sql_subtask = f"{sql_subtask} {_ASK_FOR_NAMES}"
     logger.info("UKE hybrid plan: query_id=%s sql_subtask=%r doc_subtask=%r",
                 state_dict.get("query_id", ""), sql_subtask, doc_subtask)
     return {

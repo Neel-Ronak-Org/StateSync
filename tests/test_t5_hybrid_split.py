@@ -86,7 +86,8 @@ def test_columns_fall_back_to_the_first_rows_keys():
 def test_title_matching_ignores_case_punctuation_and_spacing():
     assert [d["document_id"] for d in uk.match_titles(["Coca-Cola"], FILINGS)] == ["d_ko"]
     assert [d["document_id"] for d in uk.match_titles(["coca cola"], FILINGS)] == ["d_ko"]
-    assert [d["document_id"] for d in uk.match_titles(["PepsiCo, Inc."], FILINGS)] == []   # the entity is longer
+    # T5b: an entity longer than the title's name now matches it (the title name "pepsico" occurs in the entity)
+    assert [d["document_id"] for d in uk.match_titles(["PepsiCo, Inc."], FILINGS)] == ["d_pep"]
     assert [d["document_id"] for d in uk.match_titles(["3M"], FILINGS)] == ["d_mmm"]
 
 
