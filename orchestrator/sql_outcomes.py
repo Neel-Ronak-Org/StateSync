@@ -7,9 +7,10 @@ routing_docs_fixes.md F-S1, F-S2, F-S3). Pure functions only, so they run withou
   is never sent to the database; it becomes a terminal no_data_source ErrorRecord.
 - With the flag off, Layer 1's "statement reads no table" stays permission_denied, as before F-S2.
 
-T2b (docs/specs/partd_tasks/T2b_confirm_not_answerable.md): a NOT_ANSWERABLE reply is terminal only when the
-writer saw the whole schema. After a partial view it is the retriable not_answerable_unconfirmed: the next
-attempt is shown every table (cut to [sql] full_schema_max_chars), and a second NOT_ANSWERABLE is final.
+T2b (docs/specs/partd_tasks/T2b_confirm_not_answerable.md), T2c (T2c_always_confirm.md): the first
+NOT_ANSWERABLE reply of a question is the retriable not_answerable_unconfirmed, whatever the writer saw. The
+next attempt is shown every table (cut to [sql] full_schema_max_chars) and the columns whose names resemble
+words in the question or the reply ([sql] near_match_max lines); a second NOT_ANSWERABLE is final.
 """
 
 from __future__ import annotations
@@ -34,6 +35,10 @@ _MESSAGE_MAX_CHARS = 300  # noqa: literals - display width of a stored message, 
 _NO_DATA_SOURCE = "no_data_source"
 _UNCONFIRMED = "not_answerable_unconfirmed"
 _BLOCK_SEPARATOR = "\n\n"
+
+NEAR_MATCH_HEADER = "Columns whose names resemble words in the question or your reply:"
+_WORD_RE = re.compile(r"\w{4,}")
+_WORD_SUBSTRING_MIN = 5  # noqa: literals - T2c spec: a normalised word this long also matches by containment
 
 
 def sql_no_data_on(flags_snapshot: dict[str, Any]) -> bool:
@@ -65,27 +70,18 @@ def not_answerable_error(attempt: int, message: str, category: str = _NO_DATA_SO
     }
 
 
-def view_is_partial(shown_tables: int, dataset_tables: int, description_cut: bool = False) -> bool:
-    """Whether the writer saw only part of the schema: fewer tables than the dataset has, or a shown
-    table's description cut."""
-    return shown_tables < dataset_tables or description_cut
-
-
 def confirmation_pending(errors: list[dict[str, Any]]) -> bool:
     """True when the last attempt ended in not_answerable_unconfirmed, so this attempt is the one that
     shows every table."""
     return bool(errors) and errors[-1].get("category") == _UNCONFIRMED
 
 
-def not_answerable_record(
-    attempt: int, message: str, prior_errors: list[dict[str, Any]], shown_tables: int, dataset_tables: int,
-) -> dict[str, Any]:
-    """The ErrorRecord for a NOT_ANSWERABLE reply. A partial view gives the retriable
-    not_answerable_unconfirmed, once per question: a question that already has one gets the final
-    no_data_source, as does a reply made after the whole schema was shown."""
+def not_answerable_record(attempt: int, message: str, prior_errors: list[dict[str, Any]]) -> dict[str, Any]:
+    """The ErrorRecord for a NOT_ANSWERABLE reply. The first one of a question is the retriable
+    not_answerable_unconfirmed, whatever the writer saw; a question that already has one gets the final
+    no_data_source."""
     asked_before = any(e.get("category") == _UNCONFIRMED for e in prior_errors)
-    partial = view_is_partial(shown_tables, dataset_tables)
-    return not_answerable_error(attempt, message, _UNCONFIRMED if partial and not asked_before else _NO_DATA_SOURCE)
+    return not_answerable_error(attempt, message, _NO_DATA_SOURCE if asked_before else _UNCONFIRMED)
 
 
 def cut_schema_view(blocks: list[str], max_chars: int) -> tuple[str, int]:
@@ -102,6 +98,50 @@ def cut_schema_view(blocks: list[str], max_chars: int) -> tuple[str, int]:
         included.append(block)
         total += added
     return _BLOCK_SEPARATOR.join(included), len(included)
+
+
+def _normalise(name: str) -> str:
+    return name.lower().replace("_", "")
+
+
+def _near_words(question: str, reason: str) -> list[str]:
+    """The distinct words (runs of letters, digits and underscores, 4 characters or more) of the question and
+    the NOT_ANSWERABLE reply, normalised (lowercase, no underscores), in order of appearance. The reply's
+    marker is not a word of the reply."""
+    reason = re.sub(rf"(?i)^\s*{NOT_ANSWERABLE_MARKER}\s*:?", "", reason or "")
+    words: dict[str, None] = {}
+    for raw in _WORD_RE.findall(f"{question or ''} {reason}"):
+        norm = _normalise(raw)
+        if norm:
+            words[norm] = None
+    return list(words)
+
+
+def near_match_columns(question: str, reason: str, descriptions: list[dict[str, Any]], max_lines: int) -> list[str]:
+    """`table.column` for each column whose name resembles a word of the question or the reply. A word and a
+    column name are normalised (lowercase, no underscores); they match when equal, or when a word of at
+    least 5 characters is inside the column name or the column name is inside the word. Every table of
+    `descriptions` is searched, in the order given, then column order; each match is listed once, at most
+    max_lines."""
+    words = _near_words(question, reason)
+    found: dict[str, None] = {}
+    for desc in descriptions:
+        table = str(desc.get("table"))
+        for col in desc.get("columns", []):
+            name = col.get("name") if isinstance(col, dict) else None
+            norm = _normalise(str(name)) if name else ""
+            if not norm:
+                continue
+            if any(w == norm or (len(w) >= _WORD_SUBSTRING_MIN and (w in norm or norm in w)) for w in words):
+                found[f"{table}.{name}"] = None
+    return list(found)[:max(0, int(max_lines))]
+
+
+def near_match_block(question: str, reason: str, descriptions: list[dict[str, Any]], max_lines: int) -> str:
+    """The confirming attempt's block of near-matching columns, one `table.column` per line under
+    NEAR_MATCH_HEADER; empty when nothing matches."""
+    columns = near_match_columns(question, reason, descriptions, max_lines)
+    return "\n".join([NEAR_MATCH_HEADER, *columns]) if columns else ""
 
 
 def classify_engine_failure(

@@ -1,7 +1,7 @@
 """
 tests/test_t2b_confirm_not_answerable.py
-Pins T2b (docs/specs/partd_tasks/T2b_confirm_not_answerable.md): with [pipeline] sql_no_data = "on", a
-NOT_ANSWERABLE reply is final only when the writer saw the whole schema.
+Pins T2b (docs/specs/partd_tasks/T2b_confirm_not_answerable.md) and T2c (T2c_always_confirm.md): with
+[pipeline] sql_no_data = "on", the first NOT_ANSWERABLE reply of a question is never final.
 
 WHY THIS EXISTS. Gate G1 found 2 of 150 answerable BIRD questions answered NOT_ANSWERABLE ("missing
 edhrecRank column") from the partial schema table selection showed. NOT_ANSWERABLE was terminal, so the
@@ -9,6 +9,11 @@ correction loop that would have shown the full table never ran. After a partial 
 retriable not_answerable_unconfirmed; the next attempt is shown every table (cut to
 [sql] full_schema_max_chars) with a fixed hint, and a second NOT_ANSWERABLE is final. With the flag off
 nothing moves (tests/test_t2_sql_outcomes.py pins that).
+
+T2c: G1 failed again because the retriever there shows every table, so the partial-view condition never held
+(0 of 150 confirmations). The first NOT_ANSWERABLE is now always unconfirmed, whatever the view, and the
+confirming attempt also lists the columns whose names resemble words in the question or the reply (the
+Postgres copy lowercased every identifier: `edhrecRank` is `cards.edhrecrank`).
 """
 
 from __future__ import annotations
@@ -41,8 +46,9 @@ from state import ErrorRecord, StateSyncState, merge  # noqa: E402
 
 ON = {"pipeline.sql_no_data": "on"}
 UNCONFIRMED = "not_answerable_unconfirmed"
-HINT = ("You replied NOT_ANSWERABLE after seeing only part of the schema. Every table is described below: "
-        "write the SQL if any table holds what the question asks; reply NOT_ANSWERABLE again only if none does.")
+HINT = ("You replied NOT_ANSWERABLE. Every table is described below, followed by the columns whose names "
+        "resemble words in the question or your reply: write the SQL if any column holds what the question asks, "
+        "even under a different name or letter case; reply NOT_ANSWERABLE again only if none does.")
 REPLY = "NOT_ANSWERABLE: no edhrecRank column in the tables"
 
 
@@ -53,6 +59,7 @@ def _desc(table: str, *columns: str) -> dict:
 
 DESCS = {"orders": _desc("orders", "status"), "cards": _desc("cards", "name", "edhrecRank"),
          "sets": _desc("sets", "code")}
+NEAR_HEADER = "Columns whose names resemble words in the question or your reply:"
 
 
 class _FakeSession:
@@ -69,21 +76,26 @@ class _FakeSession:
 class _CfgWithCap:
     """cfg with [sql] full_schema_max_chars replaced (cfg itself is read-only)."""
 
-    def __init__(self, cap: int):
+    def __init__(self, cap: int, near_match_max: int | None = None):
         self._cap = cap
+        self._near_max = near_match_max
 
     def __getattr__(self, name):
         real = getattr(config_loader.cfg, name)
         if name != "sql":
             return real
         cap = self._cap
+        near = int(real.near_match_max) if self._near_max is None else self._near_max
         return SimpleNamespace(**{k: getattr(real, k) for k in ("max_tokens_sql", "retry_max")},
-                               full_schema_max_chars=cap)
+                               full_schema_max_chars=cap, near_match_max=near)
 
 
-def _run(state: dict, replies: list[str], *, shown: list[str], dataset: list[str], cap: int | None = None):
+def _run(state: dict, replies: list[str], *, shown: list[str], dataset: list[str], cap: int | None = None,
+         near_match_max: int | None = None, descs: dict | None = None):
     """Run the SQL node once. The retriever returns the `shown` tables; the dataset has the `dataset` ones.
-    Returns (update, user messages sent to the model, tables schema_describe_table was asked for)."""
+    `descs` replaces DESCS (a dataset with other tables). Returns (update, user messages sent to the model,
+    tables schema_describe_table was asked for)."""
+    catalogue = descs or DESCS
     sent: list[str] = []
     described: list[str] = []
     queue = list(replies)
@@ -95,14 +107,14 @@ def _run(state: dict, replies: list[str], *, shown: list[str], dataset: list[str
 
     class _Retriever:
         async def retrieve(self, session, table_names, schema=None, **_context):
-            return "TABLE shown", [DESCS[t] for t in shown]
+            return "TABLE shown", [catalogue[t] for t in shown]
 
     async def fake_list_tables(session, schema):
         return {"tables": [{"name": t} for t in dataset], "fingerprint": "fp"}
 
     async def fake_describe(session, table, schema=None):
         described.append(table)
-        return DESCS[table]
+        return catalogue[table]
 
     async def fake_select(session, sql_text, max_rows=None):
         return {"ok": True, "rows": [{"status": "x"}], "columns": ["status"]}
@@ -118,8 +130,9 @@ def _run(state: dict, replies: list[str], *, shown: list[str], dataset: list[str
         patch.object(sa, "get_agent_llm", lambda role: _Recorder()), patch.object(sa, "data_run_select", fake_select),
         patch.object(sa, "get_spatial_resolver", lambda: SimpleNamespace(resolve=lambda q: None)),
     ]
-    if cap is not None:
-        patches.append(patch.object(sa, "cfg", _CfgWithCap(cap)))
+    if cap is not None or near_match_max is not None:
+        patches.append(patch.object(sa, "cfg", _CfgWithCap(cap or int(config_loader.cfg.sql.full_schema_max_chars),
+                                                           near_match_max)))
     for p in patches:
         p.start()
     try:
@@ -157,23 +170,23 @@ def test_the_cap_ships_at_12000():
     assert int(config_loader.cfg.sql.full_schema_max_chars) == 12000
 
 
-@pytest.mark.parametrize("shown, total, cut, partial", [
-    (2, 3, False, True), (3, 3, False, False), (0, 3, False, True),      # 0 shown: a memory hit shows no table
-    (3, 3, True, True), (0, 0, False, False),
-])
-def test_view_is_partial(shown, total, cut, partial):
-    assert sql_outcomes.view_is_partial(shown, total, cut) is partial
+def test_the_near_match_cap_ships_at_20():
+    assert int(config_loader.cfg.sql.near_match_max) == 20
 
 
-def test_record_by_view_and_by_history():
-    partial = sql_outcomes.not_answerable_record(0, REPLY, [], 1, 3)
-    assert partial["category"] == UNCONFIRMED and partial["remediation_hint"] == HINT
-    assert partial["engine_code"] is None and partial["offending_sql"] is None and partial["message"] == REPLY
-    full = sql_outcomes.not_answerable_record(0, REPLY, [], 3, 3)
-    assert full == sql_outcomes.not_answerable_error(0, REPLY) and full["category"] == "no_data_source"
-    # asked once already: final, even if the view is still partial (the confirmation was cut or a table refused)
-    again = sql_outcomes.not_answerable_record(1, REPLY, [_unconfirmed()], 1, 3)
-    assert again["category"] == "no_data_source" and again["attempt"] == 1
+def test_record_by_history():
+    first = sql_outcomes.not_answerable_record(0, REPLY, [])
+    assert first["category"] == UNCONFIRMED and first["remediation_hint"] == HINT
+    assert first["engine_code"] is None and first["offending_sql"] is None and first["message"] == REPLY
+    # asked once already: final
+    again = sql_outcomes.not_answerable_record(1, REPLY, [_unconfirmed()])
+    assert again == sql_outcomes.not_answerable_error(1, REPLY) and again["category"] == "no_data_source"
+    assert sql_outcomes.not_answerable_record(2, REPLY, [{"category": "syntax"}, _unconfirmed()])["category"] \
+        == "no_data_source"
+
+
+def test_view_is_partial_is_gone():
+    assert not hasattr(sql_outcomes, "view_is_partial")        # T2c: the view no longer decides
 
 
 def test_confirmation_pending_is_only_the_attempt_right_after_an_unconfirmed_one():
@@ -195,7 +208,7 @@ def test_cut_schema_view_keeps_whole_tables_and_never_exceeds_the_cap():
 
 
 # ── the SQL node ────────────────────────────────────────────────────────────
-def test_partial_view_is_a_retriable_unconfirmed_outcome():
+def test_first_reply_after_a_partial_view_is_a_retriable_unconfirmed_outcome():
     update, _, _ = _run(_state(ON), [REPLY], shown=["orders"], dataset=["orders", "cards", "sets"])
     [err] = update["errors"]
     assert err["category"] == UNCONFIRMED and err["attempt"] == 0 and err["remediation_hint"] == HINT
@@ -209,14 +222,28 @@ def test_partial_view_is_a_retriable_unconfirmed_outcome():
     assert graph._route_after_sql(state) == "retry"
 
 
-def test_full_view_is_the_final_no_data_source():
+def test_first_reply_after_a_full_view_is_unconfirmed_too():
+    # T2c: this inverts T2b's test_full_view_is_the_final_no_data_source (a full view used to be final).
     update, _, _ = _run(_state(ON), [REPLY], shown=["orders", "cards", "sets"], dataset=["orders", "cards", "sets"])
+    [err] = update["errors"]
+    assert err["category"] == UNCONFIRMED and err["remediation_hint"] == HINT
+    assert err["category"] not in TERMINAL_CATEGORIES
+    graph = pytest.importorskip("graph")
+    state = StateSyncState(query_id="q", tenant_id="t", principal_id="p", session_id="s", target_schema="public",
+                           raw_query="x", route="sql")
+    state = merge(state, {"attempt": 0, "errors": [err]}, node_name="sql_agent")
+    assert graph._route_after_sql(state) == "retry"
+
+
+def test_second_reply_after_a_full_view_is_final():
+    update, _, _ = _run(_state(ON, errors=[_unconfirmed()]), [REPLY],
+                        shown=["orders", "cards", "sets"], dataset=["orders", "cards", "sets"])
     [err] = update["errors"]
     assert err["category"] == "no_data_source" and err["remediation_hint"] == category_hint("no_data_source")
     assert err["category"] in TERMINAL_CATEGORIES
 
 
-def test_memory_hit_shows_no_table_so_the_view_is_partial(monkeypatch):
+def test_memory_hit_shows_no_table_and_the_first_reply_is_unconfirmed(monkeypatch):
     # attempt 0 on a memory hit builds its context from the stored insight: no schema description at all.
     class _Store:
         async def get_trajectory(self, session, query_text, schema_fingerprint):
@@ -237,6 +264,8 @@ def test_next_attempt_context_holds_every_table_and_the_fixed_hint():
         assert text in message
     assert message.index("TABLE orders:") < message.index("TABLE cards:")       # the selected tables come first
     assert HINT in message and "cut at" not in message
+    # the question names edhrecRank, so the near-match block lists cards.edhrecRank, after the view
+    assert message.index("TABLE sets:") < message.index(NEAR_HEADER + "\ncards.edhrecRank")
     assert "errors" not in update and update["attempt"] == 1
 
 
@@ -285,3 +314,100 @@ def test_confirmation_costs_one_attempt_of_the_retry_budget():
 def test_flag_off_never_produces_the_new_category():
     update, _, _ = _run(_state(), [REPLY], shown=["orders"], dataset=["orders", "cards", "sets"])
     assert "errors" not in update and update["candidate_sql"] == REPLY   # sent as SQL, as before
+
+
+# ── T2c: the near-match columns ─────────────────────────────────────────────
+def _tables(**cols: list[str]) -> list[dict]:
+    return [_desc(t, *c) for t, c in cols.items()]
+
+
+def test_near_match_edhrecrank_in_the_question_lists_the_lowercased_column():
+    descs = _tables(cards=["name", "edhrecrank"], sets=["code"])
+    block = sql_outcomes.near_match_block("What is the edhrecRank of the card?", REPLY, descs, 20)
+    assert block == NEAR_HEADER + "\ncards.edhrecrank"
+
+
+def test_near_match_underscores_and_case_are_normalised():
+    descs = _tables(trans=["client_id", "amount"], loan=["ClientID", "date"])
+    assert sql_outcomes.near_match_columns("list each clientid", "", descs, 20) == ["trans.client_id", "loan.ClientID"]
+    assert sql_outcomes.near_match_columns("client_id please", "", descs, 20) == ["trans.client_id", "loan.ClientID"]
+
+
+def test_near_match_a_four_character_word_matches_only_by_equality():
+    descs = _tables(t=["name", "username", "names", "nam"])
+    assert sql_outcomes.near_match_columns("name", "", descs, 20) == ["t.name"]       # not username, not names
+    # a 5-character word also matches a column name inside it ("name", "nam" are inside "names")
+    assert sql_outcomes.near_match_columns("names", "", descs, 20) == ["t.name", "t.names", "t.nam"]
+
+
+def test_near_match_five_characters_match_by_containment_both_ways():
+    descs = _tables(t=["frequency", "statement_freq", "account_id", "id"])
+    # word inside the column name
+    assert sql_outcomes.near_match_columns("frequ", "", descs, 20) == ["t.frequency"]
+    assert sql_outcomes.near_match_columns("freq?", "", descs, 20) == []                # 4 characters: equality only
+    # column name inside the word
+    assert sql_outcomes.near_match_columns("accountidentifier", "", descs, 20) == ["t.account_id", "t.id"]
+
+
+def test_near_match_words_come_from_the_reply_without_its_marker():
+    descs = _tables(account=["frequency", "notanswerable"])
+    assert sql_outcomes.near_match_columns("how many?", "NOT_ANSWERABLE: no frequency here", descs, 20) \
+        == ["account.frequency"]
+    # the marker itself is not a word of the reply
+    assert sql_outcomes.near_match_columns("how many?", "NOT_ANSWERABLE: no data", descs, 20) == []
+
+
+def test_near_match_lists_each_column_once_in_table_then_column_order_and_respects_the_cap():
+    descs = _tables(b=["alpha_x", "alphax"], a=["alphax"])
+    assert sql_outcomes.near_match_columns("alphax alpha_x ALPHAX", "", descs, 20) \
+        == ["b.alpha_x", "b.alphax", "a.alphax"]
+    assert sql_outcomes.near_match_columns("alphax", "", descs, 2) == ["b.alpha_x", "b.alphax"]
+    assert sql_outcomes.near_match_columns("alphax", "", descs, 0) == []
+
+
+def test_near_match_no_block_when_nothing_matches():
+    descs = _tables(cards=["name"], sets=["code"])
+    assert sql_outcomes.near_match_block("how many foo", "NOT_ANSWERABLE: nothing", descs, 20) == ""
+    assert sql_outcomes.near_match_block("", "", descs, 20) == ""
+
+
+def test_near_match_node_lists_a_column_of_a_table_the_cap_cut_from_the_view():
+    from schema_retriever import format_table_block
+    descs = {**DESCS, "sets": _desc("sets", "code", "zorbleFlux")}
+    blocks = [format_table_block(t, descs[t]) for t in ("orders", "cards", "sets")]
+    cap = len(blocks[0]) + len("\n\n") + len(blocks[1])
+    prior = sql_outcomes.not_answerable_error(0, "NOT_ANSWERABLE: nothing", UNCONFIRMED)
+    _, messages, _ = _run(_state(ON, errors=[prior], raw_query="the zorbleflux of a set?"), ["SELECT 1"],
+                          shown=["orders"], dataset=["orders", "cards", "sets"], cap=cap, descs=descs)
+    [message] = messages
+    assert "TABLE sets:" not in message and "cut at" in message          # sets is not in the view ...
+    assert NEAR_HEADER + "\nsets.zorbleFlux" in message                 # ... but its column is listed
+
+
+def test_near_match_node_cuts_the_list_at_near_match_max():
+    descs = {**DESCS, "cards": _desc("cards", "rank_a", "rank_b", "rank_c")}
+    _, messages, _ = _run(_state(ON, errors=[_unconfirmed()], raw_query="rank? ranka rankb rankc"), ["SELECT 1"],
+                          shown=["orders"], dataset=["orders", "cards", "sets"], near_match_max=2, descs=descs)
+    assert NEAR_HEADER + "\ncards.rank_a\ncards.rank_b" in messages[0] and "cards.rank_c\n" not in messages[0]
+    assert not messages[0].rstrip().endswith("cards.rank_c")
+
+
+def test_near_match_node_leaves_the_block_out_when_nothing_matches():
+    prior = sql_outcomes.not_answerable_error(0, "NOT_ANSWERABLE: nothing", UNCONFIRMED)
+    _, messages, _ = _run(_state(ON, errors=[prior], raw_query="which one is best?"), ["SELECT 1"],
+                          shown=["orders"], dataset=["orders", "cards", "sets"])
+    assert NEAR_HEADER not in messages[0] and HINT in messages[0]
+
+
+def test_near_match_node_uses_the_recorded_reply_as_words():
+    prior = sql_outcomes.not_answerable_error(0, "NOT_ANSWERABLE: no code column", UNCONFIRMED)
+    _, messages, _ = _run(_state(ON, errors=[prior], raw_query="which one is best?"), ["SELECT 1"],
+                          shown=["orders"], dataset=["orders", "cards", "sets"])
+    assert NEAR_HEADER + "\nsets.code" in messages[0]
+
+
+def test_near_match_block_is_only_on_the_confirming_attempt_and_only_with_the_flag():
+    for flags, prior in (({}, _unconfirmed()), (ON, {**_unconfirmed(), "category": "unknown_column"})):
+        _, messages, _ = _run(_state(flags, errors=[prior]), ["SELECT 1"],
+                              shown=["orders"], dataset=["orders", "cards", "sets"])
+        assert NEAR_HEADER not in messages[0]

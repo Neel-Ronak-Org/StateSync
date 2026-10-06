@@ -816,8 +816,9 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             trajectory_steps += len(table_names)
             context_block = f"Schema:\n{schema_context}"
             if sql_outcomes.sql_no_data_on(flags_snapshot) and sql_outcomes.confirmation_pending(existing_errors):
-                # T2b: the last attempt said NOT_ANSWERABLE after a partial view. This one is shown every
-                # table of the dataset (the retrieved ones first, so a cut drops the least relevant).
+                # T2b/T2c: the last attempt said NOT_ANSWERABLE. This one is shown every table of the
+                # dataset (the retrieved ones first, so a cut drops the least relevant), then the columns
+                # whose names resemble words in the question or that reply (every described table, cut or not).
                 shown_names = {d.get("table") for d in table_descriptions}
                 blocks = [format_table_block(str(d.get("table")), d, _schema) for d in table_descriptions]
                 for tname in table_names:
@@ -837,6 +838,11 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 if described < len(blocks):
                     context_block += (f"\n\n(The description is cut at {cfg.sql.full_schema_max_chars} characters: "
                                       f"{described} of {len(blocks)} tables are described.)")
+                near_block = sql_outcomes.near_match_block(
+                    raw_query, str(existing_errors[-1].get("message") or ""), table_descriptions,
+                    int(cfg.sql.near_match_max))
+                if near_block:
+                    context_block += "\n\n" + near_block
             if ws_block:
                 context_block += "\n\n" + ws_block
 
@@ -1044,16 +1050,15 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 caveats.append("These figures may count some rows more than once (join fan-out).")
 
         if not_answerable is not None:
-            # [pipeline] sql_no_data (F-S1): a typed outcome, terminal (no_data_source), so the loop stops.
+            # [pipeline] sql_no_data (F-S1): a typed outcome, terminal (no_data_source) once confirmed, so the loop stops.
             # There is no statement to report, so candidate_sql is cleared.
             logger.info("SQL Agent: query_id=%s attempt=%d replied NOT_ANSWERABLE.", query_id, attempt)
             update["candidate_sql"] = None
             update["sql_rows"] = []
             update["sql_columns"] = []
-            # T2b: after a partial schema view it is the retriable not_answerable_unconfirmed instead, and
-            # the next attempt is shown every table; a second reply is final.
-            update["errors"] = [sql_outcomes.not_answerable_record(
-                attempt, not_answerable, existing_errors, len(table_descriptions), len(table_names))]
+            # T2b/T2c: the first reply is the retriable not_answerable_unconfirmed instead, and the next
+            # attempt is shown every table and the near-matching columns; a second reply is final.
+            update["errors"] = [sql_outcomes.not_answerable_record(attempt, not_answerable, existing_errors)]
 
         elif fanout_retry:
             # Failure-shaped, like any other failed attempt: no executed_sql, so the graph

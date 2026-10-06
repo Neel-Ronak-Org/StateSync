@@ -69,7 +69,8 @@ audit_detail_max_chars    = 500
 [sql]
 retry_max                 = 3       # attempts after the first; 4 executions maximum
 timeout_retry_max         = 3       # retries after a statement timeout (3 = today's behaviour; the scope review suggests 1)
-full_schema_max_chars     = 12000   # [pipeline] sql_no_data: the attempt after a NOT_ANSWERABLE reply seen with a partial schema describes every table, cut to this many characters (docs/specs/partd_tasks/T2b_confirm_not_answerable.md)
+full_schema_max_chars     = 12000   # [pipeline] sql_no_data: the attempt after a first NOT_ANSWERABLE reply describes every table, cut to this many characters (docs/specs/partd_tasks/T2b_confirm_not_answerable.md)
+near_match_max            = 20      # [pipeline] sql_no_data: that attempt then lists at most this many columns whose names resemble words in the question or the reply (docs/specs/partd_tasks/T2c_always_confirm.md)
 interrogation_max_samples = 4
 max_sql_length            = 8000
 max_tokens_supervisor     = 128     # enough for {"route":"sql"} classification

@@ -211,21 +211,34 @@ def _state(flags: dict | None = None, **extra) -> dict:
             "flags_snapshot": {"memory.enabled": False, **(flags or {})}, "target_schema": "public", **extra}
 
 
-def test_not_answerable_reply_is_never_sent_and_becomes_a_terminal_error():
+def test_not_answerable_reply_is_never_sent_and_the_first_one_is_unconfirmed():
+    # T2c: the first reply of a question is the retriable not_answerable_unconfirmed (it was the terminal
+    # no_data_source before); test_second_not_answerable_reply_is_the_terminal_error covers the second.
     selects: list = []
     prompts: list = []
     update = _run_node(_state(ON), "```\nNOT_ANSWERABLE: the tables hold no revenue\n```", selects, prompts)
     assert selects == []                                           # never sent to the MCP
     assert all(p.endswith(NOT_ANSWERABLE_TEXT) for p in prompts)   # the draft and the main call both carry the rule
     [err] = update["errors"]
-    assert err["category"] == "no_data_source" and err["attempt"] == 0
+    assert err["category"] == "not_answerable_unconfirmed" and err["attempt"] == 0
     assert err["message"] == "NOT_ANSWERABLE: the tables hold no revenue"
     assert err["engine_code"] is None and err["offending_sql"] is None
-    assert err["remediation_hint"] == category_hint("no_data_source")
+    assert err["remediation_hint"] == category_hint("not_answerable_unconfirmed")
     assert update["candidate_sql"] is None and "executed_sql" not in update
     assert update["sql_rows"] == [] and update["attempt"] == 0
-    assert update["errors"][0]["category"] in error_classifier.TERMINAL_CATEGORIES   # the loop stops
+    assert err["category"] not in error_classifier.TERMINAL_CATEGORIES               # the loop confirms once
     ErrorRecord(**err)
+
+
+def test_second_not_answerable_reply_is_the_terminal_error():
+    selects: list = []
+    prior = {"attempt": 0, "category": "not_answerable_unconfirmed", "engine_code": None,
+             "message": "NOT_ANSWERABLE: first", "offending_sql": None, "remediation_hint": "h"}
+    update = _run_node(_state(ON, errors=[prior]), "NOT_ANSWERABLE: the tables hold no revenue", selects)
+    [err] = update["errors"]
+    assert selects == [] and err["category"] == "no_data_source" and err["attempt"] == 1
+    assert err["remediation_hint"] == category_hint("no_data_source")
+    assert err["category"] in error_classifier.TERMINAL_CATEGORIES                  # the loop stops
 
 
 def test_not_answerable_message_is_cut_to_300_characters():
@@ -242,7 +255,7 @@ def test_corrector_reply_is_parsed_too():
     assert selects == []
     assert prompts and prompts[0].endswith(NOT_ANSWERABLE_TEXT_CORRECTOR)
     [err] = update["errors"]
-    assert err["category"] == "no_data_source" and err["attempt"] == 1
+    assert err["category"] == "not_answerable_unconfirmed" and err["attempt"] == 1   # T2c: a first reply, any attempt
 
 
 def test_sql_is_still_run_with_the_flag_on():
