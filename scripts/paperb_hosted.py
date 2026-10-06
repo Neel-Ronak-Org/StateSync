@@ -2,12 +2,14 @@
 """
 scripts/paperb_hosted.py
 Paper B's hosted zero-shot decision model (docs/research/detect_then_fallback_study.md v2, §5): Jev
-(typesafe-ai/jev, paid credits) through Vercel AI Gateway's TypeSafe-compatible endpoint. Each distinct
+(paid credits) through a TypeSafe-compatible "systemone" endpoint: Vercel AI Gateway (typesafe-ai/jev, key
+secrets/vercel_ai_gateway_key) or OpenCode Zen (jev-1.13-free, then jev-1.13 if the free tier rate-limits;
+key secrets/opencode_api_key; owner's choice, 2026-10-06). Each distinct
 pool candidate gets one Boolean ("noul") question over the verifiers' input text; the answer is
-P(correct). Resumable; the key is read from secrets/vercel_ai_gateway_key. (v2 runs zero-shot Laya
+P(correct). Resumable; every score records the model that gave it. (v2 runs zero-shot Laya
 locally from the pinned checkpoint, scripts/paperb_laya.py, so hosted Laya is no longer offered here.)
 
-    python3 scripts/paperb_hosted.py --model typesafe-ai/jev [--workers 3]
+    python3 scripts/paperb_hosted.py --provider opencode --model jev-1.13-free [--workers 3] [--limit N]
 """
 
 from __future__ import annotations
@@ -25,7 +27,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from paperb_verifiers import EVAL, REPO, render  # noqa: E402
 
-URL = "https://ai-gateway.vercel.sh/typesafe/v1/systemone"
+PROVIDERS = {"vercel": ("https://ai-gateway.vercel.sh/typesafe/v1/systemone", "vercel_ai_gateway_key", ["typesafe-ai/jev"]),
+             "opencode": ("https://opencode.ai/zen/v1/systemone", "opencode_api_key", ["jev-1.13-free", "jev-1.13"])}
 INSTRUCTIONS = "Does this SQL query and its result correctly answer the question?"
 RETRIES = 4                 # noqa: literals - 429 back-off attempts
 SAVE_EVERY = 50             # noqa: literals - completions between saves
@@ -33,19 +36,26 @@ SAVE_EVERY = 50             # noqa: literals - completions between saves
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--model", required=True, choices=["typesafe-ai/jev"])
+    ap.add_argument("--provider", choices=sorted(PROVIDERS), default="opencode")
+    ap.add_argument("--model", required=True)
     ap.add_argument("--workers", type=int, default=3)
+    ap.add_argument("--limit", type=int, help="score at most this many new candidates (a smoke test)")
     args = ap.parse_args()
-    key = (REPO / "secrets" / "vercel_ai_gateway_key").read_text().strip()
+    url, key_file, models = PROVIDERS[args.provider]
+    if args.model not in models:
+        raise SystemExit(f"{args.provider} offers {models}")
+    key = (REPO / "secrets" / key_file).read_text().strip()
     pool = json.loads((EVAL / "paperb_pool.json").read_text())["questions"]
-    out = EVAL / f"paperb_scores_{args.model.split('/')[-1]}_zeroshot.json"
-    record = json.loads(out.read_text()) if out.exists() else {"model": args.model, "instructions": INSTRUCTIONS,
-                                                               "by_text": {}, "scores": {}, "cost": 0.0}
+    out = EVAL / "paperb_scores_jev_zeroshot.json"           # the name paperb_analyze.py reads
+    record = json.loads(out.read_text()) if out.exists() else {"model": "jev", "instructions": INSTRUCTIONS,
+                                                               "by_text": {}, "model_by_text": {}, "scores": {}, "cost": 0.0}
+    record.setdefault("model_by_text", {})
+    record.setdefault("providers", {})[args.model] = url
     texts: dict[str, list[str]] = {}
     for q in pool:
         for i, c in enumerate(q["candidates"]):
             texts.setdefault(render(q["question"], c["sql"], c["preview"]), []).append(f"{q['question_id']}|{i}")
-    todo = [t for t in texts if t not in record["by_text"]]
+    todo = [t for t in texts if t not in record["by_text"]][:args.limit]
     print(f"{len(texts)} distinct candidates, {len(todo)} to score", flush=True)
     lock = threading.Lock()
 
@@ -53,7 +63,7 @@ def main() -> int:
         body = json.dumps({"model": args.model, "state": text,
                            "questions": {"correct": {"type": "noul", "instructions": INSTRUCTIONS}}}).encode()
         for attempt in range(RETRIES):
-            req = urllib.request.Request(URL, data=body, headers={"Authorization": "Bearer " + key,
+            req = urllib.request.Request(url, data=body, headers={"Authorization": "Bearer " + key,
                                                                   "Content-Type": "application/json",
                                                                   "User-Agent": "statesync-research/1.0"})
             try:
@@ -79,6 +89,7 @@ def main() -> int:
                 done += 1
                 if p is not None:
                     record["by_text"][text] = p
+                    record["model_by_text"][text] = args.model
                     record["cost"] += cost
                 if done % SAVE_EVERY == 0 or done == len(todo):
                     record["scores"] = {k: record["by_text"][t] for t, ks in texts.items() if t in record["by_text"] for k in ks}
