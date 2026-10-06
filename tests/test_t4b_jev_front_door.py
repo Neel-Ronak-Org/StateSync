@@ -60,8 +60,9 @@ def _evidence(turns=(), question="What was 3M's FY2018 capex?"):
         card_status="ok")
 
 
-def _probs(history=0.1, db=0.9, docs=0.1, oos=0.1):
-    return {"uses_history": history, "needs_database": db, "needs_documents": docs, "out_of_scope": oos}
+def _probs(history=0.1, db=0.9, docs=0.1, oos=0.1, dep=0.1):
+    return {"uses_history": history, "needs_database": db, "needs_documents": docs, "out_of_scope": oos,
+            "documents_depend_on_database": dep}
 
 
 class FakeJev:
@@ -117,7 +118,7 @@ def test_the_config_keys_and_the_flag_comment_are_as_specified():
     fd = cfg.front_door
     assert fd.jev_url == "https://opencode.ai/zen/v1/systemone" and fd.jev_model == "jev-1.13"
     assert (fd.jev_timeout_s, fd.jev_retry_wait_s) == (30, 5)
-    assert (fd.jev_yes, fd.jev_no, fd.jev_history, fd.jev_out_of_scope) == (0.6, 0.4, 0.5, 0.5)
+    assert (fd.jev_yes, fd.jev_no, fd.jev_history, fd.jev_out_of_scope, fd.jev_depends) == (0.6, 0.4, 0.5, 0.5, 0.5)
     flags = (REPO_ROOT / "config" / "flags.toml").read_text()
     line = next(row for row in flags.splitlines() if row.startswith("front_door "))
     assert '= "off"' in line and '"jev"' in line.split("#", 1)[1]
@@ -125,14 +126,16 @@ def test_the_config_keys_and_the_flag_comment_are_as_specified():
     assert "jev" in front_door.DECIDERS and front_door.front_door_enabled("jev") is True
 
 
-def test_the_four_questions_are_the_specified_text():
+def test_the_five_questions_are_the_specified_text():
     assert JEV_QUESTIONS == {
         "uses_history": "Does the new question depend on the earlier conversation turns to be understood?",
         "needs_database": "Does answering the new question need facts stored in the database described?",
         "needs_documents": "Does answering the new question need what the uploaded documents say?",
         "out_of_scope": "Is the new question about something neither the database nor the documents could answer?",
+        "documents_depend_on_database": ("Does the documents part of the new question depend on an answer from the "
+                                         "database first, for example which company to look up?"),
     }
-    assert set(JEV_RECHECK_QUESTIONS) == {"needs_database", "needs_documents", "out_of_scope"}
+    assert set(JEV_RECHECK_QUESTIONS) == set(JEV_QUESTIONS) - {"uses_history"}
 
 
 # ── the state Jev sees, and the request body ────────────────────────────────
@@ -149,10 +152,11 @@ def test_the_state_holds_the_question_turns_card_and_documents():
     assert json.loads(jev_state(_evidence(), "q"))["conversation"] == []
 
 
-def test_the_request_body_has_the_four_noul_questions():
+def test_the_request_body_has_the_five_noul_questions():
     body = jev_client.request_body("jev-1.13", "STATE", JEV_QUESTIONS)
     assert body["model"] == "jev-1.13" and body["state"] == "STATE"
-    assert set(body["questions"]) == {"uses_history", "needs_database", "needs_documents", "out_of_scope"}
+    assert set(body["questions"]) == {"uses_history", "needs_database", "needs_documents", "out_of_scope",
+                                      "documents_depend_on_database"}
     assert all(q["type"] == "noul" and q["instructions"] == JEV_QUESTIONS[name] for name, q in body["questions"].items())
 
 
@@ -221,15 +225,50 @@ def test_uses_history_with_an_unchanged_question_is_not_rechecked(monkeypatch, l
     assert len(fake.calls) == 1 and decision.route == "sql" and decision.jev["rechecked"] is False
 
 
-def test_hybrid_calls_the_llm_for_the_split_and_the_route_stays_hybrid(monkeypatch, llm):
-    llm.reply = _llm_reply(standalone_question="q", database_question="the sql part", documents_question="the docs part",
-                           documents_depend_on_database=True)
-    fake = _jev(monkeypatch, _probs(db=0.9, docs=0.9))
+def test_a_hybrid_route_makes_no_llm_call_and_sets_no_split_or_subtasks(monkeypatch, llm):
+    fake = _jev(monkeypatch, _probs(db=0.9, docs=0.9, dep=0.9))
     decision = RUN(decide_jev(_evidence(), "q"))
-    assert len(llm.log) == 1 and len(fake.calls) == 1                          # same question: no re-check
+    assert llm.log == [] and decision.llm_calls == 0 and len(fake.calls) == 1
     assert decision.route == "hybrid" and decision.parsed.out_of_scope is False
-    assert (decision.parsed.database_question, decision.parsed.documents_question) == ("the sql part", "the docs part")
+    assert (decision.parsed.database_question, decision.parsed.documents_question) == ("", "")
     assert decision.parsed.documents_depend_on_database is True
+
+    async def gather(state_dict):
+        return _evidence(question=state_dict["raw_query"])
+
+    monkeypatch.setattr(front_door, "gather_evidence", gather)
+    _jev(monkeypatch, _probs(db=0.9, docs=0.9, dep=0.9))
+    update = RUN(front_door.front_door_node({"raw_query": "q", "query_id": "q1"}, "jev"))
+    assert update["route"] == "hybrid" and "subtasks" not in update and update["docs_depend_on_sql"] is True
+    assert update["metrics"]["llm_calls"] == 0 and llm.log == []
+
+
+@pytest.mark.parametrize("p, expected", [(0.0, False), (0.4999, False), (0.5, True), (1.0, True)])
+def test_documents_depend_on_database_follows_the_threshold_at_its_edge(monkeypatch, llm, p, expected):
+    _jev(monkeypatch, _probs(db=0.9, docs=0.9, dep=p))
+    assert RUN(decide_jev(_evidence(), "q")).parsed.documents_depend_on_database is expected
+
+
+def test_a_follow_up_calls_the_llm_once_and_keeps_only_its_text_fields(monkeypatch, llm):
+    llm.reply = _llm_reply(language="en", standalone_question="What was 3M's FY2022 capex?", uses_history=False,
+                           needs_database="no", needs_documents="no", out_of_scope=True,
+                           database_question="the sql part", documents_question="the docs part",
+                           documents_depend_on_database=True)
+    fake = _jev(monkeypatch, _probs(history=0.9, db=0.9, docs=0.9, dep=0.1), _probs(db=0.9, docs=0.9, dep=0.2))
+    decision = RUN(decide_jev(_evidence([_turn(1, "x")], question="And in FY2022?"), "And in FY2022?"))
+    assert len(llm.log) == 1 and decision.llm_calls == 1
+    p = decision.parsed
+    assert p.standalone_question == "What was 3M's FY2022 capex?" and p.language == "en"
+    assert (p.database_question, p.documents_question) == ("", "")                 # the LLM's split is dropped
+    assert p.documents_depend_on_database is False                                # Jev's, not the LLM's True
+    assert p.uses_history is True and p.out_of_scope is False and decision.route == "hybrid"
+    assert len(fake.calls) == 2 and fake.calls[1][1] == JEV_RECHECK_QUESTIONS
+
+
+def test_the_recheck_decides_the_dependence_too(monkeypatch, llm):
+    _jev(monkeypatch, _probs(history=0.9, dep=0.1), _probs(db=0.9, docs=0.9, dep=0.5))
+    decision = RUN(decide_jev(_evidence(), "And in FY2022?"))
+    assert decision.route == "hybrid" and decision.parsed.documents_depend_on_database is True
 
 
 def test_a_non_english_question_calls_the_llm_and_the_gate_is_the_script_test(monkeypatch, llm):
@@ -242,7 +281,7 @@ def test_a_non_english_question_calls_the_llm_and_the_gate_is_the_script_test(mo
 
 def test_an_llm_that_cannot_be_read_leaves_jevs_route_and_the_original_question(monkeypatch, llm):
     llm.reply = "not json"
-    _jev(monkeypatch, _probs(db=0.9, docs=0.9))
+    _jev(monkeypatch, _probs(history=0.9, db=0.9, docs=0.9))
     decision = RUN(decide_jev(_evidence(), "q"))
     assert decision.route == "hybrid" and decision.parsed.standalone_question == "q" and decision.parsed.parse_ok is False
 

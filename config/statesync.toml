@@ -164,6 +164,7 @@ jev_yes                   = 0.6     # P(yes) at or above this: the need is "yes"
 jev_no                    = 0.4     # P(yes) at or below this: the need is "no"; between the two it is "unsure"
 jev_history               = 0.5     # P(uses_history) at or above this: the question depends on earlier turns
 jev_out_of_scope          = 0.5     # P(out_of_scope) at or above this: neither source can answer it
+jev_depends               = 0.5     # P(documents_depend_on_database) at or above this: the documents half waits for the database half's answer (entity narrowing)
 
 [answer_checks]
 # pipeline.answer_checks = "on". Deterministic checks on an executed SELECT.

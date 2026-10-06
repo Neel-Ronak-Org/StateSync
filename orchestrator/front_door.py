@@ -456,8 +456,10 @@ JEV_QUESTIONS = {
     "needs_database": "Does answering the new question need facts stored in the database described?",
     "needs_documents": "Does answering the new question need what the uploaded documents say?",
     "out_of_scope": "Is the new question about something neither the database nor the documents could answer?",
+    "documents_depend_on_database": ("Does the documents part of the new question depend on an answer from the "
+                                     "database first, for example which company to look up?"),
 }
-# The re-check, after the LLM rewrote the question, asks the three that decide the route.
+# The re-check, after the LLM rewrote the question, asks all but uses_history (the rewrite resolved it).
 JEV_RECHECK_QUESTIONS = {k: v for k, v in JEV_QUESTIONS.items() if k != "uses_history"}
 
 
@@ -504,11 +506,14 @@ def _same_question(a: str, b: str) -> bool:
 
 
 async def decide_jev(evidence: Evidence, question: str) -> Decision:
-    """Arm "jev". One Jev request with four questions makes the decision. The LLM (decide_llm) is called,
-    for its text only, when the question uses history, the route is hybrid, or the language gate says it
-    is not English; its routing fields are ignored. If it changed the question, Jev's needs and
-    out-of-scope questions are asked again over the standalone question (no new search) and the route
-    is read from that. A Jev error falls back to decide_llm entirely, recorded in the trace."""
+    """Arm "jev". One Jev request with five questions makes the decision. The LLM (decide_llm) is called,
+    for its text only, when the question uses history or the language gate says it is not English; only
+    its standalone question and language are kept, never its routing fields or its split (this arm sets
+    no database_question / documents_question, so a hybrid route reaches the hybrid plan node without
+    subtasks and it splits as it does without the front door). documents_depend_on_database is Jev's
+    (P >= jev_depends). If the LLM changed the question, Jev's questions (all but uses_history) are asked
+    again over the standalone question (no new search) and the route and the dependence are read from
+    that. A Jev error falls back to decide_llm entirely, recorded in the trace."""
     first = await jev_client.ask(jev_state(evidence, question), JEV_QUESTIONS)
     if not first.ok:
         logger.error("front door: Jev failed (%s); falling back to the LLM arm", first.error)
@@ -519,12 +524,17 @@ async def decide_jev(evidence: Evidence, question: str) -> Decision:
 
     needs_database, needs_documents, out_of_scope, route = jev_reading(first.probabilities)
     uses_history = first.probabilities["uses_history"] >= float(cfg.front_door.jev_history)
+
+    def depends_on_database(answers: dict[str, float]) -> bool:
+        return answers["documents_depend_on_database"] >= float(cfg.front_door.jev_depends)
+
+    depends = depends_on_database(first.probabilities)
     probabilities = {"first": first.probabilities}
     usage = {"first": first.usage}
     jev: dict[str, Any] = {"model": first.model, "ms": first.ms, "calls": 1, "rechecked": False}
 
     text: Decision | None = None
-    if uses_history or route == "hybrid" or needs_language_model(question):
+    if uses_history or needs_language_model(question):
         text = await decide_llm(evidence, question)
     standalone = text.parsed.standalone_question if text else question
     if text is not None and not _same_question(standalone, question):
@@ -535,8 +545,9 @@ async def decide_jev(evidence: Evidence, question: str) -> Decision:
             jev["rechecked"] = True
             probabilities["recheck"] = recheck.probabilities
             usage["recheck"] = recheck.usage
-            needs_database, needs_documents, out_of_scope, route = jev_reading(
-                {**first.probabilities, **recheck.probabilities})
+            reading = {**first.probabilities, **recheck.probabilities}
+            needs_database, needs_documents, out_of_scope, route = jev_reading(reading)
+            depends = depends_on_database(reading)
         else:
             logger.error("front door: Jev re-check failed (%s); keeping the first reading", recheck.error)
             jev["jev_error"] = recheck.error
@@ -544,10 +555,11 @@ async def decide_jev(evidence: Evidence, question: str) -> Decision:
 
     if text is not None:
         parsed = replace(text.parsed, uses_history=uses_history, needs_database=needs_database,
-                         needs_documents=needs_documents, out_of_scope=out_of_scope)
+                         needs_documents=needs_documents, out_of_scope=out_of_scope, database_question="",
+                         documents_question="", documents_depend_on_database=depends)
     else:
         parsed = Parsed(True, "en", question, uses_history, needs_database, needs_documents, out_of_scope,
-                        "", "", False)
+                        "", "", depends)
     return Decision(
         "jev", parsed, route, tokens_in=text.tokens_in if text else 0, tokens_out=text.tokens_out if text else 0,
         llm_calls=text.llm_calls if text else 0, llm_error=text.llm_error if text else None,
