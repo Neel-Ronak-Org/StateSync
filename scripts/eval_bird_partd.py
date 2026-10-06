@@ -83,10 +83,14 @@ def cmd_score() -> int:
             # the product names a connected database's tables cn_<id>.<table>; Paper A's scorer strips that
             # (eval_bird.unqualify) and runs it in the BIRD schema, as pool.run does
             res = pool.run(conn, a["db_id"], eb.unqualify(sql) if sql else None)
-            not_answerable = any((e or {}).get("category") == "no_data_source" for e in a.get("errors") or [])
+            errs = [e or {} for e in a.get("errors") or []]
+            # T2b: a NOT_ANSWERABLE left unconfirmed because no attempt remained also ends the question unanswered
+            not_answerable = (any(e.get("category") == "no_data_source" for e in errs)
+                              or bool(errs and errs[-1].get("category") == "not_answerable_unconfirmed"))
             rows[qid] = {"correct": bool(golds[qid] is not None and res is not None
                                          and eb.rows_match_relaxed(res[1], golds[qid], norm=eb.norm_v2)),
-                         "not_answerable": not_answerable, "ran": res is not None}
+                         "not_answerable": not_answerable, "ran": res is not None,
+                         "confirmations": sum(e.get("category") == "not_answerable_unconfirmed" for e in errs)}
         result[arm] = rows
     ids = sorted(set(result["off"]) & set(result["on"]))
     off, on = result["off"], result["on"]
@@ -97,6 +101,7 @@ def cmd_score() -> int:
                "paired": {"on_only_correct": b, "off_only_correct": c, "p_mcnemar": round(mcnemar_exact(b, c), 4)},
                "false_not_answerable": {"on": sum(on[i]["not_answerable"] for i in ids),
                                         "off": sum(off[i]["not_answerable"] for i in ids)},
+               "t2b_confirmations_on": sum(on[i].get("confirmations", 0) for i in ids),
                "bar": "false NOT_ANSWERABLE <= 1% of questions; no significant accuracy drop"}
     summary["false_not_answerable_rate_on"] = round(summary["false_not_answerable"]["on"] / max(1, len(ids)), 4)
     OUT.write_text(json.dumps({"seed": SEED, "n": N, "summary": summary, "per_question": result}, indent=1, default=str) + "\n")
