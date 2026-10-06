@@ -79,3 +79,19 @@ variable `JEV_API_KEY_FILE`); never log it.
 - Config is additive only. Never `git stash`, never push, never touch another branch. Commit once, with a
   message starting `T4b:`.
 - Report the files changed, the tests, the commands with their output tails, and anything you were unsure of.
+
+## Amendments (2026-10-06, sent to the implementer before its commit)
+
+1. **Paid model by default.** `jev_model = "jev-1.13"`: the free tier rate-limits (HTTP 429) under evaluation
+   load. The trace records each call's `usage` (OpenCode Zen returns `model`, `answers`, `usage`; no cost).
+   Jev answers in steps of 0.01 and is not deterministic (one state gave 0.58, then 0.63): no caching.
+2. **No LLM split (owner's design).** Jev is the whole router. The LLM is called only for a follow-up
+   (`uses_history`) or a non-English question, and only its text fields are used; the jev arm never sets
+   `database_question` / `documents_question`. A hybrid question goes to the SQL half whole; the documents
+   half follows, narrowed by the SQL result's entities when Jev's fifth question,
+   `documents_depend_on_database` (P ≥ `jev_depends`, default 0.5), says it depends on the database answer
+   and `pipeline.hybrid_entities` is on. The evaluated flags file disables `retrieval.hybrid_decomposition`
+   so the question is not split by the decomposer either.
+3. **Thresholds.** Fitted on the routing set's dev split from recorded probabilities; the test split is then
+   run live with them (a decision can trigger an LLM call and a re-check, which offline replay cannot).
+   The held-out hybrid set has been seen, so a Jev result on it is development, and labelled so.

@@ -4,7 +4,10 @@ scripts/paperb_hosted.py
 Paper B's hosted zero-shot decision model (docs/research/detect_then_fallback_study.md v2, §5): Jev
 (paid credits) through a TypeSafe-compatible "systemone" endpoint: Vercel AI Gateway (typesafe-ai/jev, key
 secrets/vercel_ai_gateway_key) or OpenCode Zen (jev-1.13-free, then jev-1.13 if the free tier rate-limits;
-key secrets/opencode_api_key; owner's choice, 2026-10-06). Each distinct
+key secrets/opencode_api_key; owner's choice, 2026-10-06). The free tier rate-limited after about 250
+candidates, so the scores come from jev-1.13 alone (one model for every score; the free model's partial
+scores are kept apart in paperb_scores_jev_free_partial.json). Jev is not deterministic (the same text gave
+0.58 and 0.63) and answers in steps of 0.01; each distinct text is asked once. Each distinct
 pool candidate gets one Boolean ("noul") question over the verifiers' input text; the answer is
 P(correct). Resumable; every score records the model that gave it. (v2 runs zero-shot Laya
 locally from the pinned checkpoint, scripts/paperb_laya.py, so hosted Laya is no longer offered here.)
@@ -31,6 +34,7 @@ PROVIDERS = {"vercel": ("https://ai-gateway.vercel.sh/typesafe/v1/systemone", "v
              "opencode": ("https://opencode.ai/zen/v1/systemone", "opencode_api_key", ["jev-1.13-free", "jev-1.13"])}
 INSTRUCTIONS = "Does this SQL query and its result correctly answer the question?"
 RETRIES = 4                 # noqa: literals - 429 back-off attempts
+USD_PER_M_INPUT = {"jev-1.13": 0.042, "jev-1.13-free": 0.0}   # noqa: literals - OpenCode Zen's price list (2026-10-06); output tokens free
 SAVE_EVERY = 50             # noqa: literals - completions between saves
 
 
@@ -68,7 +72,9 @@ def main() -> int:
                                                                   "User-Agent": "statesync-research/1.0"})
             try:
                 r = json.load(urllib.request.urlopen(req, timeout=60))
-                cost = float(((r.get("provider_metadata") or {}).get("gateway") or {}).get("cost") or 0)
+                gateway = float(((r.get("provider_metadata") or {}).get("gateway") or {}).get("cost") or 0)
+                tokens = int((r.get("usage") or {}).get("input_tokens") or 0)
+                cost = gateway or tokens * USD_PER_M_INPUT.get(args.model, 0.0) / 1e6   # OpenCode reports usage, not cost
                 return text, float(r["answers"]["correct"]["noul"]), cost
             except urllib.error.HTTPError as e:
                 if e.code == 429 and attempt < RETRIES - 1:
