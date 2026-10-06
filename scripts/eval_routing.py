@@ -48,6 +48,8 @@ ARMS = {"shipped": "off", "llm": "llm", "jev": "jev", "jev_rw": "jev_rw", "jev_c
 HISTORY_ROUTE = {"docs": "docs", "sql": "sql", "hybrid": "hybrid", "neither": "neither", "either": "docs"}
 DRAFT_POLL_S = 5            # noqa: literals - polling the product's draft job
 ROUTE_TIMEOUT_S = 180       # noqa: literals - a routing-only request (one model call at most, plus evidence)
+RATE_LIMIT_RETRIES = 6      # noqa: literals - the orchestrator's per-principal limiter (HTTP 429): wait and ask again
+RATE_LIMIT_WAIT_S = 20      # noqa: literals - seconds between those attempts
 
 
 def api(port: int, method: str, path: str, body: dict | None = None, timeout: float = ROUTE_TIMEOUT_S):
@@ -117,10 +119,15 @@ def route_one(port: int, workspace: str, question: str, history: list[dict] | No
     if history is not None:
         body["debug_history"] = history
     t0 = time.monotonic()
-    try:
-        st, resp = api(port, "POST", "/query", body)
-    except Exception as exc:  # noqa: BLE001 - a hung or dropped request is recorded and asked again on resume
-        return {"http_status": None, "detail": f"{type(exc).__name__}: {exc}"[:300], "ms": round((time.monotonic() - t0) * 1000)}
+    for attempt in range(RATE_LIMIT_RETRIES + 1):
+        try:
+            st, resp = api(port, "POST", "/query", body)
+        except Exception as exc:  # noqa: BLE001 - a hung or dropped request is recorded and asked again on resume
+            return {"http_status": None, "detail": f"{type(exc).__name__}: {exc}"[:300], "ms": round((time.monotonic() - t0) * 1000)}
+        if st != 429 or attempt == RATE_LIMIT_RETRIES:   # noqa: literals - HTTP Too Many Requests (the orchestrator's own limiter)
+            break
+        time.sleep(RATE_LIMIT_WAIT_S)
+        t0 = time.monotonic()
     trace = resp.get("state_trace") or {}
     return {"http_status": st, "detail": resp.get("detail"), "route": trace.get("route"),
             "out_of_scope": trace.get("out_of_scope"), "normalized_query": trace.get("normalized_query"),
