@@ -15,6 +15,7 @@ and is not edited), then records the flags file the container actually ran with.
     python3 scripts/eval_bird_partd.py ask --arm off --port 8092 [--limit N]
     python3 scripts/eval_bird_partd.py ask --arm on  --port 8091 [--limit N]
     python3 scripts/eval_bird_partd.py score
+    python3 scripts/eval_bird_partd.py ask --arm off --port 8092 --rep 1      a repeat of the off arm (noise floor)
 """
 
 from __future__ import annotations
@@ -38,8 +39,8 @@ FLAGS = {"off": REPO / "research" / "paperb" / "flags_partd_v3_off.toml",
 OUT = REPO / "docs" / "eval" / "partd_g1_bird.json"
 
 
-def label(arm: str) -> str:
-    return f"partd_v3_{arm}_heldout150"
+def label(arm: str, rep: int = 0) -> str:
+    return f"partd_v3_{arm}_heldout150" + (f"_r{rep}" if rep else "")
 
 
 def sample_ids() -> list[int]:
@@ -47,10 +48,10 @@ def sample_ids() -> list[int]:
     return sorted(random.Random(SEED).sample(sorted(set(ids)), N))
 
 
-def cmd_ask(arm: str, port: int, limit: int | None) -> int:
+def cmd_ask(arm: str, port: int, limit: int | None, rep: int = 0) -> int:
     eb.API = f"http://127.0.0.1:{port}"           # a Part D orchestrator, not the shared one
-    rc = eb.cmd_ask(label(arm), spacing_s=1.0, limit=limit, sample_name="heldout", only_ids=sample_ids())
-    path = eb.answers_path(label(arm))
+    rc = eb.cmd_ask(label(arm, rep), spacing_s=1.0, limit=limit, sample_name="heldout", only_ids=sample_ids())
+    path = eb.answers_path(label(arm, rep))
     record = json.loads(path.read_text())
     record["pipeline_flags"] = tomllib.loads(FLAGS[arm].read_text())["pipeline"]   # what the container ran
     record["partd"] = {"arm": arm, "port": port, "flags_file": str(FLAGS[arm].relative_to(REPO)),
@@ -66,14 +67,15 @@ def mcnemar_exact(b: int, c: int) -> float:
     return min(1.0, 2 * sum(math.comb(n, i) for i in range(min(b, c) + 1)) / 2 ** n)
 
 
-def cmd_score() -> int:
+def cmd_score(reps: dict[str, int] | None = None, out: Path = OUT) -> int:
+    reps = reps or {"off": 0, "on": 0}
     import paperb_pool as pool
     gold_sql = {int(q["question_id"]): q["SQL"] for q in json.loads(eb.CORRECTED.read_text())}
     conn = eb.bird_connection()
     golds: dict[int, list | None] = {}
     result: dict[str, dict] = {}
     for arm in ("off", "on"):
-        answers = json.loads(eb.answers_path(label(arm)).read_text())["answers"]
+        answers = json.loads(eb.answers_path(label(arm, reps[arm])).read_text())["answers"]
         rows = {}
         for key, a in answers.items():
             qid = int(key)
@@ -104,7 +106,7 @@ def cmd_score() -> int:
                "t2b_confirmations_on": sum(on[i].get("confirmations", 0) for i in ids),
                "bar": "false NOT_ANSWERABLE <= 1% of questions; no significant accuracy drop"}
     summary["false_not_answerable_rate_on"] = round(summary["false_not_answerable"]["on"] / max(1, len(ids)), 4)
-    OUT.write_text(json.dumps({"seed": SEED, "n": N, "summary": summary, "per_question": result}, indent=1, default=str) + "\n")
+    out.write_text(json.dumps({"seed": SEED, "n": N, "reps": reps, "summary": summary, "per_question": result}, indent=1, default=str) + "\n")
     print(json.dumps(summary, indent=1))
     return 0
 
@@ -116,9 +118,15 @@ def main() -> int:
     a.add_argument("--arm", choices=["off", "on"], required=True)
     a.add_argument("--port", type=int, required=True)
     a.add_argument("--limit", type=int)
-    sub.add_parser("score")
+    a.add_argument("--rep", type=int, default=0, help="a repeat of the same arm (noise floor), saved as _r<rep>")
+    sc = sub.add_parser("score")
+    sc.add_argument("--off-rep", type=int, default=0)
+    sc.add_argument("--on-rep", type=int, default=0)
+    sc.add_argument("--out", type=Path, default=OUT)
     args = ap.parse_args()
-    return cmd_ask(args.arm, args.port, args.limit) if args.cmd == "ask" else cmd_score()
+    if args.cmd == "ask":
+        return cmd_ask(args.arm, args.port, args.limit, args.rep)
+    return cmd_score({"off": args.off_rep, "on": args.on_rep}, args.out)
 
 
 if __name__ == "__main__":

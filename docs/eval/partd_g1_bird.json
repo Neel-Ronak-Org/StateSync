@@ -5,1523 +5,1824 @@
   "questions_in_both": 150,
   "accuracy": {
    "off": 0.76,
-   "on": 0.7267
+   "on": 0.7
   },
   "paired": {
    "on_only_correct": 6,
-   "off_only_correct": 11,
-   "p_mcnemar": 0.3323
+   "off_only_correct": 15,
+   "p_mcnemar": 0.0784
   },
   "false_not_answerable": {
-   "on": 2,
+   "on": 3,
    "off": 0
   },
+  "t2b_confirmations_on": 0,
   "bar": "false NOT_ANSWERABLE <= 1% of questions; no significant accuracy drop",
-  "false_not_answerable_rate_on": 0.0133
+  "false_not_answerable_rate_on": 0.02
  },
  "per_question": {
   "off": {
    "5": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "12": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "23": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "24": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "25": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "39": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "47": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "50": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "72": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "85": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "87": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "93": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "100": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "117": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "118": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "128": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "129": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "136": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "138": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "149": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "152": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "169": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "173": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "186": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "195": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "201": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "207": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "215": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "218": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "220": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "227": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "228": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "230": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "239": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "243": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "244": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "247": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "255": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "282": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "344": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "349": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "356": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "358": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "383": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "405": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "407": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "416": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "465": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "468": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "473": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "474": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "484": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "522": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "528": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "531": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "537": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "539": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "547": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "555": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "572": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "573": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "598": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "669": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "671": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "672": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "685": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "705": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "716": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "737": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "745": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "772": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "782": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "785": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "797": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "801": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "857": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "862": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "872": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "875": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "881": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "884": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "892": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "901": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "909": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "928": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "937": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "948": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "950": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "954": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "959": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "960": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "962": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "971": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "989": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "994": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1001": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1014": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1025": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1028": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1030": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1032": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1037": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1042": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1044": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1084": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1092": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1094": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1105": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1113": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1115": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1135": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1139": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1141": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1147": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1150": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1153": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1155": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1156": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1175": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1179": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1209": {
     "correct": false,
     "not_answerable": false,
-    "ran": false
+    "ran": false,
+    "confirmations": 0
    },
    "1232": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1242": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1270": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1275": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1302": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1322": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1323": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1344": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1346": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1352": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1359": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1362": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1368": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1380": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1390": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1392": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1403": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1427": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1435": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1457": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1472": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1479": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1490": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1500": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1506": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1524": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1531": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1533": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1247": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    }
   },
   "on": {
    "5": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "12": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "23": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "24": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "25": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "39": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "47": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "50": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "72": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "85": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "87": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "93": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "100": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "117": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "118": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "128": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "129": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "136": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "138": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "149": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "152": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "169": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "173": {
     "correct": false,
-    "not_answerable": false,
-    "ran": true
+    "not_answerable": true,
+    "ran": false,
+    "confirmations": 0
    },
    "186": {
-    "correct": true,
+    "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "195": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "201": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "207": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "215": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "218": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "220": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "227": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "228": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "230": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "239": {
-    "correct": true,
+    "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "243": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "244": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "247": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "255": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "282": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "344": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "349": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "356": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "358": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "383": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "405": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "407": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "416": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "465": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "468": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "473": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "474": {
-    "correct": false,
+    "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "484": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "522": {
     "correct": false,
     "not_answerable": true,
-    "ran": false
+    "ran": false,
+    "confirmations": 0
    },
    "528": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "531": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "537": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "539": {
-    "correct": false,
+    "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "547": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "555": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "572": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "573": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "598": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "669": {
-    "correct": false,
+    "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "671": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "672": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "685": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "705": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "716": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "737": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "745": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "772": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "782": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "785": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "797": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "801": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "857": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "862": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "872": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "875": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "881": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "884": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "892": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "901": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "909": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "928": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "937": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "948": {
-    "correct": true,
+    "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "950": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "954": {
-    "correct": true,
+    "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "959": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "960": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "962": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "971": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "989": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "994": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1001": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1014": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1025": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1028": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1030": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1032": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1037": {
-    "correct": true,
+    "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1042": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1044": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1084": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1092": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1094": {
-    "correct": true,
+    "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1105": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1113": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1115": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1135": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1139": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1141": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1147": {
-    "correct": false,
+    "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1150": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1153": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1155": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1156": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1175": {
     "correct": false,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1179": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1209": {
     "correct": false,
     "not_answerable": false,
-    "ran": false
+    "ran": false,
+    "confirmations": 0
    },
    "1232": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1242": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1247": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1270": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1275": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
    },
    "1302": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
-   },
-   "1323": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1344": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1346": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1352": {
-    "correct": false,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1359": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1362": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1368": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1380": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1390": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1392": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1403": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1427": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1435": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1457": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1472": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1479": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1490": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1500": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1506": {
-    "correct": true,
-    "not_answerable": false,
-    "ran": true
-   },
-   "1524": {
-    "correct": false,
-    "not_answerable": true,
-    "ran": false
-   },
-   "1531": {
-    "correct": false,
-    "not_answerable": false,
-    "ran": false
-   },
-   "1533": {
-    "correct": false,
-    "not_answerable": false,
-    "ran": false
+    "ran": true,
+    "confirmations": 0
    },
    "1322": {
     "correct": true,
     "not_answerable": false,
-    "ran": true
+    "ran": true,
+    "confirmations": 0
+   },
+   "1323": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1344": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1346": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1352": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1359": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1362": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1368": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1380": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1390": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1392": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1403": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1427": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1435": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1457": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1472": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1479": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1490": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1500": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1506": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1524": {
+    "correct": false,
+    "not_answerable": true,
+    "ran": false,
+    "confirmations": 0
+   },
+   "1531": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
+   },
+   "1533": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true,
+    "confirmations": 0
    }
   }
  }
