@@ -145,4 +145,8 @@ it is.
 
 ## Change log
 
-(empty)
+1. **2026-10-07, R3, before any Jev call (a note, nothing changed).** The pair builder resolved all 298 reference
+   queries (0 dropped). Two N-table cards are empty (single-table databases). BIRD repeats some data across tables
+   (for example, school names are in both `schools` and `frpm`), so a few N-column negatives may still be
+   answerable through another column; the N-column AUROC is therefore a lower bound on how well Jev separates
+   answerable from unanswerable cards.
