@@ -59,3 +59,21 @@ its reason, and the paper reports it.
 ## Change log
 
 (none)
+
+## Results (2026-10-07; nothing above was changed after the set existed)
+
+Set: 200 questions (278 of 280 sampled pages kept; the checker dropped 2, both unparsed replies, so it filtered
+little). Searches: 200 of 200 in both configurations, 400 re-ranked searches, 0 failed. Jev: 6,220 passages, $0.17.
+
+| Arm | page first | window (8) | document first | page anywhere (25) |
+|---|---|---|---|---|
+| D dense | 0.105 | 0.565 | 0.580 | 0.725 |
+| JD Jev over dense | 0.510 | 0.710 | 0.880 | 0.725 |
+| B bge + titles (evaluated setting) | 0.130 | 0.750 | 0.875 | 0.785 |
+| JB Jev over bge + titles | **0.545** | 0.760 | 0.895 | 0.785 |
+
+- **H-P1 (primary), JB vs B, page first: confirmed.** 0.545 vs 0.130, +85 / -2, exact McNemar p = 2.4e-23.
+- H-S1, JB vs B, window: not confirmed (0.760 vs 0.750, +4 / -2, Holm p = 0.69).
+- H-S2, JD vs B, page first: confirmed (0.510 vs 0.130, +81 / -5, Holm p < 1e-17).
+- H-S3, JD vs B, window: not significant (0.710 vs 0.750, +5 / -13, Holm p = 0.19); a difference this test cannot
+  rule out, so "Jev replaces the GPU re-ranker for the writer's window" is not claimed.
