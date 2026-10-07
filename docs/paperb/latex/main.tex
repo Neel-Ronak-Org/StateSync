@@ -4,6 +4,7 @@
 \usepackage{amsmath}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{array}
 \usepackage{url}
 \usepackage[hidelinks]{hyperref}
 \input{numbers.tex}
@@ -13,10 +14,10 @@
 
 \begin{document}
 
-\title{Diagnose, Fix, Measure: An Applied Study of a Database-and-Documents Assistant, and Where a Cheap
-Decision Model Can Replace LLM Calls}
+\title{What Breaks a Database-and-Documents Assistant, and Which of Its LLM Calls a Cheap Decision Model Can
+Replace}
 
-\titlerunning{Diagnose, Fix, Measure: a Database-and-Documents Assistant}
+\titlerunning{What Breaks a Database-and-Documents Assistant}
 \author{Author names (placeholder)}
 \authorrunning{Authors (placeholder)}
 \institute{Affiliation (placeholder) \\ \email{email (placeholder)}}
@@ -24,190 +25,205 @@ Decision Model Can Replace LLM Calls}
 \maketitle
 
 \begin{abstract}
-We report an applied study of StateSync, an assistant that answers questions from a company's SQL database, its
-uploaded filings, or both. On FinanceBench's open sample the shipped system answered \N{fbShip} of
-\N{fbN} questions correctly. A diagnosis traced most failures to two design flaws: a router that saw only the 20
-most recent document titles and nothing of the database, and an answer writer that read the first 8 of 25
-retrieved passages in document order. Fixing the design flaws raised accuracy on this development set to
-\N{fbBge}, and on a held-out
-routing test a single front-door LLM call routed \N{rtLLMrawAcc} of questions correctly against \N{rtShipAcc} for the shipped
-router. For SQL answers, falling back to a pool of candidates when a small trained verifier doubts the first
-answer raised execution accuracy on \N{sN} held-out BIRD questions from \N{sFirst} to \N{sPsix}
-(pre-registered, \N{sH3P}). Across both parts we test a hosted decision model, Jev, as a cheap replacement for LLM
-calls. Used zero-shot it detects wrong SQL answers nearly as well as an LLM judge (AUROC \N{sAurocJev} vs
-\N{sAurocJudge}). Asked one choice question, it routes about as accurately as the LLM front door (\N{rtJevCAcc} vs \N{rtLLMrawAcc},
-no significant difference) with no LLM call. In a
-pre-registered test on \N{pgN} held-out questions it puts the right filing page first \N{pgJBFirst} of the time,
-against \N{pgBFirst} for a cross-encoder re-ranker. Used as independent yes/no
-decisions, it cannot express that a question needs both sources. We report the negative results alongside the
-positive ones.
+StateSync answers business questions from a company's SQL database, its uploaded filings, or both. On FinanceBench's open sample, the shipped version answered only \N{fbShip} of \N{fbN}
+questions correctly. Most of the failures came down to two design decisions: the router saw the 20 most
+recently uploaded document titles and nothing about the database, and the answer writer read the first 8 of 25
+retrieved passages in filing order. With both fixed, accuracy on this development set
+rose to \N{fbBge}, and on a held-out routing test a single front-door LLM call routed \N{rtLLMrawAcc} of
+questions correctly, compared with \N{rtShipAcc} for the old router. For SQL, we let a small trained verifier
+decide when to distrust the first answer and fall back to a pool of candidates. On \N{sN} held-out BIRD
+questions this raised execution accuracy from \N{sFirst} to \N{sPsix} (pre-registered, \N{sH3P}). We also asked
+whether Jev, a hosted decision model that returns probabilities rather than text, could take over LLM
+calls that only decide something. Zero-shot, it spots wrong SQL answers almost as well as an LLM
+judge (AUROC \N{sAurocJev} against \N{sAurocJudge}). Asked a single choice question, it routes without any LLM
+call and is not significantly worse than the front door. In a pre-registered test on \N{pgN} held-out
+questions, it put the right filing page first \N{pgJBFirst} of the time, against \N{pgBFirst} for a
+cross-encoder. It fails when routing is split into separate yes/no questions; we report this and our other negative
+results in full.
 
 \keywords{Text-to-SQL \and Retrieval-augmented generation \and Query routing \and Verification \and
 Decision models \and Evaluation}
 \end{abstract}
 
 \section{Introduction}
-Assistants that answer business questions increasingly sit in front of two kinds of source at once: a
-database of figures and a library of documents. Such a system has to decide where a question should go, find
-the right passage or write the right query, and know when its own answer is likely wrong. Each of these
-decisions is usually made by another large language model (LLM) call. Each call adds seconds and cost, and
-each can fail in its own way.
+More and more assistants that answer business questions sit in front of two kinds of source at once: a database
+of figures and a library of documents. Such a system has to work out where a question should go, write the
+right query or find the right passage, and ideally notice when its own answer is probably wrong. In most
+systems each of these decisions is another large language model (LLM) call, which adds latency and cost and
+brings its own ways of failing.
 
-This paper reports what happened when we measured one such system, StateSync, honestly rather than on the
-questions it was built around. The shipped system answered \N{fbShip} of FinanceBench's open questions
-\cite{islam2023financebench} correctly. We traced the failures to concrete design flaws, fixed them, and
-measured every fix against a baseline. Where we had used a question set to find a flaw, we built a fresh,
-held-out set to confirm the fix, and fixed its analysis plan before any data existed. Throughout, we ask
-one further question: which of the system's LLM calls can a cheap decision model replace? We use Jev
-\cite{typesafe2026jev}, which answers typed yes/no and choice questions about a given state with
-probabilities, writes no text, and costs a fraction of a cent per call.
+This paper is an account of what we found when we evaluated one such system, StateSync, on questions it had not
+been tuned on. On FinanceBench's open questions \cite{islam2023financebench} the shipped version was right only
+\N{fbShip} of the time. We traced the failures to specific design flaws, fixed them, and compared each fix with
+the version before it. Because we found the flaws on FinanceBench, we did not treat our FinanceBench gains as
+evidence. Wherever a question set had been used to find a problem, we built a separate held-out set to test the
+fix, and wrote down how it would be analysed before the data existed.
 
-Our contributions are:
+Alongside the fixes we kept asking a second question: which of the system's LLM calls could be handed to
+something much cheaper? Several of them write no text that a user ever sees. They only decide something, such as
+which source to query or whether an answer looks wrong. We tried Jev \cite{typesafe2026jev} in these roles. Jev
+answers typed yes/no and choice questions about a piece of text with probabilities, produces no prose, and costs a
+fraction of a cent per call.
+
+The paper makes four contributions.
 \begin{itemize}
-\item \textbf{A diagnosis and its fixes.} We show how a blind router and a passage-ordering choice cost most of
-a document assistant's accuracy, and how fixing them raises FinanceBench accuracy from \N{fbShip} to
-\N{fbBge}. A single front-door call replaces three LLM calls before routing.
-\item \textbf{Detect-then-fallback for SQL.} On \N{sN} held-out BIRD questions \cite{li2023bird}, a trained
-verifier's doubt about the first answer triggers a fallback to a pool of 21 candidate queries, raising
-execution accuracy from \N{sFirst} to \N{sPsix} (pre-registered, confirmed after Holm correction). Two other pre-registered hypotheses were not confirmed.
-\item \textbf{A decision model as a cheap layer.} Jev flags wrong SQL answers nearly as well as an LLM judge, with no training (AUROC \N{sAurocJev} vs \N{sAurocJudge}). Asked one choice question, it matches the LLM router
-(\N{rtJevCAcc} vs \N{rtLLMrawAcc}, no significant difference) with no LLM call. In a pre-registered held-out test it moves the right
-page to the top of the retrieved passages \N{pgJBFirst} vs \N{pgBFirst} of the time. It fails when its decisions
-are posed as independent yes/no questions.
-\item \textbf{Negative results, reported.} A ``not answerable'' reply for SQL missed its pre-set bar for false
-refusals. The fixed system did not significantly beat the shipped one on held-out two-source questions. A
-conformal ``verified'' label never reached usable coverage.
+\item A diagnosis of a document assistant that lost most of its accuracy to a router with too little
+information and a writer that read passages in the wrong order. Fixing both raised FinanceBench accuracy from
+\N{fbShip} to \N{fbBge}, and one front-door call replaced the two or three LLM calls that used to run before
+routing.
+\item A detect-then-fallback scheme for SQL. On \N{sN} held-out BIRD questions \cite{li2023bird}, falling back to a
+pool of 21 candidate queries only when a trained verifier doubts the first answer raised execution accuracy from
+\N{sFirst} to \N{sPsix}. This was one of three pre-registered hypotheses and the only one that survived Holm
+correction.
+\item Evidence that a decision model can do some of this deciding. Without any training, Jev flags wrong SQL
+answers nearly as well as an LLM judge (AUROC \N{sAurocJev} against \N{sAurocJudge}), routes questions without an
+LLM call and without a significant loss against an LLM router, and in a pre-registered held-out test puts the right
+page at the top of the retrieved passages \N{pgJBFirst} of the time against \N{pgBFirst}. It fails when routing is
+broken into independent yes/no questions.
+\item A record of what did not work. A ``not answerable'' reply for SQL produced more false refusals than we had
+allowed in advance, the fixed system did not significantly beat the shipped one on held-out two-source questions,
+and a conformal ``verified'' label never certified a single answer.
 \end{itemize}
 
 \section{System}\label{sec:system}
-StateSync answers a question from a connected SQL database, from a workspace's uploaded documents, or from
-both. A question takes one of four routes: \emph{sql}, \emph{docs}, \emph{hybrid} (both sources) or
-\emph{neither} (a polite refusal).
+StateSync answers a question from a connected SQL database, from a workspace's uploaded documents, or from both.
+Each question takes one of four routes: \emph{sql}, \emph{docs}, \emph{hybrid} (both sources) or \emph{neither},
+which gives a polite refusal.
 
-\paragraph{Shipped pipeline.} Before any answer work, the shipped system made up to three LLM calls: a
-normaliser (meant for Hindi and Hinglish questions, which on English passes the text through), a follow-up
-rewriter on every turn after the first, and a router. The router saw the question and the titles of the 20
-most recently uploaded documents. It saw nothing of the database, and no document beyond those 20.
+\paragraph{Shipped pipeline.} Before any work on the answer, the shipped system made up to three LLM calls. A
+normaliser, written for Hindi and Hinglish questions, passed English text through unchanged; a rewriter turned
+every follow-up into a standalone question; and a router chose the route. The router was shown the question and
+the titles of the 20 most recently uploaded documents. It saw nothing of the database and none of the other
+documents.
 
-\paragraph{SQL route.} An LLM agent reads the schema, writes a query, runs it read-only, and on an error or an
-empty result reads a remediation hint and retries (at most three times). Its first answer is what Part~S
-(Sect.~\ref{sec:sql}) tries to detect as wrong.
+\paragraph{SQL route.} An LLM agent reads the schema, writes a query and runs it read-only. If the query fails or
+returns nothing, the agent reads a remediation hint and tries again, up to three times. Section~\ref{sec:sql} is
+about catching the cases where this first answer is wrong.
 
-\paragraph{Documents route.} A two-round dense search (\texttt{mxbai-embed-large}) first finds the most relevant
-documents, then returns up to 25 passages from them. An optional cross-encoder (\texttt{bge-reranker-v2-m3}
-\cite{chen2024bgem3}, on the host GPU) re-scores them. The answer writer reads the first 8 of the 25. The
-shipped system ordered those 8 by document and by position in the document, not by relevance.
+\paragraph{Documents route.} A two-round dense search (\texttt{mxbai-embed-large}) first picks the most relevant
+documents and then returns up to 25 passages from them. An optional cross-encoder, \texttt{bge-reranker-v2-m3}
+\cite{chen2024bgem3}, running on the host GPU, can re-score them. The answer writer reads only the first 8 of the
+25, and in the shipped system those 8 were ordered by document and by position within the document rather than by
+relevance.
 
-\paragraph{Hybrid route.} The question is split by an LLM into a database part and a documents part. The
-shipped split recognised only the identifiers of the product's original e-commerce domain.
+\paragraph{Hybrid route.} An LLM splits the question into a database part and a documents part. In the shipped
+system the split only recognised identifiers from the product's original e-commerce domain.
 
-\paragraph{Fixed design.} The fixes (Sect.~\ref{sec:docs}) replace the three pre-routing calls with one
-\emph{front door}. It is given the question, the last three turns, a \emph{database card} (the dataset's tables
-and columns, cached) and the five best-matching documents from one dense search. It returns, as JSON, the
-standalone question, whether answering needs the database and the documents (yes, no or unsure each), whether
-the question is out of scope, and, when both sources are needed, the split. A fixed table maps the two
-needs to a route, so nothing defaults silently to SQL. The writer reads passages in relevance order, with each
-passage's filing title and page. The re-ranker also reads the title. For hybrid questions whose documents part
-depends on the database part (``which of these companies had the highest revenue, and what does its annual
-report say about risks?''), the documents search is narrowed to the filings whose titles name the entities the
-SQL result returned.
+\paragraph{Fixed design.} The fixes, evaluated in Sect.~\ref{sec:docs}, replace the three pre-routing calls with a
+single \emph{front door}. It receives the question, the last three turns, a cached \emph{database card} listing
+the dataset's tables and columns, and the five documents that best match one dense search. It returns JSON with
+the standalone question, whether answering needs the database and whether it needs the documents (yes, no or
+unsure for each), whether the question is out of scope, and the split when both sources are needed. A fixed table
+turns the two needs into a route, so nothing falls through to SQL by default. The writer now reads passages in
+relevance order, each labelled with its filing title and page, and the re-ranker reads the title too. Some hybrid
+questions have a documents part that depends on the database part, for example ``which of these companies had
+the highest revenue, and what does its annual report say about risks?''. For these, the documents search is
+narrowed to filings whose titles name the companies returned by the SQL query.
 
-\paragraph{Jev.} Jev \cite{typesafe2026jev} is a hosted decision model. A request carries a state (any text) and typed
-questions: \emph{noul} (is this statement true? answered with a probability) or \emph{choice} (pick one of
-named options, with a probability each). It writes no text. We call \texttt{jev-1.13} through OpenCode Zen at
-\$0.042 per million input tokens. Sect.~\ref{sec:jev} tests it in seven roles.
+\paragraph{Jev.} Jev \cite{typesafe2026jev} is a hosted decision model. A request contains a state, which can be
+any text, and one or more typed questions. A \emph{noul} question asks whether a statement is true and is answered
+with a probability; a \emph{choice} question asks for one of several named options and returns a probability for
+each. We called \texttt{jev-1.13} through OpenCode Zen, at \$0.042 per million input tokens. Section~\ref{sec:jev}
+covers the seven roles we tried it in.
 
 \section{Method}\label{sec:method}
-\paragraph{Development and held-out data.} We distinguish data we used to find problems from data we used to
-confirm fixes. FinanceBench's open sample \cite{islam2023financebench} (150 questions over 84 SEC filings,
-44,918 passages) is our \emph{development} set for the documents route: we diagnosed and fixed the system on
-it, so its numbers are not confirmatory. Confirmation comes from four sets built or fixed before their runs:
+\paragraph{Development and held-out data.} We kept the data we used to find problems apart from the data we used
+to test fixes. FinanceBench's open sample \cite{islam2023financebench}, with 150 questions over 84 SEC filings
+(44,918 passages), is our \emph{development} set for the documents route. We diagnosed and fixed the system on
+it, so its numbers are not confirmatory. The confirmatory evidence comes from four sets that were built or frozen
+before the runs they are used for:
 \begin{itemize}
-\item \textbf{BIRD held-out} \cite{li2023bird}: \N{sN} questions of the Mini-Dev set, held out from all
-development, scored against corrected gold queries \cite{jin2026annotation}, for the SQL route.
+\item \textbf{BIRD held-out} \cite{li2023bird}: \N{sN} questions from the Mini-Dev set, kept out of all
+development and scored against corrected gold queries \cite{jin2026annotation}. It is used for the SQL route.
 \item \textbf{Routing set}: 224 questions and 24 short conversations over a database of SEC-reported figures for
-31 companies and the same 84 filings, labelled \emph{sql}, \emph{docs}, \emph{hybrid}, \emph{either} (both
-sources can answer) or \emph{neither}, split into development and test halves before any run. All
-prompt and threshold choices were made on the development half; we report the test half
-(\N{rtN} questions, \N{rtTurnsN} conversation turns).
-\item \textbf{Held-out hybrid set}: 100 two-source questions generated from templates with a fixed seed after
-the hybrid design was settled, 60 of them ``dependent'' (the documents part needs the database answer).
-\item \textbf{Held-out page set}: \N{pgN} questions written by an LLM (Gemini) from randomly sampled filing
-pages, FinanceBench's evidence pages excluded; the gold page is the source page.
+31 companies and the same 84 filings. Each question is labelled \emph{sql}, \emph{docs}, \emph{hybrid},
+\emph{either} (both sources can answer it) or \emph{neither}. We split the set into development and test halves
+before any run, made every prompt and threshold choice on the development half, and report the test half
+(\N{rtN} questions and \N{rtTurnsN} conversation turns).
+\item \textbf{Held-out hybrid set}: 100 two-source questions generated from templates with a fixed seed after the
+hybrid design was settled. In 60 of them the documents part depends on the database answer.
+\item \textbf{Held-out page set}: \N{pgN} questions that an LLM (Gemini) wrote from randomly sampled filing pages.
+FinanceBench's evidence pages and the pages next to them were excluded, and the gold page is the page the question
+was written from.
 \end{itemize}
 
-\paragraph{Pre-registration.} For Part~S, the hybrid set and the page-finding test, the hypotheses, measures,
-tests and thresholds were committed to the repository before the data they test existed or were scored, with a
-change log for anything altered later. Analyses decided after seeing results are labelled exploratory.
+\paragraph{Pre-registration.} For the SQL study, the hybrid set and the page-finding test, we committed the
+hypotheses, measures, tests and thresholds to the repository before the data they test existed or had been
+scored, and logged every later change. Any analysis we decided on after seeing results is labelled exploratory.
 
-\paragraph{Grading.} SQL answers are scored by execution against the corrected gold under a relaxed row
-comparison. Document answers are graded by an LLM grader (Gemini 3.8 Flash) against FinanceBench's answer and
-justification, with a fixed prompt, in one shuffled order, blind to the configuration: correct, partly correct,
-incorrect or refused. The primary label is \emph{correct}. A blind second-model check of a random sample of grades is
-reported in Sect.~\ref{sec:threats}.
+\paragraph{Grading.} SQL answers are scored by executing them and comparing their rows with the corrected gold
+under a relaxed comparison. Document answers are graded by an LLM (Gemini 3.8 Flash) against FinanceBench's
+answer and justification, with a fixed prompt, in a single shuffled order and without knowing which configuration
+produced the answer. The labels are correct, partly correct, incorrect and refused, and we count only
+\emph{correct}. Section~\ref{sec:threats} reports a blind check of a random sample of these grades by a second
+model.
 
-\paragraph{Statistics.} Paired comparisons use the exact McNemar test (sign-flip permutation tests where
-outcomes are fractional, as when ties between candidates are scored at their expected accuracy), intervals
-from a bootstrap stratified by database (2,000 resamples), and Holm correction within each family of
-pre-registered hypotheses.
+\paragraph{Statistics.} Paired comparisons use the exact McNemar test, or a sign-flip permutation test when
+outcomes are fractional (for example when tied candidates are scored at their expected accuracy). Intervals come
+from a bootstrap stratified by database with 2,000 resamples, and within each family of pre-registered hypotheses
+we apply Holm's correction.
 
-\paragraph{Run safeguards.} Every comparison runs the product's own code from images built from a recorded
-commit, in containers separate from the shared deployment. The harnesses refuse to run on a container whose
-image differs from the recorded build, and stop when the front door reports that the database card is missing.
-That guard was added after a Docker restart left the SEC database stopped and silently invalidated an afternoon
-of routing runs. Those runs were discarded and repeated (Sect.~\ref{sec:threats}).
+\paragraph{Run safeguards.} The documents and routing experiments run the product's own code, in containers built
+from a recorded commit and kept separate from the shared deployment. The evaluation scripts refuse to run against a
+container whose image does not match the recorded build, and they stop if the front door reports that the
+database card is missing. We added that second check after a Docker restart left the SEC database stopped and
+quietly spoiled an afternoon of routing runs, which we discarded and repeated (Sect.~\ref{sec:threats}).
 
 \section{SQL answers: detect, then fall back}\label{sec:sql}
-\paragraph{Pool.} For each of the \N{sN} held-out questions we pooled 21 candidate queries: the pipeline answer of
-GPT-5 mini and five self-consistency samples, the same six from gpt-oss-120b, and three standalone samples each
-from three further models. Candidates whose results agree form a cluster. The pipeline's own answer, GPT-5 mini's
-first candidate, is the \emph{first answer} (\N{sFirst} correct). At least one candidate is right for \N{sOracle}
-of questions, which bounds what any selection can reach.
+\paragraph{Candidate pool.} For each of the \N{sN} held-out questions we collected 21 candidate queries: GPT-5
+mini's pipeline answer plus five self-consistency samples, the same six from gpt-oss-120b, and three standalone
+samples each from DeepSeek-V4.1-Flash, Qwen3-Coder-30B-A3B and GLM-5.3-Flash. Candidates whose results agree form a
+cluster. The pipeline's own answer, GPT-5 mini's first candidate, is the \emph{first answer}, and it is correct for
+\N{sFirst} of questions. At least one candidate is correct for \N{sOracle}, which is the ceiling for any way of
+choosing among them.
 
-\paragraph{Checkers.} We compare five ways of scoring a candidate. (i)~A ModernBERT-base classifier
-\cite{warner2024modernbert}, fine-tuned on execution-labelled candidates from other questions (``real''), or on
-the reference query and rule-based mutants of it (``mutation''). (ii)~Laya, a small decision model, zero-shot and
-fine-tuned. (iii)~An LLM judge (Gemini 3.8 Flash) giving a 0--100 score. (iv)~Jev, zero-shot, asked ``Does this SQL
-query and its result correctly answer the question?''. All see the question, the query and a preview of its
-result. Trained checkers are trained, calibrated and tested on rotating folds stratified by database: each question
-is scored once, by a model that saw neither it nor its threshold's calibration fold.
+\paragraph{Checkers.} We compared four kinds of checker. The first is a ModernBERT-base classifier
+\cite{warner2024modernbert}, fine-tuned either on execution-labelled candidates from other questions (``real'') or
+on each question's reference query and rule-based mutants of it (``mutation''). The second is Laya, a small
+decision model, used zero-shot and fine-tuned. The third is an LLM judge (Gemini 3.8 Flash) that gives a score from
+0 to 100. The fourth is Jev, zero-shot, asked ``Does this SQL query and its result correctly answer the
+question?''. Every checker sees the question, the query and a preview of its result. The trained checkers are
+trained, calibrated and tested on rotating folds stratified by database, so each question is scored exactly once,
+by a model that saw neither the question nor the fold used to calibrate its threshold.
 
-\paragraph{Pre-registered hypotheses.} H1: selecting the pool's candidate with the highest ModernBERT score beats a
-majority vote. H2: training on real candidates beats training on mutants. H3: a cascade that keeps the first
-answer unless ModernBERT doubts it, and then selects from the pool, beats the first answer. The doubt threshold is
-fitted per round on the calibration fold.
+\paragraph{Pre-registered hypotheses.} H1: picking the candidate in the pool with the highest ModernBERT score beats
+a majority vote. H2: training ModernBERT on real candidates beats training it on mutants. H3: a cascade that keeps
+the first answer unless ModernBERT doubts it, and only then picks from the pool, beats the first answer. The doubt
+threshold is fitted on the calibration fold in each round.
 
 \begin{table}[t]
 \centering
-\caption{SQL answers on \N{sN} held-out BIRD questions: execution accuracy of the first answer and of fallback
-policies. Pre-registered comparisons are one-sided, Holm-corrected; ``n.s.'' = not significant after correction.}
+\caption{SQL answers on \N{sN} held-out BIRD questions: execution accuracy of the first answer and of the
+fallback policies. Pre-registered comparisons are one-sided and their p values Holm-adjusted; win/loss counts can
+be fractional because tied candidates are scored at their expected accuracy.}
 \label{tab:sql}
 \begin{tabular}{lrl}
 \toprule
-Policy & Accuracy & vs.\ reference \\
+Policy & Accuracy & Comparison \\
 \midrule
 First answer (GPT-5 mini pipeline) & \N{sFirst} & -- \\
 Majority vote over the pool & \N{sVote} & -- \\
-ModernBERT-max, real (H1 vs vote) & \N{sPfive} & +\N{sH1W}/$-$\N{sH1L}, \N{sH1P}, n.s. \\
-ModernBERT-max, mutation (H2) & \N{sPfivem} & real vs mutation \N{sH2P}, n.s. \\
+ModernBERT-max, real (H1, vs vote) & \N{sPfive} & +\N{sH1W}/$-$\N{sH1L}, \N{sH1P} \\
+ModernBERT-max, mutation (H2) & \N{sPfivem} & real vs mutation, \N{sH2P} \\
 \textbf{ModernBERT-triggered cascade (H3)} & \textbf{\N{sPsix}} & +\N{sH3W}/$-$\N{sH3L}, \N{sH3P} \\
 ModernBERT score + vote & \N{sPfivev} & exploratory \\
 Judge-max & \N{sJudgeMax} & -- \\
 Judge-triggered cascade & \N{sJudgeCascade} & -- \\
 Laya-max (fine-tuned / zero-shot) & \N{sLayaMax} / \N{sLayaZSMax} & -- \\
 Jev-max (zero-shot) & \N{sJevMax} & -- \\
-Any candidate right (oracle) & \N{sOracle} & bound \\
+Any candidate right (oracle) & \N{sOracle} & ceiling \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{Results.} Table~\ref{tab:sql}. H3 is confirmed: the cascade raises accuracy from \N{sFirst} to
-\N{sPsix} (95\% interval for the gain: \N{sPsixCI} points), falling back on \N{sPsixFall} of questions. H1 and
-H2 point the expected way but do not survive Holm correction. The best policy we found adds ModernBERT's scores
-within each cluster of agreeing candidates (\N{sPfivev}). We found it after the pre-registered analysis, so we
-report it as exploratory. Cheaper fallbacks that a product would try first help little: when the judge
-doubts the first answer (\N{sJudgeDoubts} of questions), re-voting among GPT-5 mini's own samples reaches
-\N{sReVote}, and escalating to gpt-oss's answer \N{sEscalate}.
+\paragraph{Results.} Table~\ref{tab:sql} shows that H3 holds. The cascade raises accuracy from \N{sFirst} to
+\N{sPsix}, with a 95\% interval for the gain of \N{sPsixCI} points, and it falls back on \N{sPsixFall} of
+questions. H1 and H2 point in the expected direction but do not survive the correction. The best policy we found
+adds up ModernBERT's scores within each cluster of agreeing candidates and reaches \N{sPfivev}; since we only
+thought of it after the pre-registered analysis, it counts as exploratory. The cheaper fallbacks a product team
+would probably try first help very little. When the judge doubts the first answer, which happens for
+\N{sJudgeDoubts} of questions, re-voting among GPT-5 mini's own samples gives \N{sReVote}, and escalating to
+gpt-oss's answer gives \N{sEscalate}.
 
 \begin{table}[t]
 \centering
@@ -217,7 +233,7 @@ doubts the first answer (\N{sJudgeDoubts} of questions), re-voting among GPT-5 m
 \toprule
 Checker & AUROC & Training / cost \\
 \midrule
-LLM judge (Gemini 3.8 Flash) & \N{sAurocJudge} & none; an LLM call per cluster \\
+LLM judge (Gemini 3.8 Flash) & \N{sAurocJudge} & none; one LLM call per cluster \\
 Jev, zero-shot & \N{sAurocJev} & none; \N{sJevCost} for all 6,056 distinct candidates \\
 ModernBERT, real & \N{sAurocMB} & 5-fold fine-tuning \\
 Laya, fine-tuned & \N{sAurocLayaFT} & fine-tuning per fold \\
@@ -227,57 +243,59 @@ Laya, zero-shot & \N{sAurocLayaZS} & none \\
 \end{tabular}
 \end{table}
 
-\paragraph{Detection.} Table~\ref{tab:detect}. The judge detects wrong first answers best. Jev, with no training and
-no prompt engineering, comes second, ahead of the trained ModernBERT. The judge's lead over Jev and Jev's lead over
-ModernBERT both have bootstrap intervals that include zero. Jev's scores are stable: rescoring 200 candidates gave a
-rank correlation of \N{sJevRetest}. Jev is a weak \emph{selector}, though. Picking the candidate it scores highest
-gives \N{sJevMax}, little above the first answer.
+\paragraph{Detection.} As Table~\ref{tab:detect} shows, the judge is best at telling when the first answer is
+wrong. Jev comes second with no training and a single fixed question, slightly ahead of the fine-tuned ModernBERT,
+although the bootstrap intervals for both gaps include zero. Its scores are also stable: when we rescored 200
+candidates, the rank correlation with the first run was \N{sJevRetest}. Jev is much weaker at \emph{choosing},
+though. Taking whichever candidate it scores highest gives \N{sJevMax}, barely above the first answer.
 
-\paragraph{Jev as the trigger (exploratory).} Because Jev is good at doubting and poor at choosing, we tried it as
-the cascade's trigger with ModernBERT-plus-vote as the selector. With Jev's untuned rule ``fall back when
-P(correct)~$<0.5$'', accuracy rises to \N{sJthree} (\N{sJthreeP}) while falling back on only \N{sJthreeFall} of
-questions. With the threshold fitted like H3's, it reaches \N{sJtwo}. These analyses were decided after the
-pre-registered ones and are reported as exploratory.
+\paragraph{Jev as the trigger (exploratory).} Since Jev is good at doubting and poor at choosing, we tried it as the
+cascade's trigger, with ModernBERT-plus-vote doing the choosing. With Jev's untuned rule of falling back whenever
+P(correct)~$<0.5$, accuracy rises to \N{sJthree} (\N{sJthreeP}), and the system falls back on only
+\N{sJthreeFall} of questions. With a threshold fitted the same way as H3's it reaches \N{sJtwo}, but it then falls
+back on \N{sJtwoFall} of questions. We decided on these analyses after the pre-registered ones, so they are
+exploratory.
 
-\paragraph{Approved examples.} A cheaper lever than any checker is to show the SQL writer approved question--query
-pairs from the same database (from the training folds). We measured it with gpt-oss-120b and the standalone prompt,
-three samples per question per arm. With the product's similarity threshold (E1), only 54 of the \N{sN} questions
-get any example, and accuracy moves from \N{sExE0} to \N{sExE1} (\N{sExOneDiff} points, 95\% interval
-\N{sExOneCI}). With the three most similar examples and no threshold (E2) it reaches \N{sExE2} (\N{sExTwoDiff},
-\N{sExTwoCI}). These gains are measured on a different writer than the cascade's, so they are not directly
-comparable to Table~\ref{tab:sql}. But they suggest that labelled questions are worth more as examples than as
-verifier training data.
+\paragraph{Approved examples.} A cheaper lever than any checker is to show the SQL writer approved
+question--query pairs from the same database, taken from the training folds. We measured this with gpt-oss-120b,
+the standalone prompt and three samples per question in each arm. With the product's similarity threshold (E1),
+only 54 of the \N{sN} questions get any example at all, and accuracy moves from \N{sExE0} to \N{sExE1}
+(\N{sExOneDiff} points, 95\% interval \N{sExOneCI}). Giving the three most similar examples with no threshold (E2)
+reaches \N{sExE2} (\N{sExTwoDiff} points, \N{sExTwoCI}). These runs use a different writer from the cascade, so the
+numbers cannot be compared directly with Table~\ref{tab:sql}. They do suggest that a set of labelled questions is
+worth more as examples for the writer than as training data for a verifier.
 
 \section{Documents and routing}\label{sec:docs}
 \paragraph{Diagnosis.} On FinanceBench the shipped system answered \N{fbShip} of questions correctly and declined
-\N{fbShipRefused} of \N{fbN}. Two flaws explain most of it. First, the router sent \N{fbShipToSql} of the \N{fbN}
-document questions to SQL, although the FinanceBench workspace's database held unrelated e-commerce data and could
-answer none of them. The router saw only the 20 newest of 84 titles and nothing of the database, so a question about a
-filing outside those 20 looked like a database question. Second, of the \N{fbShipReached} questions that did reach
-the documents, only \N{fbShipReachedCorrect} were answered correctly. The search often found the right page, but
-the writer read the first 8 of 25 passages \emph{in document order}. The right page was among the 25 for
-\N{wwDocAny} of questions but among the writer's 8 for only \N{wwDoc}.
+\N{fbShipRefused} of the \N{fbN}. Two flaws account for most of this. The first was routing: \N{fbShipToSql} of the
+\N{fbN} questions, all of them about documents, went to SQL, even though the FinanceBench workspace's database held
+unrelated e-commerce data and could answer none of them. The router saw only the 20 newest of 84 titles and nothing
+about the database, so a question about any older filing looked like a database question. The second was what
+happened to the \N{fbShipReached} questions that did reach the documents, of which only \N{fbShipReachedCorrect}
+were answered correctly. Search often found the right page, but the writer read the first 8 of 25 passages in
+document order. The right page was among the 25 for \N{wwDocAny} of questions, yet among the 8 the writer actually
+read for only \N{wwDoc}.
 
-\paragraph{Fixes and their effect (development set).} Ordering the writer's passages by relevance raised the share
-of questions whose right page reaches the writer from \N{wwDoc} to \N{wwRel}. Adding the re-ranker, and letting it
-read each passage's title, raised it to \N{wwBgeT}. With the front door in place of the router and these
-fixes, the system answers \N{fbDense} of FinanceBench correctly without the re-ranker and \N{fbBge} with it,
-against \N{fbShip} shipped (+\N{fbBgeW}/$-$\N{fbBgeL}, \N{fbBgeP}). These are development-set numbers. The
-held-out tests below and in Sect.~\ref{sec:jev} are the confirmatory evidence.
+\paragraph{Fixes and their effect (development set).} Reading the passages in relevance order raised the share of
+questions whose right page reaches the writer from \N{wwDoc} to \N{wwRel}, and adding the re-ranker, with the
+filing title included in what it reads, raised it to \N{wwBgeT}. With these changes and the front door in place
+of the old router, the system answers \N{fbDense} of FinanceBench correctly without the re-ranker and \N{fbBge}
+with it, against \N{fbShip} for the shipped system (+\N{fbBgeW}/$-$\N{fbBgeL}, \N{fbBgeP}). These are
+development-set numbers. The confirmatory evidence is in the held-out tests below and in Sect.~\ref{sec:jev}.
 
-\paragraph{Routing (held-out test).} Table~\ref{tab:routing} compares routers on the routing set's test half. Here
-earlier turns are given as the user typed them, as a system that rewrites nothing would see them. The front door
-routes \N{rtLLMrawAcc} of questions correctly against \N{rtShipAcc} for the shipped router
-(+\N{rtLLMrawvShipW}/$-$\N{rtLLMrawvShipL}, \N{rtLLMrawvShipP}). With gold rewritten history it reaches
-\N{rtLLMAcc}. It gets most two-source questions right (\N{rtLLMrawHybrid}), and it is the only LLM router that
-declines out-of-scope questions at all (\N{rtLLMrawNeither}, against \N{rtShipNeither}). A semantic router
-(majority label of the five most similar labelled development questions) is a strong cheap baseline at
-\N{rtSemAcc}, but it misses most two-source (\N{rtSemHybrid}) and out-of-scope (\N{rtSemNeither}) questions.
+\paragraph{Routing (held-out test).} Table~\ref{tab:routing} compares the routers on the test half of the routing
+set. Earlier turns are passed exactly as the user typed them, which is what a system that rewrites nothing would
+see. The front door routes \N{rtLLMrawAcc} of questions correctly, against \N{rtShipAcc} for the shipped router
+(+\N{rtLLMrawvShipW}/$-$\N{rtLLMrawvShipL}, \N{rtLLMrawvShipP}), and \N{rtLLMAcc} when given gold rewritten history
+instead. It gets most two-source questions right (\N{rtLLMrawHybrid}) and, unlike the shipped router, declines some
+out-of-scope questions (\N{rtLLMrawNeither} against \N{rtShipNeither}). A semantic router, which takes the majority
+label of the five most similar labelled development questions, is a strong cheap baseline at \N{rtSemAcc}. It
+misses most two-source (\N{rtSemHybrid}) and out-of-scope (\N{rtSemNeither}) questions, though.
 
 \begin{table}[t]
 \centering
-\caption{Routing on the routing set's held-out test half (\N{rtN} questions; history as typed). ``Calls'' are LLM calls
-before routing on a first turn; latency is the median routing time.}
+\caption{Routing on the held-out test half of the routing set (\N{rtN} questions; history as typed). ``Calls''
+counts LLM calls before routing on a first turn; latency is the median routing time.}
 \label{tab:routing}
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{lrrrrrr}
@@ -287,51 +305,57 @@ Router & Accuracy & Hybrid & Neither & Docs only & Calls & Latency (s) \\
 Shipped (normaliser, rewriter, router) & \N{rtShipAcc} & \N{rtShipHybrid} & \N{rtShipNeither} & \N{rtShipDocs} & \N{rtShipCalls} & \N{rtShipMs} \\
 Semantic router (k-NN on dev labels) & \N{rtSemAcc} & \N{rtSemHybrid} & \N{rtSemNeither} & \N{rtSemDocs} & 0 & -- \\
 LLM front door & \N{rtLLMrawAcc} & \N{rtLLMrawHybrid} & \N{rtLLMrawNeither} & \N{rtLLMrawDocs} & \N{rtLLMrawCalls} & \N{rtLLMrawMs} \\
-Jev, one choice question & \N{rtJevCAcc} & \N{rtJevCHybrid} & \N{rtJevCNeither} & \N{rtJevCDocs} & 0 & \N{rtJevCMs} \\
+Jev, one choice (first wording) & \N{rtJevCvoneAcc} & \N{rtJevCvoneHybrid} & \N{rtJevCvoneNeither} & \N{rtJevCvoneDocs} & 0 & \N{rtJevCvoneMs} \\
+Jev, one choice (revised wording) & \N{rtJevCAcc} & \N{rtJevCHybrid} & \N{rtJevCNeither} & \N{rtJevCDocs} & 0 & \N{rtJevCMs} \\
 Jev, yes/no questions & \N{rtJevYNAcc} & \N{rtJevYNHybrid} & \N{rtJevYNNeither} & \N{rtJevYNDocs} & 0 & \N{rtJevYNMs} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{Two-source questions (held-out).} On 100 held-out hybrid questions, an answer counts when its database part
-is right and it cites the right filing. The shipped system gets \N{hyShip}, the fixed system \N{hyVthree} and the
-fixed system with entity narrowing \N{hyEnt}. The pre-registered primary comparison, fixed vs shipped, is
-\emph{not} significant (+\N{hyMainW}/$-$\N{hyMainL}, \N{hyMainP}). The pre-registered secondary one is significant:
-on the 60 dependent questions, entity narrowing lifts both-parts-right from \N{hyVthreeDep} to \N{hyEntDep}
-(+\N{hyEntW}/$-$\N{hyEntL}, \N{hyEntP}). Two weaknesses cap all arms. The front door sent \N{hyVthreeToSql} of the
-60 dependent questions to SQL alone. And the database part was right for only \N{hyDbRight} of 100.
+\paragraph{Two-source questions (held-out).} On the 100 held-out hybrid questions, an answer counts only if its
+database part is right and it cites the right filing. The shipped system gets \N{hyShip}, the fixed system
+\N{hyVthree} and the fixed system with entity narrowing \N{hyEnt}. The pre-registered primary comparison, fixed
+against shipped, is \emph{not} significant (+\N{hyMainW}/$-$\N{hyMainL}, \N{hyMainP}, two-sided). The
+pre-registered secondary comparison is: on the 60 dependent questions, entity narrowing raises the number with
+both parts right from \N{hyVthreeDep} to \N{hyEntDep} (+\N{hyEntW}/$-$\N{hyEntL}, \N{hyEntP}). Two weaknesses
+hold every arm back. The front door sent \N{hyVthreeToSql} of the 60 dependent questions to SQL alone, and the
+database part was right for only \N{hyDbRight} of the 100 questions.
 
-\paragraph{Follow-up questions without an extra LLM call.} The shipped system rewrites every follow-up with an LLM.
-We replace this with rules. A follow-up is detected by anaphora (``it'', ``its'', ``what about'') or a missing
-company. The last company and year mentioned, in the previous answer first, are carried forward. The models that
-write the SQL and the answer get one line of context. On the routing set's follow-up turns the rules detect
-\N{ccDetected} follow-ups with no false alarm and recover company and year correctly for \N{ccBoth}. Answered end to
-end (\N{tuN} turns with gold answers; Jev with the first choice wording), Jev routing plus carry-over gets \N{tuCarry} right with no extra LLM call. That
-is against \N{tuNoCtx} without context (+\N{tuCarryNoW}/$-$\N{tuCarryNoL}, \N{tuCarryNoP}), \N{tuShip} for the
-shipped LLM rewriter, and \N{tuLLM} for the LLM front door (+\N{tuCarryLLMW}/$-$\N{tuCarryLLML}, \N{tuCarryLLMP}).
+\paragraph{Follow-up questions without an extra LLM call.} The shipped system rewrote every follow-up with an LLM;
+we tried replacing that call with simple rules. A turn counts as a follow-up if it contains an anaphor (``it'',
+``its'', ``what about'') or names no company, and in that case the last company and year mentioned, looking at the
+previous answer first, are carried forward. The models that write the SQL and the answer then receive one extra
+line of context. On the routing set's follow-up turns, the rules detect \N{ccDetected} follow-ups with no false
+alarms and recover both company and year for \N{ccBoth}. We then answered \N{tuN} turns with gold answers end to
+end, routing with Jev's first choice wording. Jev plus the carried context gets \N{tuCarry} right without any LLM
+call before routing, against \N{tuNoCtx} with no context (+\N{tuCarryNoW}/$-$\N{tuCarryNoL}, \N{tuCarryNoP}),
+\N{tuShip} for the shipped LLM rewriter, and \N{tuLLM} for the LLM front door (+\N{tuCarryLLMW}/$-$\N{tuCarryLLML},
+\N{tuCarryLLMP}). The rules recover most of what context is worth, but the front door is still ahead.
 
-\paragraph{A fix that did not ship.} We let the SQL writer reply ``not answerable'' instead of forcing a query. It
-had to keep false refusals on 150 answerable held-out BIRD questions at or below 1\%, and three versions missed
-(best \N{gFalseNA}). Accuracy was unchanged within run-to-run variation: one configuration run twice gave
-\N{gNoiseA} and \N{gNoiseB}. The feature is off in every result above.
+\paragraph{A fix that did not ship.} We also let the SQL writer reply ``not answerable'' instead of forcing out a
+query. To ship, it had to keep false refusals on 150 answerable held-out BIRD questions at or below 1\%. Three
+versions missed that bar, the best with \N{gFalseNA}. Accuracy did not change beyond run-to-run variation: the same
+configuration run twice gave \N{gNoiseA} and \N{gNoiseB}. The feature is switched off in every result reported
+here.
 
 \section{Jev as a cheap decision layer}\label{sec:jev}
-Across the system, several LLM calls only \emph{decide} something: is this answer wrong, which source is needed,
-which passage holds the answer, does this database hold the data. We asked whether a decision model that writes no
-text can take these over. Table~\ref{tab:jev} summarises the seven roles.
+Several of the system's LLM calls produce no text for the user and exist only to \emph{decide} something: whether
+an answer is wrong, which source a question needs, which passage holds the answer, or whether a database holds the
+data at all. We asked whether a decision model could make these calls instead. Table~\ref{tab:jev} summarises the
+seven roles we tried.
 
 \begin{table}[t]
 \centering
-\caption{Jev (\texttt{jev-1.13}, zero-shot) in seven roles. ``Held-out'' marks results on data that played no part in
-the design; ``dev'' marks development-set or exploratory results.}
+\caption{Jev (\texttt{jev-1.13}, zero-shot) in seven roles. ``Held-out'' marks results on data that played no part
+in the design; ``dev'' marks development-set or exploratory results.}
 \label{tab:jev}
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{p{3.0cm}p{4.9cm}l}
+\begin{tabular}{>{\raggedright\arraybackslash}p{2.9cm}>{\raggedright\arraybackslash}p{5.2cm}>{\raggedright\arraybackslash}p{3.3cm}}
 \toprule
 Role & Result & Evidence \\
 \midrule
 Page finder & right page first \N{pgJBFirst} vs \N{pgBFirst} (bge + titles), +\N{pgPoneW}/$-$\N{pgPoneL}, \N{pgPoneP} & held-out, pre-registered \\
-Router (one choice) & \N{rtJevCAcc} vs \N{rtLLMrawAcc} for the LLM front door, \N{rtJevCvLLMP}; no LLM call & held-out \\
+Router (one choice) & \N{rtJevCvoneAcc} (first wording), \N{rtJevCAcc} (revised) vs \N{rtLLMrawAcc} for the LLM front door; neither difference significant & held-out (see text) \\
 Not-answerable gate & AUROC \N{naAuroc}; \N{naFalse} false refusals, \N{naCaught} unanswerable caught & held-out half, easy negatives \\
 SQL answer checker & AUROC \N{sAurocJev} vs \N{sAurocJudge} (LLM judge) & held-out \\
 SQL retry trigger & \N{sJthree} vs \N{sFirst}, falling back on \N{sJthreeFall} & held-out, exploratory \\
@@ -342,96 +366,120 @@ Document answer checker & AUROC \N{dcAuroc} & dev (weak) \\
 \end{table}
 
 \paragraph{Page finding: a pre-registered test.} On FinanceBench, re-ordering the 25 retrieved passages by Jev's
-answer to ``Does this passage contain the information needed to answer the question?'' looked promising. But
-FinanceBench is our development set, so we pre-registered a confirmatory test. We fixed the seed, the filters, the
-question-writer and checker prompts, the arms, the measures and the tests in the repository before the set existed.
-The set has \N{pgN} questions, written by Gemini from randomly sampled filing pages; FinanceBench's evidence pages
-and their neighbours are excluded. All arms re-order the same 25 passages, so only the order differs. The primary
-hypothesis held: Jev puts the right page first \N{pgJBFirst} of the time against \N{pgBFirst} for the re-ranker
-(+\N{pgPoneW}/$-$\N{pgPoneL}, \N{pgPoneP}). Without the GPU re-ranker, over dense results alone, Jev reaches
-\N{pgJDFirst}. Jev did not improve whether the right page is among the writer's 8 (\N{pgJBWin} vs \N{pgBWin}), which
-the re-ranker had already brought close to its ceiling. So the gain is in precision: the first passage, the one a
-user is shown as the source, is right four times as often. The cost was \$0.17 for 6,220 passages.
+answer to ``Does this passage contain the information needed to answer the question?'' looked promising. Since
+FinanceBench is our development set, we set up a confirmatory test. The seed, the filters, the prompts for writing
+and checking questions, the arms, the measures and the tests were all committed to the repository before the set
+existed. The set has \N{pgN} questions written by Gemini from randomly sampled filing pages, excluding
+FinanceBench's evidence pages and their neighbours. Every arm re-orders the same 25 passages, so the arms differ
+only in order. The primary hypothesis held. Jev put the right page first \N{pgJBFirst} of the time, against
+\N{pgBFirst} for the re-ranker (+\N{pgPoneW}/$-$\N{pgPoneL}, \N{pgPoneP}), and \N{pgJDFirst} when it re-ordered the
+dense results alone, without the GPU re-ranker (against \N{pgDFirst} for the dense order). It did not change whether
+the right page is among the writer's 8 (\N{pgJBWin} against \N{pgBWin}), which the re-ranker had already brought
+close to its ceiling. The gain is therefore in precision: the top passage, which is the one a user is shown as the
+source, is right about four times as often. Scoring the 6,220 passages cost \$0.17.
 
-\paragraph{Routing: one choice beats several yes/no questions.} Asked separate yes/no questions (``does answering need
-the database?'', ``\ldots the documents?''), Jev routes no better than the shipped router (\N{rtJevYNAcc}). It almost
-never chooses both sources (\N{rtJevYNHybrid} hybrid). The reason shows in its probabilities. On development
-questions, a question that needs both sources and one that either source can answer get nearly the same scores on
-both questions, so no pair of thresholds separates them. Asked one choice question (database only, documents only,
-both, or neither), Jev weighs the sources against each other. It gets every hybrid question right (\N{rtJevCHybrid}),
-routes \N{rtJevCAcc} overall, not significantly different from the LLM front door (\N{rtJevCvLLMP}), and needs no
-LLM call and a median \N{rtJevCMs}\,s instead of \N{rtLLMrawMs}\,s. One description of the options was chosen on the
-development half before the single test run. Its weakness is documents-only questions (\N{rtJevCDocs}). It sends some
-of them to the database whenever they ask for financial figures, even figures the database does not hold.
+\paragraph{Routing: one choice question works where several yes/no questions fail.} When we asked Jev separate
+yes/no questions (``does answering need the database?'' and ``does it need the documents?''), it routed no better
+than the shipped router (\N{rtJevYNAcc}) and almost never chose both sources (\N{rtJevYNHybrid} hybrid questions).
+Its probabilities show why. On development questions, a question that needs both sources and one that either source
+could answer get almost the same pair of scores, so no pair of thresholds can tell them apart. A single choice
+question (database only, documents only, both, or neither) makes Jev weigh the sources against each other instead.
+We wrote a description of the four options on the development half and ran it once on the test half. It reached
+\N{rtJevCvoneAcc}, with every hybrid question right (\N{rtJevCvoneHybrid}), but it sent many documents-only
+questions to the database (\N{rtJevCvoneDocs} right), typically ones asking for financial figures the database
+does not hold. We then revised the descriptions to say what level of detail the database's columns hold, compared the
+two wordings on the development half only, and ran the revision once on the test half: \N{rtJevCAcc}, with documents
+at \N{rtJevCDocs}. Because the revision was prompted by errors we had seen on the test half, the first wording's
+figure is the cleaner held-out estimate. Against the front door, neither wording differs significantly (first
+\N{rtJevCvonevLLMP}, revised \N{rtJevCvLLMP}), and Jev routes in a median \N{rtJevCMs}\,s rather than
+\N{rtLLMrawMs}\,s with no LLM call. With \N{rtN} questions these tests could still miss a gap of several points, so
+we read them as ``close'', not ``equal''.
 
-\paragraph{A gate for unanswerable SQL questions.} The LLM's ``not answerable'' reply failed its 1\% false-refusal bar
-(Sect.~\ref{sec:docs}). We asked Jev ``Does the database described contain the data needed to answer the
-question?'' for the 150 held-out BIRD questions, each against its own schema and against a randomly chosen other
-database's schema. With the threshold fitted on one half, the other half had \N{naFalse} false refusals while
-\N{naCaught} unanswerable pairs were caught. A question asked of the wrong database is an easy negative, so this
-shows the gate can meet the bar, not that it would on subtler cases.
+\paragraph{A gate for unanswerable SQL questions.} The LLM's ``not answerable'' reply failed its 1\% bar for false
+refusals (Sect.~\ref{sec:docs}). We asked Jev ``Does the database described contain the data needed to answer the
+question?'' for each of the 150 held-out BIRD questions, once against its own schema and once against the schema
+of another, randomly chosen database. With the threshold fitted on one half, the other half had \N{naFalse} false
+refusals and \N{naCaught} unanswerable pairs caught. A question put to the wrong database is an easy negative, so
+this shows the gate can meet the bar in principle, not that it would on subtler cases.
 
-\paragraph{Where Jev is weak.} Judging whether a written answer is supported by its cited passages is harder for it. On
-the fixed system's FinanceBench answers its AUROC is \N{dcAuroc}, too low to gate answers usefully. And it is a poor
-\emph{selector} among SQL candidates, even though it is a good doubter (Sect.~\ref{sec:sql}).
+\paragraph{Where Jev is weak.} Judging whether a written answer is supported by the passages it cites is harder
+for Jev. On the fixed system's FinanceBench answers its AUROC is \N{dcAuroc}, too low to be useful as a gate. And,
+as Sect.~\ref{sec:sql} showed, it is a good doubter but a poor selector among SQL candidates.
 
 \section{Negative results and threats to validity}\label{sec:threats}
-\paragraph{What did not work.} Two of three pre-registered SQL hypotheses (H1, H2) were not confirmed after Holm
+\paragraph{What did not work.} Two of the three pre-registered SQL hypotheses, H1 and H2, did not survive Holm
 correction. A conformal ``verified'' label for SQL answers, meant to mark answers with a guaranteed error rate,
-never reached usable coverage at 5\% or 10\%, because the calibration folds were too small for the bound. The
-``not answerable'' reply missed its false-refusal bar and was not shipped. On held-out two-source questions the
-fixed system did not significantly beat the shipped one. Jev posed as yes/no routing questions failed, and Jev as
-a document answer checker was weak.
+did not certify a single answer at either 5\% or 10\%, because the calibration folds were too small for the bound
+to be met. The ``not answerable'' reply missed its false-refusal bar and was not shipped. On held-out two-source
+questions the fixed system did not significantly beat the shipped one. Jev failed as a router when asked yes/no
+questions and was weak as a checker of document answers.
 
-\paragraph{Development-set numbers.} The FinanceBench gains (\N{fbShip} to \N{fbBge}) were measured on the questions
-we used to diagnose the system and are optimistic. The confirmatory evidence for the documents route is the
-held-out routing, hybrid and page-finding results.
+\paragraph{Development-set numbers.} The FinanceBench gains, from \N{fbShip} to \N{fbBge}, were measured on the
+same questions we used to diagnose the system and are likely optimistic. The confirmatory evidence for the
+documents route is the held-out routing, hybrid and page-finding results.
 
-\paragraph{Generated questions.} The held-out hybrid and page sets were generated, from templates and by an LLM.
-Generated questions may be cleaner than users' questions. For pages, another page may also answer a question, which
-lowers every arm's measured page accuracy alike. The LLM that wrote page questions (Gemini) also grades document
-answers; it never ranks passages.
+\paragraph{Test-set reuse in routing.} The routing test half was used more than once. Most routers were fitted on
+the development half and run once on the test half, but Jev's revised option wording was written after we had seen
+the first wording's test errors (Sect.~\ref{sec:jev}), and we report both.
 
-\paragraph{Graders.} Document answers are graded by an LLM. As a check, a second model (\textbf{[model name]}), blind
-to the grader's verdicts and to which configuration produced each answer, graded a random sample of 30 answers. It
-agreed with the grader on 27 of 30 (29 of 30 on correct vs.\ not correct). All three disagreements were between
-\emph{partly correct} and an adjacent label. This is a check between models, not a human check, and we report it as
-such. SQL answers are scored by execution, not by a grader.
+\paragraph{Generated questions.} The held-out hybrid and page sets were generated, the first from templates and
+the second by an LLM, and generated questions may be cleaner than real users' questions. On the page set, a page
+other than the source page may also answer a question, which lowers every arm's measured accuracy by the same
+mechanism. The LLM that wrote the page questions (Gemini) is also the one that grades document answers, but it
+never ranks passages.
 
-\paragraph{A discarded afternoon of runs.} A Docker restart left the SEC database stopped. For several hours, every
-front door decided without the database card. We found it when SQL answers failed, discarded the affected runs
-(kept, labelled, in the repository), added a guard that stops any run without the card, and repeated them. Every
-routing number in this paper comes from the repeated runs.
+\paragraph{Graders.} Document answers are graded by an LLM. To check it, a second model (\textbf{[model name]}),
+blind both to the grader's verdicts and to which configuration produced each answer, graded a random sample of 30
+answers. It agreed with the grader on 27 of the 30, and on 29 of 30 when only correct versus not correct matters.
+All three disagreements involved \emph{partly correct} and a neighbouring label. This is agreement between two
+models, not a human check, and we report it as such. SQL answers are scored by execution and need no grader.
 
-\paragraph{Scope.} One product, English questions, US public-company filings and one financial database. Several
-models are reached through commercial routers whose upstream providers are not disclosed; the served model name is
-recorded per call. Jev is a commercial model whose training data we do not know.
+\paragraph{A discarded afternoon of runs.} A Docker restart left the SEC database stopped, and for several hours
+every front door made its decisions without the database card. We noticed when SQL answers started failing,
+discarded the affected runs (they are kept, labelled, in the repository), added a check that stops any run without
+the card, and repeated the runs. Every routing number in this paper comes from the repeated runs.
+
+\paragraph{Scope.} The study covers one product, English questions, US public-company filings and one financial
+database. Several models were reached through commercial routers that do not disclose their upstream providers,
+so we recorded the served model name for every call. Jev is a commercial model and we do not know what it was
+trained on.
 
 \section{Related work}
-\textbf{Verification and selection for text-to-SQL.} LEVER \cite{ni2023lever} re-ranks generated programs with a
-verifier that reads execution results. CHASE-SQL \cite{pourreza2025chase} selects among multi-path candidates with a
-trained selector, and GradeSQL \cite{tritto2025gradesql} trains outcome reward models that beat majority voting.
-Richardson \cite{richardson2026predicts} studies which signals predict correctness. Our cascade uses a verifier only
-to decide \emph{when} to fall back, and we find that a zero-shot decision model is a good doubter but a poor selector.
-\textbf{Cascades.} FrugalGPT \cite{chen2023frugalgpt} escalates to stronger models when a scorer doubts an answer.
-\textbf{Adaptive and corrective retrieval.} Adaptive-RAG \cite{jeong2024adaptiverag} routes by predicted question
-complexity, and CRAG \cite{yan2024crag} triggers corrective actions from a retrieval evaluator. \textbf{Routing between
-databases and documents.} Rule-driven routing between structured and unstructured sources \cite{bai2025routing}
-found them complementary and querying both naively costly, which motivates deciding ``both'' deliberately. Our
-front door decides it from evidence about both sources. \textbf{Re-ranking.} Cross-encoders such as the BGE family
-\cite{chen2024bgem3} are the standard second stage. Our page-finding result suggests a decision model asked a direct
-relevance question is a strong precision re-ranker. We found no published evaluation of Jev on SQL answers,
+\paragraph{Verification and selection for text-to-SQL.} LEVER \cite{ni2023lever} re-ranks generated programs with a
+verifier that reads their execution results. CHASE-SQL \cite{pourreza2025chase} chooses among candidates generated
+along several paths with a trained selector, and GradeSQL \cite{tritto2025gradesql} trains outcome reward models
+that beat majority voting. Richardson \cite{richardson2026predicts} studies which signals predict whether a query is
+correct. Our cascade uses a verifier only to decide \emph{when} to fall back, and we find that a zero-shot decision
+model is good at that and poor at choosing.
+
+\paragraph{Cascades and adaptive retrieval.} FrugalGPT \cite{chen2023frugalgpt} escalates to stronger models when a
+scorer doubts an answer. Adaptive-RAG \cite{jeong2024adaptiverag} routes questions by their predicted complexity,
+and CRAG \cite{yan2024crag} triggers corrective actions based on a retrieval evaluator.
+
+\paragraph{Routing between databases and documents.} Bai et al.\ \cite{bai2025routing} route between structured and
+unstructured sources with rules, and find the two complementary and querying both naively expensive. That is why
+our front door decides on ``both'' deliberately, from evidence about each source.
+
+\paragraph{Re-ranking.} Cross-encoders such as the BGE family \cite{chen2024bgem3} are the usual second stage of
+retrieval. Our page-finding result suggests that a decision model asked a direct relevance question can be a
+strong re-ranker when precision at the top matters. We found no published evaluation of Jev on SQL answers,
 routing or retrieval.
 
 \section{Conclusion}
-Measured honestly, a database-and-documents assistant that looked reasonable lost most of its accuracy to two design
-choices: what its router was shown, and how its writer's passages were ordered. Fixing them, and confirming each fix
-on data that played no part in finding it, was more valuable than any single model upgrade. Across the system, a
-cheap decision model can replace LLM calls that only \emph{decide}. It flags wrong SQL answers nearly as well as an
-LLM judge. Asked one choice question, it routes about as accurately as an LLM front door, with no significant difference. It finds the right source page
-four times as often as a cross-encoder. It fails where the decision is split into independent questions, or where
-it must judge prose against evidence. Code, prompts, pre-registrations and every result file are kept with the project's
-code (availability: \textbf{to be decided by the authors}).
+When we evaluated a database-and-documents assistant on questions it had not been tuned on, most of its lost
+accuracy traced back to two ordinary design choices: what the router was shown, and the order in which the writer
+read its passages. Fixing them raised accuracy on our development set from \N{fbShip} to \N{fbBge}; on held-out
+data the routing fix held up clearly, while the gain on two-source questions was too small to confirm. We also found that a cheap decision model can take over several of the LLM calls that only make a
+decision. It flags wrong SQL answers nearly as well as an LLM judge, routes questions about as well as an LLM front
+door when asked a single choice question, and puts the right source page first about four times as often as a
+cross-encoder. It breaks down when one decision is split into independent questions, and when it has to judge
+prose against evidence. The code, prompts, pre-registrations and every result file are kept with the project
+(availability: \textbf{to be decided by the authors}).
+
+\begin{credits}
+\subsubsection{\discintname}
+\textbf{[To be completed by the authors.]}
+\end{credits}
 
 \bibliographystyle{splncs04}
 \bibliography{refs}

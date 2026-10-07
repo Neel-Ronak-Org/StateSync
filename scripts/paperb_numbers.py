@@ -73,7 +73,7 @@ def routing() -> dict[str, str]:
 
     for tag, a, b in (("LLMvShip", "llm", "shipped"), ("LLMrawvShip", "llm@raw", "shipped"),
                       ("JevCvLLM", "jev_choice@raw+v2", "llm@raw"), ("JevCvShip", "jev_choice@raw+v2", "shipped"),
-                      ("JevYNvLLM", "jev", "llm@raw"), ("JevRWvLLM", "jev_rw", "llm@raw")):
+                      ("JevCvonevLLM", "jev_choice@raw", "llm@raw"), ("JevYNvLLM", "jev", "llm@raw"), ("JevRWvLLM", "jev_rw", "llm@raw")):
         A, B = R[f"{a}|test|0"]["items"], R[f"{b}|test|0"]["items"]
         ids = [i for i in A if i in B]
         w = sum(pred(A[i]) in acc[i] and pred(B[i]) not in acc[i] for i in ids)
@@ -99,9 +99,17 @@ def main() -> int:
     N["sVote"] = pct(P["P3 pool vote"])
     N["sJevMax"] = pct(P["pool Jev-max (zero-shot)"])
     t = a["tests"]
+    # Holm over the three pre-registered hypotheses: the table prints adjusted one-sided p values.
+    order = sorted(("H1", "H2", "H3"), key=lambda h: t[h]["p_one_sided"])
+    adj, run = {}, 0.0
+    for i, h in enumerate(order):
+        run = max(run, min(1.0, (len(order) - i) * t[h]["p_one_sided"]))
+        adj[h] = run
+    assert all((adj[h] < 0.05) == a["holm"][h] for h in adj), "Holm adjustment disagrees with the analysis file"
+    cnt = lambda x: f"{x:.0f}" if float(x).is_integer() else f"{x:.1f}"   # ties score fractional wins
     for h in ("H1", "H2", "H3"):
-        N[f"s{h}P"] = f"$p={t[h]['p_one_sided']:.4f}$".rstrip("0") if t[h]["p_one_sided"] >= 1e-4 else pval(t[h]["p_one_sided"])
-        N[f"s{h}W"], N[f"s{h}L"] = str(int(t[h]["a_better"])), str(int(t[h]["b_better"]))
+        N[f"s{h}P"] = f"$p_{{\\mathrm{{Holm}}}}={adj[h]:.4f}$"
+        N[f"s{h}W"], N[f"s{h}L"] = cnt(t[h]["a_better"]), cnt(t[h]["b_better"])
     D = a["detection_first_answer"]
     for key, name in (("judge (Gemini, 0-100)", "Judge"), ("modernbert_real", "MB"), ("modernbert_mutation", "MBmut"),
                       ("laya_finetuned", "LayaFT"), ("laya_zeroshot", "LayaZS"), ("jev_zeroshot", "Jev")):
