@@ -1,0 +1,135 @@
+{
+ "scores": "docs/eval/bird_scores_heldout_gptoss_v2_corrected.json",
+ "n": 393,
+ "wrong": 87,
+ "cv": {
+  "5-fold": {
+   "free (process + data checks)": {
+    "auroc": 0.5597,
+    "aurc": 0.2161
+   },
+   "process only": {
+    "auroc": 0.5782,
+    "aurc": 0.1961
+   },
+   "all (free + judge + self-consistency)": {
+    "auroc": 0.672,
+    "aurc": 0.1841
+   },
+   "all without data checks": {
+    "auroc": 0.6912,
+    "aurc": 0.176
+   },
+   "judge + self-consistency": {
+    "auroc": 0.7066,
+    "aurc": 0.1456
+   },
+   "self-consistency alone": {
+    "auroc": 0.6054,
+    "aurc": 0.1832
+   },
+   "judge alone": {
+    "auroc": 0.7052,
+    "aurc": 0.1443
+   },
+   "AURC gain: all (free + judge + self-consistency) over all without data checks": {
+    "gain": -0.0081,
+    "ci95": [
+     -0.0395,
+     0.0161
+    ]
+   },
+   "AURC gain: all (free + judge + self-consistency) over self-consistency alone": {
+    "gain": -0.0009,
+    "ci95": [
+     -0.0463,
+     0.0458
+    ]
+   },
+   "AURC gain: free (process + data checks) over process only": {
+    "gain": -0.02,
+    "ci95": [
+     -0.0654,
+     0.0297
+    ]
+   },
+   "AURC gain: free (process + data checks) over judge alone": {
+    "gain": -0.0718,
+    "ci95": [
+     -0.1153,
+     -0.03
+    ]
+   }
+  },
+  "leave-one-database-out": {
+   "free (process + data checks)": {
+    "auroc": 0.491,
+    "aurc": 0.2673
+   },
+   "process only": {
+    "auroc": 0.4778,
+    "aurc": 0.2791
+   },
+   "all (free + judge + self-consistency)": {
+    "auroc": 0.6957,
+    "aurc": 0.1672
+   },
+   "all without data checks": {
+    "auroc": 0.7165,
+    "aurc": 0.1477
+   },
+   "judge + self-consistency": {
+    "auroc": 0.6898,
+    "aurc": 0.1642
+   },
+   "self-consistency alone": {
+    "auroc": 0.6054,
+    "aurc": 0.1832
+   },
+   "judge alone": {
+    "auroc": 0.7052,
+    "aurc": 0.1443
+   },
+   "AURC gain: all (free + judge + self-consistency) over all without data checks": {
+    "gain": -0.0196,
+    "ci95": [
+     -0.053,
+     0.0084
+    ]
+   },
+   "AURC gain: all (free + judge + self-consistency) over self-consistency alone": {
+    "gain": 0.0159,
+    "ci95": [
+     -0.0278,
+     0.0578
+    ]
+   },
+   "AURC gain: free (process + data checks) over process only": {
+    "gain": 0.0117,
+    "ci95": [
+     -0.006,
+     0.0322
+    ]
+   },
+   "AURC gain: free (process + data checks) over judge alone": {
+    "gain": -0.123,
+    "ci95": [
+     -0.1709,
+     -0.0751
+    ]
+   }
+  }
+ },
+ "coefficients_all_standardised": {
+  "no_sql": 0.167,
+  "empty_result": 0.697,
+  "any_sql_retry": 0.203,
+  "refusal": 0.289,
+  "fanout_retry": 0.0,
+  "truncation": -0.236,
+  "null_heavy": 0.302,
+  "grounding_before_repair": 0.13,
+  "judge": 0.627,
+  "self_consistency": 0.498
+ }
+}

@@ -1,0 +1,102 @@
+{
+ "heldout_gpt5mini": {
+  "judge_auroc": 0.6969,
+  "by_samples": {
+   "1": {
+    "extra_calls": 1,
+    "auroc": 0.6447,
+    "minus_judge": -0.0523,
+    "minus_judge_ci95": [
+     -0.1106,
+     0.0039
+    ]
+   },
+   "2": {
+    "extra_calls": 2,
+    "auroc": 0.687,
+    "minus_judge": -0.0099,
+    "minus_judge_ci95": [
+     -0.0737,
+     0.0517
+    ]
+   },
+   "3": {
+    "extra_calls": 3,
+    "auroc": 0.7102,
+    "minus_judge": 0.0132,
+    "minus_judge_ci95": [
+     -0.0528,
+     0.0765
+    ]
+   },
+   "4": {
+    "extra_calls": 4,
+    "auroc": 0.7258,
+    "minus_judge": 0.0288,
+    "minus_judge_ci95": [
+     -0.0398,
+     0.0929
+    ]
+   },
+   "5": {
+    "extra_calls": 5,
+    "auroc": 0.7387,
+    "minus_judge": 0.0418,
+    "minus_judge_ci95": [
+     -0.0281,
+     0.1069
+    ]
+   }
+  }
+ },
+ "heldout_gptoss": {
+  "judge_auroc": 0.6833,
+  "by_samples": {
+   "1": {
+    "extra_calls": 1,
+    "auroc": 0.6144,
+    "minus_judge": -0.0689,
+    "minus_judge_ci95": [
+     -0.1323,
+     -0.0094
+    ]
+   },
+   "2": {
+    "extra_calls": 2,
+    "auroc": 0.6593,
+    "minus_judge": -0.024,
+    "minus_judge_ci95": [
+     -0.0945,
+     0.0433
+    ]
+   },
+   "3": {
+    "extra_calls": 3,
+    "auroc": 0.684,
+    "minus_judge": 0.0007,
+    "minus_judge_ci95": [
+     -0.0731,
+     0.0737
+    ]
+   },
+   "4": {
+    "extra_calls": 4,
+    "auroc": 0.7011,
+    "minus_judge": 0.0178,
+    "minus_judge_ci95": [
+     -0.0602,
+     0.0951
+    ]
+   },
+   "5": {
+    "extra_calls": 5,
+    "auroc": 0.7153,
+    "minus_judge": 0.032,
+    "minus_judge_ci95": [
+     -0.0479,
+     0.1117
+    ]
+   }
+  }
+ }
+}

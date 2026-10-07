@@ -1,0 +1,1795 @@
+{
+ "seed": 20261006,
+ "built_with": "scripts/build_hybrid_set.py",
+ "data_defects": [
+  "General Mills: the Revenues tag in sec.annual_metrics is about 2 billion dollars a year, not net sales (about 18 billion); revenue ratios for General Mills are wrong in the database.",
+  "Kraft Heinz: no fiscal-2022 revenue row.",
+  "Fiscal years: period_end_year mislabels 52/53-week years ending 1-2 January (Johnson & Johnson); reference queries use the year of period_end - 20 days."
+ ],
+ "analysis": {
+  "primary": "v3 vs shipped, both halves right, exact McNemar two-sided, alpha 0.05",
+  "secondary": "v3_entities vs v3 on dependent items, same test"
+ },
+ "items": [
+  {
+   "id": "hd01",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Coca-Cola, AES and Verizon, which had the highest revenue in fiscal 2022, and what does that company's 2022 10-K say about the main risks it faces?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'revenue' AND period_end_year = 2022 AND ticker IN ('AES', 'KO', 'VZ') ORDER BY 2 DESC",
+   "sql_answer": "VZ, 136835000000",
+   "all_values": "VZ, 136835000000; KO, 43004000000; AES, 12617000000",
+   "winner": "Verizon",
+   "filing": "VERIZON_2022_10K",
+   "metric": "revenue",
+   "year": 2022,
+   "order": "highest",
+   "topic": "the main risks it faces",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd02",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among American Water Works and 3M, which had the highest net profit margin in fiscal 2022, and what does that company's 2022 10-K say about its employees and workforce?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('AWK', 'MMM') ORDER BY 2 DESC",
+   "sql_answer": "AWK, 21.79",
+   "all_values": "AWK, 21.79; MMM, 16.88",
+   "winner": "American Water Works",
+   "filing": "AMERICANWATERWORKS_2022_10K",
+   "metric": "net_margin",
+   "year": 2022,
+   "order": "highest",
+   "topic": "its employees and workforce",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd03",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among PepsiCo, CVS Health, American Water Works and Coca-Cola, which had the highest operating income in fiscal 2022, and what does that company's 2022 10-K say about the main risks it faces?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'operating_income' AND period_end_year = 2022 AND ticker IN ('AWK', 'CVS', 'KO', 'PEP') ORDER BY 2 DESC",
+   "sql_answer": "PEP, 11512000000",
+   "all_values": "PEP, 11512000000; KO, 10909000000; CVS, 7746000000; AWK, 1273000000",
+   "winner": "PepsiCo",
+   "filing": "PEPSICO_2022_10K",
+   "metric": "operating_income",
+   "year": 2022,
+   "order": "highest",
+   "topic": "the main risks it faces",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd04",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among PepsiCo, Lockheed Martin, Verizon and PayPal, which had the lowest current ratio in fiscal 2022, and what does that company's 2022 10-K say about how its business segments are organised?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'current_liabilities' WHERE n.metric = 'current_assets' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('LMT', 'PEP', 'PYPL', 'VZ') ORDER BY 2 DESC",
+   "sql_answer": "VZ, 75.46",
+   "all_values": "LMT, 132.13; PYPL, 127.53; PEP, 80.41; VZ, 75.46",
+   "winner": "Verizon",
+   "filing": "VERIZON_2022_10K",
+   "metric": "current_ratio",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "how its business segments are organised",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd05",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among American Water Works, Coca-Cola, Nike and Corning, which had the highest current ratio in fiscal 2021, and what does that company's 2021 10-K say about its properties and facilities?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'current_liabilities' WHERE n.metric = 'current_assets' AND n.period_end_year = 2021 AND d.value <> 0 AND n.ticker IN ('AWK', 'GLW', 'KO', 'NKE') ORDER BY 2 DESC",
+   "sql_answer": "NKE, 271.77",
+   "all_values": "NKE, 271.77; GLW, 159.36; KO, 113.01; AWK, 72.58",
+   "winner": "Nike",
+   "filing": "NIKE_2021_10K",
+   "metric": "current_ratio",
+   "year": 2021,
+   "order": "highest",
+   "topic": "its properties and facilities",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd06",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Costco, Corning, Verizon and American Water Works, which had the lowest net profit margin in fiscal 2021, and what does that company's 2021 10-K say about any material legal proceedings?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2021 AND d.value <> 0 AND n.ticker IN ('AWK', 'COST', 'GLW', 'VZ') ORDER BY 2 DESC",
+   "sql_answer": "COST, 2.56",
+   "all_values": "AWK, 32.27; VZ, 16.51; GLW, 13.54; COST, 2.56",
+   "winner": "Costco",
+   "filing": "COSTCO_2021_10K",
+   "metric": "net_margin",
+   "year": 2021,
+   "order": "lowest",
+   "topic": "any material legal proceedings",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd07",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among MGM Resorts, Adobe, PepsiCo and American Water Works, which had the lowest total assets at year end in fiscal 2022, and what does that company's 2022 10-K say about its properties and facilities?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2022 AND ticker IN ('ADBE', 'AWK', 'MGM', 'PEP') ORDER BY 2 DESC",
+   "sql_answer": "ADBE, 27165000000",
+   "all_values": "PEP, 92187000000; MGM, 45692206000; AWK, 27787000000; ADBE, 27165000000",
+   "winner": "Adobe",
+   "filing": "ADOBE_2022_10K",
+   "metric": "total_assets",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "its properties and facilities",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd08",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among PepsiCo, Coca-Cola, MGM Resorts and Lockheed Martin, which had the highest operating margin in fiscal 2022, and what does that company's 2022 10-K say about its properties and facilities?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'operating_income' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('KO', 'LMT', 'MGM', 'PEP') ORDER BY 2 DESC",
+   "sql_answer": "KO, 25.37",
+   "all_values": "KO, 25.37; PEP, 13.33; LMT, 12.65; MGM, 10.96",
+   "winner": "Coca-Cola",
+   "filing": "COCACOLA_2022_10K",
+   "metric": "operating_margin",
+   "year": 2022,
+   "order": "highest",
+   "topic": "its properties and facilities",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd09",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Corning, PepsiCo and Johnson & Johnson, which had the lowest spending on share repurchases in fiscal 2022, and what does that company's 2022 10-K say about its properties and facilities?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'share_repurchases' AND period_end_year = 2022 AND ticker IN ('GLW', 'JNJ', 'PEP') ORDER BY 2 DESC",
+   "sql_answer": "GLW, 221000000",
+   "all_values": "JNJ, 6035000000; PEP, 1500000000; GLW, 221000000",
+   "winner": "Corning",
+   "filing": "CORNING_2022_10K",
+   "metric": "share_repurchases",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "its properties and facilities",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd10",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Boeing, AES and JPMorgan, which had the lowest operating cash flow in fiscal 2022, and what does that company's 2022 10-K say about its liquidity and capital resources?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'operating_cash_flow' AND period_end_year = 2022 AND ticker IN ('AES', 'BA', 'JPM') ORDER BY 2 DESC",
+   "sql_answer": "AES, 2715000000",
+   "all_values": "JPM, 107119000000; BA, 3512000000; AES, 2715000000",
+   "winner": "AES Corporation",
+   "filing": "AES_2022_10K",
+   "metric": "operating_cash_flow",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "its liquidity and capital resources",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd11",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Corning, Boeing, American Express and Adobe, which had the highest net profit margin in fiscal 2022, and what does that company's 2022 10-K say about any material legal proceedings?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('ADBE', 'AXP', 'BA', 'GLW') ORDER BY 2 DESC",
+   "sql_answer": "ADBE, 27.01",
+   "all_values": "ADBE, 27.01; AXP, 21.96; GLW, 9.27; BA, -7.41",
+   "winner": "Adobe",
+   "filing": "ADOBE_2022_10K",
+   "metric": "net_margin",
+   "year": 2022,
+   "order": "highest",
+   "topic": "any material legal proceedings",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd12",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Johnson & Johnson, AES, CVS Health and PayPal, which had the highest capital expenditure as a share of revenue in fiscal 2022, and what does that company's 2022 10-K say about the main risks it faces?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'capital_expenditure' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('AES', 'CVS', 'JNJ', 'PYPL') ORDER BY 2 DESC",
+   "sql_answer": "AES, 36.07",
+   "all_values": "AES, 36.07; JNJ, 4.22; PYPL, 2.57; CVS, 0.85",
+   "winner": "AES Corporation",
+   "filing": "AES_2022_10K",
+   "metric": "capex_intensity",
+   "year": 2022,
+   "order": "highest",
+   "topic": "the main risks it faces",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd13",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among General Mills, AMD and 3M, which had the highest total assets at year end in fiscal 2022, and what does that company's 2022 10-K say about its properties and facilities?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2022 AND ticker IN ('AMD', 'GIS', 'MMM') ORDER BY 2 DESC",
+   "sql_answer": "AMD, 67580000000",
+   "all_values": "AMD, 67580000000; MMM, 46455000000; GIS, 31090100000",
+   "winner": "AMD",
+   "filing": "AMD_2022_10K",
+   "metric": "total_assets",
+   "year": 2022,
+   "order": "highest",
+   "topic": "its properties and facilities",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd14",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among 3M, American Express, Corning and Adobe, which had the highest net income in fiscal 2022, and what does that company's 2022 10-K say about its properties and facilities?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'net_income' AND period_end_year = 2022 AND ticker IN ('ADBE', 'AXP', 'GLW', 'MMM') ORDER BY 2 DESC",
+   "sql_answer": "AXP, 7514000000",
+   "all_values": "AXP, 7514000000; MMM, 5777000000; ADBE, 4756000000; GLW, 1316000000",
+   "winner": "American Express",
+   "filing": "AMERICANEXPRESS_2022_10K",
+   "metric": "net_income",
+   "year": 2022,
+   "order": "highest",
+   "topic": "its properties and facilities",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd15",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Pfizer and Nike, which had the highest total assets at year end in fiscal 2021, and what does that company's 2021 10-K say about the main risks it faces?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2021 AND ticker IN ('NKE', 'PFE') ORDER BY 2 DESC",
+   "sql_answer": "PFE, 181476000000",
+   "all_values": "PFE, 181476000000; NKE, 37740000000",
+   "winner": "Pfizer",
+   "filing": "PFIZER_2021_10K",
+   "metric": "total_assets",
+   "year": 2021,
+   "order": "highest",
+   "topic": "the main risks it faces",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd16",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Boeing, 3M, American Water Works and Lockheed Martin, which had the highest operating margin in fiscal 2022, and what does that company's 2022 10-K say about what drove its results that year?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'operating_income' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('AWK', 'BA', 'LMT', 'MMM') ORDER BY 2 DESC",
+   "sql_answer": "AWK, 33.83",
+   "all_values": "AWK, 33.83; MMM, 19.10; LMT, 12.65; BA, -5.33",
+   "winner": "American Water Works",
+   "filing": "AMERICANWATERWORKS_2022_10K",
+   "metric": "operating_margin",
+   "year": 2022,
+   "order": "highest",
+   "topic": "what drove its results that year",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd17",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among MGM Resorts, Lockheed Martin and Corning, which had the highest spending on share repurchases in fiscal 2022, and what does that company's 2022 10-K say about what drove its results that year?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'share_repurchases' AND period_end_year = 2022 AND ticker IN ('GLW', 'LMT', 'MGM') ORDER BY 2 DESC",
+   "sql_answer": "LMT, 7900000000",
+   "all_values": "LMT, 7900000000; MGM, 2775217000; GLW, 221000000",
+   "winner": "Lockheed Martin",
+   "filing": "LOCKHEEDMARTIN_2022_10K",
+   "metric": "share_repurchases",
+   "year": 2022,
+   "order": "highest",
+   "topic": "what drove its results that year",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd18",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Verizon, AMD, Corning and PayPal, which had the highest operating income in fiscal 2022, and what does that company's 2022 10-K say about its properties and facilities?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'operating_income' AND period_end_year = 2022 AND ticker IN ('AMD', 'GLW', 'PYPL', 'VZ') ORDER BY 2 DESC",
+   "sql_answer": "VZ, 30467000000",
+   "all_values": "VZ, 30467000000; PYPL, 3837000000; GLW, 1438000000; AMD, 1264000000",
+   "winner": "Verizon",
+   "filing": "VERIZON_2022_10K",
+   "metric": "operating_income",
+   "year": 2022,
+   "order": "highest",
+   "topic": "its properties and facilities",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd19",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among 3M, American Water Works and MGM Resorts, which had the highest capital expenditure as a share of revenue in fiscal 2022, and what does that company's 2022 10-K say about how its business segments are organised?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'capital_expenditure' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('AWK', 'MGM', 'MMM') ORDER BY 2 DESC",
+   "sql_answer": "AWK, 61.04",
+   "all_values": "AWK, 61.04; MGM, 5.83; MMM, 5.11",
+   "winner": "American Water Works",
+   "filing": "AMERICANWATERWORKS_2022_10K",
+   "metric": "capex_intensity",
+   "year": 2022,
+   "order": "highest",
+   "topic": "how its business segments are organised",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd20",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Boeing, 3M and Adobe, which had the highest net profit margin in fiscal 2022, and what does that company's 2022 10-K say about how its business segments are organised?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('ADBE', 'BA', 'MMM') ORDER BY 2 DESC",
+   "sql_answer": "ADBE, 27.01",
+   "all_values": "ADBE, 27.01; MMM, 16.88; BA, -7.41",
+   "winner": "Adobe",
+   "filing": "ADOBE_2022_10K",
+   "metric": "net_margin",
+   "year": 2022,
+   "order": "highest",
+   "topic": "how its business segments are organised",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd21",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among AES, Lockheed Martin, General Mills and Verizon, which had the lowest current ratio in fiscal 2022, and what does that company's 2022 10-K say about the main risks it faces?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'current_liabilities' WHERE n.metric = 'current_assets' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('AES', 'GIS', 'LMT', 'VZ') ORDER BY 2 DESC",
+   "sql_answer": "GIS, 63.46",
+   "all_values": "LMT, 132.13; AES, 117.75; VZ, 75.46; GIS, 63.46",
+   "winner": "General Mills",
+   "filing": "GENERALMILLS_2022_10K",
+   "metric": "current_ratio",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "the main risks it faces",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd22",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Corning and Adobe, which had the lowest total assets at year end in fiscal 2022, and what does that company's 2022 10-K say about what drove its results that year?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2022 AND ticker IN ('ADBE', 'GLW') ORDER BY 2 DESC",
+   "sql_answer": "ADBE, 27165000000",
+   "all_values": "GLW, 29499000000; ADBE, 27165000000",
+   "winner": "Adobe",
+   "filing": "ADOBE_2022_10K",
+   "metric": "total_assets",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "what drove its results that year",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd23",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among MGM Resorts, Boeing, Verizon and PayPal, which had the lowest revenue in fiscal 2022, and what does that company's 2022 10-K say about the main risks it faces?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'revenue' AND period_end_year = 2022 AND ticker IN ('BA', 'MGM', 'PYPL', 'VZ') ORDER BY 2 DESC",
+   "sql_answer": "MGM, 13127485000",
+   "all_values": "VZ, 136835000000; BA, 66608000000; PYPL, 27518000000; MGM, 13127485000",
+   "winner": "MGM Resorts",
+   "filing": "MGMRESORTS_2022_10K",
+   "metric": "revenue",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "the main risks it faces",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd24",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among CVS Health, AES, AMD and Adobe, which had the lowest capital expenditure in fiscal 2022, and what does that company's 2022 10-K say about its properties and facilities?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'capital_expenditure' AND period_end_year = 2022 AND ticker IN ('ADBE', 'AES', 'AMD', 'CVS') ORDER BY 2 DESC",
+   "sql_answer": "ADBE, 442000000",
+   "all_values": "AES, 4551000000; CVS, 2727000000; AMD, 450000000; ADBE, 442000000",
+   "winner": "Adobe",
+   "filing": "ADOBE_2022_10K",
+   "metric": "capital_expenditure",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "its properties and facilities",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd25",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among General Mills, MGM Resorts, American Express and Boeing, which had the highest operating cash flow in fiscal 2022, and what does that company's 2022 10-K say about its liquidity and capital resources?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'operating_cash_flow' AND period_end_year = 2022 AND ticker IN ('AXP', 'BA', 'GIS', 'MGM') ORDER BY 2 DESC",
+   "sql_answer": "AXP, 21079000000",
+   "all_values": "AXP, 21079000000; BA, 3512000000; GIS, 3316100000; MGM, 1756462000",
+   "winner": "American Express",
+   "filing": "AMERICANEXPRESS_2022_10K",
+   "metric": "operating_cash_flow",
+   "year": 2022,
+   "order": "highest",
+   "topic": "its liquidity and capital resources",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd26",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among PepsiCo, Verizon, Pfizer and Corning, which had the lowest total assets at year end in fiscal 2021, and what does that company's 2021 10-K say about its liquidity and capital resources?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2021 AND ticker IN ('GLW', 'PEP', 'PFE', 'VZ') ORDER BY 2 DESC",
+   "sql_answer": "GLW, 30154000000",
+   "all_values": "VZ, 366596000000; PFE, 181476000000; PEP, 92377000000; GLW, 30154000000",
+   "winner": "Corning",
+   "filing": "CORNING_2021_10K",
+   "metric": "total_assets",
+   "year": 2021,
+   "order": "lowest",
+   "topic": "its liquidity and capital resources",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd27",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Corning, Boeing, Verizon and CVS Health, which had the highest current ratio in fiscal 2022, and what does that company's 2022 10-K say about its properties and facilities?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'current_liabilities' WHERE n.metric = 'current_assets' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('BA', 'CVS', 'GLW', 'VZ') ORDER BY 2 DESC",
+   "sql_answer": "GLW, 144.02",
+   "all_values": "GLW, 144.02; BA, 121.62; CVS, 94.19; VZ, 75.46",
+   "winner": "Corning",
+   "filing": "CORNING_2022_10K",
+   "metric": "current_ratio",
+   "year": 2022,
+   "order": "highest",
+   "topic": "its properties and facilities",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd28",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among PayPal, Lockheed Martin, American Express and Corning, which had the highest net profit margin in fiscal 2022, and what does that company's 2022 10-K say about what drove its results that year?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('AXP', 'GLW', 'LMT', 'PYPL') ORDER BY 2 DESC",
+   "sql_answer": "AXP, 21.96",
+   "all_values": "AXP, 21.96; GLW, 9.27; PYPL, 8.79; LMT, 8.69",
+   "winner": "American Express",
+   "filing": "AMERICANEXPRESS_2022_10K",
+   "metric": "net_margin",
+   "year": 2022,
+   "order": "highest",
+   "topic": "what drove its results that year",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd29",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Corning, PayPal, American Express and 3M, which had the highest net profit margin in fiscal 2022, and what does that company's 2022 10-K say about any material legal proceedings?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('AXP', 'GLW', 'MMM', 'PYPL') ORDER BY 2 DESC",
+   "sql_answer": "AXP, 21.96",
+   "all_values": "AXP, 21.96; MMM, 16.88; GLW, 9.27; PYPL, 8.79",
+   "winner": "American Express",
+   "filing": "AMERICANEXPRESS_2022_10K",
+   "metric": "net_margin",
+   "year": 2022,
+   "order": "highest",
+   "topic": "any material legal proceedings",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd30",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among AMD, PepsiCo, MGM Resorts and Boeing, which had the lowest net income in fiscal 2022, and what does that company's 2022 10-K say about its properties and facilities?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'net_income' AND period_end_year = 2022 AND ticker IN ('AMD', 'BA', 'MGM', 'PEP') ORDER BY 2 DESC",
+   "sql_answer": "BA, -4935000000",
+   "all_values": "PEP, 8910000000; MGM, 1473093000; AMD, 1320000000; BA, -4935000000",
+   "winner": "Boeing",
+   "filing": "BOEING_2022_10K",
+   "metric": "net_income",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "its properties and facilities",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd31",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among MGM Resorts, PayPal and Corning, which had the highest operating income in fiscal 2022, and what does that company's 2022 10-K say about any material legal proceedings?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'operating_income' AND period_end_year = 2022 AND ticker IN ('GLW', 'MGM', 'PYPL') ORDER BY 2 DESC",
+   "sql_answer": "PYPL, 3837000000",
+   "all_values": "PYPL, 3837000000; MGM, 1439372000; GLW, 1438000000",
+   "winner": "Paypal",
+   "filing": "PAYPAL_2022_10K",
+   "metric": "operating_income",
+   "year": 2022,
+   "order": "highest",
+   "topic": "any material legal proceedings",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd32",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among CVS Health, Coca-Cola, Johnson & Johnson and American Express, which had the highest capital expenditure in fiscal 2022, and what does that company's 2022 10-K say about its liquidity and capital resources?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'capital_expenditure' AND period_end_year = 2022 AND ticker IN ('AXP', 'CVS', 'JNJ', 'KO') ORDER BY 2 DESC",
+   "sql_answer": "JNJ, 4009000000",
+   "all_values": "JNJ, 4009000000; CVS, 2727000000; AXP, 1855000000; KO, 1484000000",
+   "winner": "Johnson & Johnson",
+   "filing": "JOHNSON_JOHNSON_2022_10K",
+   "metric": "capital_expenditure",
+   "year": 2022,
+   "order": "highest",
+   "topic": "its liquidity and capital resources",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd33",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among MGM Resorts, CVS Health, PepsiCo and PayPal, which had the highest operating income in fiscal 2022, and what does that company's 2022 10-K say about any material legal proceedings?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'operating_income' AND period_end_year = 2022 AND ticker IN ('CVS', 'MGM', 'PEP', 'PYPL') ORDER BY 2 DESC",
+   "sql_answer": "PEP, 11512000000",
+   "all_values": "PEP, 11512000000; CVS, 7746000000; PYPL, 3837000000; MGM, 1439372000",
+   "winner": "PepsiCo",
+   "filing": "PEPSICO_2022_10K",
+   "metric": "operating_income",
+   "year": 2022,
+   "order": "highest",
+   "topic": "any material legal proceedings",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd34",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Coca-Cola, Boeing, CVS Health and 3M, which had the lowest revenue in fiscal 2022, and what does that company's 2022 10-K say about what drove its results that year?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'revenue' AND period_end_year = 2022 AND ticker IN ('BA', 'CVS', 'KO', 'MMM') ORDER BY 2 DESC",
+   "sql_answer": "MMM, 34229000000",
+   "all_values": "CVS, 322467000000; BA, 66608000000; KO, 43004000000; MMM, 34229000000",
+   "winner": "3M",
+   "filing": "3M_2022_10K",
+   "metric": "revenue",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "what drove its results that year",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd35",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among General Mills, Verizon and PayPal, which had the lowest operating cash flow in fiscal 2022, and what does that company's 2022 10-K say about any material legal proceedings?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'operating_cash_flow' AND period_end_year = 2022 AND ticker IN ('GIS', 'PYPL', 'VZ') ORDER BY 2 DESC",
+   "sql_answer": "GIS, 3316100000",
+   "all_values": "VZ, 37141000000; PYPL, 5813000000; GIS, 3316100000",
+   "winner": "General Mills",
+   "filing": "GENERALMILLS_2022_10K",
+   "metric": "operating_cash_flow",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "any material legal proceedings",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd36",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among AES, Johnson & Johnson, Coca-Cola and Adobe, which had the highest total assets at year end in fiscal 2022, and what does that company's 2022 10-K say about any material legal proceedings?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2022 AND ticker IN ('ADBE', 'AES', 'JNJ', 'KO') ORDER BY 2 DESC",
+   "sql_answer": "JNJ, 187378000000",
+   "all_values": "JNJ, 187378000000; KO, 92763000000; AES, 38363000000; ADBE, 27165000000",
+   "winner": "Johnson & Johnson",
+   "filing": "JOHNSON_JOHNSON_2022_10K",
+   "metric": "total_assets",
+   "year": 2022,
+   "order": "highest",
+   "topic": "any material legal proceedings",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd37",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among AES, Adobe, PepsiCo and Johnson & Johnson, which had the lowest total assets at year end in fiscal 2022, and what does that company's 2022 10-K say about its competition?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2022 AND ticker IN ('ADBE', 'AES', 'JNJ', 'PEP') ORDER BY 2 DESC",
+   "sql_answer": "ADBE, 27165000000",
+   "all_values": "JNJ, 187378000000; PEP, 92187000000; AES, 38363000000; ADBE, 27165000000",
+   "winner": "Adobe",
+   "filing": "ADOBE_2022_10K",
+   "metric": "total_assets",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "its competition",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd38",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among PepsiCo, Boeing and MGM Resorts, which had the lowest net profit margin in fiscal 2022, and what does that company's 2022 10-K say about what drove its results that year?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('BA', 'MGM', 'PEP') ORDER BY 2 DESC",
+   "sql_answer": "BA, -7.41",
+   "all_values": "MGM, 11.22; PEP, 10.31; BA, -7.41",
+   "winner": "Boeing",
+   "filing": "BOEING_2022_10K",
+   "metric": "net_margin",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "what drove its results that year",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd39",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among PepsiCo, Corning, Coca-Cola and 3M, which had the highest net profit margin in fiscal 2022, and what does that company's 2022 10-K say about its competition?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('GLW', 'KO', 'MMM', 'PEP') ORDER BY 2 DESC",
+   "sql_answer": "KO, 22.19",
+   "all_values": "KO, 22.19; MMM, 16.88; PEP, 10.31; GLW, 9.27",
+   "winner": "Coca-Cola",
+   "filing": "COCACOLA_2022_10K",
+   "metric": "net_margin",
+   "year": 2022,
+   "order": "highest",
+   "topic": "its competition",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd40",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among JPMorgan, AES, CVS Health and American Express, which had the lowest operating cash flow in fiscal 2022, and what does that company's 2022 10-K say about what drove its results that year?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'operating_cash_flow' AND period_end_year = 2022 AND ticker IN ('AES', 'AXP', 'CVS', 'JPM') ORDER BY 2 DESC",
+   "sql_answer": "AES, 2715000000",
+   "all_values": "JPM, 107119000000; AXP, 21079000000; CVS, 16177000000; AES, 2715000000",
+   "winner": "AES Corporation",
+   "filing": "AES_2022_10K",
+   "metric": "operating_cash_flow",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "what drove its results that year",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd41",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among JPMorgan, Corning and American Water Works, which had the highest revenue in fiscal 2022, and what does that company's 2022 10-K say about its liquidity and capital resources?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'revenue' AND period_end_year = 2022 AND ticker IN ('AWK', 'GLW', 'JPM') ORDER BY 2 DESC",
+   "sql_answer": "JPM, 128695000000",
+   "all_values": "JPM, 128695000000; GLW, 14189000000; AWK, 3763000000",
+   "winner": "JPMorgan",
+   "filing": "JPMORGAN_2022_10K",
+   "metric": "revenue",
+   "year": 2022,
+   "order": "highest",
+   "topic": "its liquidity and capital resources",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd42",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Coca-Cola, Nike and Costco, which had the highest capital expenditure in fiscal 2021, and what does that company's 2021 10-K say about its competition?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'capital_expenditure' AND period_end_year = 2021 AND ticker IN ('COST', 'KO', 'NKE') ORDER BY 2 DESC",
+   "sql_answer": "COST, 3588000000",
+   "all_values": "COST, 3588000000; KO, 1367000000; NKE, 695000000",
+   "winner": "Costco",
+   "filing": "COSTCO_2021_10K",
+   "metric": "capital_expenditure",
+   "year": 2021,
+   "order": "highest",
+   "topic": "its competition",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd43",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Coca-Cola, CVS Health, JPMorgan and MGM Resorts, which had the lowest total assets at year end in fiscal 2022, and what does that company's 2022 10-K say about its properties and facilities?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2022 AND ticker IN ('CVS', 'JPM', 'KO', 'MGM') ORDER BY 2 DESC",
+   "sql_answer": "MGM, 45692206000",
+   "all_values": "JPM, 3665743000000; CVS, 228275000000; KO, 92763000000; MGM, 45692206000",
+   "winner": "MGM Resorts",
+   "filing": "MGMRESORTS_2022_10K",
+   "metric": "total_assets",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "its properties and facilities",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd44",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Coca-Cola, CVS Health, American Express and PepsiCo, which had the lowest dividends paid in fiscal 2022, and what does that company's 2022 10-K say about its properties and facilities?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'dividends_paid' AND period_end_year = 2022 AND ticker IN ('AXP', 'CVS', 'KO', 'PEP') ORDER BY 2 DESC",
+   "sql_answer": "AXP, 1565000000",
+   "all_values": "KO, 7616000000; PEP, 6172000000; CVS, 2907000000; AXP, 1565000000",
+   "winner": "American Express",
+   "filing": "AMERICANEXPRESS_2022_10K",
+   "metric": "dividends_paid",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "its properties and facilities",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd45",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Johnson & Johnson, AMD, American Express and 3M, which had the highest capital expenditure in fiscal 2022, and what does that company's 2022 10-K say about its employees and workforce?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'capital_expenditure' AND period_end_year = 2022 AND ticker IN ('AMD', 'AXP', 'JNJ', 'MMM') ORDER BY 2 DESC",
+   "sql_answer": "JNJ, 4009000000",
+   "all_values": "JNJ, 4009000000; AXP, 1855000000; MMM, 1749000000; AMD, 450000000",
+   "winner": "Johnson & Johnson",
+   "filing": "JOHNSON_JOHNSON_2022_10K",
+   "metric": "capital_expenditure",
+   "year": 2022,
+   "order": "highest",
+   "topic": "its employees and workforce",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd46",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Pfizer, Corning and Costco, which had the highest net profit margin in fiscal 2021, and what does that company's 2021 10-K say about any material legal proceedings?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2021 AND d.value <> 0 AND n.ticker IN ('COST', 'GLW', 'PFE') ORDER BY 2 DESC",
+   "sql_answer": "PFE, 27.04",
+   "all_values": "PFE, 27.04; GLW, 13.54; COST, 2.56",
+   "winner": "Pfizer",
+   "filing": "PFIZER_2021_10K",
+   "metric": "net_margin",
+   "year": 2021,
+   "order": "highest",
+   "topic": "any material legal proceedings",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd47",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among General Mills, MGM Resorts, PepsiCo and American Water Works, which had the lowest total assets at year end in fiscal 2022, and what does that company's 2022 10-K say about its employees and workforce?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2022 AND ticker IN ('AWK', 'GIS', 'MGM', 'PEP') ORDER BY 2 DESC",
+   "sql_answer": "AWK, 27787000000",
+   "all_values": "PEP, 92187000000; MGM, 45692206000; GIS, 31090100000; AWK, 27787000000",
+   "winner": "American Water Works",
+   "filing": "AMERICANWATERWORKS_2022_10K",
+   "metric": "total_assets",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "its employees and workforce",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd48",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Coca-Cola, General Mills and American Water Works, which had the highest total assets at year end in fiscal 2022, and what does that company's 2022 10-K say about its liquidity and capital resources?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2022 AND ticker IN ('AWK', 'GIS', 'KO') ORDER BY 2 DESC",
+   "sql_answer": "KO, 92763000000",
+   "all_values": "KO, 92763000000; GIS, 31090100000; AWK, 27787000000",
+   "winner": "Coca-Cola",
+   "filing": "COCACOLA_2022_10K",
+   "metric": "total_assets",
+   "year": 2022,
+   "order": "highest",
+   "topic": "its liquidity and capital resources",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd49",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Pfizer, PepsiCo and American Water Works, which had the highest net profit margin in fiscal 2021, and what does that company's 2021 10-K say about what drove its results that year?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2021 AND d.value <> 0 AND n.ticker IN ('AWK', 'PEP', 'PFE') ORDER BY 2 DESC",
+   "sql_answer": "AWK, 32.27",
+   "all_values": "AWK, 32.27; PFE, 27.04; PEP, 9.59",
+   "winner": "American Water Works",
+   "filing": "AMERICANWATERWORKS_2021_10K",
+   "metric": "net_margin",
+   "year": 2021,
+   "order": "highest",
+   "topic": "what drove its results that year",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd50",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Boeing, Corning and Coca-Cola, which had the highest net profit margin in fiscal 2022, and what does that company's 2022 10-K say about its competition?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('BA', 'GLW', 'KO') ORDER BY 2 DESC",
+   "sql_answer": "KO, 22.19",
+   "all_values": "KO, 22.19; GLW, 9.27; BA, -7.41",
+   "winner": "Coca-Cola",
+   "filing": "COCACOLA_2022_10K",
+   "metric": "net_margin",
+   "year": 2022,
+   "order": "highest",
+   "topic": "its competition",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd51",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Verizon, American Express, AES and 3M, which had the lowest net profit margin in fiscal 2022, and what does that company's 2022 10-K say about its liquidity and capital resources?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('AES', 'AXP', 'MMM', 'VZ') ORDER BY 2 DESC",
+   "sql_answer": "AES, -4.33",
+   "all_values": "AXP, 21.96; MMM, 16.88; VZ, 15.53; AES, -4.33",
+   "winner": "AES Corporation",
+   "filing": "AES_2022_10K",
+   "metric": "net_margin",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "its liquidity and capital resources",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd52",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Corning, American Water Works and Nike, which had the lowest operating cash flow in fiscal 2021, and what does that company's 2021 10-K say about its liquidity and capital resources?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'operating_cash_flow' AND period_end_year = 2021 AND ticker IN ('AWK', 'GLW', 'NKE') ORDER BY 2 DESC",
+   "sql_answer": "AWK, 1441000000",
+   "all_values": "NKE, 6657000000; GLW, 3412000000; AWK, 1441000000",
+   "winner": "American Water Works",
+   "filing": "AMERICANWATERWORKS_2021_10K",
+   "metric": "operating_cash_flow",
+   "year": 2021,
+   "order": "lowest",
+   "topic": "its liquidity and capital resources",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd53",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Nike, PepsiCo, Lockheed Martin and Verizon, which had the lowest net income in fiscal 2021, and what does that company's 2021 10-K say about its competition?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'net_income' AND period_end_year = 2021 AND ticker IN ('LMT', 'NKE', 'PEP', 'VZ') ORDER BY 2 DESC",
+   "sql_answer": "NKE, 5727000000",
+   "all_values": "VZ, 22065000000; PEP, 7618000000; LMT, 6315000000; NKE, 5727000000",
+   "winner": "Nike",
+   "filing": "NIKE_2021_10K",
+   "metric": "net_income",
+   "year": 2021,
+   "order": "lowest",
+   "topic": "its competition",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd54",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among American Express, Coca-Cola and Corning, which had the highest net income in fiscal 2022, and what does that company's 2022 10-K say about its properties and facilities?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'net_income' AND period_end_year = 2022 AND ticker IN ('AXP', 'GLW', 'KO') ORDER BY 2 DESC",
+   "sql_answer": "KO, 9542000000",
+   "all_values": "KO, 9542000000; AXP, 7514000000; GLW, 1316000000",
+   "winner": "Coca-Cola",
+   "filing": "COCACOLA_2022_10K",
+   "metric": "net_income",
+   "year": 2022,
+   "order": "highest",
+   "topic": "its properties and facilities",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd55",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among 3M, CVS Health, PayPal and Johnson & Johnson, which had the lowest operating cash flow in fiscal 2022, and what does that company's 2022 10-K say about how its business segments are organised?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'operating_cash_flow' AND period_end_year = 2022 AND ticker IN ('CVS', 'JNJ', 'MMM', 'PYPL') ORDER BY 2 DESC",
+   "sql_answer": "MMM, 5591000000",
+   "all_values": "JNJ, 21194000000; CVS, 16177000000; PYPL, 5813000000; MMM, 5591000000",
+   "winner": "3M",
+   "filing": "3M_2022_10K",
+   "metric": "operating_cash_flow",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "how its business segments are organised",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd56",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Johnson & Johnson, MGM Resorts, Coca-Cola and Corning, which had the highest total assets at year end in fiscal 2022, and what does that company's 2022 10-K say about any material legal proceedings?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2022 AND ticker IN ('GLW', 'JNJ', 'KO', 'MGM') ORDER BY 2 DESC",
+   "sql_answer": "JNJ, 187378000000",
+   "all_values": "JNJ, 187378000000; KO, 92763000000; MGM, 45692206000; GLW, 29499000000",
+   "winner": "Johnson & Johnson",
+   "filing": "JOHNSON_JOHNSON_2022_10K",
+   "metric": "total_assets",
+   "year": 2022,
+   "order": "highest",
+   "topic": "any material legal proceedings",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd57",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among CVS Health, MGM Resorts, AES and PepsiCo, which had the lowest dividends paid in fiscal 2022, and what does that company's 2022 10-K say about how its business segments are organised?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'dividends_paid' AND period_end_year = 2022 AND ticker IN ('AES', 'CVS', 'MGM', 'PEP') ORDER BY 2 DESC",
+   "sql_answer": "MGM, 4048000",
+   "all_values": "PEP, 6172000000; CVS, 2907000000; AES, 422000000; MGM, 4048000",
+   "winner": "MGM Resorts",
+   "filing": "MGMRESORTS_2022_10K",
+   "metric": "dividends_paid",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "how its business segments are organised",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd58",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Verizon, American Water Works, General Mills and AES, which had the highest total assets at year end in fiscal 2022, and what does that company's 2022 10-K say about its employees and workforce?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2022 AND ticker IN ('AES', 'AWK', 'GIS', 'VZ') ORDER BY 2 DESC",
+   "sql_answer": "VZ, 379680000000",
+   "all_values": "VZ, 379680000000; AES, 38363000000; GIS, 31090100000; AWK, 27787000000",
+   "winner": "Verizon",
+   "filing": "VERIZON_2022_10K",
+   "metric": "total_assets",
+   "year": 2022,
+   "order": "highest",
+   "topic": "its employees and workforce",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd59",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among Coca-Cola, Nike, Lockheed Martin and PepsiCo, which had the highest net profit margin in fiscal 2021, and what does that company's 2021 10-K say about its employees and workforce?",
+   "source": "generated",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2021 AND d.value <> 0 AND n.ticker IN ('KO', 'LMT', 'NKE', 'PEP') ORDER BY 2 DESC",
+   "sql_answer": "KO, 25.28",
+   "all_values": "KO, 25.28; NKE, 12.86; PEP, 9.59; LMT, 9.42",
+   "winner": "Coca-Cola",
+   "filing": "COCACOLA_2021_10K",
+   "metric": "net_margin",
+   "year": 2021,
+   "order": "highest",
+   "topic": "its employees and workforce",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hd60",
+   "class": "hybrid",
+   "dependent": true,
+   "question": "Among MGM Resorts and CVS Health, which had the lowest cash and cash equivalents at year end in fiscal 2022, and what does that company's 2022 10-K say about any material legal proceedings?",
+   "source": "generated",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'cash_and_equivalents' AND period_end_year = 2022 AND ticker IN ('CVS', 'MGM') ORDER BY 2 DESC",
+   "sql_answer": "MGM, 5911893000",
+   "all_values": "CVS, 12945000000; MGM, 5911893000",
+   "winner": "MGM Resorts",
+   "filing": "MGMRESORTS_2022_10K",
+   "metric": "cash_and_equivalents",
+   "year": 2022,
+   "order": "lowest",
+   "topic": "any material legal proceedings",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi01",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2017, what was the average current ratio across the companies, and what does Netflix's 2017 10-K say about what drove its results that year?",
+   "source": "generated",
+   "reference_sql": "SELECT round(avg(a.value / l.value)::numeric, 2) FROM am a JOIN am l ON l.company = a.company AND l.period_end_year = a.period_end_year AND l.metric = 'current_liabilities' WHERE a.metric = 'current_assets' AND a.period_end_year = 2017 AND l.value <> 0",
+   "sql_answer": "1.57",
+   "winner": null,
+   "filing": "NETFLIX_2017_10K",
+   "year": 2017,
+   "topic": "what drove its results that year",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi02",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2022, what was the median operating margin across the companies, and what does Boeing's 2022 10-K say about its properties and facilities?",
+   "source": "generated",
+   "reference_sql": "SELECT round((percentile_cont(0.5) WITHIN GROUP (ORDER BY o.value / r.value) * 100)::numeric, 1) FROM am o JOIN am r ON r.company = o.company AND r.period_end_year = o.period_end_year AND r.metric = 'revenue' WHERE o.metric = 'operating_income' AND o.period_end_year = 2022 AND r.ticker <> 'GIS'",
+   "sql_answer": "11.0",
+   "winner": null,
+   "filing": "BOEING_2022_10K",
+   "year": 2022,
+   "topic": "its properties and facilities",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi03",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2019, what was the total spent on share repurchases by all the companies, and what does Nike's 2019 10-K say about any material legal proceedings?",
+   "source": "generated",
+   "reference_sql": "SELECT sum(value) FROM am WHERE metric = 'share_repurchases' AND period_end_year = 2019",
+   "sql_answer": "89124828000",
+   "winner": null,
+   "filing": "NIKE_2019_10K",
+   "year": 2019,
+   "topic": "any material legal proceedings",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi04",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2020, what was the average current ratio across the companies, and what does General Mills's 2020 10-K say about any material legal proceedings?",
+   "source": "generated",
+   "reference_sql": "SELECT round(avg(a.value / l.value)::numeric, 2) FROM am a JOIN am l ON l.company = a.company AND l.period_end_year = a.period_end_year AND l.metric = 'current_liabilities' WHERE a.metric = 'current_assets' AND a.period_end_year = 2020 AND l.value <> 0",
+   "sql_answer": "1.56",
+   "winner": null,
+   "filing": "GENERALMILLS_2020_10K",
+   "year": 2020,
+   "topic": "any material legal proceedings",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi05",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2018, which three companies had the largest total assets, and what does Walmart's 2018 10-K say about its properties and facilities?",
+   "source": "generated",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2018 ORDER BY value DESC LIMIT 3",
+   "sql_answer": "JPMorgan, 2622532000000; Verizon, 264829000000; Microsoft, 258848000000",
+   "winner": null,
+   "filing": "WALMART_2018_10K",
+   "year": 2018,
+   "topic": "its properties and facilities",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi06",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2022, which three companies had the largest total assets, and what does Coca-Cola's 2022 10-K say about its employees and workforce?",
+   "source": "generated",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2022 ORDER BY value DESC LIMIT 3",
+   "sql_answer": "JPMorgan, 3665743000000; Amazon, 462675000000; Verizon, 379680000000",
+   "winner": null,
+   "filing": "COCACOLA_2022_10K",
+   "year": 2022,
+   "topic": "its employees and workforce",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi07",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2022, what was the median operating margin across the companies, and what does American Water Works's 2022 10-K say about any material legal proceedings?",
+   "source": "generated",
+   "reference_sql": "SELECT round((percentile_cont(0.5) WITHIN GROUP (ORDER BY o.value / r.value) * 100)::numeric, 1) FROM am o JOIN am r ON r.company = o.company AND r.period_end_year = o.period_end_year AND r.metric = 'revenue' WHERE o.metric = 'operating_income' AND o.period_end_year = 2022 AND r.ticker <> 'GIS'",
+   "sql_answer": "11.0",
+   "winner": null,
+   "filing": "AMERICANWATERWORKS_2022_10K",
+   "year": 2022,
+   "topic": "any material legal proceedings",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi08",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2022, what was the total spent on share repurchases by all the companies, and what does PayPal's 2022 10-K say about any material legal proceedings?",
+   "source": "generated",
+   "reference_sql": "SELECT sum(value) FROM am WHERE metric = 'share_repurchases' AND period_end_year = 2022",
+   "sql_answer": "107993942000",
+   "winner": null,
+   "filing": "PAYPAL_2022_10K",
+   "year": 2022,
+   "topic": "any material legal proceedings",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi09",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2022, how many of the companies reported a net loss, and what does JPMorgan's 2022 10-K say about its employees and workforce?",
+   "source": "generated",
+   "reference_sql": "SELECT count(*) FROM am WHERE metric = 'net_income' AND period_end_year = 2022 AND value < 0",
+   "sql_answer": "4",
+   "winner": null,
+   "filing": "JPMORGAN_2022_10K",
+   "year": 2022,
+   "topic": "its employees and workforce",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi10",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2020, which three companies had the largest total assets, and what does Corning's 2020 10-K say about what drove its results that year?",
+   "source": "generated",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2020 ORDER BY value DESC LIMIT 3",
+   "sql_answer": "JPMorgan, 3386071000000; Amazon, 321195000000; Verizon, 316481000000",
+   "winner": null,
+   "filing": "CORNING_2020_10K",
+   "year": 2020,
+   "topic": "what drove its results that year",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi11",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2018, which three companies had the largest total assets, and what does Nike's 2018 10-K say about its competition?",
+   "source": "generated",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2018 ORDER BY value DESC LIMIT 3",
+   "sql_answer": "JPMorgan, 2622532000000; Verizon, 264829000000; Microsoft, 258848000000",
+   "winner": null,
+   "filing": "NIKE_2018_10K",
+   "year": 2018,
+   "topic": "its competition",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi12",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2023, what was the average net profit margin across the companies, and what does Microsoft's 2023 10-K say about how its business segments are organised?",
+   "source": "generated",
+   "reference_sql": "SELECT round((avg(n.value / d.value) * 100)::numeric, 1) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2023 AND d.value <> 0 AND n.ticker <> 'GIS'",
+   "sql_answer": "10.6",
+   "winner": null,
+   "filing": "MICROSOFT_2023_10K",
+   "year": 2023,
+   "topic": "how its business segments are organised",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi13",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2022, which three companies had the largest total assets, and what does Verizon's 2022 10-K say about how its business segments are organised?",
+   "source": "generated",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2022 ORDER BY value DESC LIMIT 3",
+   "sql_answer": "JPMorgan, 3665743000000; Amazon, 462675000000; Verizon, 379680000000",
+   "winner": null,
+   "filing": "VERIZON_2022_10K",
+   "year": 2022,
+   "topic": "how its business segments are organised",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi14",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2022, which three companies had the highest diluted earnings per share, and what does Corning's 2022 10-K say about how its business segments are organised?",
+   "source": "generated",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'eps_diluted' AND period_end_year = 2022 ORDER BY value DESC LIMIT 3",
+   "sql_answer": "Lockheed Martin, 21.66; Ulta Beauty, 17.98; Costco, 13.14",
+   "winner": null,
+   "filing": "CORNING_2022_10K",
+   "year": 2022,
+   "topic": "how its business segments are organised",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi15",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2019, what was the average current ratio across the companies, and what does General Mills's 2019 10-K say about the main risks it faces?",
+   "source": "generated",
+   "reference_sql": "SELECT round(avg(a.value / l.value)::numeric, 2) FROM am a JOIN am l ON l.company = a.company AND l.period_end_year = a.period_end_year AND l.metric = 'current_liabilities' WHERE a.metric = 'current_assets' AND a.period_end_year = 2019 AND l.value <> 0",
+   "sql_answer": "1.36",
+   "winner": null,
+   "filing": "GENERALMILLS_2019_10K",
+   "year": 2019,
+   "topic": "the main risks it faces",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi16",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2022, how many of the companies reported a net loss, and what does AMD's 2022 10-K say about its competition?",
+   "source": "generated",
+   "reference_sql": "SELECT count(*) FROM am WHERE metric = 'net_income' AND period_end_year = 2022 AND value < 0",
+   "sql_answer": "4",
+   "winner": null,
+   "filing": "AMD_2022_10K",
+   "year": 2022,
+   "topic": "its competition",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi17",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2021, what was the average net profit margin across the companies, and what does Nike's 2021 10-K say about how its business segments are organised?",
+   "source": "generated",
+   "reference_sql": "SELECT round((avg(n.value / d.value) * 100)::numeric, 1) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2021 AND d.value <> 0 AND n.ticker <> 'GIS'",
+   "sql_answer": "14.2",
+   "winner": null,
+   "filing": "NIKE_2021_10K",
+   "year": 2021,
+   "topic": "how its business segments are organised",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi18",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2019, what was the average current ratio across the companies, and what does Kraft Heinz's 2019 10-K say about its liquidity and capital resources?",
+   "source": "generated",
+   "reference_sql": "SELECT round(avg(a.value / l.value)::numeric, 2) FROM am a JOIN am l ON l.company = a.company AND l.period_end_year = a.period_end_year AND l.metric = 'current_liabilities' WHERE a.metric = 'current_assets' AND a.period_end_year = 2019 AND l.value <> 0",
+   "sql_answer": "1.36",
+   "winner": null,
+   "filing": "KRAFTHEINZ_2019_10K",
+   "year": 2019,
+   "topic": "its liquidity and capital resources",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi19",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2022, how many of the companies reported a net loss, and what does Lockheed Martin's 2022 10-K say about its liquidity and capital resources?",
+   "source": "generated",
+   "reference_sql": "SELECT count(*) FROM am WHERE metric = 'net_income' AND period_end_year = 2022 AND value < 0",
+   "sql_answer": "4",
+   "winner": null,
+   "filing": "LOCKHEEDMARTIN_2022_10K",
+   "year": 2022,
+   "topic": "its liquidity and capital resources",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi20",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2017, what was the average net profit margin across the companies, and what does Best Buy's 2017 10-K say about how its business segments are organised?",
+   "source": "generated",
+   "reference_sql": "SELECT round((avg(n.value / d.value) * 100)::numeric, 1) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2017 AND d.value <> 0 AND n.ticker <> 'GIS'",
+   "sql_answer": "9.1",
+   "winner": null,
+   "filing": "BESTBUY_2017_10K",
+   "year": 2017,
+   "topic": "how its business segments are organised",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi21",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2022, what was the average net profit margin across the companies, and what does General Mills's 2022 10-K say about what drove its results that year?",
+   "source": "generated",
+   "reference_sql": "SELECT round((avg(n.value / d.value) * 100)::numeric, 1) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker <> 'GIS'",
+   "sql_answer": "11.9",
+   "winner": null,
+   "filing": "GENERALMILLS_2022_10K",
+   "year": 2022,
+   "topic": "what drove its results that year",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi22",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2018, which three companies had the largest total assets, and what does Boeing's 2018 10-K say about its employees and workforce?",
+   "source": "generated",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2018 ORDER BY value DESC LIMIT 3",
+   "sql_answer": "JPMorgan, 2622532000000; Verizon, 264829000000; Microsoft, 258848000000",
+   "winner": null,
+   "filing": "BOEING_2018_10K",
+   "year": 2018,
+   "topic": "its employees and workforce",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi23",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2018, which three companies had the highest diluted earnings per share, and what does 3M's 2018 10-K say about how its business segments are organised?",
+   "source": "generated",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'eps_diluted' AND period_end_year = 2018 ORDER BY value DESC LIMIT 3",
+   "sql_answer": "Amazon, 20.14; Boeing, 17.85; Lockheed Martin, 17.59",
+   "winner": null,
+   "filing": "3M_2018_10K",
+   "year": 2018,
+   "topic": "how its business segments are organised",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi24",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2021, which three companies had the largest total assets, and what does Costco's 2021 10-K say about its properties and facilities?",
+   "source": "generated",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2021 ORDER BY value DESC LIMIT 3",
+   "sql_answer": "JPMorgan, 3743567000000; Amazon, 420549000000; Verizon, 366596000000",
+   "winner": null,
+   "filing": "COSTCO_2021_10K",
+   "year": 2021,
+   "topic": "its properties and facilities",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi25",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2022, how many of the companies reported a net loss, and what does American Express's 2022 10-K say about what drove its results that year?",
+   "source": "generated",
+   "reference_sql": "SELECT count(*) FROM am WHERE metric = 'net_income' AND period_end_year = 2022 AND value < 0",
+   "sql_answer": "4",
+   "winner": null,
+   "filing": "AMERICANEXPRESS_2022_10K",
+   "year": 2022,
+   "topic": "what drove its results that year",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi26",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2021, what was the average current ratio across the companies, and what does Lockheed Martin's 2021 10-K say about any material legal proceedings?",
+   "source": "generated",
+   "reference_sql": "SELECT round(avg(a.value / l.value)::numeric, 2) FROM am a JOIN am l ON l.company = a.company AND l.period_end_year = a.period_end_year AND l.metric = 'current_liabilities' WHERE a.metric = 'current_assets' AND a.period_end_year = 2021 AND l.value <> 0",
+   "sql_answer": "1.48",
+   "winner": null,
+   "filing": "LOCKHEEDMARTIN_2021_10K",
+   "year": 2021,
+   "topic": "any material legal proceedings",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi27",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2021, what was the total spent on share repurchases by all the companies, and what does Coca-Cola's 2021 10-K say about its competition?",
+   "source": "generated",
+   "reference_sql": "SELECT sum(value) FROM am WHERE metric = 'share_repurchases' AND period_end_year = 2021",
+   "sql_answer": "80232826000",
+   "winner": null,
+   "filing": "COCACOLA_2021_10K",
+   "year": 2021,
+   "topic": "its competition",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi28",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2022, what was the average current ratio across the companies, and what does Adobe's 2022 10-K say about its liquidity and capital resources?",
+   "source": "generated",
+   "reference_sql": "SELECT round(avg(a.value / l.value)::numeric, 2) FROM am a JOIN am l ON l.company = a.company AND l.period_end_year = a.period_end_year AND l.metric = 'current_liabilities' WHERE a.metric = 'current_assets' AND a.period_end_year = 2022 AND l.value <> 0",
+   "sql_answer": "1.35",
+   "winner": null,
+   "filing": "ADOBE_2022_10K",
+   "year": 2022,
+   "topic": "its liquidity and capital resources",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi29",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2021, how many of the companies paid dividends, and what does Corning's 2021 10-K say about its liquidity and capital resources?",
+   "source": "generated",
+   "reference_sql": "SELECT count(DISTINCT ticker) FROM am WHERE metric = 'dividends_paid' AND period_end_year = 2021 AND value > 0",
+   "sql_answer": "20",
+   "winner": null,
+   "filing": "CORNING_2021_10K",
+   "year": 2021,
+   "topic": "its liquidity and capital resources",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi30",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2023, what was the median operating margin across the companies, and what does Amcor's 2023 10-K say about the main risks it faces?",
+   "source": "generated",
+   "reference_sql": "SELECT round((percentile_cont(0.5) WITHIN GROUP (ORDER BY o.value / r.value) * 100)::numeric, 1) FROM am o JOIN am r ON r.company = o.company AND r.period_end_year = o.period_end_year AND r.metric = 'revenue' WHERE o.metric = 'operating_income' AND o.period_end_year = 2023 AND r.ticker <> 'GIS'",
+   "sql_answer": "10.3",
+   "winner": null,
+   "filing": "AMCOR_2023_10K",
+   "year": 2023,
+   "topic": "the main risks it faces",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi31",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2019, how many of the companies reported a net loss, and what does Walmart's 2019 10-K say about its employees and workforce?",
+   "source": "generated",
+   "reference_sql": "SELECT count(*) FROM am WHERE metric = 'net_income' AND period_end_year = 2019 AND value < 0",
+   "sql_answer": "1",
+   "winner": null,
+   "filing": "WALMART_2019_10K",
+   "year": 2019,
+   "topic": "its employees and workforce",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi32",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2022, what was the average current ratio across the companies, and what does MGM Resorts's 2022 10-K say about the main risks it faces?",
+   "source": "generated",
+   "reference_sql": "SELECT round(avg(a.value / l.value)::numeric, 2) FROM am a JOIN am l ON l.company = a.company AND l.period_end_year = a.period_end_year AND l.metric = 'current_liabilities' WHERE a.metric = 'current_assets' AND a.period_end_year = 2022 AND l.value <> 0",
+   "sql_answer": "1.35",
+   "winner": null,
+   "filing": "MGMRESORTS_2022_10K",
+   "year": 2022,
+   "topic": "the main risks it faces",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi33",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2022, what was the average current ratio across the companies, and what does CVS Health's 2022 10-K say about its employees and workforce?",
+   "source": "generated",
+   "reference_sql": "SELECT round(avg(a.value / l.value)::numeric, 2) FROM am a JOIN am l ON l.company = a.company AND l.period_end_year = a.period_end_year AND l.metric = 'current_liabilities' WHERE a.metric = 'current_assets' AND a.period_end_year = 2022 AND l.value <> 0",
+   "sql_answer": "1.35",
+   "winner": null,
+   "filing": "CVSHEALTH_2022_10K",
+   "year": 2022,
+   "topic": "its employees and workforce",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi34",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2021, which three companies had the largest total assets, and what does Verizon's 2021 10-K say about any material legal proceedings?",
+   "source": "generated",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2021 ORDER BY value DESC LIMIT 3",
+   "sql_answer": "JPMorgan, 3743567000000; Amazon, 420549000000; Verizon, 366596000000",
+   "winner": null,
+   "filing": "VERIZON_2021_10K",
+   "year": 2021,
+   "topic": "any material legal proceedings",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi35",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2020, which three companies had the highest diluted earnings per share, and what does MGM Resorts's 2020 10-K say about its liquidity and capital resources?",
+   "source": "generated",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'eps_diluted' AND period_end_year = 2020 ORDER BY value DESC LIMIT 3",
+   "sql_answer": "Amazon, 41.83; Lockheed Martin, 24.3; Ulta Beauty, 12.15",
+   "winner": null,
+   "filing": "MGMRESORTS_2020_10K",
+   "year": 2020,
+   "topic": "its liquidity and capital resources",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi36",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2022, what was the median operating margin across the companies, and what does AES's 2022 10-K say about the main risks it faces?",
+   "source": "generated",
+   "reference_sql": "SELECT round((percentile_cont(0.5) WITHIN GROUP (ORDER BY o.value / r.value) * 100)::numeric, 1) FROM am o JOIN am r ON r.company = o.company AND r.period_end_year = o.period_end_year AND r.metric = 'revenue' WHERE o.metric = 'operating_income' AND o.period_end_year = 2022 AND r.ticker <> 'GIS'",
+   "sql_answer": "11.0",
+   "winner": null,
+   "filing": "AES_2022_10K",
+   "year": 2022,
+   "topic": "the main risks it faces",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi37",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2023, what was the average net profit margin across the companies, and what does Ulta Beauty's 2023 10-K say about how its business segments are organised?",
+   "source": "generated",
+   "reference_sql": "SELECT round((avg(n.value / d.value) * 100)::numeric, 1) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'revenue' WHERE n.metric = 'net_income' AND n.period_end_year = 2023 AND d.value <> 0 AND n.ticker <> 'GIS'",
+   "sql_answer": "10.6",
+   "winner": null,
+   "filing": "ULTABEAUTY_2023_10K",
+   "year": 2023,
+   "topic": "how its business segments are organised",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi38",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2023, how many of the companies paid dividends, and what does Nike's 2023 10-K say about its competition?",
+   "source": "generated",
+   "reference_sql": "SELECT count(DISTINCT ticker) FROM am WHERE metric = 'dividends_paid' AND period_end_year = 2023 AND value > 0",
+   "sql_answer": "19",
+   "winner": null,
+   "filing": "NIKE_2023_10K",
+   "year": 2023,
+   "topic": "its competition",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi39",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2020, how many of the companies paid dividends, and what does Lockheed Martin's 2020 10-K say about the main risks it faces?",
+   "source": "generated",
+   "reference_sql": "SELECT count(DISTINCT ticker) FROM am WHERE metric = 'dividends_paid' AND period_end_year = 2020 AND value > 0",
+   "sql_answer": "21",
+   "winner": null,
+   "filing": "LOCKHEEDMARTIN_2020_10K",
+   "year": 2020,
+   "topic": "the main risks it faces",
+   "acceptable": [
+    "hybrid"
+   ]
+  },
+  {
+   "id": "hi40",
+   "class": "hybrid",
+   "dependent": false,
+   "question": "In fiscal 2018, which three companies had the largest total assets, and what does CVS Health's 2018 10-K say about what drove its results that year?",
+   "source": "generated",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2018 ORDER BY value DESC LIMIT 3",
+   "sql_answer": "JPMorgan, 2622532000000; Verizon, 264829000000; Microsoft, 258848000000",
+   "winner": null,
+   "filing": "CVSHEALTH_2018_10K",
+   "year": 2018,
+   "topic": "what drove its results that year",
+   "acceptable": [
+    "hybrid"
+   ]
+  }
+ ]
+}

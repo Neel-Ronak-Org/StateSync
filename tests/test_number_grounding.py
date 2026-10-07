@@ -105,3 +105,10 @@ def test_offsets_point_at_the_figure_in_the_text():
     text = "Delhi had 133 orders."
     figure = g.ground(text, ROWS, COLS)["figures"][0]
     assert text[figure["start"]:figure["end"]].strip() == "133"
+
+
+def test_a_database_answer_whose_query_never_ran_is_not_grounded():
+    # BIRD held-out: 3 of grounding's 4 catches were failure texts quoting error codes.
+    assert not g.applies("sql", None) and not g.applies("sql", "")
+    assert g.applies("sql", "SELECT 1")
+    assert g.applies("docs", None) and g.applies("hybrid", None) and g.applies(None, None)

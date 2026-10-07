@@ -26,6 +26,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from config_loader import cfg, flags
 from llm.provider import get_agent_llm
+from profiles import profile_for
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +34,8 @@ _VALID_PROVIDERS = frozenset({"prompt"})
 _VALID_LANGUAGES = frozenset({"en", "hi", "hinglish", "other"})
 
 _SYSTEM_PROMPT = """\
-You are a language-detection and query-normalization step for an ONDC
-logistics analytics system. You will be given one user query, which may be
+You are a language-detection and query-normalization step for a data
+analytics assistant. You will be given one user query, which may be
 in English, Hindi (Devanagari script), Hinglish (Hindi written in Roman
 script, often code-mixed with English), or something else.
 
@@ -48,8 +49,8 @@ Task:
 
 Entity preservation is the most important rule, more important than
 translation quality:
-- Any proper noun -- a seller/store name, city name, product name,
-  logistics provider name, or any other specific named entity -- must be
+- Any proper noun -- a person, company, store, product or place name,
+  or any other specific named entity -- must be
   copied through EXACTLY as it appears in the original query, in whatever
   script it was written in. Do NOT translate it. Do NOT transliterate it.
   Do NOT normalize spacing or spelling. Copy the exact substring.
@@ -75,7 +76,7 @@ Respond with ONLY a JSON object, no markdown, no explanation:
 
 @runtime_checkable
 class LanguageNormalizer(Protocol):
-    async def normalize(self, raw_query: str) -> dict[str, Any]:
+    async def normalize(self, raw_query: str, target_schema: str | None = None) -> dict[str, Any]:
         """
         Returns {"detected_language", "normalized_query", "preserved_entities"}.
         normalized_query is never None -- callers get raw_query back verbatim
@@ -122,12 +123,12 @@ class PromptNormalizer:
     detect_confidence_min and only for hi/hinglish — rewrite with entity
     preservation. English and low-confidence/other inputs pass through
     with normalized_query == raw_query (the rewrite step is skipped, not
-    the detection call itself)."""
+    the detection call itself). The prompt is the dataset profile's."""
 
-    async def normalize(self, raw_query: str) -> dict[str, Any]:
+    async def normalize(self, raw_query: str, target_schema: str | None = None) -> dict[str, Any]:
         llm = get_agent_llm("normalizer")
         result = await llm.complete(
-            system=_SYSTEM_PROMPT,
+            system=profile_for(target_schema).normalizer_prompt,
             messages=[{"role": "user", "content": raw_query}],
             max_tokens=cfg.sql.max_tokens_normalizer,
         )

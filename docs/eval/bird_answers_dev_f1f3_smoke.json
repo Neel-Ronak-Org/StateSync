@@ -1,0 +1,1939 @@
+{
+ "label": "dev_f1f3_smoke",
+ "sample": "pilot",
+ "sample_sha256": "95ecd0c379e4ce9ef3fe6f49e797abb32ccc6d59d0a0645f73f52345d97d233c",
+ "answers": {
+  "37": {
+   "question_id": 37,
+   "db_id": "california_schools",
+   "difficulty": "moderate",
+   "http_status": 200,
+   "answer_text": "Street: 2607 Myrtle Street; City: Oakland; State: CA; Zip: 94607-3415.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT s.street, s.city, s.zip, s.state\nFROM cn_9240ceb08edb4938.satscores ss\nJOIN cn_9240ceb08edb4938.schools s ON ss.cds = s.cdscode\nWHERE ss.rtype = 'S' AND ss.numtsttakr > 0 AND ss.numge1500 IS NOT NULL\nORDER BY (ss.numge1500::double precision / ss.numtsttakr::double precision) ASC\nLIMIT 1",
+   "candidate_sql": "SELECT s.street, s.city, s.zip, s.state\nFROM cn_9240ceb08edb4938.satscores ss\nJOIN cn_9240ceb08edb4938.schools s ON ss.cds = s.cdscode\nWHERE ss.rtype = 'S' AND ss.numtsttakr > 0 AND ss.numge1500 IS NOT NULL\nORDER BY (ss.numge1500::double precision / ss.numtsttakr::double precision) ASC\nLIMIT 1",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "2607",
+      "start": 8,
+      "end": 12,
+      "matched": true,
+      "source": {
+       "kind": "text",
+       "row": 0,
+       "column": "street"
+      }
+     }
+    ],
+    "matched": 1,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 631,
+     "tokens_out": 64,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 491,
+     "rate_remaining_tokens": 7175,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 1107,
+     "tokens_out": 373,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 9176,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 2310,
+     "tokens_out": 375,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 7055,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "synthesizer",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 752,
+     "tokens_out": 174,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5499,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4800,
+    "tokens_out": 986,
+    "llm_calls": 4,
+    "trajectory_steps": 8,
+    "latency_ms": 22691
+   },
+   "caveats": [],
+   "latency_ms": 22712,
+   "asked_at": "2026-10-03T14:43:43+00:00"
+  },
+  "46": {
+   "question_id": 46,
+   "db_id": "california_schools",
+   "difficulty": "simple",
+   "http_status": 200,
+   "answer_text": "The school with the highest K\u201312 enrollment in the provided results is California School for the Deaf\u2013Fremont with 410 enrollees (cdscode 01316170131763).",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT s.cdscode, s.school, f.\"Enrollment (K-12)\"\nFROM cn_9240ceb08edb4938.schools s\nJOIN cn_9240ceb08edb4938.frpm f ON s.cdscode = f.cdscode\nWHERE s.doc = '31'\n  AND f.\"Enrollment (K-12)\" IS NOT NULL\n  AND f.\"Enrollment (K-12)\" = (\n    SELECT MAX(f2.\"Enrollment (K-12)\")\n    FROM cn_9240ceb08edb4938.frpm f2\n    JOIN cn_9240ceb08edb4938.schools s2 ON f2.cdscode = s2.cdscode\n    WHERE s2.doc = '31' AND f2.\"Enrollment (K-12)\" IS NOT NULL\n  )",
+   "candidate_sql": "SELECT s.cdscode, s.school, f.\"Enrollment (K-12)\"\nFROM cn_9240ceb08edb4938.schools s\nJOIN cn_9240ceb08edb4938.frpm f ON s.cdscode = f.cdscode\nWHERE s.doc = '31'\n  AND f.\"Enrollment (K-12)\" IS NOT NULL\n  AND f.\"Enrollment (K-12)\" = (\n    SELECT MAX(f2.\"Enrollment (K-12)\")\n    FROM cn_9240ceb08edb4938.frpm f2\n    JOIN cn_9240ceb08edb4938.schools s2 ON f2.cdscode = s2.cdscode\n    WHERE s2.doc = '31' AND f2.\"Enrollment (K-12)\" IS NOT NULL\n  )",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "410",
+      "start": 115,
+      "end": 118,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "Enrollment (K-12)"
+      }
+     },
+     {
+      "text": "01316170131763",
+      "start": 138,
+      "end": 152,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "cdscode"
+      }
+     }
+    ],
+    "matched": 2,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 621,
+     "tokens_out": 60,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 269,
+     "rate_remaining_tokens": 7154,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 1095,
+     "tokens_out": 504,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 8468,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 2579,
+     "tokens_out": 614,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 10209,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "synthesizer",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 746,
+     "tokens_out": 155,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6730,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 5041,
+    "tokens_out": 1333,
+    "llm_calls": 4,
+    "trajectory_steps": 8,
+    "latency_ms": 25830
+   },
+   "caveats": [],
+   "latency_ms": 25854,
+   "asked_at": "2026-10-03T14:44:16+00:00"
+  },
+  "82": {
+   "question_id": 82,
+   "db_id": "california_schools",
+   "difficulty": "simple",
+   "http_status": 200,
+   "answer_text": "The school with the highest longitude offers grades 7 through 8 (Low Grade: 7; High Grade: 8).",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT f.\"Low Grade\", f.\"High Grade\" FROM cn_9240ceb08edb4938.schools s JOIN cn_9240ceb08edb4938.frpm f ON s.cdscode = f.cdscode ORDER BY abs(s.longitude) DESC LIMIT 1",
+   "candidate_sql": "SELECT f.\"Low Grade\", f.\"High Grade\" FROM cn_9240ceb08edb4938.schools s JOIN cn_9240ceb08edb4938.frpm f ON s.cdscode = f.cdscode ORDER BY abs(s.longitude) DESC LIMIT 1",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "7",
+      "start": 52,
+      "end": 53,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "Low Grade"
+      }
+     },
+     {
+      "text": "8",
+      "start": 62,
+      "end": 63,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "High Grade"
+      }
+     },
+     {
+      "text": "7",
+      "start": 76,
+      "end": 77,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "Low Grade"
+      }
+     },
+     {
+      "text": "8",
+      "start": 91,
+      "end": 92,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "High Grade"
+      }
+     }
+    ],
+    "matched": 4,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 605,
+     "tokens_out": 53,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 296,
+     "rate_remaining_tokens": 6931,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 1082,
+     "tokens_out": 434,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 8833,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 2566,
+     "tokens_out": 311,
+     "cached_tokens": 2432,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5720,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "synthesizer",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 705,
+     "tokens_out": 105,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5393,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4958,
+    "tokens_out": 903,
+    "llm_calls": 4,
+    "trajectory_steps": 8,
+    "latency_ms": 20362
+   },
+   "caveats": [],
+   "latency_ms": 20378,
+   "asked_at": "2026-10-03T14:44:45+00:00"
+  },
+  "766": {
+   "question_id": 766,
+   "db_id": "superhero",
+   "difficulty": "moderate",
+   "http_status": 200,
+   "answer_text": "The query returned the following hero full_name values as having the maximum strength (first 50 rows shown): Richard Milhouse Jones, Abraxas, -, -, En Sabah Nur, -, -, -, Erik Stephan Josten, Benjamin Kirby Tennyson, -, -, Barda Free, Carol Susan Jane Danvers, Teth-Adam, Barbara Ann Minerva, -, Uxas, Doomsday, Jonathan Osterman, Dru-Zod, Kallark, -, Kakarot, -, -, Heracles, Robert Bruce Banner, -, Cain Marko, -, -, -, -, -, -, -, Nathaniel Christopher Adam, -, -, Onslaught, Jean Grey-Summers, Kara Zor-L, Thaddeus E. Ross, Robert Reynolds, William Joseph Batson, Jennifer Walters, Norrin Radd, -, - (63 total rows returned; only the first 50 rows were provided in the context).",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT s.full_name\nFROM cn_b710015657fa447c.superhero s\nJOIN cn_b710015657fa447c.hero_attribute ha ON ha.hero_id = s.id\nJOIN cn_b710015657fa447c.attribute a ON a.id = ha.attribute_id\nWHERE lower(a.attribute_name) = 'strength'\n  AND ha.attribute_value = (\n    SELECT max(ha2.attribute_value)\n    FROM cn_b710015657fa447c.hero_attribute ha2\n    JOIN cn_b710015657fa447c.attribute a2 ON a2.id = ha2.attribute_id\n    WHERE lower(a2.attribute_name) = 'strength'\n  )",
+   "candidate_sql": "SELECT s.full_name\nFROM cn_b710015657fa447c.superhero s\nJOIN cn_b710015657fa447c.hero_attribute ha ON ha.hero_id = s.id\nJOIN cn_b710015657fa447c.attribute a ON a.id = ha.attribute_id\nWHERE lower(a.attribute_name) = 'strength'\n  AND ha.attribute_value = (\n    SELECT max(ha2.attribute_value)\n    FROM cn_b710015657fa447c.hero_attribute ha2\n    JOIN cn_b710015657fa447c.attribute a2 ON a2.id = ha2.attribute_id\n    WHERE lower(a2.attribute_name) = 'strength'\n  )",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "50",
+      "start": 93,
+      "end": 95,
+      "matched": true,
+      "source": {
+       "kind": "shown"
+      }
+     },
+     {
+      "text": "63",
+      "start": 605,
+      "end": 607,
+      "matched": true,
+      "source": {
+       "kind": "aggregate",
+       "aggregate": "count",
+       "column": "rows"
+      }
+     },
+     {
+      "text": "50",
+      "start": 644,
+      "end": 646,
+      "matched": true,
+      "source": {
+       "kind": "shown"
+      }
+     }
+    ],
+    "matched": 3,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 63,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 608,
+     "tokens_out": 49,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 234,
+     "rate_remaining_tokens": 7339,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 830,
+     "tokens_out": 456,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 7515,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 1477,
+     "tokens_out": 429,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5795,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "synthesizer",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 1309,
+     "tokens_out": 520,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 8266,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4224,
+    "tokens_out": 1454,
+    "llm_calls": 4,
+    "trajectory_steps": 16,
+    "latency_ms": 22041
+   },
+   "caveats": [],
+   "latency_ms": 22058,
+   "asked_at": "2026-10-03T14:45:15+00:00"
+  },
+  "915": {
+   "question_id": 915,
+   "db_id": "formula_1",
+   "difficulty": "simple",
+   "http_status": 200,
+   "answer_text": "The oldest driver is from France (nationality: French).",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT d.nationality\nFROM cn_dbd54b57e3f84128.drivers d\nORDER BY d.dob::timestamptz ASC\nLIMIT 1",
+   "candidate_sql": "SELECT d.nationality\nFROM cn_dbd54b57e3f84128.drivers d\nORDER BY d.dob::timestamptz ASC\nLIMIT 1",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [],
+    "matched": 0,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 610,
+     "tokens_out": 43,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 231,
+     "rate_remaining_tokens": 7337,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 1454,
+     "tokens_out": 326,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6438,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 1839,
+     "tokens_out": 207,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5474,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "synthesizer",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 698,
+     "tokens_out": 121,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 3618,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4601,
+    "tokens_out": 697,
+    "llm_calls": 4,
+    "trajectory_steps": 17,
+    "latency_ms": 15980
+   },
+   "caveats": [],
+   "latency_ms": 15992,
+   "asked_at": "2026-10-03T14:45:39+00:00"
+  },
+  "1107": {
+   "question_id": 1107,
+   "db_id": "european_football_2",
+   "difficulty": "moderate",
+   "http_status": 200,
+   "answer_text": "Kevin Constant's first time with his highest crossing score was on 2013-02-15 00:00:00.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT pa.date\nFROM cn_e1b70dcdfda248fc.player p\nJOIN cn_e1b70dcdfda248fc.player_attributes pa ON pa.player_api_id = p.player_api_id\nWHERE p.player_name = 'Kevin Constant'\n  AND pa.crossing = (\n    SELECT MAX(pa2.crossing) FROM cn_e1b70dcdfda248fc.player_attributes pa2 WHERE pa2.player_api_id = p.player_api_id\n  )\nORDER BY pa.date::timestamptz ASC\nLIMIT 1",
+   "candidate_sql": "SELECT pa.date\nFROM cn_e1b70dcdfda248fc.player p\nJOIN cn_e1b70dcdfda248fc.player_attributes pa ON pa.player_api_id = p.player_api_id\nWHERE p.player_name = 'Kevin Constant'\n  AND pa.crossing = (\n    SELECT MAX(pa2.crossing) FROM cn_e1b70dcdfda248fc.player_attributes pa2 WHERE pa2.player_api_id = p.player_api_id\n  )\nORDER BY pa.date::timestamptz ASC\nLIMIT 1",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [],
+    "matched": 0,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 616,
+     "tokens_out": 70,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 296,
+     "rate_remaining_tokens": 7331,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 2438,
+     "tokens_out": 372,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6280,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 3586,
+     "tokens_out": 320,
+     "cached_tokens": 2304,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6020,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "synthesizer",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 714,
+     "tokens_out": 117,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4354,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 7354,
+    "tokens_out": 879,
+    "llm_calls": 4,
+    "trajectory_steps": 12,
+    "latency_ms": 17969
+   },
+   "caveats": [],
+   "latency_ms": 17986,
+   "asked_at": "2026-10-03T14:46:05+00:00"
+  },
+  "145": {
+   "question_id": 145,
+   "db_id": "financial",
+   "difficulty": "moderate",
+   "http_status": 200,
+   "answer_text": "The query returned 660 account-holder IDs whose credit-card (operation = 'VYBER KARTOU') transactions in 1998 had amounts less than the average. The first 50 client_id values are: 19, 41, 51, 56, 76, 79, 83, 87, 112, 114, 116, 128, 130, 131, 132, 138, 146, 153, 161, 174, 192, 219, 221, 225, 236, 238, 242, 256, 267, 268, 272, 295, 305, 309, 326, 334, 335, 347, 358, 365, 370, 378, 414, 425, 429, 434, 438, 439, 441, 447. (Total rows returned: 660.)",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT DISTINCT d.client_id\nFROM cn_b7185de16da64408.account a\nJOIN cn_b7185de16da64408.trans t ON a.account_id = t.account_id\nJOIN cn_b7185de16da64408.disp d ON d.account_id = a.account_id\nJOIN cn_b7185de16da64408.client c ON c.client_id = d.client_id\nWHERE d.type = 'OWNER'\n  AND t.operation = 'VYBER KARTOU'\n  AND cast(t.date AS timestamptz) >= '1998-01-01'::timestamptz\n  AND cast(t.date AS timestamptz) < '1999-01-01'::timestamptz\n  AND t.amount < (\n    SELECT avg(t2.amount)\n    FROM cn_b7185de16da64408.trans t2\n    WHERE t2.operation = 'VYBER KARTOU'\n      AND cast(t2.date AS timestamptz) >= '1998-01-01'::timestamptz\n      AND cast(t2.date AS timestamptz) < '1999-01-01'::timestamptz\n  )",
+   "candidate_sql": "SELECT DISTINCT d.client_id\nFROM cn_b7185de16da64408.account a\nJOIN cn_b7185de16da64408.trans t ON a.account_id = t.account_id\nJOIN cn_b7185de16da64408.disp d ON d.account_id = a.account_id\nJOIN cn_b7185de16da64408.client c ON c.client_id = d.client_id\nWHERE d.type = 'OWNER'\n  AND t.operation = 'VYBER KARTOU'\n  AND cast(t.date AS timestamptz) >= '1998-01-01'::timestamptz\n  AND cast(t.date AS timestamptz) < '1999-01-01'::timestamptz\n  AND t.amount < (\n    SELECT avg(t2.amount)\n    FROM cn_b7185de16da64408.trans t2\n    WHERE t2.operation = 'VYBER KARTOU'\n      AND cast(t2.date AS timestamptz) >= '1998-01-01'::timestamptz\n      AND cast(t2.date AS timestamptz) < '1999-01-01'::timestamptz\n  )",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "660",
+      "start": 19,
+      "end": 22,
+      "matched": true,
+      "source": {
+       "kind": "aggregate",
+       "aggregate": "count",
+       "column": "rows"
+      }
+     },
+     {
+      "text": "50",
+      "start": 155,
+      "end": 157,
+      "matched": true,
+      "source": {
+       "kind": "shown"
+      }
+     },
+     {
+      "text": "19",
+      "start": 180,
+      "end": 182,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 0,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "41",
+      "start": 184,
+      "end": 186,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 1,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "51",
+      "start": 188,
+      "end": 190,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 2,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "56",
+      "start": 192,
+      "end": 194,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 3,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "76",
+      "start": 196,
+      "end": 198,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 4,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "79",
+      "start": 200,
+      "end": 202,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 5,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "83",
+      "start": 204,
+      "end": 206,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 6,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "87",
+      "start": 208,
+      "end": 210,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 7,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "112",
+      "start": 212,
+      "end": 215,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 8,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "114",
+      "start": 217,
+      "end": 220,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 9,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "116",
+      "start": 222,
+      "end": 225,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 10,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "128",
+      "start": 227,
+      "end": 230,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 11,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "130",
+      "start": 232,
+      "end": 235,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 12,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "131",
+      "start": 237,
+      "end": 240,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 13,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "132",
+      "start": 242,
+      "end": 245,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 14,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "138",
+      "start": 247,
+      "end": 250,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 15,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "146",
+      "start": 252,
+      "end": 255,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 16,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "153",
+      "start": 257,
+      "end": 260,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 17,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "161",
+      "start": 262,
+      "end": 265,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 18,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "174",
+      "start": 267,
+      "end": 270,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 19,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "192",
+      "start": 272,
+      "end": 275,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 20,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "219",
+      "start": 277,
+      "end": 280,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 21,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "221",
+      "start": 282,
+      "end": 285,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 22,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "225",
+      "start": 287,
+      "end": 290,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 23,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "236",
+      "start": 292,
+      "end": 295,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 24,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "238",
+      "start": 297,
+      "end": 300,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 25,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "242",
+      "start": 302,
+      "end": 305,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 26,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "256",
+      "start": 307,
+      "end": 310,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 27,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "267",
+      "start": 312,
+      "end": 315,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 28,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "268",
+      "start": 317,
+      "end": 320,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 29,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "272",
+      "start": 322,
+      "end": 325,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 30,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "295",
+      "start": 327,
+      "end": 330,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 31,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "305",
+      "start": 332,
+      "end": 335,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 32,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "309",
+      "start": 337,
+      "end": 340,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 33,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "326",
+      "start": 342,
+      "end": 345,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 34,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "334",
+      "start": 347,
+      "end": 350,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 35,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "335",
+      "start": 352,
+      "end": 355,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 36,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "347",
+      "start": 357,
+      "end": 360,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 37,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "358",
+      "start": 362,
+      "end": 365,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 38,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "365",
+      "start": 367,
+      "end": 370,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 39,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "370",
+      "start": 372,
+      "end": 375,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 40,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "378",
+      "start": 377,
+      "end": 380,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 41,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "414",
+      "start": 382,
+      "end": 385,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 42,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "425",
+      "start": 387,
+      "end": 390,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 43,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "429",
+      "start": 392,
+      "end": 395,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 44,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "434",
+      "start": 397,
+      "end": 400,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 45,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "438",
+      "start": 402,
+      "end": 405,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 46,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "439",
+      "start": 407,
+      "end": 410,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 47,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "441",
+      "start": 412,
+      "end": 415,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 48,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "447",
+      "start": 417,
+      "end": 420,
+      "matched": true,
+      "source": {
+       "kind": "cell",
+       "row": 49,
+       "column": "client_id"
+      }
+     },
+     {
+      "text": "660",
+      "start": 444,
+      "end": 447,
+      "matched": true,
+      "source": {
+       "kind": "aggregate",
+       "aggregate": "count",
+       "column": "rows"
+      }
+     }
+    ],
+    "matched": 53,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 660,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 623,
+     "tokens_out": 70,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 281,
+     "rate_remaining_tokens": 7307,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 930,
+     "tokens_out": 841,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 11768,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 1732,
+     "tokens_out": 900,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 14055,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "synthesizer",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 1299,
+     "tokens_out": 429,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 8140,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4584,
+    "tokens_out": 2240,
+    "llm_calls": 4,
+    "trajectory_steps": 15,
+    "latency_ms": 34579
+   },
+   "caveats": [],
+   "latency_ms": 34605,
+   "asked_at": "2026-10-03T14:46:51+00:00"
+  },
+  "327": {
+   "question_id": 327,
+   "db_id": "toxicology",
+   "difficulty": "moderate",
+   "http_status": 200,
+   "answer_text": "There are 186 non-carcinogenic molecules that consist of more than 5 atoms. The first 50 molecule_id values returned are:\nTR424, TR165, TR035, TR478, TR156, TR477, TR129, TR203, TR175, TR134, TR336, TR284, TR025, TR036, TR247, TR208, TR173, TR439, TR281, TR191, TR174, TR121, TR010, TR146, TR183, TR195, TR112, TR101, TR214, TR168, TR150, TR031, TR014, TR061, TR425, TR228, TR143, TR161, TR401, TR330, TR124, TR211, TR141, TR235, TR435, TR046, TR117, TR219, TR377, TR126.\n(Full result set contains 186 molecule_id rows.)",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT m.molecule_id\nFROM cn_426229f583924ad0.molecule AS m\nJOIN cn_426229f583924ad0.atom AS a ON a.molecule_id = m.molecule_id\nWHERE m.label = '-'\nGROUP BY m.molecule_id\nHAVING COUNT(a.atom_id) > 5",
+   "candidate_sql": "SELECT m.molecule_id\nFROM cn_426229f583924ad0.molecule AS m\nJOIN cn_426229f583924ad0.atom AS a ON a.molecule_id = m.molecule_id\nWHERE m.label = '-'\nGROUP BY m.molecule_id\nHAVING COUNT(a.atom_id) > 5",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "186",
+      "start": 10,
+      "end": 13,
+      "matched": true,
+      "source": {
+       "kind": "aggregate",
+       "aggregate": "count",
+       "column": "rows"
+      }
+     },
+     {
+      "text": "5",
+      "start": 67,
+      "end": 68,
+      "matched": true,
+      "source": {
+       "kind": "question"
+      }
+     },
+     {
+      "text": "50",
+      "start": 86,
+      "end": 88,
+      "matched": true,
+      "source": {
+       "kind": "shown"
+      }
+     },
+     {
+      "text": "186",
+      "start": 498,
+      "end": 501,
+      "matched": true,
+      "source": {
+       "kind": "aggregate",
+       "aggregate": "count",
+       "column": "rows"
+      }
+     }
+    ],
+    "matched": 4,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 186,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 620,
+     "tokens_out": 49,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 236,
+     "rate_remaining_tokens": 7316,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 552,
+     "tokens_out": 294,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6896,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 681,
+     "tokens_out": 353,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 9026,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "synthesizer",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 1398,
+     "tokens_out": 427,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 7133,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3251,
+    "tokens_out": 1123,
+    "llm_calls": 4,
+    "trajectory_steps": 9,
+    "latency_ms": 23449
+   },
+   "caveats": [],
+   "latency_ms": 23492,
+   "asked_at": "2026-10-03T14:47:23+00:00"
+  },
+  "773": {
+   "question_id": 773,
+   "db_id": "superhero",
+   "difficulty": "challenging",
+   "http_status": 200,
+   "answer_text": "There are 157 superheroes in the query result whose hair_colour_id = skin_colour_id = eye_colour_id. Examples (superhero \u2014 publisher):\n- Agent Zero \u2014 Marvel Comics\n- Alex Mercer \u2014 Wildstorm\n- Alex Woolsly \u2014 NBC - Heroes\n- Allan Quatermain \u2014 Wildstorm\n- Ando Masahashi \u2014 NBC - Heroes\n- Angel \u2014 Dark Horse Comics\n- Angela \u2014 Image Comics\n- Anti-Spawn \u2014 Image Comics\n- Arsenal \u2014 DC Comics\n- Aztar \u2014 DC Comics\n(Full list contains 157 rows returned by the query.)",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT s.superhero_name, p.publisher_name\nFROM cn_b710015657fa447c.superhero s\nJOIN cn_b710015657fa447c.publisher p ON s.publisher_id = p.id\nWHERE s.eye_colour_id = s.hair_colour_id\n  AND s.hair_colour_id = s.skin_colour_id",
+   "candidate_sql": "SELECT s.superhero_name, p.publisher_name\nFROM cn_b710015657fa447c.superhero s\nJOIN cn_b710015657fa447c.publisher p ON s.publisher_id = p.id\nWHERE s.eye_colour_id = s.hair_colour_id\n  AND s.hair_colour_id = s.skin_colour_id",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "157",
+      "start": 10,
+      "end": 13,
+      "matched": true,
+      "source": {
+       "kind": "aggregate",
+       "aggregate": "count",
+       "column": "rows"
+      }
+     },
+     {
+      "text": "157",
+      "start": 425,
+      "end": 428,
+      "matched": true,
+      "source": {
+       "kind": "aggregate",
+       "aggregate": "count",
+       "column": "rows"
+      }
+     }
+    ],
+    "matched": 2,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 157,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 636,
+     "tokens_out": 59,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5976,
+     "rate_remaining_tokens": 7304,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 858,
+     "tokens_out": 245,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6112,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 1388,
+     "tokens_out": 217,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4960,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "synthesizer",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 1890,
+     "tokens_out": 532,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 8959,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4772,
+    "tokens_out": 1053,
+    "llm_calls": 4,
+    "trajectory_steps": 15,
+    "latency_ms": 26164
+   },
+   "caveats": [],
+   "latency_ms": 26179,
+   "asked_at": "2026-10-03T14:47:57+00:00"
+  },
+  "1036": {
+   "question_id": 1036,
+   "db_id": "european_football_2",
+   "difficulty": "challenging",
+   "http_status": 200,
+   "answer_text": "The query returned 128 teams with above-average build-up play passing in 2012. The first 50 team_long_name values (as returned) are:\n1. 1. FC Kaiserslautern\n2. 1. FC K\u00f6ln\n3. 1. FSV Mainz 05\n4. AC Ajaccio\n5. AS Saint-\u00c9tienne\n6. Aberdeen\n7. Angers SCO\n8. Aston Villa\n9. Atalanta\n10. Athletic Club de Bilbao\n11. Atl\u00e9tico Madrid\n12. BSC Young Boys\n13. Bari\n14. Bayer 04 Leverkusen\n15. Beerschot AC\n16. Birmingham City\n17. Blackburn Rovers\n18. Blackpool\n19. Bologna\n20. Bolton Wanderers\n21. Borussia M\u00f6nchengladbach\n22. CA Osasuna\n23. Cagliari\n24. Cardiff City\n25. Catania\n26. Celtic\n27. Chievo Verona\n28. Club Brugge KV\n29. Cracovia\n30. C\u00f3rdoba CF\n31. Dundee United\n32. Dunfermline Athletic\n33. ES Troyes AC\n34. Eintracht Braunschweig\n35. Elche CF\n36. Empoli\n37. Everton\n38. Excelsior\n39. FC Augsburg\n40. FC Nantes\n41. FC Porto\n42. FC St. Pauli\n43. FC Utrecht\n44. Fiorentina\n45. GKS Be\u0142chat\u00f3w\n46. Genoa\n47. Grasshopper Club Z\u00fcrich\n48. Hannover 96\n49. Heart of Midlothian\n50. Hellas Verona\n\nNote: the result set contains 128 rows in total; only the first 50 rows were included in the provided context.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT DISTINCT t.team_long_name\nFROM cn_e1b70dcdfda248fc.team AS t\nJOIN cn_e1b70dcdfda248fc.team_attributes AS ta ON ta.team_api_id = t.team_api_id\nWHERE ta.buildupplaypassing IS NOT NULL\n  AND to_char(ta.date::timestamptz, 'YYYY') = '2012'\n  AND ta.buildupplaypassing > (\n    SELECT SUM(ta2.buildupplaypassing)::numeric / COUNT(ta2.team_api_id)\n    FROM cn_e1b70dcdfda248fc.team_attributes AS ta2\n    WHERE ta2.buildupplaypassing IS NOT NULL\n      AND to_char(ta2.date::timestamptz, 'YYYY') = '2012'\n  )",
+   "candidate_sql": "SELECT DISTINCT t.team_long_name\nFROM cn_e1b70dcdfda248fc.team AS t\nJOIN cn_e1b70dcdfda248fc.team_attributes AS ta ON ta.team_api_id = t.team_api_id\nWHERE ta.buildupplaypassing IS NOT NULL\n  AND to_char(ta.date::timestamptz, 'YYYY') = '2012'\n  AND ta.buildupplaypassing > (\n    SELECT SUM(ta2.buildupplaypassing)::numeric / COUNT(ta2.team_api_id)\n    FROM cn_e1b70dcdfda248fc.team_attributes AS ta2\n    WHERE ta2.buildupplaypassing IS NOT NULL\n      AND to_char(ta2.date::timestamptz, 'YYYY') = '2012'\n  )",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "128",
+      "start": 19,
+      "end": 22,
+      "matched": true,
+      "source": {
+       "kind": "aggregate",
+       "aggregate": "count",
+       "column": "rows"
+      }
+     },
+     {
+      "text": "50",
+      "start": 89,
+      "end": 91,
+      "matched": true,
+      "source": {
+       "kind": "shown"
+      }
+     },
+     {
+      "text": "1",
+      "start": 136,
+      "end": 137,
+      "matched": true,
+      "source": {
+       "kind": "text",
+       "row": 0,
+       "column": "team_long_name"
+      }
+     },
+     {
+      "text": "1",
+      "start": 160,
+      "end": 161,
+      "matched": true,
+      "source": {
+       "kind": "text",
+       "row": 0,
+       "column": "team_long_name"
+      }
+     },
+     {
+      "text": "1",
+      "start": 174,
+      "end": 175,
+      "matched": true,
+      "source": {
+       "kind": "text",
+       "row": 0,
+       "column": "team_long_name"
+      }
+     },
+     {
+      "text": "05",
+      "start": 187,
+      "end": 189,
+      "matched": true,
+      "source": {
+       "kind": "text",
+       "row": 2,
+       "column": "team_long_name"
+      }
+     },
+     {
+      "text": "04",
+      "start": 363,
+      "end": 365,
+      "matched": true,
+      "source": {
+       "kind": "text",
+       "row": 13,
+       "column": "team_long_name"
+      }
+     },
+     {
+      "text": "96",
+      "start": 940,
+      "end": 942,
+      "matched": true,
+      "source": {
+       "kind": "text",
+       "row": 47,
+       "column": "team_long_name"
+      }
+     },
+     {
+      "text": "128",
+      "start": 1016,
+      "end": 1019,
+      "matched": true,
+      "source": {
+       "kind": "aggregate",
+       "aggregate": "count",
+       "column": "rows"
+      }
+     },
+     {
+      "text": "50",
+      "start": 1050,
+      "end": 1052,
+      "matched": true,
+      "source": {
+       "kind": "shown"
+      }
+     }
+    ],
+    "matched": 10,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 128,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 678,
+     "tokens_out": 59,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 265,
+     "rate_remaining_tokens": 7262,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 2491,
+     "tokens_out": 512,
+     "cached_tokens": 1792,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 8856,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 3517,
+     "tokens_out": 418,
+     "cached_tokens": 1792,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 7090,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "synthesizer",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 1565,
+     "tokens_out": 604,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 7573,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 8251,
+    "tokens_out": 1593,
+    "llm_calls": 4,
+    "trajectory_steps": 12,
+    "latency_ms": 23942
+   },
+   "caveats": [],
+   "latency_ms": 23967,
+   "asked_at": "2026-10-03T14:48:29+00:00"
+  },
+  "1088": {
+   "question_id": 1088,
+   "db_id": "european_football_2",
+   "difficulty": "moderate",
+   "http_status": 200,
+   "answer_text": "I cannot list players meeting \"volley > 70 and dribbling > 70\" because the provided query result contains only the player_name column and does not include volley or dribbling scores. Please provide data (or a query result) that includes the volley and dribbling columns so I can filter by those conditions.\n\nCaveat: the context shows the first 1,000 rows; the full result is larger.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT DISTINCT p.player_name\nFROM cn_e1b70dcdfda248fc.player p\nJOIN cn_e1b70dcdfda248fc.player_attributes pa ON p.player_api_id = pa.player_api_id\nWHERE pa.volleys > 70 AND pa.dribbling > 70",
+   "candidate_sql": "SELECT DISTINCT p.player_name\nFROM cn_e1b70dcdfda248fc.player p\nJOIN cn_e1b70dcdfda248fc.player_attributes pa ON p.player_api_id = pa.player_api_id\nWHERE pa.volleys > 70 AND pa.dribbling > 70",
+   "evidence": "unchecked",
+   "number_grounding": {
+    "figures": [
+     {
+      "text": "70",
+      "start": 40,
+      "end": 42,
+      "matched": true,
+      "source": {
+       "kind": "question"
+      }
+     },
+     {
+      "text": "70",
+      "start": 59,
+      "end": 61,
+      "matched": true,
+      "source": {
+       "kind": "question"
+      }
+     },
+     {
+      "text": "1,000",
+      "start": 344,
+      "end": 349,
+      "matched": true,
+      "source": {
+       "kind": "aggregate",
+       "aggregate": "count",
+       "column": "rows"
+      }
+     }
+    ],
+    "matched": 3,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 1000,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 634,
+     "tokens_out": 55,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 245,
+     "rate_remaining_tokens": 7296,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 2455,
+     "tokens_out": 236,
+     "cached_tokens": 1792,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6097,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 3444,
+     "tokens_out": 143,
+     "cached_tokens": 2304,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5454,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "synthesizer",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 1493,
+     "tokens_out": 193,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 5413,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 8026,
+    "tokens_out": 627,
+    "llm_calls": 4,
+    "trajectory_steps": 12,
+    "latency_ms": 17416
+   },
+   "caveats": [
+    "Showing the first 1,000 rows; the full result is larger."
+   ],
+   "latency_ms": 17435,
+   "asked_at": "2026-10-03T14:48:54+00:00"
+  },
+  "1389": {
+   "question_id": 1389,
+   "db_id": "student_club",
+   "difficulty": "simple",
+   "http_status": 200,
+   "answer_text": "I cannot determine which event has the lowest cost because the provided query results include only event_name values (October Speaker, November Speaker, September Speaker) and contain no cost or price column. To identify the event with the minimum cost, please provide results that include a cost column (e.g., event_name and cost) or run a query that returns MIN(cost) per event.",
+   "detail": null,
+   "route": "sql",
+   "executed_sql": "SELECT e.event_name\nFROM cn_97b3964026cb47ff.event e\nJOIN cn_97b3964026cb47ff.budget b ON b.link_to_event = e.event_id\nJOIN cn_97b3964026cb47ff.expense x ON x.link_to_budget = b.budget_id\nWHERE x.cost = (\n  SELECT MIN(x2.cost) FROM cn_97b3964026cb47ff.expense x2 WHERE x2.cost IS NOT NULL\n)",
+   "candidate_sql": "SELECT e.event_name\nFROM cn_97b3964026cb47ff.event e\nJOIN cn_97b3964026cb47ff.budget b ON b.link_to_event = e.event_id\nJOIN cn_97b3964026cb47ff.expense x ON x.link_to_budget = b.budget_id\nWHERE x.cost = (\n  SELECT MIN(x2.cost) FROM cn_97b3964026cb47ff.expense x2 WHERE x2.cost IS NOT NULL\n)",
+   "evidence": "checked",
+   "number_grounding": {
+    "figures": [],
+    "matched": 0,
+    "unmatched": []
+   },
+   "repair": null,
+   "errors": [],
+   "attempt": 0,
+   "sql_rows_count": 3,
+   "calls": [
+    {
+     "role": "normalizer",
+     "model": "qwen/qwen3.8-27b",
+     "tokens_in": 596,
+     "tokens_out": 46,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 345,
+     "rate_remaining_tokens": 7344,
+     "served_model": "qwen/qwen3.8-27b",
+     "endpoint": "groq"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 883,
+     "tokens_out": 398,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 8529,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "sql",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 1844,
+     "tokens_out": 391,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 6534,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    },
+    {
+     "role": "synthesizer",
+     "model": "zed-hosted/gpt-5-mini",
+     "tokens_in": 712,
+     "tokens_out": 163,
+     "cached_tokens": 0,
+     "retries": 0,
+     "waited_ms": 0,
+     "ms": 4863,
+     "rate_remaining_tokens": null,
+     "served_model": "gpt-5-mini",
+     "endpoint": "local_router"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 4035,
+    "tokens_out": 998,
+    "llm_calls": 4,
+    "trajectory_steps": 14,
+    "latency_ms": 20472
+   },
+   "caveats": [],
+   "latency_ms": 20487,
+   "asked_at": "2026-10-03T14:49:23+00:00"
+  }
+ },
+ "pipeline_flags": {
+  "language_gate": "llm",
+  "router_mode": "always",
+  "sql_draft_mode": "llm",
+  "synth_style": "full",
+  "answer_checks": "on",
+  "templates": "off",
+  "number_grounding": "on",
+  "repair_loop": "evidence",
+  "sql_row_cap": "executor",
+  "grounding_version": "v2",
+  "retrieval_mode": "dense",
+  "doc_scope": "all",
+  "doc_abstain": "off",
+  "rerank": "bge",
+  "query_rewrite": "off"
+ }
+}

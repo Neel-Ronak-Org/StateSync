@@ -1,0 +1,1808 @@
+{
+ "flags_file": "flags_partd_v3_final_bge_entities.toml",
+ "pipeline": {
+  "front_door": "llm",
+  "debug_hooks": "off",
+  "language_gate": "llm",
+  "router_mode": "always",
+  "sql_draft_mode": "llm",
+  "synth_style": "full",
+  "answer_checks": "off",
+  "templates": "off",
+  "sql_no_data": "off",
+  "plain_failures": "on",
+  "route_recovery": "on",
+  "number_grounding": "on",
+  "repair_loop": "off",
+  "sql_row_cap": "prompt",
+  "grounding_version": "v1",
+  "self_consistency_k": 0,
+  "retrieval_mode": "dense",
+  "doc_scope": "all",
+  "doc_abstain": "off",
+  "rerank": "bge",
+  "query_rewrite": "off",
+  "passage_order": "relevance",
+  "passage_titles": "on",
+  "rerank_titles": "on",
+  "hybrid_entities": "on"
+ },
+ "port": 8091,
+ "images": {
+  "commit": "d06e8bb",
+  "built_at": "2026-10-06T03:18:32Z",
+  "mcp_image": "sha256:f7e0e4df4e4db03fd8994a083eb356101448b473c359dd1a21985dade46fd122",
+  "orchestrator_image": "sha256:65ec2473a4b368498010961f2afd24db3de01a5c32f3d0c723d402e49995b841"
+ },
+ "answers": {
+  "h01": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "No operating margin data for 3M, Boeing, AMD, or Adobe was found in the provided information, so we cannot determine which company had the lowest operating margin in fiscal 2022. Consequently, we cannot report what the 2022 annual report said drove that company\u2019s results.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT amr.ticker,\n       amr.company,\n       amr.value AS operating_margin\nFROM cn_4509b5c383744bb6.annual_metrics_restated AS amr\nWHERE amr.metric = 'operating_margin'\n  AND amr.period_end_year = 2022\n  AND amr.ticker IN ('MMM', 'BA', 'AMD', 'ADBE')\nORDER BY amr.value ASC\nLIMIT 1",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_4a602e9261f54001_c00010",
+     "page": 4,
+     "title": "AMD 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_4a602e9261f54001_c00198",
+     "page": 43,
+     "title": "AMD 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_4a602e9261f54001_c00199",
+     "page": 43,
+     "title": "AMD 2022 10K"
+    }
+   ],
+   "executed_sql": "SELECT amr.ticker,\n       amr.company,\n       amr.value AS operating_margin\nFROM cn_4509b5c383744bb6.annual_metrics_restated AS amr\nWHERE amr.metric = 'operating_margin'\n  AND amr.period_end_year = 2022\n  AND amr.ticker IN ('MMM', 'BA', 'AMD', 'ADBE')\nORDER BY amr.value ASC\nLIMIT 1",
+   "hybrid_entities": {
+    "entities": [],
+    "matched_documents": [],
+    "narrowed": false
+   },
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "Among 3M, Boeing, AMD and Adobe, which had the lowest operating margin in fiscal 2022, and what does that company's 2022 annual report say drove its results?",
+    "database_question": "Which of 3M, Boeing, AMD, or Adobe had the lowest operating margin in fiscal 2022?",
+    "documents_question": "What does the 2022 annual report of the company with the lowest operating margin among 3M, Boeing, AMD, and Adobe in fiscal 2022 say drove its results?",
+    "documents_depend_on_database": true,
+    "documents": [
+     {
+      "title": "3M 2022 10K",
+      "score": 0.6816087581645011
+     },
+     {
+      "title": "AMD 2015 10K",
+      "score": 0.6805402065289499
+     },
+     {
+      "title": "3M 2023Q2 10Q",
+      "score": 0.6692546601436257
+     },
+     {
+      "title": "GENERALMILLS 2022 10K",
+      "score": 0.668838759716505
+     },
+     {
+      "title": "3M 2018 10K",
+      "score": 0.6679701011163068
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "ok",
+    "history_turns": 0
+   },
+   "errors": [
+    {
+     "attempt": 0,
+     "category": "empty_result",
+     "engine_code": null,
+     "message": "Query executed successfully but returned zero rows.",
+     "offending_sql": "SELECT am.company,\n       am.ticker,\n       am.value AS operating_margin\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.metric = 'operating_margin'\n  AND am.period_end_year = 2022\n  AND am.ticker IN ('MMM', 'BA', 'AMD', 'ADBE')\nORDER BY am.value ASC\nLIMIT 1",
+     "remediation_hint": "Query was valid but returned zero rows. Verify filter literals against sampled values before concluding the answer is empty."
+    }
+   ],
+   "ms": 51636
+  },
+  "h02": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "No matching records were found for Coca-Cola, PepsiCo, or General Mills in the provided data, so we cannot determine which company grew revenue fastest in fiscal 2022 or cite the reasons given in their 2022 10\u2011K filings.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT c.name AS company,\n       (COALESCE(am2022_r.value, am2022.value) - COALESCE(am2021_r.value, am2021.value))\n       / NULLIF(COALESCE(am2021_r.value, am2021.value), 0) AS revenue_growth_rate\nFROM cn_4509b5c383744bb6.companies c\nLEFT JOIN cn_4509b5c383744bb6.annual_metrics am2022\n  ON am2022.ticker = c.ticker\n AND am2022.metric = 'revenue'\n AND EXTRACT(YEAR FROM am2022.period_end) = 2022\nLEFT JOIN cn_4509b5c383744bb6.annual_metrics am2021\n  ON am2021.ticker = c.ticker\n AND am2021.metric = 'revenue'\n AND EXTRACT(YEAR FROM am2021.period_end) = 2021\nLEFT JOIN cn_4509b5c383744bb6.annual_metrics_restated am2022_r\n  ON am2022_r.ticker = c.ticker\n AND am2022_r.metric = 'revenue'\n AND EXTRACT(YEAR FROM am2022_r.period_end) = 2022\nLEFT JOIN cn_4509b5c383744bb6.annual_metrics_restated am2021_r\n  ON am2021_r.ticker = c.ticker\n AND am2021_r.metric = 'revenue'\n AND EXTRACT(YEAR FROM am2021_r.period_end) = 2021\nWHERE c.name IN ('Coca-Cola', 'PepsiCo', 'General Mills')\n  AND COALESCE(am2022.value, am2022_r.value) IS NOT NULL\n  AND COALESCE(am2021.value, am2021_r.value) IS NOT NULL\nORDER BY revenue_growth_rate DESC\nLIMIT 1",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_a78870ad8fc74b94_c00195",
+     "page": 39,
+     "title": "ADOBE 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_a78870ad8fc74b94_c00201",
+     "page": 40,
+     "title": "ADOBE 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_a78870ad8fc74b94_c00202",
+     "page": 40,
+     "title": "ADOBE 2022 10K"
+    }
+   ],
+   "executed_sql": "SELECT c.name AS company,\n       (COALESCE(am2022_r.value, am2022.value) - COALESCE(am2021_r.value, am2021.value))\n       / NULLIF(COALESCE(am2021_r.value, am2021.value), 0) AS revenue_growth_rate\nFROM cn_4509b5c383744bb6.companies c\nLEFT JOIN cn_4509b5c383744bb6.annual_metrics am2022\n  ON am2022.ticker = c.ticker\n AND am2022.metric = 'revenue'\n AND EXTRACT(YEAR FROM am2022.period_end) = 2022\nLEFT JOIN cn_4509b5c383744bb6.annual_metrics am2021\n  ON am2021.ticker = c.ticker\n AND am2021.metric = 'revenue'\n AND EXTRACT(YEAR FROM am2021.period_end) = 2021\nLEFT JOIN cn_4509b5c383744bb6.annual_metrics_restated am2022_r\n  ON am2022_r.ticker = c.ticker\n AND am2022_r.metric = 'revenue'\n AND EXTRACT(YEAR FROM am2022_r.period_end) = 2022\nLEFT JOIN cn_4509b5c383744bb6.annual_metrics_restated am2021_r\n  ON am2021_r.ticker = c.ticker\n AND am2021_r.metric = 'revenue'\n AND EXTRACT(YEAR FROM am2021_r.period_end) = 2021\nWHERE c.name IN ('Coca-Cola', 'PepsiCo', 'General Mills')\n  AND COALESCE(am2022.value, am2022_r.value) IS NOT NULL\n  AND COALESCE(am2021.value, am2021_r.value) IS NOT NULL\nORDER BY revenue_growth_rate DESC\nLIMIT 1",
+   "hybrid_entities": {
+    "entities": [],
+    "matched_documents": [],
+    "narrowed": false
+   },
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "Which of Coca-Cola, PepsiCo and General Mills grew revenue fastest in fiscal 2022, and what reasons does its 2022 10-K give for that growth?",
+    "database_question": "Which of Coca-Cola, PepsiCo and General Mills had the highest revenue growth rate in fiscal 2022?",
+    "documents_question": "What reasons does the 2022 10-K of the company with the fastest revenue growth in fiscal 2022 give for that growth?",
+    "documents_depend_on_database": true,
+    "documents": [
+     {
+      "title": "PEPSICO 2022 10K",
+      "score": 0.7189694362447744
+     },
+     {
+      "title": "PEPSICO 2021 10K",
+      "score": 0.717532753944397
+     },
+     {
+      "title": "GENERALMILLS 2022 10K",
+      "score": 0.6739389896392822
+     },
+     {
+      "title": "PEPSICO 2023Q1 EARNINGS",
+      "score": 0.6716251168697981
+     },
+     {
+      "title": "COCACOLA 2021 10K",
+      "score": 0.6675506433904985
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [
+    {
+     "attempt": 0,
+     "category": "empty_result",
+     "engine_code": null,
+     "message": "Query executed successfully but returned zero rows.",
+     "offending_sql": "SELECT c.name AS company, \n       (am2022.value - am2021.value) / NULLIF(am2021.value, 0) AS revenue_growth_rate\nFROM cn_4509b5c383744bb6.companies c\nJOIN cn_4509b5c383744bb6.annual_metrics am2022\n  ON am2022.ticker = c.ticker\n AND am2022.metric = 'revenue'\n AND am2022.period_end_year = 2022\nJOIN cn_4509b5c383744bb6.annual_metrics am2021\n  ON am2021.ticker = c.ticker\n AND am2021.metric = 'revenue'\n AND am2021.period_end_year = 2021\nWHERE c.name IN ('Coca-Cola', 'PepsiCo', 'General Mills')\nORDER BY revenue_growth_rate DESC\nLIMIT 1",
+     "remediation_hint": "Query was valid but returned zero rows. Verify filter literals against sampled values before concluding the answer is empty."
+    }
+   ],
+   "ms": 38756
+  },
+  "h03": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "Based on the available data, JPMorgan Chase & Co. reported a net income of $37,676,000,000 for fiscal 2022. Net\u2011income figures for American Express and PayPal are not present in the provided data, so JPMorgan\u2019s figure is the only one we can compare and it appears to be the largest among the three companies.\n\nJPMorgan\u2019s 2022 Form\u202f10\u2011K highlights several key risk areas, including:\n\u2022\u202fStrategic risk \u2013 the potential for the firm\u2019s strategy to be less effective than expected.\n\u2022\u202fCapital risk \u2013 risks related to the firm\u2019s capital adequacy and regulatory capital requirements.\n\u2022\u202fLiquidity risk \u2013 the risk that the firm may not be able to meet its short\u2011term obligations.\n\u2022\u202fReputation risk \u2013 the risk of damage to the firm\u2019s reputation affecting its business.\n\u2022\u202fCyber\u2011security risk \u2013 the risk of cyber\u2011attacks or unauthorized access that could disrupt systems or compromise data.\n\u2022\u202fOther general risks and uncertainties outlined in Item\u202f1A (Risk Factors) of the 10\u2011K.\nThese risk factors are discussed throughout the 10\u2011K, particularly in the \u201cRisk Factors\u201d section (Item\u202f1A) and related management discussion sections.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT c.name AS company, a.ticker, a.value AS net_income\nFROM cn_4509b5c383744bb6.annual_metrics AS a\nJOIN cn_4509b5c383744bb6.companies AS c\n  ON a.ticker = c.ticker\nWHERE a.metric = 'net_income'\n  AND a.period_end_year = 2022\n  AND a.ticker IN ('JPM', 'AXP', 'PYPL')\nORDER BY a.value DESC\nLIMIT 1",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_2b71f70ae5fa4c6f_c00007",
+     "page": 4,
+     "title": "PAYPAL 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_2b71f70ae5fa4c6f_c00163",
+     "page": 33,
+     "title": "PAYPAL 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_f9521a40687b4391_c00232",
+     "page": 48,
+     "title": "JPMORGAN 2022 10K"
+    }
+   ],
+   "executed_sql": "SELECT c.name AS company, a.ticker, a.value AS net_income\nFROM cn_4509b5c383744bb6.annual_metrics AS a\nJOIN cn_4509b5c383744bb6.companies AS c\n  ON a.ticker = c.ticker\nWHERE a.metric = 'net_income'\n  AND a.period_end_year = 2022\n  AND a.ticker IN ('JPM', 'AXP', 'PYPL')\nORDER BY a.value DESC\nLIMIT 1",
+   "hybrid_entities": {
+    "entities": [
+     "JPMORGAN CHASE & CO",
+     "JPM"
+    ],
+    "matched_documents": [],
+    "narrowed": false
+   },
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "Which of JPMorgan, American Express and PayPal reported the largest net income in fiscal 2022, and what risks does its 2022 10-K highlight?",
+    "database_question": "Which of JPMorgan, American Express and PayPal reported the largest net income in fiscal 2022?",
+    "documents_question": "What risks does the 2022 10-K of the company with the largest net income among JPMorgan, American Express and PayPal in fiscal 2022 highlight?",
+    "documents_depend_on_database": true,
+    "documents": [
+     {
+      "title": "JPMORGAN 2022 10K",
+      "score": 0.7381552145666193
+     },
+     {
+      "title": "JPMORGAN 2023Q2 10Q",
+      "score": 0.72293015346418
+     },
+     {
+      "title": "JPMORGAN 2021Q1 10Q",
+      "score": 0.7156267767780115
+     },
+     {
+      "title": "JPMORGAN 2022Q2 10Q",
+      "score": 0.7145242436302751
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 34102
+  },
+  "h04": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "Based on the 10\u2011K filings, 3M reported capital expenditures of $1,831\u202fmillion for fiscal 2022, which is higher than Lockheed\u202fMartin\u2019s $1,700\u202fmillion in the same year. No capital\u2011expenditure figure for Boeing was found in the provided documents. 3M\u2019s 10\u2011K explains that its capital spending is used to invest in property, plant and equipment to support growth across diverse markets, meet product demand, increase manufacturing efficiency, and expand manufacturing and sourcing capabilities so that product capacity aligns with sales in major geographic regions.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT c.name AS company, amr.value AS capital_expenditure\nFROM cn_4509b5c383744bb6.annual_metrics_restated AS amr\nJOIN cn_4509b5c383744bb6.companies AS c ON amr.ticker = c.ticker\nWHERE amr.metric = 'capital_expenditures'\n  AND amr.period_end_year = 2022\n  AND c.ticker IN ('LMT', 'BA', 'MMM')\nORDER BY amr.value DESC\nLIMIT 1",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cbd639f9fce44454_c00025",
+     "page": 7,
+     "title": "3M 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cbd639f9fce44454_c00138",
+     "page": 34,
+     "title": "3M 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cbd639f9fce44454_c00529",
+     "page": 123,
+     "title": "3M 2022 10K"
+    }
+   ],
+   "executed_sql": "SELECT c.name AS company, amr.value AS capital_expenditure\nFROM cn_4509b5c383744bb6.annual_metrics_restated AS amr\nJOIN cn_4509b5c383744bb6.companies AS c ON amr.ticker = c.ticker\nWHERE amr.metric = 'capital_expenditures'\n  AND amr.period_end_year = 2022\n  AND c.ticker IN ('LMT', 'BA', 'MMM')\nORDER BY amr.value DESC\nLIMIT 1",
+   "hybrid_entities": {
+    "entities": [],
+    "matched_documents": [],
+    "narrowed": false
+   },
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "Among Lockheed Martin, Boeing and 3M, which spent the most on capital expenditure in fiscal 2022, and what does its 10-K say that spending is for?",
+    "database_question": "Which of Lockheed Martin, Boeing, or 3M had the highest capital expenditure value in fiscal year 2022?",
+    "documents_question": "What does the 10-K of the company with the highest capital expenditure in fiscal year 2022 say that spending is for?",
+    "documents_depend_on_database": true,
+    "documents": [
+     {
+      "title": "3M 2023Q2 10Q",
+      "score": 0.737478488313103
+     },
+     {
+      "title": "3M 2018 10K",
+      "score": 0.7323591415469656
+     },
+     {
+      "title": "3M 2022 10K",
+      "score": 0.7240201326711382
+     },
+     {
+      "title": "BOEING 2022 10K",
+      "score": 0.7044487486955633
+     },
+     {
+      "title": "LOCKHEEDMARTIN 2022 10K",
+      "score": 0.6887621607328659
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [
+    {
+     "attempt": 0,
+     "category": "empty_result",
+     "engine_code": null,
+     "message": "Query executed successfully but returned zero rows.",
+     "offending_sql": "SELECT am.company, am.value\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.metric = 'capital_expenditures'\n  AND am.period_end_year = 2022\n  AND am.company IN ('Lockheed Martin', 'Boeing', '3M')\nORDER BY am.value DESC\nLIMIT 1",
+     "remediation_hint": "Query was valid but returned zero rows. Verify filter literals against sampled values before concluding the answer is empty."
+    }
+   ],
+   "ms": 54080
+  },
+  "h05": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "According to the available 2022 10\u2011K data, Advanced Micro Devices (AMD) reported research and development expenses of $5,005,000,000 for fiscal 2022. The filing lists its main products as various warranty accrual items: \u201cStandard and Extended Product Warranty Accrual; Standard and Extended Product Warranty Accrual, Decrease for Payments; Standard and Extended Product Warranty Accrual, Increase for Warranties Issued.\u201d No comparable R&D figures for Corning or 3M are present in the provided data, so AMD is the only company for which the amount can be reported.",
+   "route": "sql",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT\n  c.name AS company,\n  am.value AS r_and_d_spent,\n  STRING_AGG(DISTINCT f.label, '; ') AS main_products\nFROM cn_4509b5c383744bb6.companies c\nJOIN cn_4509b5c383744bb6.annual_metrics_restated am\n  ON am.ticker = c.ticker\nJOIN cn_4509b5c383744bb6.metric_tags mt\n  ON mt.metric = am.metric\n AND mt.tag ILIKE '%ResearchAndDevelopment%'\nLEFT JOIN cn_4509b5c383744bb6.facts f\n  ON f.cik = c.cik\n AND f.form = '10-K'\n AND f.period_end >= DATE '2022-01-01' AND f.period_end <= DATE '2022-12-31'\n AND f.label ILIKE '%product%'\nWHERE am.period_end_year = 2022\n  AND c.ticker IN ('GLW','AMD','MMM')\n  AND am.unit = 'USD'\nGROUP BY c.name, am.value\nORDER BY am.value DESC\nLIMIT 1",
+     "page": null
+    }
+   ],
+   "executed_sql": "SELECT\n  c.name AS company,\n  am.value AS r_and_d_spent,\n  STRING_AGG(DISTINCT f.label, '; ') AS main_products\nFROM cn_4509b5c383744bb6.companies c\nJOIN cn_4509b5c383744bb6.annual_metrics_restated am\n  ON am.ticker = c.ticker\nJOIN cn_4509b5c383744bb6.metric_tags mt\n  ON mt.metric = am.metric\n AND mt.tag ILIKE '%ResearchAndDevelopment%'\nLEFT JOIN cn_4509b5c383744bb6.facts f\n  ON f.cik = c.cik\n AND f.form = '10-K'\n AND f.period_end >= DATE '2022-01-01' AND f.period_end <= DATE '2022-12-31'\n AND f.label ILIKE '%product%'\nWHERE am.period_end_year = 2022\n  AND c.ticker IN ('GLW','AMD','MMM')\n  AND am.unit = 'USD'\nGROUP BY c.name, am.value\nORDER BY am.value DESC\nLIMIT 1",
+   "hybrid_entities": null,
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "unsure",
+    "out_of_scope": false,
+    "route": "sql",
+    "parse_ok": true,
+    "standalone_question": "Which of Corning, AMD and 3M spent the most on research and development in fiscal 2022, and what are its main products according to its 2022 10-K?",
+    "database_question": "Which of Corning, AMD and 3M spent the most on research and development in fiscal 2022?",
+    "documents_question": "What are the main products of the company that spent the most on research and development in fiscal 2022 according to its 2022 10-K?",
+    "documents_depend_on_database": true,
+    "documents": [
+     {
+      "title": "CORNING 2021 10K",
+      "score": 0.7119099245178789
+     },
+     {
+      "title": "CORNING 2022 10K",
+      "score": 0.694081136073623
+     },
+     {
+      "title": "CORNING 2020 10K",
+      "score": 0.6844899182660032
+     },
+     {
+      "title": "AMD 2022 10K",
+      "score": 0.6736682854195993
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 40321
+  },
+  "h06": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "CVS Health reported substantially higher revenue in fiscal 2022 ($322.467\u202fbillion) than Johnson & Johnson ($93.775\u202fbillion). The documents provided do not contain the segment\u2011description text from CVS Health\u2019s 2022 Form\u202f10\u2011K, so a summary of its business\u2011segment structure cannot be given from the available data.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT am.ticker, am.company, am.value\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.metric = 'revenue'\n  AND am.period_end_year = 2022\n  AND am.ticker IN ('CVS', 'JNJ')\nORDER BY am.value DESC\nLIMIT 1000",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_c8d81aaeb2494d2f_c00306",
+     "page": 58,
+     "title": "AMERICANWATERWORKS 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_c8d81aaeb2494d2f_c00307",
+     "page": 58,
+     "title": "AMERICANWATERWORKS 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_c8d81aaeb2494d2f_c00607",
+     "page": 133,
+     "title": "AMERICANWATERWORKS 2022 10K"
+    }
+   ],
+   "executed_sql": "SELECT am.ticker, am.company, am.value\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.metric = 'revenue'\n  AND am.period_end_year = 2022\n  AND am.ticker IN ('CVS', 'JNJ')\nORDER BY am.value DESC\nLIMIT 1000",
+   "hybrid_entities": {
+    "entities": [
+     "CVS",
+     "CVS Health",
+     "JNJ",
+     "Johnson & Johnson"
+    ],
+    "matched_documents": [],
+    "narrowed": false
+   },
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "Between CVS Health and Johnson & Johnson, which had the larger revenue in fiscal 2022, and how does its 2022 10-K describe its business segments?",
+    "database_question": "Which company had the larger revenue in fiscal 2022, CVS Health or Johnson & Johnson?",
+    "documents_question": "How does the 2022 10-K of the company with the larger fiscal 2022 revenue describe its business segments?",
+    "documents_depend_on_database": true,
+    "documents": [
+     {
+      "title": "JOHNSON JOHNSON 2023Q2 EARNINGS",
+      "score": 0.7471261096411449
+     },
+     {
+      "title": "JOHNSON JOHNSON 2023 8K dated 2023 08 30",
+      "score": 0.7384724928769688
+     },
+     {
+      "title": "JOHNSON JOHNSON 2022 10K",
+      "score": 0.7366990917863413
+     },
+     {
+      "title": "JOHNSON JOHNSON 2022Q4 EARNINGS",
+      "score": 0.7273133234568444
+     },
+     {
+      "title": "CVSHEALTH 2022 10K",
+      "score": 0.7169373462758879
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 28375
+  },
+  "h07": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "No matching records were found for the requested companies' long\u2011term debt at the end of fiscal 2022, so I cannot determine which had the highest amount or provide details from the 2022 10\u2011K about debt maturities.",
+   "route": "sql",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT c.name AS company_name,\n       am.ticker,\n       am.value AS long_term_debt_2022,\n       f.value AS debt_maturities_2022\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nJOIN cn_4509b5c383744bb6.companies AS c\n  ON am.ticker = c.ticker\nJOIN cn_4509b5c383744bb6.facts AS f\n  ON c.cik = f.cik\nWHERE am.period_end_year = 2022\n  AND am.metric = 'LongTermDebt'\n  AND c.name IN ('MGM Resorts', 'Boeing', 'AES')\n  AND f.form = '10-K'\n  AND f.filing_fy = 2022\n  AND f.label ILIKE '%Debt Maturities%'\nORDER BY am.value DESC\nLIMIT 1",
+     "page": null
+    }
+   ],
+   "executed_sql": "SELECT c.name AS company_name,\n       am.ticker,\n       am.value AS long_term_debt_2022,\n       f.value AS debt_maturities_2022\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nJOIN cn_4509b5c383744bb6.companies AS c\n  ON am.ticker = c.ticker\nJOIN cn_4509b5c383744bb6.facts AS f\n  ON c.cik = f.cik\nWHERE am.period_end_year = 2022\n  AND am.metric = 'LongTermDebt'\n  AND c.name IN ('MGM Resorts', 'Boeing', 'AES')\n  AND f.form = '10-K'\n  AND f.filing_fy = 2022\n  AND f.label ILIKE '%Debt Maturities%'\nORDER BY am.value DESC\nLIMIT 1",
+   "hybrid_entities": null,
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "unsure",
+    "out_of_scope": false,
+    "route": "sql",
+    "parse_ok": true,
+    "standalone_question": "Which of MGM Resorts, Boeing and AES had the most long-term debt at the end of fiscal 2022, and what does its 2022 10-K say about its debt maturities?",
+    "database_question": "Which of MGM Resorts, Boeing and AES had the most long-term debt at the end of fiscal 2022?",
+    "documents_question": "What does the 2022 10-K of the company with the most long-term debt at the end of fiscal 2022 say about its debt maturities?",
+    "documents_depend_on_database": true,
+    "documents": [
+     {
+      "title": "MGMRESORTS 2023Q2 10Q",
+      "score": 0.726887724604845
+     },
+     {
+      "title": "MGMRESORTS 2022Q4 EARNINGS",
+      "score": 0.7249940320882065
+     },
+     {
+      "title": "MGMRESORTS 2020 10K",
+      "score": 0.7213165760040334
+     },
+     {
+      "title": "MGMRESORTS 2022 10K",
+      "score": 0.7197226667486856
+     },
+     {
+      "title": "MGMRESORTS 2018 10K",
+      "score": 0.7132443106333667
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [
+    {
+     "attempt": 0,
+     "category": "empty_result",
+     "engine_code": null,
+     "message": "Query executed successfully but returned zero rows.",
+     "offending_sql": "SELECT am.ticker,\n       am.company,\n       am.value AS long_term_debt_2022,\n       am.filed AS filing_date\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nJOIN cn_4509b5c383744bb6.companies AS c\n  ON am.ticker = c.ticker\nWHERE am.period_end_year = 2022\n  AND am.metric = 'LongTermDebt'\n  AND c.name IN ('MGM Resorts', 'Boeing', 'AES')\nORDER BY am.value DESC\nLIMIT 1",
+     "remediation_hint": "Query was valid but returned zero rows. Verify filter literals against sampled values before concluding the answer is empty."
+    },
+    {
+     "attempt": 1,
+     "category": "unknown_column",
+     "engine_code": "42703",
+     "message": "column f.metric does not exist\nLINE 15:   AND f.metric = 'DebtMaturities'\n               ^\nHINT:  Perhaps you meant to reference the column \"am.metric\".",
+     "offending_sql": "SELECT c.name AS company_name,\n       am.ticker,\n       am.value AS long_term_debt_2022,\n       f.value AS debt_maturities_2022\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nJOIN cn_4509b5c383744bb6.companies AS c\n  ON am.ticker = c.ticker\nJOIN cn_4509b5c383744bb6.facts AS f\n  ON c.cik = f.cik\nWHERE am.period_end_year = 2022\n  AND am.metric = 'LongTermDebt'\n  AND c.name IN ('MGM Resorts', 'Boeing', 'AES')\n  AND f.form = '10-K'\n  AND f.filing_fy = 2022\n  AND f.metric = 'DebtMaturities'\nORDER BY am.value DESC\nLIMIT 1",
+     "remediation_hint": "Referenced column does not exist. Call schema.describe_table for the tables in FROM before re-emitting."
+    },
+    {
+     "attempt": 2,
+     "category": "empty_result",
+     "engine_code": null,
+     "message": "Query executed successfully but returned zero rows.",
+     "offending_sql": "SELECT c.name AS company_name,\n       am.ticker,\n       am.value AS long_term_debt_2022,\n       f.value AS debt_maturities_2022\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nJOIN cn_4509b5c383744bb6.companies AS c ON am.ticker = c.ticker\nJOIN cn_4509b5c383744bb6.facts AS f ON c.cik = f.cik\nWHERE am.period_end_year = 2022\n  AND am.metric = 'LongTermDebt'\n  AND c.name IN ('MGM Resorts', 'Boeing', 'AES')\n  AND f.form = '10-K'\n  AND f.filing_fy = 2022\n  AND f.label ILIKE '%Debt Maturities%'\nORDER BY am.value DESC\nLIMIT 1",
+     "remediation_hint": "Query was valid but returned zero rows. Verify filter literals against sampled values before concluding the answer is empty."
+    }
+   ],
+   "ms": 53250
+  },
+  "h08": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "Based on the data provided, American Water Works (ticker\u202fAWK) reported a capital\u2011expenditure\u2011to\u2011revenue ratio of approximately 0.61 for fiscal\u202f2022. This is the only ratio available for the three companies mentioned, so it is the highest among American Water Works, AES and 3M.\n\nThe company\u2019s 2022 Form\u202f10\u2011K describes its capital investment plans as follows: it intends to spend $30\u202fbillion to $34\u202fbillion over the next ten years on capital improvements, mainly for pipe replacement and upgrades to aging water\u2011 and wastewater\u2011treatment infrastructure. The plan includes accelerating the pipe renewal cycle from a 250\u2011year to an expected 110\u2011year replacement schedule, which should allow the replacement of about 2,100\u202fmiles of mains and collection pipes between 2023 and 2027. In 2022 the company recorded total capital expenditures of $2.3\u202fbillion, an increase of $533\u202fmillion driven by higher spending across transmission and distribution, treatment, services, and other infrastructure categories.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT am.ticker,\n       SUM(CASE WHEN am.metric = 'capital_expenditure' THEN am.value END) /\n       NULLIF(SUM(CASE WHEN am.metric = 'revenue' THEN am.value END), 0) AS capex_to_rev_ratio\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.ticker IN ('AWK', 'AES', 'MMM')\n  AND am.period_end_year = 2022\n  AND am.metric IN ('capital_expenditure', 'revenue')\nGROUP BY am.ticker\nORDER BY capex_to_rev_ratio DESC\nLIMIT 1",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_c8d81aaeb2494d2f_c00009",
+     "page": 3,
+     "title": "AMERICANWATERWORKS 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_c8d81aaeb2494d2f_c00032",
+     "page": 8,
+     "title": "AMERICANWATERWORKS 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_c8d81aaeb2494d2f_c00328",
+     "page": 64,
+     "title": "AMERICANWATERWORKS 2022 10K"
+    }
+   ],
+   "executed_sql": "SELECT am.ticker,\n       SUM(CASE WHEN am.metric = 'capital_expenditure' THEN am.value END) /\n       NULLIF(SUM(CASE WHEN am.metric = 'revenue' THEN am.value END), 0) AS capex_to_rev_ratio\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.ticker IN ('AWK', 'AES', 'MMM')\n  AND am.period_end_year = 2022\n  AND am.metric IN ('capital_expenditure', 'revenue')\nGROUP BY am.ticker\nORDER BY capex_to_rev_ratio DESC\nLIMIT 1",
+   "hybrid_entities": {
+    "entities": [
+     "AWK"
+    ],
+    "matched_documents": [],
+    "narrowed": false
+   },
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "Among American Water Works, AES and 3M, which spent the most on capital expenditure relative to revenue in fiscal 2022, and how does its 2022 10-K describe its capital investment plans?",
+    "database_question": "Which of American Water Works, AES, or 3M had the highest ratio of capital expenditure to revenue in fiscal year 2022?",
+    "documents_question": "How does the 2022 10-K of the company with the highest capital expenditure to revenue ratio in fiscal year 2022 describe its capital investment plans?",
+    "documents_depend_on_database": true,
+    "documents": [
+     {
+      "title": "AMERICANWATERWORKS 2022 10K",
+      "score": 0.7489603159333241
+     },
+     {
+      "title": "AMERICANWATERWORKS 2020 10K",
+      "score": 0.7440573129619783
+     },
+     {
+      "title": "AMERICANWATERWORKS 2021 10K",
+      "score": 0.738934579149606
+     },
+     {
+      "title": "3M 2022 10K",
+      "score": 0.7093201376628749
+     },
+     {
+      "title": "3M 2018 10K",
+      "score": 0.7044966573123198
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 33821
+  },
+  "h09": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The query returned no matching records, so the gross margin data for Adobe, PayPal, and AMD for fiscal 2022 is not available in the provided context. Consequently, I cannot determine which company had the highest gross margin, nor can I provide the main competitive risks listed in any 2022 10\u2011K filing.",
+   "route": "sql",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "WITH margins AS (\n  SELECT am.ticker,\n         am.company,\n         am.value AS gross_margin\n  FROM cn_4509b5c383744bb6.annual_metrics am\n  WHERE am.ticker IN ('ADBE','PYPL','AMD')\n    AND am.metric = 'gross_margin'\n    AND am.period_end_year = 2022\n),\ntop_company AS (\n  SELECT ticker,\n         company,\n         gross_margin\n  FROM margins\n  ORDER BY gross_margin DESC\n  LIMIT 1\n)\nSELECT tc.ticker,\n       tc.company,\n       tc.gross_margin,\n       f.label AS competitive_risk_label\nFROM top_company tc\nJOIN cn_4509b5c383744bb6.companies c\n  ON c.ticker = tc.ticker\nJOIN cn_4509b5c383744bb6.facts f\n  ON f.cik = c.cik\n  AND f.form = '10-K'\n  AND f.filing_fy = 2022\n  AND f.label ILIKE '%competitive risk%'\nLIMIT 1",
+     "page": null
+    }
+   ],
+   "executed_sql": "WITH margins AS (\n  SELECT am.ticker,\n         am.company,\n         am.value AS gross_margin\n  FROM cn_4509b5c383744bb6.annual_metrics am\n  WHERE am.ticker IN ('ADBE','PYPL','AMD')\n    AND am.metric = 'gross_margin'\n    AND am.period_end_year = 2022\n),\ntop_company AS (\n  SELECT ticker,\n         company,\n         gross_margin\n  FROM margins\n  ORDER BY gross_margin DESC\n  LIMIT 1\n)\nSELECT tc.ticker,\n       tc.company,\n       tc.gross_margin,\n       f.label AS competitive_risk_label\nFROM top_company tc\nJOIN cn_4509b5c383744bb6.companies c\n  ON c.ticker = tc.ticker\nJOIN cn_4509b5c383744bb6.facts f\n  ON f.cik = c.cik\n  AND f.form = '10-K'\n  AND f.filing_fy = 2022\n  AND f.label ILIKE '%competitive risk%'\nLIMIT 1",
+   "hybrid_entities": null,
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "unsure",
+    "out_of_scope": false,
+    "route": "sql",
+    "parse_ok": true,
+    "standalone_question": "Which of Adobe, PayPal and AMD had the highest gross margin in fiscal 2022, and what does its 2022 10-K list as its main competitive risks?",
+    "database_question": "Which of Adobe, PayPal and AMD had the highest gross margin in fiscal 2022?",
+    "documents_question": "What does the 2022 10-K of the company with the highest gross margin among Adobe, PayPal and AMD in fiscal 2022 list as its main competitive risks?",
+    "documents_depend_on_database": true,
+    "documents": [
+     {
+      "title": "ADOBE 2022 10K",
+      "score": 0.6870723143729984
+     },
+     {
+      "title": "ADOBE 2017 10K",
+      "score": 0.6828417531128068
+     },
+     {
+      "title": "ADOBE 2016 10K",
+      "score": 0.680365843860117
+     },
+     {
+      "title": "ADOBE 2015 10K",
+      "score": 0.6735742104484231
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [
+    {
+     "attempt": 0,
+     "category": "empty_result",
+     "engine_code": null,
+     "message": "Query executed successfully but returned zero rows.",
+     "offending_sql": "WITH margins AS (\n  SELECT am.ticker,\n         am.company,\n         am.value AS gross_margin\n  FROM cn_4509b5c383744bb6.annual_metrics am\n  WHERE am.ticker IN ('ADBE','PYPL','AMD')\n    AND am.metric = 'gross_margin'\n    AND am.period_end_year = 2022\n),\ntop_company AS (\n  SELECT ticker,\n         company,\n         gross_margin\n  FROM margins\n  ORDER BY gross_margin DESC\n  LIMIT 1\n)\nSELECT tc.ticker,\n       tc.company,\n       tc.gross_margin,\n       f.label AS competitive_risk_label\nFROM top_company tc\nJOIN cn_4509b5c383744bb6.companies c\n  ON c.ticker = tc.ticker\nJOIN cn_4509b5c383744bb6.facts f\n  ON f.cik = c.cik\n  AND f.form = '10-K'\n  AND f.filing_fy = 2022\n  AND f.label ILIKE '%competitive risk%' \nLIMIT 1",
+     "remediation_hint": "Query was valid but returned zero rows. Verify filter literals against sampled values before concluding the answer is empty."
+    }
+   ],
+   "ms": 35243
+  },
+  "h10": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "Coca\u2011Cola paid the most dividends among the three companies in fiscal 2022.  Its 2022 Form\u202f10\u2011K reports that the Company paid $7,616\u202fmillion in cash dividends for the year and that the Board of Directors increased the regular quarterly dividend to $0.46 per share (a full\u2011year dividend of $1.84 per share) at its February\u202f2023 meeting.  The filing notes that this marked the company\u2019s 61st consecutive annual dividend increase and that the annualized common\u2011stock dividend for 2022 was $1.76 per share, reflecting a policy of regularly raising the dividend each year.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT am.ticker, am.value\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.period_end_year = 2022\n  AND am.ticker IN ('KO', 'PEP', 'KHC')\nORDER BY am.value DESC\nLIMIT 1",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_3956a69bebb84704_c00169",
+     "page": 40,
+     "title": "JOHNSON JOHNSON 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_c8d81aaeb2494d2f_c00505",
+     "page": 106,
+     "title": "AMERICANWATERWORKS 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_c8d81aaeb2494d2f_c00506",
+     "page": 106,
+     "title": "AMERICANWATERWORKS 2022 10K"
+    }
+   ],
+   "executed_sql": "SELECT am.ticker, am.value\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.period_end_year = 2022\n  AND am.ticker IN ('KO', 'PEP', 'KHC')\nORDER BY am.value DESC\nLIMIT 1",
+   "hybrid_entities": {
+    "entities": [
+     "KO"
+    ],
+    "matched_documents": [],
+    "narrowed": false
+   },
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "Among Coca-Cola, PepsiCo and Kraft Heinz, which paid the most in dividends in fiscal 2022, and what does its 2022 10-K say about its dividend policy?",
+    "database_question": "Which of Coca-Cola, PepsiCo, or Kraft Heinz paid the most in dividends in fiscal 2022?",
+    "documents_question": "What does the 2022 10-K of the company that paid the most in dividends in fiscal 2022 say about its dividend policy?",
+    "documents_depend_on_database": true,
+    "documents": [
+     {
+      "title": "PEPSICO 2021 10K",
+      "score": 0.7633603301668466
+     },
+     {
+      "title": "PEPSICO 2022 10K",
+      "score": 0.7517094603971575
+     },
+     {
+      "title": "COCACOLA 2021 10K",
+      "score": 0.7144838826406974
+     },
+     {
+      "title": "COCACOLA 2022 10K",
+      "score": 0.6997646392093793
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 37687
+  },
+  "h11": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "Based on the data provided, Lockheed\u202fMartin spent the most on share repurchases in fiscal\u202f2022, repurchasing about $7.9\u202fbillion of its common stock.  Corning\u2019s 2022 repurchase activity was much smaller \u2013 it repurchased shares for roughly $221\u202fmillion.  No share\u2011repurchase amount for General\u202fMills appears in the supplied 10\u2011K excerpts, so it cannot be compared.\n\nLockheed\u202fMartin\u2019s 2022 Form\u202f10\u2011K explains that the Board authorized an additional $14\u202fbillion to the repurchase program on October\u202f17,\u202f2022 and that the company entered an accelerated share\u2011repurchase (ASR) agreement to buy $4\u202fbillion of common stock, funded by issuing $4\u202fbillion of senior unsecured notes.  As of December\u202f31,\u202f2022 the remaining authorization for future repurchases was $10\u202fbillion, expected to be used over three years and funded through operating cash and additional debt.  The program has no set expiration date and may be amended or terminated by the Board at any time.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "with rep as (\n  select amr.ticker as ticker, amr.value as value\n  from cn_4509b5c383744bb6.annual_metrics_restated amr\n  where amr.metric = 'share_repurchases'\n    and amr.period_end_year = 2022\n    and amr.ticker in ('LMT','GLW','GIS')\n  union all\n  select am.ticker as ticker, am.value as value\n  from cn_4509b5c383744bb6.annual_metrics am\n  where am.metric = 'share_repurchases'\n    and am.period_end_year = 2022\n    and am.ticker in ('LMT','GLW','GIS')\n    and not exists (\n      select 1\n      from cn_4509b5c383744bb6.annual_metrics_restated amr2\n      where amr2.ticker = am.ticker\n        and amr2.metric = am.metric\n        and amr2.period_end_year = am.period_end_year\n    )\n)\nselect rep.ticker, rep.value\nfrom rep\norder by rep.value desc\nlimit 1",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_d0637c2101e946c0_c00236",
+     "page": 46,
+     "title": "LOCKHEEDMARTIN 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_d0637c2101e946c0_c00453",
+     "page": 95,
+     "title": "LOCKHEEDMARTIN 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_4a602e9261f54001_c00189",
+     "page": 39,
+     "title": "AMD 2022 10K"
+    }
+   ],
+   "executed_sql": "with rep as (\n  select amr.ticker as ticker, amr.value as value\n  from cn_4509b5c383744bb6.annual_metrics_restated amr\n  where amr.metric = 'share_repurchases'\n    and amr.period_end_year = 2022\n    and amr.ticker in ('LMT','GLW','GIS')\n  union all\n  select am.ticker as ticker, am.value as value\n  from cn_4509b5c383744bb6.annual_metrics am\n  where am.metric = 'share_repurchases'\n    and am.period_end_year = 2022\n    and am.ticker in ('LMT','GLW','GIS')\n    and not exists (\n      select 1\n      from cn_4509b5c383744bb6.annual_metrics_restated amr2\n      where amr2.ticker = am.ticker\n        and amr2.metric = am.metric\n        and amr2.period_end_year = am.period_end_year\n    )\n)\nselect rep.ticker, rep.value\nfrom rep\norder by rep.value desc\nlimit 1",
+   "hybrid_entities": {
+    "entities": [
+     "LMT"
+    ],
+    "matched_documents": [],
+    "narrowed": false
+   },
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "Which of Lockheed Martin, Corning and General Mills spent the most on share repurchases in fiscal 2022, and what does its 10-K say about its repurchase program?",
+    "database_question": "Which of Lockheed Martin, Corning and General Mills spent the most on share repurchases in fiscal 2022?",
+    "documents_question": "What does the 10-K of the company that spent the most on share repurchases among Lockheed Martin, Corning and General Mills in fiscal 2022 say about its repurchase program?",
+    "documents_depend_on_database": true,
+    "documents": [
+     {
+      "title": "CORNING 2020 10K",
+      "score": 0.7406441503187365
+     },
+     {
+      "title": "CORNING 2021 10K",
+      "score": 0.7276053589920036
+     },
+     {
+      "title": "CORNING 2022 10K",
+      "score": 0.7164993499666262
+     },
+     {
+      "title": "JOHNSON JOHNSON 2022 10K",
+      "score": 0.6867832896863759
+     },
+     {
+      "title": "MGMRESORTS 2020 10K",
+      "score": 0.6854727626350966
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 36873
+  },
+  "h12": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "JPMorgan Chase & Co. had the largest total assets at the end of fiscal 2022, reporting $3,665,743,000,000 (about $3.7\u202ftrillion). Its 2022 Form\u202f10\u2011K notes that the firm had $3.7\u202ftrillion in assets and $292.3\u202fbillion in stockholders\u2019 equity as of December\u202f31,\u202f2022, indicating a strong liquidity position.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT c.name AS company, am.value AS total_assets\nFROM cn_4509b5c383744bb6.companies AS c\nJOIN cn_4509b5c383744bb6.annual_metrics AS am ON am.ticker = c.ticker\nWHERE am.metric = 'total_assets'\n  AND am.period_end_year = 2022\n  AND (c.name ILIKE '%Verizon%' OR c.name ILIKE '%JPMorgan%' OR c.name ILIKE '%PepsiCo%')\nORDER BY am.value DESC\nLIMIT 1",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_a32f909cd8f24bbf_c00220",
+     "page": 53,
+     "title": "PEPSICO 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_a32f909cd8f24bbf_c00254",
+     "page": 64,
+     "title": "PEPSICO 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_a32f909cd8f24bbf_c00259",
+     "page": 66,
+     "title": "PEPSICO 2022 10K"
+    }
+   ],
+   "executed_sql": "SELECT c.name AS company, am.value AS total_assets\nFROM cn_4509b5c383744bb6.companies AS c\nJOIN cn_4509b5c383744bb6.annual_metrics AS am ON am.ticker = c.ticker\nWHERE am.metric = 'total_assets'\n  AND am.period_end_year = 2022\n  AND (c.name ILIKE '%Verizon%' OR c.name ILIKE '%JPMorgan%' OR c.name ILIKE '%PepsiCo%')\nORDER BY am.value DESC\nLIMIT 1",
+   "hybrid_entities": {
+    "entities": [
+     "JPMORGAN CHASE & CO"
+    ],
+    "matched_documents": [],
+    "narrowed": false
+   },
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "Among Verizon, JPMorgan and PepsiCo, which had the largest total assets at the end of fiscal 2022, and what does its 2022 10-K say about its liquidity?",
+    "database_question": "Which company among Verizon, JPMorgan, and PepsiCo had the largest total assets at the end of fiscal 2022?",
+    "documents_question": "What does the 2022 10-K of the company with the largest total assets at the end of fiscal 2022 among Verizon, JPMorgan, and PepsiCo say about its liquidity?",
+    "documents_depend_on_database": true,
+    "documents": [
+     {
+      "title": "PEPSICO 2022 10K",
+      "score": 0.7253212614125251
+     },
+     {
+      "title": "PEPSICO 2021 10K",
+      "score": 0.7195794582366943
+     },
+     {
+      "title": "JPMORGAN 2021Q1 10Q",
+      "score": 0.7173576367798152
+     },
+     {
+      "title": "JPMORGAN 2022Q2 10Q",
+      "score": 0.7168086429606302
+     },
+     {
+      "title": "JPMORGAN 2023Q2 10Q",
+      "score": 0.7114365180915442
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 39214
+  },
+  "h13": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The average revenue growth for all companies in fiscal\u202f2022 was 0.1153, or about 11.5%.  AMD\u2019s 2022 Form\u202f10\u2011K explains that its revenue change was driven by several factors: a 10% decline in Client\u2011segment revenue caused by lower processor shipments from a weak PC market and inventory\u2011correction actions in the PC supply chain; a significant increase in Embedded\u2011segment revenue largely from the inclusion of Xilinx\u2011embedded product sales after the February\u202f2022 acquisition of Xilinx; and higher semi\u2011custom product sales that boosted overall revenue.  The net effect was a mixed performance with growth in some segments offset by declines in others.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT AVG(growth) AS avg_revenue_growth\nFROM (\n    SELECT am2022.ticker,\n           (am2022.value - am2021.value)::numeric / NULLIF(am2021.value, 0) AS growth\n    FROM cn_4509b5c383744bb6.annual_metrics AS am2022\n    JOIN cn_4509b5c383744bb6.annual_metrics AS am2021\n      ON am2022.ticker = am2021.ticker\n     AND am2022.metric = am2021.metric\n    WHERE am2022.metric = 'revenue'\n      AND am2022.period_end_year = 2022\n      AND am2021.period_end_year = 2021\n      AND am2022.unit = 'USD'\n      AND am2021.unit = 'USD'\n) sub\nLIMIT 1000",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_4a602e9261f54001_c00078",
+     "page": 19,
+     "title": "AMD 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_4a602e9261f54001_c00199",
+     "page": 43,
+     "title": "AMD 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_4a602e9261f54001_c00201",
+     "page": 43,
+     "title": "AMD 2022 10K"
+    }
+   ],
+   "executed_sql": "SELECT AVG(growth) AS avg_revenue_growth\nFROM (\n    SELECT am2022.ticker,\n           (am2022.value - am2021.value)::numeric / NULLIF(am2021.value, 0) AS growth\n    FROM cn_4509b5c383744bb6.annual_metrics AS am2022\n    JOIN cn_4509b5c383744bb6.annual_metrics AS am2021\n      ON am2022.ticker = am2021.ticker\n     AND am2022.metric = am2021.metric\n    WHERE am2022.metric = 'revenue'\n      AND am2022.period_end_year = 2022\n      AND am2021.period_end_year = 2021\n      AND am2022.unit = 'USD'\n      AND am2021.unit = 'USD'\n) sub\nLIMIT 1000",
+   "hybrid_entities": null,
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "What was the average revenue growth across all the companies in fiscal 2022, and what does AMD's 2022 10-K say drove its own revenue change?",
+    "database_question": "What was the average revenue growth across all the companies in fiscal 2022?",
+    "documents_question": "What does AMD's 2022 10-K say drove its own revenue change?",
+    "documents_depend_on_database": false,
+    "documents": [
+     {
+      "title": "AMD 2022 10K",
+      "score": 0.7504235580942266
+     },
+     {
+      "title": "MICROSOFT 2023 10K",
+      "score": 0.679390051437615
+     },
+     {
+      "title": "AMD 2015 10K",
+      "score": 0.6792740844382307
+     },
+     {
+      "title": "BLOCK 2020 10K",
+      "score": 0.6773600405121138
+     },
+     {
+      "title": "PAYPAL 2022 10K",
+      "score": 0.6674922107174126
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 38397
+  },
+  "h14": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "Four companies reported a net loss in fiscal 2022. Boeing\u2019s 2022 Form\u202f10\u2011K includes a Legal Proceedings section that discusses ongoing litigation and investigations that could have a material effect on its financial position, indicating that material legal proceedings are described in the filing.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT COUNT(DISTINCT amr.ticker) AS companies_with_net_loss_2022\nFROM cn_4509b5c383744bb6.annual_metrics_restated AS amr\nWHERE amr.period_end_year = 2022\n  AND amr.metric = 'net_income'\n  AND amr.value < 0\nLIMIT 1000",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_862837ee70f4475c_c00004",
+     "page": 2,
+     "title": "BOEING 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_862837ee70f4475c_c00062",
+     "page": 16,
+     "title": "BOEING 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_862837ee70f4475c_c00152",
+     "page": 43,
+     "title": "BOEING 2022 10K"
+    }
+   ],
+   "executed_sql": "SELECT COUNT(DISTINCT amr.ticker) AS companies_with_net_loss_2022\nFROM cn_4509b5c383744bb6.annual_metrics_restated AS amr\nWHERE amr.period_end_year = 2022\n  AND amr.metric = 'net_income'\n  AND amr.value < 0\nLIMIT 1000",
+   "hybrid_entities": null,
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "How many of the companies reported a net loss in fiscal 2022, and does Boeing's 2022 10-K describe any material legal proceedings?",
+    "database_question": "How many of the companies reported a net loss in fiscal 2022?",
+    "documents_question": "Does Boeing's 2022 10-K describe any material legal proceedings?",
+    "documents_depend_on_database": false,
+    "documents": [
+     {
+      "title": "BOEING 2022 10K",
+      "score": 0.7624601408886795
+     },
+     {
+      "title": "BOEING 2018 10K",
+      "score": 0.7169168939939143
+     },
+     {
+      "title": "AES 2022 10K",
+      "score": 0.6940110228022699
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 35662
+  },
+  "h15": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The median operating margin for the set of companies in fiscal\u202f2022 could not be determined\u2014the query returned a null value for the median.\n\nIn 3M\u2019s 2022 Form\u202f10\u2011K, the company reports an operating income margin of 20.8\u202f% of net sales for the year ended December\u202f31,\u202f2022. The filing explains that the margin was affected by several factors, including higher raw\u2011material costs, increased logistics and outsourced manufacturing expenses, manufacturing productivity impacts, and higher compensation and benefit costs, which together more than offset the leverage from sales growth and restructuring benefits. The 10\u2011K also notes that, beginning in the first quarter of 2022, 3M changed the measure of segment operating performance used by its chief operating decision maker, which altered the disclosed segment profit/loss figures and consequently the reported operating margin.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT\n    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY company_margin.value) AS median_operating_margin\nFROM (\n    SELECT\n        am.ticker,\n        MAX(am.value) AS value\n    FROM cn_4509b5c383744bb6.annual_metrics_restated AS am\n    WHERE am.metric = 'operating_margin'\n      AND am.period_end_year = 2022\n    GROUP BY am.ticker\n) AS company_margin",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cbd639f9fce44454_c00081",
+     "page": 19,
+     "title": "3M 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cbd639f9fce44454_c00086",
+     "page": 20,
+     "title": "3M 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cbd639f9fce44454_c00108",
+     "page": 26,
+     "title": "3M 2022 10K"
+    }
+   ],
+   "executed_sql": "SELECT\n    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY company_margin.value) AS median_operating_margin\nFROM (\n    SELECT\n        am.ticker,\n        MAX(am.value) AS value\n    FROM cn_4509b5c383744bb6.annual_metrics_restated AS am\n    WHERE am.metric = 'operating_margin'\n      AND am.period_end_year = 2022\n    GROUP BY am.ticker\n) AS company_margin",
+   "hybrid_entities": null,
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "What was the median operating margin across the companies in fiscal 2022, and how does 3M's 2022 10-K explain its own operating margin?",
+    "database_question": "What was the median operating margin across the companies in fiscal 2022?",
+    "documents_question": "How does 3M's 2022 10-K explain its own operating margin?",
+    "documents_depend_on_database": false,
+    "documents": [
+     {
+      "title": "3M 2018 10K",
+      "score": 0.7470113039016724
+     },
+     {
+      "title": "3M 2023Q2 10Q",
+      "score": 0.7400778841879558
+     },
+     {
+      "title": "GENERALMILLS 2022 10K",
+      "score": 0.7302984652190058
+     },
+     {
+      "title": "3M 2022 10K",
+      "score": 0.712381686256138
+     },
+     {
+      "title": "COCACOLA 2022 10K",
+      "score": 0.6969145590510287
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 47385
+  },
+  "h16": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "In fiscal 2021, the aggregate dividends paid by all companies amounted to $82,978,189,000.  The Coca\u2011Cola Company\u2019s 2021 Form\u202f10\u2011K reports that it paid a dividend of $1.68 per share, which translated to total dividends of $7,251\u202fmillion (about $7.3\u202fbillion) for the year.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT SUM(am.value) AS total_dividends_paid\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.period_end_year = 2021\n  AND am.metric = 'dividends_paid'\n  AND am.unit = 'USD'",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_eeac029263a04cf8_c00329",
+     "page": 62,
+     "title": "COCACOLA 2021 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_eeac029263a04cf8_c00334",
+     "page": 65,
+     "title": "COCACOLA 2021 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_eeac029263a04cf8_c00336",
+     "page": 66,
+     "title": "COCACOLA 2021 10K"
+    }
+   ],
+   "executed_sql": "SELECT SUM(am.value) AS total_dividends_paid\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.period_end_year = 2021\n  AND am.metric = 'dividends_paid'\n  AND am.unit = 'USD'",
+   "hybrid_entities": null,
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "What were the total dividends paid by all the companies in fiscal 2021, and what does Coca-Cola's 2021 10-K say about its dividend?",
+    "database_question": "What were the total dividends paid by all the companies in fiscal 2021?",
+    "documents_question": "What does Coca-Cola's 2021 10-K say about its dividend?",
+    "documents_depend_on_database": false,
+    "documents": [
+     {
+      "title": "COCACOLA 2021 10K",
+      "score": 0.7964206707291194
+     },
+     {
+      "title": "COCACOLA 2022 10K",
+      "score": 0.7740415181382075
+     },
+     {
+      "title": "COCACOLA 2017 10K",
+      "score": 0.7421289922326192
+     },
+     {
+      "title": "LOCKHEEDMARTIN 2022 10K",
+      "score": 0.7279975955488528
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 31416
+  },
+  "h17": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "Netflix\u2019s consolidated revenue grew steadily from fiscal 2015 to fiscal 2022. The revenue figures were:\n- 2015: $6.78\u202fbillion\n- 2016: $8.83\u202fbillion (up $2.05\u202fbillion, about 30% YoY)\n- 2017: $11.69\u202fbillion (up $2.86\u202fbillion, about 32% YoY)\n- 2018: $15.79\u202fbillion (up $4.10\u202fbillion, about 35% YoY)\n- 2019: $20.16\u202fbillion (up $4.36\u202fbillion, about 28% YoY)\n- 2020: $24.99\u202fbillion (up $4.84\u202fbillion, about 24% YoY)\n- 2021: $29.70\u202fbillion (up $4.70\u202fbillion, about 19% YoY)\n- 2022: $31.62\u202fbillion (up $1.92\u202fbillion, about 6.5% YoY)\n\nThe 2017 Form\u202f10\u2011K describes Netflix\u2019s streaming strategy as follows: the company\u2019s core strategy is to grow its streaming membership business globally while meeting profit\u2011margin targets. It continuously improves the member experience by expanding streaming content, emphasizing a programming mix that \u201cdelights\u201d members, and investing heavily in original programming. Netflix also focuses on enhancing the user interface and extending the service to more internet\u2011connected screens. International expansion is a key priority, with streaming revenue accounting for a growing share of total revenue (44% in 2017, up from 36% in 2016). The company seeks to broaden relationships with existing partners and increase its capability to stream content to other platforms, recognizing that strong partner and device relationships are essential for retaining and growing its subscriber base.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT am.period_end_year, am.value\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.ticker = 'NFLX'\n  AND am.metric = 'revenue'\n  AND am.period_end_year BETWEEN 2015 AND 2022\nORDER BY am.period_end_year\nLIMIT 1000",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_86c4ba60e8ca443d_c00008",
+     "page": 3,
+     "title": "NETFLIX 2017 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_86c4ba60e8ca443d_c00010",
+     "page": 3,
+     "title": "NETFLIX 2017 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_86c4ba60e8ca443d_c00011",
+     "page": 3,
+     "title": "NETFLIX 2017 10K"
+    }
+   ],
+   "executed_sql": "SELECT am.period_end_year, am.value\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.ticker = 'NFLX'\n  AND am.metric = 'revenue'\n  AND am.period_end_year BETWEEN 2015 AND 2022\nORDER BY am.period_end_year\nLIMIT 1000",
+   "hybrid_entities": null,
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "How did Netflix's revenue change each year from fiscal 2015 to fiscal 2022, and what does its 2017 10-K say about its streaming strategy?",
+    "database_question": "What was Netflix's revenue for each fiscal year from 2015 to 2022?",
+    "documents_question": "What does Netflix's 2017 10-K say about its streaming strategy?",
+    "documents_depend_on_database": false,
+    "documents": [
+     {
+      "title": "NETFLIX 2017 10K",
+      "score": 0.7399279213209907
+     },
+     {
+      "title": "NETFLIX 2015 10K",
+      "score": 0.735645055770874
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 35476
+  },
+  "h18": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "Walmart\u2019s reported net income (in dollars) for each fiscal year was:\n- 2018: $9,862,000,000\n- 2019: $6,670,000,000\n- 2020: $14,881,000,000\n- 2021: $13,510,000,000\n- 2022: $13,673,000,000\n- 2023: $11,680,000,000\n\nThe 2020 Form\u202f10\u2011K highlights Walmart\u2019s e\u2011commerce investment strategy, stating that the company is making \u201cincreasing investments in eCommerce, technology, supply chain, store remodels and other omni\u2011channel customer initiatives, such as same\u2011day pickup and delivery.\u201d Specific actions noted include:\n- Launch of NextDay Delivery covering more than 75\u202f% of the U.S. population.\n- Introduction of Delivery Unlimited from 1,600 U.S. locations.\n- Expansion of Same\u2011Day Pickup to nearly 3,200 locations.\n- Ongoing e\u2011commerce acquisitions (e.g., a majority stake in Flipkart) and development of technology incubators to drive e\u2011commerce innovation.\nThese initiatives are presented as part of Walmart\u2019s broader effort to integrate its online and physical store channels and improve customer convenience.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT am.period_end_year, am.value\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.ticker = 'WMT'\n  AND am.metric = 'net_income'\n  AND am.period_end_year BETWEEN 2018 AND 2023\nLIMIT 1000",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_4d8dd58125c24e4e_c00010",
+     "page": 4,
+     "title": "WALMART 2020 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_4d8dd58125c24e4e_c00016",
+     "page": 5,
+     "title": "WALMART 2020 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_4d8dd58125c24e4e_c00022",
+     "page": 7,
+     "title": "WALMART 2020 10K"
+    }
+   ],
+   "executed_sql": "SELECT am.period_end_year, am.value\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.ticker = 'WMT'\n  AND am.metric = 'net_income'\n  AND am.period_end_year BETWEEN 2018 AND 2023\nLIMIT 1000",
+   "hybrid_entities": null,
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "What was Walmart's net income in each fiscal year from 2018 to 2023, and what does its 2020 10-K say about its e-commerce investments?",
+    "database_question": "What was Walmart's net income in each fiscal year from 2018 to 2023?",
+    "documents_question": "What does Walmart's 2020 10-K say about its e-commerce investments?",
+    "documents_depend_on_database": false,
+    "documents": [
+     {
+      "title": "WALMART 2020 10K",
+      "score": 0.8223139894896538
+     },
+     {
+      "title": "WALMART 2019 10K",
+      "score": 0.8009013058904174
+     },
+     {
+      "title": "WALMART 2018 10K",
+      "score": 0.784796489191266
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 35637
+  },
+  "h19": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "Microsoft\u2019s total revenue grew from $91.154\u202fbillion in fiscal 2016 to $211.915\u202fbillion in fiscal 2023, more than doubling over the period. The 2023 Form\u202f10\u2011K highlights that the company\u2019s cloud business is a major growth driver: Microsoft Cloud revenue rose 22% to $111.6\u202fbillion, Azure and other cloud services grew 29%, and Intelligent Cloud revenue increased 17%, driving overall revenue up 7% year\u2011over\u2011year. The filing also notes that the cloud business benefits from economies of scale in datacenters, multi\u2011tenancy, and integration across the technology stack, positioning Azure as a globally\u2011scaled, hybrid\u2011consistent platform with AI capabilities and strong security.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT am.period_end_year, am.value\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.ticker = 'MSFT'\n  AND am.metric = 'revenue'\n  AND am.period_end_year IN (2016, 2023)\nORDER BY am.period_end_year\nLIMIT 1000",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_20dd86a0693c4791_c00013",
+     "page": 5,
+     "title": "MICROSOFT 2023 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_20dd86a0693c4791_c00020",
+     "page": 7,
+     "title": "MICROSOFT 2023 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_20dd86a0693c4791_c00089",
+     "page": 24,
+     "title": "MICROSOFT 2023 10K"
+    }
+   ],
+   "executed_sql": "SELECT am.period_end_year, am.value\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.ticker = 'MSFT'\n  AND am.metric = 'revenue'\n  AND am.period_end_year IN (2016, 2023)\nORDER BY am.period_end_year\nLIMIT 1000",
+   "hybrid_entities": null,
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "How did Microsoft's revenue grow from fiscal 2016 to fiscal 2023, and what does its 2023 10-K say about its cloud business?",
+    "database_question": "What was Microsoft's revenue in fiscal 2016 and fiscal 2023?",
+    "documents_question": "What does Microsoft's 2023 10-K say about its cloud business?",
+    "documents_depend_on_database": false,
+    "documents": [
+     {
+      "title": "MICROSOFT 2023 10K",
+      "score": 0.808922280742409
+     },
+     {
+      "title": "MICROSOFT 2016 10K",
+      "score": 0.745812311019716
+     },
+     {
+      "title": "ADOBE 2016 10K",
+      "score": 0.7014321778085787
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 35664
+  },
+  "h20": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The provided data does not contain Nike\u2019s diluted earnings per share for fiscal years 2018\u20112023, so those figures cannot be reported.\n\nThe 2023 Nike Form\u202f10\u2011K discusses inventory as follows:\n- Inventories as of May\u202f31,\u202f2023 were $8.5\u202fbillion, essentially unchanged (flat) compared with the prior year.\n- Early in fiscal\u202f2023 the company experienced elevated inventory levels, especially at the end of the first quarter, due to product flow disruptions.\n- Throughout the year Nike took actions to reduce excess inventory, including decreasing future inventory purchases and increasing promotional activity, which helped normalize inventory levels by the fourth quarter.\n- The balance\u2011sheet shows total inventories of $8.454\u202fbillion for 2023, broken down by region (North America $3.806\u202fbillion, EMEA $2.167\u202fbillion, Greater\u202fChina $0.973\u202fbillion, APLA $0.894\u202fbillion, Global Brand Divisions $0.232\u202fbillion, Converse $0.305\u202fbillion, Corporate $0.077\u202fbillion).",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT amr.period_end_year,\n       amr.value\nFROM cn_4509b5c383744bb6.annual_metrics_restated AS amr\nJOIN cn_4509b5c383744bb6.companies AS c\n  ON amr.ticker = c.ticker\nWHERE c.ticker = 'NKE'\n  AND amr.metric = 'diluted_earnings_per_share'\n  AND amr.period_end_year BETWEEN 2018 AND 2023\nORDER BY amr.period_end_year\nLIMIT 1000",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_6b7724405eff4f5c_c00093",
+     "page": 19,
+     "title": "NIKE 2023 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_6b7724405eff4f5c_c00160",
+     "page": 32,
+     "title": "NIKE 2023 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_6b7724405eff4f5c_c00162",
+     "page": 32,
+     "title": "NIKE 2023 10K"
+    }
+   ],
+   "executed_sql": "SELECT amr.period_end_year,\n       amr.value\nFROM cn_4509b5c383744bb6.annual_metrics_restated AS amr\nJOIN cn_4509b5c383744bb6.companies AS c\n  ON amr.ticker = c.ticker\nWHERE c.ticker = 'NKE'\n  AND amr.metric = 'diluted_earnings_per_share'\n  AND amr.period_end_year BETWEEN 2018 AND 2023\nORDER BY amr.period_end_year\nLIMIT 1000",
+   "hybrid_entities": null,
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "What was Nike's diluted earnings per share in each year from fiscal 2018 to fiscal 2023, and what does its 2023 10-K say about inventory levels?",
+    "database_question": "What was Nike's diluted earnings per share in each year from fiscal 2018 to fiscal 2023?",
+    "documents_question": "What does Nike's 2023 10-K say about inventory levels?",
+    "documents_depend_on_database": false,
+    "documents": [
+     {
+      "title": "NIKE 2023 10K",
+      "score": 0.8018946411484109
+     },
+     {
+      "title": "NIKE 2021 10K",
+      "score": 0.8009813310763211
+     },
+     {
+      "title": "NIKE 2019 10K",
+      "score": 0.7795328134159095
+     },
+     {
+      "title": "NIKE 2018 10K",
+      "score": 0.7774374154284752
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [
+    {
+     "attempt": 0,
+     "category": "empty_result",
+     "engine_code": null,
+     "message": "Query executed successfully but returned zero rows.",
+     "offending_sql": "SELECT amr.period_end_year,\n       amr.value\nFROM cn_4509b5c383744bb6.annual_metrics_restated AS amr\nJOIN cn_4509b5c383744bb6.companies AS c\n  ON amr.ticker = c.ticker\nWHERE c.name = 'Nike'\n  AND amr.metric = 'diluted_earnings_per_share'\n  AND amr.period_end_year BETWEEN 2018 AND 2023\nORDER BY amr.period_end_year\nLIMIT 1000",
+     "remediation_hint": "Query was valid but returned zero rows. Verify filter literals against sampled values before concluding the answer is empty."
+    }
+   ],
+   "ms": 49348
+  },
+  "h21": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "Best\u202fBuy\u2019s total revenue grew from $39.4\u202fbillion in fiscal\u202f2017 to $43.5\u202fbillion in fiscal\u202f2024, an increase of roughly $4.0\u202fbillion (about a 10\u202f% rise).  The 2023 Form\u202f10\u2011K reports that at the end of fiscal\u202f2023 the company operated 978 domestic stores and 160 international stores, for a combined total of 1,138 stores.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT am.period_end_year,\n       am.value AS total_revenue\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nJOIN cn_4509b5c383744bb6.companies AS c\n  ON am.ticker = c.ticker\nWHERE c.name ILIKE '%Best Buy%'\n  AND am.metric = 'revenue'\n  AND am.period_end_year IN (2017, 2024)\nORDER BY am.period_end_year\nLIMIT 1000",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_e882049c30734ca6_c00107",
+     "page": 19,
+     "title": "BESTBUY 2023 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_e882049c30734ca6_c00108",
+     "page": 19,
+     "title": "BESTBUY 2023 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_e882049c30734ca6_c00142",
+     "page": 26,
+     "title": "BESTBUY 2023 10K"
+    }
+   ],
+   "executed_sql": "SELECT am.period_end_year,\n       am.value AS total_revenue\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nJOIN cn_4509b5c383744bb6.companies AS c\n  ON am.ticker = c.ticker\nWHERE c.name ILIKE '%Best Buy%'\n  AND am.metric = 'revenue'\n  AND am.period_end_year IN (2017, 2024)\nORDER BY am.period_end_year\nLIMIT 1000",
+   "hybrid_entities": null,
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "How did Best Buy's revenue change from fiscal 2017 to fiscal 2024, and what does its 2023 10-K say about its store count?",
+    "database_question": "What was Best Buy's total revenue in fiscal 2017 and fiscal 2024?",
+    "documents_question": "What does the Best Buy 2023 10-K report regarding its store count at the end of fiscal 2023?",
+    "documents_depend_on_database": false,
+    "documents": [
+     {
+      "title": "BESTBUY 2017 10K",
+      "score": 0.7806585475374187
+     },
+     {
+      "title": "BESTBUY 2024Q2 10Q",
+      "score": 0.7570696890660097
+     },
+     {
+      "title": "BESTBUY 2023 10K",
+      "score": 0.7553133064135001
+     },
+     {
+      "title": "BESTBUY 2019 10K",
+      "score": 0.7185354400554049
+     },
+     {
+      "title": "ULTABEAUTY 2023 10K",
+      "score": 0.6915396496426544
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 37831
+  },
+  "h22": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The data source did not contain any figures for Amcor\u2019s capital expenditures for fiscal years 2018, 2019, 2020, 2021, 2022 or 2023, so no amounts can be reported for those years.\n\nThe 2023 Form\u202f10\u2011K describes several acquisitions:\n- In August\u202f2023 the company signed an agreement to acquire a small manufacturer of flexible packaging for food, home\u2011care and personal\u2011care applications in India, intended to expand its flexible\u2011packaging footprint in that market.\n- In January\u202f2023 the company announced an agreement to acquire a medical\u2011device packaging company based in Shanghai, China, with annual sales of about $50\u202fmillion; the deal was expected to close by the end of the third quarter of fiscal\u202f2023.\n- The 2023 annual report also notes that Amcor completed three bolt\u2011on acquisitions during fiscal\u202f2023, though the specific targets are not detailed in the extracted passages.\n\nThus, while the 10\u2011K lists these three acquisition activities, it does not provide a detailed breakdown of capital\u2011expenditure amounts for the requested fiscal years.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT am.period_end_year AS fiscal_year,\n       am.value,\n       am.unit\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.ticker = 'AMC'\n  AND am.metric = 'capital_expenditure'\n  AND am.period_end_year BETWEEN 2018 AND 2023\n\nUNION ALL\n\nSELECT amr.period_end_year AS fiscal_year,\n       amr.value,\n       amr.unit\nFROM cn_4509b5c383744bb6.annual_metrics_restated AS amr\nWHERE amr.ticker = 'AMC'\n  AND amr.metric = 'capital_expenditure'\n  AND amr.period_end_year BETWEEN 2018 AND 2023\nORDER BY fiscal_year\nLIMIT 1000",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_f46e3371082f4d87_c00158",
+     "page": 41,
+     "title": "AMCOR 2023 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_f46e3371082f4d87_c00159",
+     "page": 41,
+     "title": "AMCOR 2023 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_f46e3371082f4d87_c00354",
+     "page": 109,
+     "title": "AMCOR 2023 10K"
+    }
+   ],
+   "executed_sql": "SELECT am.period_end_year AS fiscal_year,\n       am.value,\n       am.unit\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.ticker = 'AMC'\n  AND am.metric = 'capital_expenditure'\n  AND am.period_end_year BETWEEN 2018 AND 2023\n\nUNION ALL\n\nSELECT amr.period_end_year AS fiscal_year,\n       amr.value,\n       amr.unit\nFROM cn_4509b5c383744bb6.annual_metrics_restated AS amr\nWHERE amr.ticker = 'AMC'\n  AND amr.metric = 'capital_expenditure'\n  AND amr.period_end_year BETWEEN 2018 AND 2023\nORDER BY fiscal_year\nLIMIT 1000",
+   "hybrid_entities": null,
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "What was Amcor's capital expenditure in each year from fiscal 2018 to fiscal 2023, and what acquisitions does its 2023 10-K describe?",
+    "database_question": "What was Amcor's capital expenditure in each year from fiscal 2018 to fiscal 2023?",
+    "documents_question": "What acquisitions does Amcor's 2023 10-K describe?",
+    "documents_depend_on_database": false,
+    "documents": [
+     {
+      "title": "AMCOR 2023 10K",
+      "score": 0.7451954332110557
+     },
+     {
+      "title": "AMCOR 2020 10K",
+      "score": 0.742030933974331
+     },
+     {
+      "title": "AMCOR 2023Q4 EARNINGS",
+      "score": 0.7301916754474305
+     },
+     {
+      "title": "AMCOR 2023Q2 10Q",
+      "score": 0.718004448294906
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [
+    {
+     "attempt": 0,
+     "category": "empty_result",
+     "engine_code": null,
+     "message": "Query executed successfully but returned zero rows.",
+     "offending_sql": "SELECT amr.period_end_year AS fiscal_year,\n       amr.value,\n       amr.unit\nFROM cn_4509b5c383744bb6.annual_metrics_restated AS amr\nWHERE amr.ticker = 'AMC'\n  AND amr.metric = 'capital_expenditure'\n  AND amr.period_end_year BETWEEN 2018 AND 2023\nORDER BY amr.period_end_year\nLIMIT 1000",
+     "remediation_hint": "Query was valid but returned zero rows. Verify filter literals against sampled values before concluding the answer is empty."
+    }
+   ],
+   "ms": 41034
+  },
+  "h23": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "Ulta Beauty\u2019s net income grew substantially between fiscal 2019 and fiscal 2023. In 2019 the company reported net income of $658.6\u202fmillion, which rose to $705.9\u202fmillion in 2020, fell to $175.8\u202fmillion in 2021, rebounded to $985.8\u202fmillion in 2022, and reached $1.242\u202fbillion in 2023 \u2013 an overall increase of about $583.9\u202fmillion (roughly 89\u202f%) from 2019 to 2023.\n\nThe 2023 Form\u202f10\u2011K describes the company\u2019s loyalty program, Ultamate\u202fRewards, as a \u201cbest\u2011in\u2011class\u201d program that lets members earn points for every dollar spent on products and services, including purchases made with private\u2011label and co\u2011branded credit cards and at Ulta Beauty at Target. More than 40\u202fmillion active members generate over 95\u202f% of total sales, giving Ulta deep customer insights. Points are valid for at least one year and can be redeemed for discounts on any product or service in stores or through digital channels. Revenue from the program is deferred until points are redeemed or expire, with estimates of redemption rates updated each reporting period. The program also supports co\u2011branded and private\u2011label credit cards that drive higher wallet share and provide additional consumer insights.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT am.period_end_year AS fiscal_year,\n       am.value AS net_income\nFROM cn_4509b5c383744bb6.annual_metrics am\nWHERE am.metric = 'net_income'\n  AND am.ticker = 'ULTA'\n  AND am.period_end_year BETWEEN 2019 AND 2023\nORDER BY am.period_end_year\nLIMIT 1000",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_011d2d8ef9e84531_c00014",
+     "page": 5,
+     "title": "ULTABEAUTY 2023 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_011d2d8ef9e84531_c00019",
+     "page": 6,
+     "title": "ULTABEAUTY 2023 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_011d2d8ef9e84531_c00031",
+     "page": 9,
+     "title": "ULTABEAUTY 2023 10K"
+    }
+   ],
+   "executed_sql": "SELECT am.period_end_year AS fiscal_year,\n       am.value AS net_income\nFROM cn_4509b5c383744bb6.annual_metrics am\nWHERE am.metric = 'net_income'\n  AND am.ticker = 'ULTA'\n  AND am.period_end_year BETWEEN 2019 AND 2023\nORDER BY am.period_end_year\nLIMIT 1000",
+   "hybrid_entities": null,
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "How did Ulta Beauty's net income change from fiscal 2019 to fiscal 2023, and what does its 2023 10-K say about its loyalty program?",
+    "database_question": "What was Ulta Beauty's net income for fiscal years 2019 through 2023?",
+    "documents_question": "What does Ulta Beauty's 2023 10-K say about its loyalty program?",
+    "documents_depend_on_database": false,
+    "documents": [
+     {
+      "title": "ULTABEAUTY 2023 10K",
+      "score": 0.7745980985582472
+     },
+     {
+      "title": "ULTABEAUTY 2023Q4 EARNINGS",
+      "score": 0.7739581965841561
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 39442
+  },
+  "h24": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The five companies that spent the most on research and development in fiscal 2022 are:\n1. Microsoft (ticker MSFT) \u2013 $24,512,000,000\n2. AMD (ticker AMD) \u2013 $5,005,000,000\n3. Boeing (ticker BA) \u2013 $2,852,000,000\n4. Netflix (ticker NFLX) \u2013 $2,711,041,000\n5. Block (ticker XYZ) \u2013 $2,135,612,000\n\nCorning\u2019s 2022 10\u2011K emphasizes that the company\u2019s research focus is concentrated on three core technologies, four manufacturing and engineering platforms, and five Market\u2011Access Platforms, with roughly 80% of its research, development and engineering investment directed toward this cohesive set. This strategy is intended to enable rapid talent deployment and asset repurposing across the business to capture high\u2011return opportunities.",
+   "route": "hybrid",
+   "citations": [
+    {
+     "kind": "sql",
+     "ref": "SELECT am.company, am.ticker, am.value\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.metric = 'research_and_development'\n  AND am.period_end_year = 2022\nORDER BY am.value DESC\nLIMIT 5",
+     "page": null
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_779886ece55c483d_c00005",
+     "page": 2,
+     "title": "CORNING 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_779886ece55c483d_c00006",
+     "page": 2,
+     "title": "CORNING 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_779886ece55c483d_c00021",
+     "page": 5,
+     "title": "CORNING 2022 10K"
+    }
+   ],
+   "executed_sql": "SELECT am.company, am.ticker, am.value\nFROM cn_4509b5c383744bb6.annual_metrics AS am\nWHERE am.metric = 'research_and_development'\n  AND am.period_end_year = 2022\nORDER BY am.value DESC\nLIMIT 5",
+   "hybrid_entities": null,
+   "front_door": {
+    "arm": "llm",
+    "language": "en",
+    "uses_history": false,
+    "needs_database": "yes",
+    "needs_documents": "yes",
+    "out_of_scope": false,
+    "route": "hybrid",
+    "parse_ok": true,
+    "standalone_question": "Which five companies spent the most on research and development in fiscal 2022, and what does Corning's 2022 10-K say about its research focus?",
+    "database_question": "Which five companies spent the most on research and development in fiscal 2022?",
+    "documents_question": "What does Corning's 2022 10-K say about its research focus?",
+    "documents_depend_on_database": false,
+    "documents": [
+     {
+      "title": "CORNING 2021 10K",
+      "score": 0.7352901697158866
+     },
+     {
+      "title": "CORNING 2020 10K",
+      "score": 0.7105280160903981
+     },
+     {
+      "title": "CORNING 2022 10K",
+      "score": 0.6809116956855367
+     }
+    ],
+    "card_chars": 1082,
+    "card_status": "cached",
+    "history_turns": 0
+   },
+   "errors": [],
+   "ms": 34594
+  }
+ }
+}

@@ -26,18 +26,21 @@ from pydantic import BaseModel
 from auth import (CSRF_HEADER, SESSION_COOKIE, AuthError, Principal, RateLimited, RateLimiter, all_principals,
                   authenticate, credential_header, init_auth, rate_limiter, read_rate_limiter)
 from config_loader import cfg, flags, snapshot_flags
-from graph import graph
+from front_door import DebugTurn, debug_hooks_refused, route_only_trace
+from graph import graph, route_graph
 from llm.provider import LLM_READINESS, validate_llm_config
 from llm.recording import start_recording, stop_recording
 from failures import user_facing_failure
 from evidence import evidence_tier
+from number_grounding import applies as grounding_applies
 from number_grounding import caveat as grounding_caveat
 from number_grounding import ground
+import repair_loop
 from sql_explain import explain_sql
 from mcp_client import (MCPSession, audit_record, history_append_turn,
                         history_check_session, history_get_recent_turns,
                         history_get_turn_rows, history_list_sessions, history_delete_session)
-from nodes.synthesizer import build_citations
+from nodes.synthesizer import build_citations, synthesizer_node
 from schema_retriever import target_schema
 from schemas.synthesizer_output import safe_synthesizer_output
 from state import StateSyncState
@@ -239,6 +242,12 @@ class QueryRequest(BaseModel):
     # Test harness only (C2-V1/V2): seeds the attempt-0 candidate SQL,
     # bypassing LLM generation. Never sent by the frontend.
     debug_candidate_sql: str | None = None
+    # Evaluation hooks (docs/specs/partd_tasks/T4a_front_door.md), accepted only when [pipeline]
+    # debug_hooks = "on" (Part D's own container); HTTP 400 otherwise. debug_route_only runs only up to
+    # the routing decision and writes no turn. debug_history gives the earlier turns, used instead of
+    # the stored history by the front door and by the legacy rewrite step.
+    debug_route_only: bool = False
+    debug_history: list[DebugTurn] | None = None
 
 
 class QueryResponse(BaseModel):
@@ -425,6 +434,8 @@ async def answer_question(
     debug_candidate_sql: str | None = None,
     workspace_id: str | None = None,
     allow_fast_path: bool = True,
+    debug_route_only: bool = False,
+    debug_history: list[DebugTurn] | None = None,
 ) -> QueryResponse:
     """
     Run one question through the pipeline and record the turn: the body of
@@ -451,7 +462,7 @@ async def answer_question(
     t0 = time.monotonic()
     model_calls = start_recording()
     try:
-        raw_final = await graph.ainvoke(
+        raw_final = await (route_graph if debug_route_only else graph).ainvoke(
             StateSyncState(
                 query_id=initial_input["query_id"],
                 tenant_id=initial_input["tenant_id"],
@@ -464,9 +475,19 @@ async def answer_question(
                 allow_fast_path=allow_fast_path,
                 flags_snapshot=initial_input["flags_snapshot"],
                 debug_candidate_sql=debug_candidate_sql,
+                debug_history=[t.model_dump() for t in debug_history] if debug_history is not None else None,
             )
         )
         final_state: StateSyncState = StateSyncState(**raw_final) if isinstance(raw_final, dict) else raw_final
+        # The flag-and-repair loop (repair_loop.py; off when shipped). Inside the recording
+        # window so its one extra model call is counted with the others.
+        repair_record = None
+        variant = str(final_state.flags_snapshot.get("pipeline.repair_loop", "off"))
+        if (not debug_route_only and variant != "off"
+                and final_state.flags_snapshot.get("pipeline.number_grounding") == "on"):
+            update, repair_record = await repair_loop.repair(final_state.model_dump(), variant, synthesizer_node)
+            if update:
+                final_state = final_state.model_copy(update=update)
     except Exception as exc:
         logger.error("Graph execution failed: %s", exc, exc_info=True)
         await _audit(
@@ -486,6 +507,18 @@ async def answer_question(
 
     latency_ms = int((time.monotonic() - t0) * 1000)  # noqa: literals — ms conversion factor
 
+    if debug_route_only:
+        # Evaluation hook: the routing decision only. No answer, no turn written.
+        await _audit(
+            principal.principal_id, principal.tenant_id, route_path, "allowed",
+            query_id=final_state.query_id, session_id=session_id, client_ip=client_ip,
+            detail=f"schema={final_state.target_schema} route_only",
+        )
+        return QueryResponse(
+            query_id=final_state.query_id, answer_text="", chart=None, citations=[],
+            state_trace=route_only_trace(final_state, model_calls), latency_ms=latency_ms,
+        )
+
     # Build state trace for B-V2 log verification and C1 memory verification.
     # sql_rows/sql_columns are included (not just the count) so C1-V3 can do
     # execution-based dataframe equality across repeated runs -- this trace
@@ -495,10 +528,12 @@ async def answer_question(
     # caveat, which also keeps the answer out of the "checked" tier.
     grounding = None
     caveats = list(final_state.caveats)
-    if final_state.flags_snapshot.get("pipeline.number_grounding") == "on" and final_state.answer_text:
+    if (final_state.flags_snapshot.get("pipeline.number_grounding") == "on" and final_state.answer_text
+            and grounding_applies(final_state.route, final_state.executed_sql)):
         grounding = ground(final_state.answer_text, final_state.sql_rows, final_state.sql_columns,
                            final_state.normalized_query or final_state.raw_query,
-                           [r.content for r in final_state.retrievals])
+                           [r.content for r in final_state.retrievals],
+                           **repair_loop.grounding_options(final_state.flags_snapshot, len(final_state.sql_rows)))
         figure_caveat = grounding_caveat(grounding["unmatched"])
         if figure_caveat:
             caveats.append(figure_caveat)
@@ -514,7 +549,10 @@ async def answer_question(
                                   final_state.flags_snapshot, caveats,
                                   final_state.compiled_template),
         "number_grounding": grounding,
-        "route":       final_state.route,
+        "repair": repair_record,
+        "self_consistency": final_state.self_consistency,
+        "route":       "neither" if final_state.out_of_scope else final_state.route,   # the front door's out-of-scope answer
+        "recovered_from": final_state.recovered_from,   # "sql" when route_recovery ran the documents route instead
         "executed_sql": final_state.executed_sql,
         # executed_sql is null when a statement was rejected before execution,
         # so candidate_sql is what a caller inspects to see what the agent actually proposed.
@@ -545,6 +583,13 @@ async def answer_question(
         "calls":              model_calls,
         "synth_style":        final_state.flags_snapshot.get("pipeline.synth_style", "full"),
     }
+    if final_state.front_door is not None:
+        # Only when pipeline.front_door ran: the shipped trace has neither key.
+        state_trace["front_door"] = final_state.front_door
+        state_trace["out_of_scope"] = final_state.out_of_scope
+    if final_state.hybrid_entities is not None:
+        # Only when pipeline.hybrid_entities ran the entity step in the hybrid documents half.
+        state_trace["hybrid_entities"] = final_state.hybrid_entities
 
     # Recomputed here from final_state's typed fields, not read off the
     # synthesizer node's own return value: graph.ainvoke()'s return is
@@ -601,7 +646,7 @@ async def answer_question(
                 rewrite_applied=final_state.rewrite_applied,
                 context_guessed=final_state.context_guessed,
                 answer_text=validated["answer_text"],
-                route=final_state.route,
+                route="neither" if final_state.out_of_scope else final_state.route,
                 executed_sql=final_state.executed_sql,
                 # Artifacts (migration 012), so a resumed conversation renders
                 # what the user saw. The chart is the VALIDATED spec -- the same
@@ -680,6 +725,10 @@ async def run_query(
 ) -> QueryResponse:
     if not body.query or not body.query.strip():
         raise HTTPException(status_code=422, detail="query must not be empty")
+    refusal = debug_hooks_refused(body.debug_route_only, body.debug_history,
+                                  str(flags.pipeline.get("debug_hooks", "off")))
+    if refusal:
+        raise HTTPException(status_code=400, detail=refusal)
 
     requested = body.schema or target_schema()
     if body.workspace_id:
@@ -761,6 +810,8 @@ async def run_query(
         client_ip,
         debug_candidate_sql=body.debug_candidate_sql,
         workspace_id=body.workspace_id,
+        debug_route_only=body.debug_route_only,
+        debug_history=body.debug_history,
     )
 
 

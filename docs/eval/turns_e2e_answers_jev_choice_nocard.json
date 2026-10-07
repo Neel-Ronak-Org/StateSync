@@ -1,0 +1,683 @@
+{
+ "flags_file": "flags_partd_v3_route_jev_choice.toml",
+ "pipeline": {
+  "front_door": "jev_choice",
+  "debug_hooks": "on",
+  "language_gate": "llm",
+  "router_mode": "always",
+  "sql_draft_mode": "llm",
+  "synth_style": "full",
+  "answer_checks": "off",
+  "templates": "off",
+  "sql_no_data": "off",
+  "plain_failures": "on",
+  "route_recovery": "on",
+  "number_grounding": "on",
+  "repair_loop": "off",
+  "sql_row_cap": "prompt",
+  "grounding_version": "v1",
+  "self_consistency_k": 0,
+  "retrieval_mode": "dense",
+  "doc_scope": "all",
+  "doc_abstain": "off",
+  "rerank": "bge",
+  "query_rewrite": "off",
+  "passage_order": "relevance",
+  "passage_titles": "on",
+  "rerank_titles": "on",
+  "hybrid_entities": "off",
+  "context_carry": "off"
+ },
+ "port": 8092,
+ "images": {
+  "commit": "99e78f7",
+  "built_at": "2026-10-06T18:12:34Z",
+  "mcp_image": "sha256:a3d6bcc71cc4ff4633399f8f66a9a3bebffccdecbcf2996f5cdfd1755077d6ec",
+  "orchestrator_image": "sha256:0f5fbc153a7e382dbdd94bf6b8e3d5f26ba1eed098d317ae2f41e83d101742d2"
+ },
+ "answers": {
+  "c01|2": {
+   "http_status": 503,
+   "detail": "A service this answer depends on is unavailable right now. Please try again shortly. (reference afede2cb-a3f7-4723-8ca9-6af6b601d257)",
+   "answer_text": null,
+   "route": null,
+   "out_of_scope": null,
+   "normalized_query": null,
+   "context_carry": null,
+   "citations": null,
+   "metrics": null,
+   "ms": 11455
+  },
+  "c01|3": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The operating\u2011margin shift was the result of several offsetting items.  In 2018 the margin fell 2.3\u202fpercentage points versus 2017, driven primarily by:\u202f\u2022\u202fA gain on the May\u202f2017 divestiture of the identity\u2011management business, which reduced the margin;\u202f\u2022\u202fHigher defined\u2011benefit pension, post\u2011retirement service\u2011cost and defined\u2011contribution expenses, which also pulled the margin down;\u202f\u2022\u202fAcquisition impacts (mainly the Scott Safety purchase) and lower divestiture gains (excluding the identity\u2011management and Communication\u2011Markets sales) that further decreased the margin;\u202f\u2022\u202fRemaining stranded costs from the Communication\u2011Markets divestiture that reduced the margin;\u202f\u2022\u202fConversely, organic local\u2011currency growth, productivity improvements and lower portfolio and supply\u2011chain footprint\u2011optimization charges lifted the margin;\u202f\u2022\u202fThe loss of lower\u2011margin operating income from businesses that were divested added a positive contribution.  The net effect of these opposing forces was the 2.3\u2011point margin decline.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "What drove its operating margin change that year?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_ad50fc78723e4beb_c00118",
+     "page": 29,
+     "title": "3M 2018 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_ad50fc78723e4beb_c00139",
+     "page": 34,
+     "title": "3M 2018 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_2b71f70ae5fa4c6f_c00171",
+     "page": 35,
+     "title": "PAYPAL 2022 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3212,
+    "tokens_out": 450,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 39170
+   },
+   "ms": 39260
+  },
+  "c02|2": {
+   "http_status": 503,
+   "detail": "A service this answer depends on is unavailable right now. Please try again shortly. (reference 86e551cf-d40b-4d1e-ae6d-7c1a7c3928a3)",
+   "answer_text": null,
+   "route": null,
+   "out_of_scope": null,
+   "normalized_query": null,
+   "context_carry": null,
+   "citations": null,
+   "metrics": null,
+   "ms": 11066
+  },
+  "c03|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The 2022 filing notes that the company is involved in various claims, suits and legal proceedings and has accrued about $22\u202fmillion for those matters as of December\u202f31,\u202f2022. However, the filing does not call out any specific legal battles as being materially important in fiscal\u202f2022; it only references a significant portion of the accrued liabilities relating to regulatory matters and commercial disputes without naming particular cases.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "Has it reported any materially important legal battles in fiscal 2022?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_87236be6651c47ff_c00707",
+     "page": 169,
+     "title": "AES 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_87236be6651c47ff_c00781",
+     "page": 187,
+     "title": "AES 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_d94e00def6b54b39_c00635",
+     "page": 176,
+     "title": "JPMORGAN 2022Q2 10Q"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 2724,
+    "tokens_out": 378,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 20491
+   },
+   "ms": 20580
+  },
+  "c04|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "Its primary customers are grocery stores, mass merchandisers, membership stores, natural\u2011food chains, drug stores, dollar and discount chains, e\u2011commerce retailers, commercial and non\u2011commercial food\u2011service distributors and operators, restaurants, convenience stores, and pet\u2011specialty stores.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "Who are its primary customers?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_c9070fe345984f70_c00009",
+     "page": 4,
+     "title": "GENERALMILLS 2020 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cf0ed055f21b4351_c00047",
+     "page": 10,
+     "title": "AMD 2015 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_4a602e9261f54001_c00043",
+     "page": 11,
+     "title": "AMD 2022 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 2628,
+    "tokens_out": 242,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 17991
+   },
+   "ms": 18033
+  },
+  "c05|2": {
+   "http_status": 503,
+   "detail": "A service this answer depends on is unavailable right now. Please try again shortly. (reference dae89e74-5b41-4bff-9855-e989497f9af9)",
+   "answer_text": null,
+   "route": null,
+   "out_of_scope": null,
+   "normalized_query": null,
+   "context_carry": null,
+   "citations": null,
+   "metrics": null,
+   "ms": 11156
+  },
+  "c06|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The 10\u2011K filings describe inventory as a key balance\u2011sheet item that is valued at the lower of cost (often FIFO or average cost) or net realizable value. Companies emphasize the need to forecast demand accurately; under\u2011estimates can cause shortages, while over\u2011estimates can lead to excess inventory that may become obsolete and require write\u2011downs or write\u2011offs. Inventory reserves are regularly reviewed and adjusted based on assumptions about future demand, market conditions, historical sales, and product life\u2011cycle status. Excess or obsolete inventory is written down to its estimated net realizable value, and shrinkage reserves are estimated from historical loss percentages. These policies are intended to prevent material impacts on gross profit or operating income.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "What does its 10-K say about inventory levels?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_25cd77dbfcd34c99_c00103",
+     "page": 24,
+     "title": "BLOCK 2016 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_25cd77dbfcd34c99_c00306",
+     "page": 81,
+     "title": "BLOCK 2016 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_20dd86a0693c4791_c00209",
+     "page": 55,
+     "title": "MICROSOFT 2023 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 2806,
+    "tokens_out": 365,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 20806
+   },
+   "ms": 20854
+  },
+  "c07|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "According to the 2017 Form\u202f10\u2011K, the company\u2019s three primary acquisitions were:\n1. Souq Group Ltd., an e\u2011commerce company acquired on May\u202f12\u202f2017 for about $583\u202fmillion (net of cash). \n2. Whole Foods Market, a grocery\u2011store chain acquired on August\u202f28\u202f2017 for about $13.2\u202fbillion (net of cash). \n3. A set of other smaller companies acquired during 2017 for a combined purchase price of roughly $204\u202fmillion (these were not individually named because none was material on its own).",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "What are three main companies it acquired, according to that 10-K?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_ad50fc78723e4beb_c00075",
+     "page": 18,
+     "title": "3M 2018 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_ad50fc78723e4beb_c00318",
+     "page": 73,
+     "title": "3M 2018 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_ad50fc78723e4beb_c00319",
+     "page": 73,
+     "title": "3M 2018 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3078,
+    "tokens_out": 546,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 25463
+   },
+   "ms": 25535
+  },
+  "c08|2": {
+   "http_status": 503,
+   "detail": "A service this answer depends on is unavailable right now. Please try again shortly. (reference 600c76af-66f1-4fe7-a8f4-1bd8d5d8a841)",
+   "answer_text": null,
+   "route": null,
+   "out_of_scope": null,
+   "normalized_query": null,
+   "context_carry": null,
+   "citations": null,
+   "metrics": null,
+   "ms": 11115
+  },
+  "c09|2": {
+   "http_status": 503,
+   "detail": "A service this answer depends on is unavailable right now. Please try again shortly. (reference 05819faa-5152-4146-9d8c-1c41b5e436ef)",
+   "answer_text": null,
+   "route": null,
+   "out_of_scope": null,
+   "normalized_query": null,
+   "context_carry": null,
+   "citations": null,
+   "metrics": null,
+   "ms": 11098
+  },
+  "c10|2": {
+   "http_status": 503,
+   "detail": "A service this answer depends on is unavailable right now. Please try again shortly. (reference 67467d5a-74a4-4b9d-b384-f91740d9488e)",
+   "answer_text": null,
+   "route": null,
+   "out_of_scope": null,
+   "normalized_query": null,
+   "context_carry": null,
+   "citations": null,
+   "metrics": null,
+   "ms": 11181
+  },
+  "c11|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The net income for the year ended December\u202f31,\u202f2021 was $1,906\u202fmillion.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "What was its net income that year?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_a3064876807446c1_c00240",
+     "page": 63,
+     "title": "NETFLIX 2015 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_0de2b33a9e354742_c00107",
+     "page": 25,
+     "title": "CORNING 2021 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_0de2b33a9e354742_c00108",
+     "page": 25,
+     "title": "CORNING 2021 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3245,
+    "tokens_out": 500,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 20038
+   },
+   "ms": 20113
+  },
+  "c12|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "This workspace's database and documents do not hold that, so I can't answer it from here.",
+   "route": "neither",
+   "out_of_scope": true,
+   "normalized_query": "Write me a haiku about that.",
+   "context_carry": null,
+   "citations": [],
+   "metrics": {
+    "tokens_in": 0,
+    "tokens_out": 0,
+    "llm_calls": 0,
+    "trajectory_steps": 2,
+    "latency_ms": 6201
+   },
+   "ms": 6253
+  },
+  "c13|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The provided documents include Boeing's total debt of $57.0\u202fbillion as of December\u202f31\u202f2022, but they do not contain a comparable debt figure for December\u202f31\u202f2021. Without the 2021 debt amount, we cannot determine whether Boeing's debt increased between 2021 and 2022.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "Has it increased its debt between 2021 and 2022?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_862837ee70f4475c_c00067",
+     "page": 18,
+     "title": "BOEING 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_862837ee70f4475c_c00068",
+     "page": 18,
+     "title": "BOEING 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_862837ee70f4475c_c00153",
+     "page": 43,
+     "title": "BOEING 2022 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3092,
+    "tokens_out": 229,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 16628
+   },
+   "ms": 16694
+  },
+  "c14|2": {
+   "http_status": 503,
+   "detail": "A service this answer depends on is unavailable right now. Please try again shortly. (reference 9cd01a2c-cf01-4c27-9e26-3c2de9de95c6)",
+   "answer_text": null,
+   "route": null,
+   "out_of_scope": null,
+   "normalized_query": null,
+   "context_carry": null,
+   "citations": null,
+   "metrics": null,
+   "ms": 11568
+  },
+  "c15|2": {
+   "http_status": 503,
+   "detail": "A service this answer depends on is unavailable right now. Please try again shortly. (reference 89c5c5fd-bf8e-4be0-9381-e40aad87e831)",
+   "answer_text": null,
+   "route": null,
+   "out_of_scope": null,
+   "normalized_query": null,
+   "context_carry": null,
+   "citations": null,
+   "metrics": null,
+   "ms": 11388
+  },
+  "c16|2": {
+   "http_status": 503,
+   "detail": "A service this answer depends on is unavailable right now. Please try again shortly. (reference 9a74faf3-2a45-4bc4-9c7d-2d24242bb7e4)",
+   "answer_text": null,
+   "route": null,
+   "out_of_scope": null,
+   "normalized_query": null,
+   "context_carry": null,
+   "citations": null,
+   "metrics": null,
+   "ms": 11481
+  },
+  "c17|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "Based on the provided documents, the company referenced (Nike) reported that it completed multiple acquisitions in each of fiscal years 2023, 2022 and 2021, but the filings did not list the specific targets or transaction details for any of those years. \n\nOther companies mentioned in the same set of documents provide more detail: \n- AMD disclosed two major acquisitions in fiscal 2022 \u2013 Xilinx (completed February\u202f14\u202f2022) and Pensando Systems (completed May\u202f26\u202f2022). \n- Amcor reported two acquisitions that fall within its fiscal 2023 period (which ends June\u202f30): the purchase of a Czech Republic flexible\u2011packaging plant (closed August\u202f1\u202f2022) and the acquisition of a medical\u2011device packaging site in Shanghai, China (closed March\u202f17\u202f2023). \n- 3M stated that it had no acquisitions that closed during fiscal 2022 or fiscal 2021. \n- American Water Works noted that it grows primarily through acquisitions of water and wastewater systems, but no specific deals were identified for the recent years.\n\nThus, for the company in question (Nike), the filings confirm the occurrence of multiple acquisitions in FY2023, FY2022 and FY2021, though the specific acquisitions are not enumerated in the excerpts provided.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "What major acquisitions has it done in FY2023, FY2022 and FY2021?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_6b7724405eff4f5c_c00374",
+     "page": 93,
+     "title": "NIKE 2023 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_f46e3371082f4d87_c00241",
+     "page": 64,
+     "title": "AMCOR 2023 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_f46e3371082f4d87_c00243",
+     "page": 64,
+     "title": "AMCOR 2023 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 2939,
+    "tokens_out": 753,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 24114
+   },
+   "ms": 24195
+  },
+  "c18|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The supplied documents do not contain information indicating that any of 3M's business segments will be treated as a discontinued operation starting on August 30, 2023.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "Which of its business segments will be treated as a discontinued operation from August 30, 2023?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_cb7c25859be84c85_c00023",
+     "page": 10,
+     "title": "3M 2023Q2 10Q"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cb7c25859be84c85_c00223",
+     "page": 52,
+     "title": "3M 2023Q2 10Q"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cb7c25859be84c85_c00230",
+     "page": 54,
+     "title": "3M 2023Q2 10Q"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 2916,
+    "tokens_out": 508,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 21082
+   },
+   "ms": 21153
+  },
+  "c19|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "AMD\u2019s operating margin fell in 2022 because operating income dropped sharply. The primary cause was the amortization of intangible assets tied to the Xilinx acquisition, which reduced operating income. The margin decline was also helped by weaker client\u2011segment revenue from a soft PC market and inventory\u2011correction actions, but the amortization expense was identified as the main driver.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "For AMD, what drove its operating margin change that year?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_cf0ed055f21b4351_c00181",
+     "page": 36,
+     "title": "AMD 2015 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cf0ed055f21b4351_c00182",
+     "page": 36,
+     "title": "AMD 2015 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cf0ed055f21b4351_c00183",
+     "page": 36,
+     "title": "AMD 2015 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3095,
+    "tokens_out": 381,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 19065
+   },
+   "ms": 19139
+  },
+  "c20|2": {
+   "http_status": 503,
+   "detail": "A service this answer depends on is unavailable right now. Please try again shortly. (reference e0605c8d-d97e-4bd5-89eb-1e86e0d5089f)",
+   "answer_text": null,
+   "route": null,
+   "out_of_scope": null,
+   "normalized_query": null,
+   "context_carry": null,
+   "citations": null,
+   "metrics": null,
+   "ms": 11061
+  },
+  "c21|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The provided documents do not list any specific materially important legal battles for 2022, 2021 or 2020. They only contain general disclosures about legal expenses, litigation reserves and statements that the pending matters are not expected to have a material adverse effect on the firms\u2019 financial condition.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "Has it reported any materially important legal battles from 2022, 2021 and 2020?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_f9ec399c86f148c4_c00585",
+     "page": 159,
+     "title": "JPMORGAN 2021Q1 10Q"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_f9ec399c86f148c4_c00586",
+     "page": 159,
+     "title": "JPMORGAN 2021Q1 10Q"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_f9521a40687b4391_c01223",
+     "page": 287,
+     "title": "JPMORGAN 2022 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 2657,
+    "tokens_out": 141,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 24030
+   },
+   "ms": 24105
+  },
+  "c21|3": {
+   "http_status": 503,
+   "detail": "A service this answer depends on is unavailable right now. Please try again shortly. (reference a269795e-98c6-4fd6-bf25-c4848de7a947)",
+   "answer_text": null,
+   "route": null,
+   "out_of_scope": null,
+   "normalized_query": null,
+   "context_carry": null,
+   "citations": null,
+   "metrics": null,
+   "ms": 11236
+  },
+  "c22|2": {
+   "http_status": 503,
+   "detail": "A service this answer depends on is unavailable right now. Please try again shortly. (reference fe839910-6b42-438a-a5fc-e904e4debe5a)",
+   "answer_text": null,
+   "route": null,
+   "out_of_scope": null,
+   "normalized_query": null,
+   "context_carry": null,
+   "citations": null,
+   "metrics": null,
+   "ms": 11145
+  },
+  "c23|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The provided documents do not contain FY2022 EBITDAR figures broken down by region, so I cannot determine which region had the highest EBITDAR contribution for that year.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "Which region had the highest EBITDAR contribution for it during FY2022?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_ba8f90f2a07540b8_c00252",
+     "page": 46,
+     "title": "MGMRESORTS 2020 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_a78870ad8fc74b94_c00208",
+     "page": 42,
+     "title": "ADOBE 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_a78870ad8fc74b94_c00326",
+     "page": 75,
+     "title": "ADOBE 2022 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 3326,
+    "tokens_out": 115,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 30353
+   },
+   "ms": 30431
+  },
+  "c24|2": {
+   "http_status": 200,
+   "detail": null,
+   "answer_text": "The fiscal year 2022 effective tax rate increased by 9.1 percentage points compared with the fiscal year 2021 effective tax rate.",
+   "route": "docs",
+   "out_of_scope": false,
+   "normalized_query": "And how much has its effective tax rate changed between FY2021 and FY2022?",
+   "context_carry": null,
+   "citations": [
+    {
+     "kind": "chunk",
+     "ref": "up_3956a69bebb84704_c00260",
+     "page": 68,
+     "title": "JOHNSON JOHNSON 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_3956a69bebb84704_c00261",
+     "page": 68,
+     "title": "JOHNSON JOHNSON 2022 10K"
+    },
+    {
+     "kind": "chunk",
+     "ref": "up_cbd639f9fce44454_c00094",
+     "page": 22,
+     "title": "3M 2022 10K"
+    }
+   ],
+   "metrics": {
+    "tokens_in": 2882,
+    "tokens_out": 125,
+    "llm_calls": 1,
+    "trajectory_steps": 4,
+    "latency_ms": 29307
+   },
+   "ms": 29372
+  }
+ }
+}

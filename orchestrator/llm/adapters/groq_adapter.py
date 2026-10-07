@@ -120,6 +120,11 @@ class GroqAdapter:
             )
         return base_url
 
+    def _label(self) -> str:
+        """'Groq', or the endpoint name for an OpenAI-compatible subclass (logs only)."""
+        ep = getattr(self, "endpoint", None)
+        return f"Endpoint {ep.name}" if ep is not None else "Groq"
+
     @staticmethod
     def _effort_for(model: str) -> str:
         """Reasoning effort for this model, or '' to omit the parameter.
@@ -165,7 +170,14 @@ class GroqAdapter:
             budget += int(cfg.models.groq_reasoning_headroom_tokens)
             extra["reasoning_effort"] = self._reasoning_effort
 
-        attempts = int(cfg.models.groq_max_retries) + 1
+        # A subclass may lower retries (a router that retries itself) or omit temperature
+        # (reasoning models that reject it); see openai_compat_adapter.py.
+        attempts = int(getattr(self, "_max_retries", cfg.models.groq_max_retries)) + 1
+        if not getattr(self, "_omit_temperature", False):
+            extra["temperature"] = cfg.models.temperature
+        # A router's own request fields (OpenRouter provider pinning); see openai_compat_adapter.py.
+        if getattr(self, "_extra_body", None):
+            extra["extra_body"] = self._extra_body
         backoff = float(cfg.models.groq_retry_base_delay_s)
         waited_s = 0.0
         retries = 0
@@ -175,7 +187,6 @@ class GroqAdapter:
                 raw = await self._client.chat.completions.with_raw_response.create(
                     model=self.model,
                     max_completion_tokens=budget,
-                    temperature=cfg.models.temperature,
                     messages=[{"role": "system", "content": system}] + messages,
                     **extra,
                 )
@@ -188,14 +199,14 @@ class GroqAdapter:
                 delay = self._retry_delay(exc, backoff)
                 if waited_s + delay > _max_total_wait_s():
                     logger.warning(
-                        "Groq gave up after %.1fs of waiting (models.groq_max_total_wait_s=%.1f, "
+                        "%s gave up after %.1fs of waiting (models.groq_max_total_wait_s=%.1f, "
                         "model=%s); raising %s.",
-                        waited_s, _max_total_wait_s(), self.model, type(exc).__name__,
+                        self._label(), waited_s, _max_total_wait_s(), self.model, type(exc).__name__,
                     )
                     raise
                 logger.warning(
-                    "Groq call failed transiently (%s, attempt %d/%d, model=%s); retrying in %.1fs.",
-                    type(exc).__name__, attempt + 1, attempts, self.model, delay,
+                    "%s call failed transiently (%s, attempt %d/%d, model=%s); retrying in %.1fs.",
+                    self._label(), type(exc).__name__, attempt + 1, attempts, self.model, delay,
                 )
                 await asyncio.sleep(delay)
                 waited_s += delay
@@ -228,4 +239,6 @@ class GroqAdapter:
             retries=retries,
             waited_ms=int(waited_s * 1000),  # noqa: literals - seconds to milliseconds
             rate_remaining_tokens=remaining,
+            served_model=getattr(completion, "model", None),
+            served_provider=getattr(completion, "provider", None),
         )

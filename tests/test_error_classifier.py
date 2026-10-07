@@ -95,7 +95,8 @@ def test_mq_10_join_cardinality_does_not_reach_the_classifier():
 
 def test_every_taxonomy_rule_is_reachable(seeds):
     taxonomy = json.loads((REPO_ROOT / "config" / "error_taxonomy.json").read_text())
-    expected_categories = {rule["category"] for rule in taxonomy["rules"]}
+    overrides = json.loads((REPO_ROOT / "config" / "error_taxonomy_overrides.json").read_text())
+    expected_categories = {rule["category"] for rule in taxonomy["rules"] + overrides["rules"]}
     expected_categories.add(taxonomy["fallback"]["category"])
 
     reached: set[str] = set()
@@ -115,13 +116,16 @@ def test_every_taxonomy_rule_is_reachable(seeds):
     reached.add(classify_error(sqlstate="22P02", message="invalid input syntax for type date")[0])
     reached.add(classify_error(sqlstate=None, message="expected 1024 dimensions, not 768")[0])
     reached.add(classify_error(sqlstate="99999", message="totally unrecognized engine failure")[0])
+    reached.add(classify_error(sqlstate=None, message="[Layer 1 Gate] Rejected: statement reads no table.")[0])
+    # T2b: not an engine failure; the SQL agent records it itself and takes the hint through category_hint.
+    reached.add(classify_error(sqlstate=None, message="NOT_ANSWERABLE_UNCONFIRMED")[0])
 
     missing = expected_categories - reached
     assert not missing, f"Unreachable taxonomy categories: {missing}"
 
 
 def test_terminal_categories_match_a3():
-    assert TERMINAL_CATEGORIES == {"permission_denied", "unclassified"}
+    assert TERMINAL_CATEGORIES == {"permission_denied", "no_data_source", "unclassified"}
 
 
 def test_remediation_hint_is_never_empty_for_any_rule():
@@ -129,3 +133,23 @@ def test_remediation_hint_is_never_empty_for_any_rule():
     for rule in taxonomy["rules"]:
         assert rule["hint"].strip(), f"Rule for {rule['category']!r} has an empty hint."
     assert taxonomy["fallback"]["hint"].strip()
+
+
+def test_reads_no_table_is_no_data_source_and_other_gate_rejections_stay_permission_denied():
+    """routing_docs_fixes.md F-S2: a statement that reads no table means the database does not hold what
+    was asked; every other Layer 1 rejection keeps its security classification."""
+    no_table = ("[Layer 1 Gate] Rejected: statement reads no table. Queries must read data from the schema "
+                "rather than compute constants or server introspection. This rejection is based on query "
+                "shape, not content safety.")
+    assert classify_error(sqlstate=None, message=no_table)[0] == "no_data_source"
+    for message in ("[Layer 1 Gate] Rejected: top-level statement must be SelectStmt, got 'UpdateStmt'.",
+                    "[Layer 1 Gate] Rejected: expected exactly 1 SQL statement, got 2. Multi-statement submissions are not permitted."):
+        assert classify_error(sqlstate=None, message=message)[0] == "permission_denied"
+    assert classify_error(sqlstate="42501", message="permission denied for table x")[0] == "permission_denied"
+
+
+def test_shared_taxonomy_file_holds_only_categories_old_images_know():
+    """The shared, live-mounted error_taxonomy.json must stay readable by images built before 2026-10-05
+    (their ErrorCategory has no no_data_source); new categories go in the overrides file."""
+    taxonomy = json.loads((REPO_ROOT / "config" / "error_taxonomy.json").read_text())
+    assert "no_data_source" not in {rule["category"] for rule in taxonomy["rules"]}

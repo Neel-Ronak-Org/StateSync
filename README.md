@@ -20,6 +20,7 @@ pbcopy < secrets/api_token_dev        # copies your sign-in token (macOS); print
 open http://localhost:3000            # paste the token, Sign in
 ```
 
+- **Re-ranking (on since 2026-10-03):** document search re-scores its top 30 passages with the bge cross-encoder, which runs natively on the Mac GPU because Docker on macOS cannot reach it (`scripts/run_reranker_host.sh`, 127.0.0.1:8096). On this machine a login service keeps it running (`~/Library/LaunchAgents/com.statesync.reranker.plist`; log `~/Library/Logs/statesync-reranker.log`; stop with `launchctl bootout gui/$(id -u)/com.statesync.reranker`). If it is not running, search falls back to the plain order.
 - **Why not the evaluator:** it re-runs 55 test questions through the model provider every hour, which uses up Groq's free daily limit within hours. Start it only to measure.
 - **Budget:** each question costs about 5 model calls and "Build with AI" about 40; Groq's free tier allows 1,000 requests a day per model. Refreshing a card costs no model call.
 

@@ -1,0 +1,126 @@
+{
+ "exploratory": true,
+ "summary": {
+  "P0 first answer": 0.771,
+  "P6 ModernBERT-triggered cascade": 0.827,
+  "P6 as reported": 0.827,
+  "J1 Jev-triggered cascade, Jev-max fallback": {
+   "accuracy": 0.7761,
+   "0": 0.22,
+   "1": 0.62,
+   "2": 0.13,
+   "3": 0.61,
+   "4": 0.3,
+   "fallback_share": 0.3206,
+   "vs_first": {
+    "difference": 0.0051,
+    "ci95": [
+     -0.0229,
+     0.0331
+    ]
+   },
+   "vs_first_test": {
+    "a_mean": 0.7761,
+    "b_mean": 0.771,
+    "discordant": 32,
+    "a_better": 17.0,
+    "b_better": 15.0,
+    "p_one_sided": 0.43003,
+    "test": "exact McNemar"
+   },
+   "vs_P6": {
+    "difference": -0.0509,
+    "ci95": [
+     -0.0865,
+     -0.0153
+    ]
+   },
+   "vs_P6_test": {
+    "a_mean": 0.7761,
+    "b_mean": 0.827,
+    "discordant": 54,
+    "a_better": 17.0,
+    "b_better": 37.0,
+    "p_one_sided": 0.99808,
+    "test": "exact McNemar"
+   }
+  },
+  "J2 Jev-triggered cascade, ModernBERT + vote fallback": {
+   "accuracy": 0.8499,
+   "0": 0.22,
+   "1": 0.26,
+   "2": 0.12,
+   "3": 0.1,
+   "4": 0.11,
+   "fallback_share": 0.6209,
+   "vs_first": {
+    "difference": 0.0789,
+    "ci95": [
+     0.0483,
+     0.112
+    ]
+   },
+   "vs_first_test": {
+    "a_mean": 0.8499,
+    "b_mean": 0.771,
+    "discordant": 43,
+    "a_better": 37.0,
+    "b_better": 6.0,
+    "p_one_sided": 0.0,
+    "test": "exact McNemar"
+   },
+   "vs_P6": {
+    "difference": 0.0229,
+    "ci95": [
+     -0.0025,
+     0.0509
+    ]
+   },
+   "vs_P6_test": {
+    "a_mean": 0.8499,
+    "b_mean": 0.827,
+    "discordant": 31,
+    "a_better": 20.0,
+    "b_better": 11.0,
+    "p_one_sided": 0.07481,
+    "test": "exact McNemar"
+   }
+  },
+  "J3 Jev doubt at 0.5, ModernBERT + vote fallback": {
+   "accuracy": 0.8117,
+   "fallback_share": 0.1349,
+   "vs_first": {
+    "difference": 0.0407,
+    "ci95": [
+     0.0204,
+     0.0636
+    ]
+   },
+   "vs_first_test": {
+    "a_mean": 0.8117,
+    "b_mean": 0.771,
+    "discordant": 18,
+    "a_better": 17.0,
+    "b_better": 1.0,
+    "p_one_sided": 7e-05,
+    "test": "exact McNemar"
+   },
+   "vs_P6": {
+    "difference": -0.0153,
+    "ci95": [
+     -0.0458,
+     0.0153
+    ]
+   },
+   "vs_P6_test": {
+    "a_mean": 0.8117,
+    "b_mean": 0.827,
+    "discordant": 38,
+    "a_better": 16.0,
+    "b_better": 22.0,
+    "p_one_sided": 0.87206,
+    "test": "exact McNemar"
+   }
+  }
+ }
+}

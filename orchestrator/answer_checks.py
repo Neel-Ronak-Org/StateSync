@@ -104,9 +104,34 @@ def _has_join(node: Any) -> bool:
     return isinstance(node, pglast.ast.JoinExpr)
 
 
+class _Refs(Visitor):
+    """Every column reference inside an expression."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.refs: list[Any] = []
+
+    def visit_ColumnRef(self, ancestors, node):  # noqa: N802 -- pglast visitor naming
+        self.refs.append(node)
+
+
+def _one_alias_ref(expr: Any) -> Any | None:
+    """A representative column of `expr` when every column it reads is alias.column of the SAME
+    alias (AVG(EXTRACT(YEAR FROM d.dob)), SUM(o.qty * o.price)); None when it reads none or
+    several tables. Added after the evidence-tiers study: on its fan-out set the robustness model
+    averaged EXTRACT(YEAR FROM ...) through a repeating join, which the plain-column rule missed."""
+    scan = _Refs()
+    scan(expr)
+    aliases = {tuple(getattr(f, "sval", None) for f in ref.fields)[0] for ref in scan.refs if len(ref.fields) == 2}
+    if not scan.refs or len(aliases) != 1 or any(len(ref.fields) != 2 for ref in scan.refs):
+        return None
+    return scan.refs[0]
+
+
 class _Scan(Visitor):
-    """Finds sum/avg/count calls with a plain column argument, COUNT(*), and anything that
-    makes the statement too complicated to reason about (sub-selects)."""
+    """Finds sum/avg/count calls over a column (or an expression of one table's columns),
+    COUNT(*), and anything that makes the statement too complicated to reason about
+    (sub-selects)."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -127,6 +152,10 @@ class _Scan(Visitor):
         args = node.args or ()
         if len(args) == 1 and isinstance(args[0], pglast.ast.ColumnRef):
             self.aggregates.append((name, args[0]))
+        elif len(args) == 1:
+            ref = _one_alias_ref(args[0])
+            if ref is not None:
+                self.aggregates.append((name, ref))
 
 
 def fanout_probe(sql: str, default_schema: str | None = None) -> list[Probe] | None:

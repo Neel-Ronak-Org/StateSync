@@ -69,6 +69,8 @@ audit_detail_max_chars    = 500
 [sql]
 retry_max                 = 3       # attempts after the first; 4 executions maximum
 timeout_retry_max         = 3       # retries after a statement timeout (3 = today's behaviour; the scope review suggests 1)
+full_schema_max_chars     = 12000   # [pipeline] sql_no_data: the attempt after a first NOT_ANSWERABLE reply describes every table, cut to this many characters (docs/specs/partd_tasks/T2b_confirm_not_answerable.md)
+near_match_max            = 20      # [pipeline] sql_no_data: that attempt then lists at most this many columns whose names resemble words in the question or the reply (docs/specs/partd_tasks/T2c_always_confirm.md)
 interrogation_max_samples = 4
 max_sql_length            = 8000
 max_tokens_supervisor     = 128     # enough for {"route":"sql"} classification
@@ -117,17 +119,20 @@ hinglish_markers          = ["hai", "hain", "kya", "kitne", "kitna", "kitni", "k
                              "wale", "wali", "wala", "kiye", "kiya", "diya", "gaya", "gayi", "hua", "hui",
                              "raha", "rahi", "rahe", "sabse", "zyada", "kam", "abhi", "pichle", "agle"]
 
+[profiles]
+# The datasets that get the ONDC profile (orchestrator/profiles_ondc.py): the prompts, SQL framing,
+# DIGIPIN resolver and party-id join written for the synthetic ONDC sample. Every other dataset
+# (olist, live, an owner's own database cn_...) gets the neutral prompts of the core modules.
+ondc_schemas              = ["public"]
+
 [pipeline]
-# Datasets where the code written for the synthetic ONDC corpus stays on (the SQL
-# writer's ONDC framing, the DIGIPIN resolver): the three built-in datasets, so their
-# measured behaviour is unchanged. An owner's own database (cn_...) is never one.
-synthetic_schemas         = ["public", "olist", "live"]
 # pipeline.router_mode = "when_documents": sources (schemas) that have documents;
 # questions on any other source go straight to SQL without the router call.
 document_schemas          = ["public", "olist"]
-# The router and hybrid-decomposer prompts written for (and measured on) the ONDC sample corpus are
-# used only for these datasets; every other dataset (olist, a workspace on the owner's own database)
-# gets the general prompts in nodes/supervisor.py and nodes/unstructured_knowledge.py (2026-10-02).
+# Kept only for images built before T1 (2026-10-05): the shared orchestrator reads this file live and
+# its old code reads these two keys at startup. The current code ignores them ([profiles].ondc_schemas
+# decides). Remove both after the shared orchestrator is rebuilt.
+synthetic_schemas         = ["public", "olist", "live"]
 ondc_prompt_schemas       = ["public"]
 # pipeline.sql_draft_mode = "profiles": example values per text column, sampled once per
 # schema fingerprint and cached, replace the draft call and live sampling.
@@ -138,6 +143,28 @@ profile_max_chars         = 1500
 # pipeline.synth_style = "short"
 synth_short_preview_rows  = 20
 synth_short_max_sentences = 3
+
+[front_door]
+# pipeline.front_door = "llm" (docs/specs/partd_tasks/T4a_front_door.md; routing_docs_fixes.md F-FD).
+evidence_passages         = 20      # passages fetched for the document evidence (one dense search, no re-ranking)
+evidence_documents        = 5       # documents shown, by best passage score
+excerpt_chars             = 300     # characters of each document's best passage
+card_max_chars            = 4000    # the database card's cap
+history_turns             = 3       # earlier turns given to the front door
+answer_start_chars        = 200     # characters of each earlier answer
+max_tokens                = 1500    # the front door call's output cap
+card_cache_max            = 32      # database cards kept per process, per (tenant, dataset); the oldest is dropped
+out_of_scope_message      = "This workspace's database and documents do not hold that, so I can't answer it from here."
+# pipeline.front_door = "jev" (docs/specs/partd_tasks/T4b_jev_front_door.md): Jev makes every routing decision.
+jev_url                   = "https://opencode.ai/zen/v1/systemone"   # OpenCode Zen's systemone endpoint (key: /run/secrets/opencode_api_key, or the file named by JEV_API_KEY_FILE)
+jev_model                 = "jev-1.13"   # the paid model: the free tier (jev-1.13-free) rate-limits under evaluation load
+jev_timeout_s             = 30      # seconds, per request
+jev_retry_wait_s          = 5       # seconds before the one retry after HTTP 429 or 5xx
+jev_yes                   = 0.6     # P(yes) at or above this: the need is "yes"
+jev_no                    = 0.4     # P(yes) at or below this: the need is "no"; between the two it is "unsure"
+jev_history               = 0.5     # P(uses_history) at or above this: the question depends on earlier turns
+jev_out_of_scope          = 0.5     # P(out_of_scope) at or above this: neither source can answer it
+jev_depends               = 0.5     # P(documents_depend_on_database) at or above this: the documents half waits for the database half's answer (entity narrowing)
 
 [answer_checks]
 # pipeline.answer_checks = "on". Deterministic checks on an executed SELECT.
@@ -219,7 +246,7 @@ build_keep_s              = 3600    # finished builds stay readable this long
 [connections]
 # Your own Postgres (docs/V3_PLAN.md Phase 3c slice 6, migration 026,
 # mcp/connections.py). A connection is saved only when its login is read-only.
-max_per_principal           = 10
+max_per_principal           = 20         # was 10; raised 2026-10-03 for BIRD (one connection per database, 11)
 name_max_chars              = 60
 host_max_chars              = 255
 field_max_chars             = 128      # database, user and schema names
@@ -282,7 +309,7 @@ mine_max_chunks             = 400        # passages read when finding definition
 
 [workspaces]
 # Workspaces and their knowledge store (docs/V3_PLAN.md Phase 3, migration 021).
-max_per_principal           = 12
+max_per_principal           = 24         # was 12; raised 2026-10-03 for BIRD (11 workspaces) and the SEC study (2)
 name_max_chars              = 60
 business_context_max_chars  = 4000
 description_max_chars       = 400
@@ -615,3 +642,15 @@ value_index_max_words     = 4        # longer values are prose, not entities, an
 value_index_time_budget_s = 20       # building it may delay the first question on a schema by at most this
 value_min_token_chars     = 3        # shorter question words never match a value
 value_tables              = 2        # value-matched tables added after the top tables (never displacing them)
+
+# The hybrid documents half narrowed by the SQL half's entities (docs/specs/partd_tasks/T5_hybrid_split.md;
+# flags.toml [pipeline] hybrid_entities).
+[hybrid]
+entity_rows               = 5        # entities are read from this many of the SQL result's first rows
+max_entities              = 5        # and at most this many distinct text values are kept, in row order
+title_name_min_chars      = 4        # a title's name (its words before the year) shorter than this matches an entity only by equality (T5b)
+
+# Multi-turn context with no extra model call (docs/specs/partd_tasks/T4d_context_carry.md;
+# flags.toml [pipeline] context_carry).
+[context_carry]
+answer_chars              = 200      # the context line quotes this many characters of the previous answer

@@ -33,8 +33,8 @@ import logging
 import os
 import time
 
-from config_loader import cfg, flags
-from llm.adapters.base import ChatModel, LLMResponse
+from config_loader import cfg
+from llm.adapters.base import LLMResponse
 
 logger = logging.getLogger(__name__)
 

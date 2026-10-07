@@ -13,7 +13,8 @@
 # 2026-09-26: "groq" by owner decision (docs/V3_PLAN.md 0.4). The configured
 # local model was not installed on the dev machine, and v3 demos on a hosted
 # model. "local" still works offline once `ollama pull qwen2.5:7b` is done.
-provider = "groq"           # "local" | "anthropic" | "azure" | "gemini" | "groq"
+provider = "groq"           # "local" | "anthropic" | "azure" | "gemini" | "groq" | "openai_compat"
+# The BIRD pilot (2026-10-03) ran with "openai_compat" (Zed GPT-5 mini via OmniRoute); see docs/eval/bird_pilot_report.md.
 ollama_url = "http://host.docker.internal:11434"
 
 # Azure OpenAI / AI Foundry (BD1 seam, third implementation).
@@ -39,6 +40,74 @@ base_url = "https://api.groq.com/openai/v1"
 # the accepted values differ by model family.
 [llm.groq.reasoning_effort]
 "openai/gpt-oss-120b" = "low"
+
+# provider = "openai_compat" (llm/adapters/openai_compat_adapter.py): named OpenAI-compatible
+# endpoints, each role pinned to "endpoint:model", with an explicit fallback policy. NOT the
+# shipped provider (that stays "groq"); this is the route to free tiers and paid credits.
+# Keys are Docker secret files named by key_secret (mount them in docker-compose.yml first).
+[llm.openai_compat]
+fallback             = "off"    # "off" (every measurement) | "same_model" | "any"
+require_served_match = true     # refuse an answer from a model other than the one requested
+
+[llm.endpoints.groq]
+base_url   = "https://api.groq.com/openai/v1"
+key_secret = "groq_api_key"
+[llm.endpoints.groq.reasoning_effort]
+"openai/gpt-oss-120b" = "low"
+
+[llm.endpoints.openrouter]
+base_url   = "https://openrouter.ai/api/v1"
+key_secret = "openrouter_api_key"
+[llm.endpoints.openrouter.reasoning_effort]
+"openai/gpt-oss-120b" = "low"
+# OpenRouter forwards to many upstream providers, whose serving of the same weights differs (precision,
+# chat template, reasoning handling). Each model is pinned to ONE provider with fallbacks off, and the
+# provider OpenRouter reports is recorded per call (a different one is refused). gpt-oss-120b on Groq
+# is the shipped serving stack. qwen3.8-27b has no Groq route on OpenRouter: DeepInfra's bf16 build,
+# thinking off (Groq's qwen answers without it: normaliser outputs <= 156 tokens on the BIRD runs).
+[llm.endpoints.openrouter.extra_body."openai/gpt-oss-120b"]
+provider = { order = ["groq"], allow_fallbacks = false }
+[llm.endpoints.openrouter.extra_body."qwen/qwen3.8-27b"]
+provider  = { order = ["deepinfra/bf16"], allow_fallbacks = false }
+reasoning = { enabled = false }
+
+# Cheaper Inference (Keak): an OpenAI-compatible reseller of spare provider capacity. It does not
+# disclose or let us pin the upstream that serves a model, so a run through it records the served
+# model name per call (refused if different) and is checked against Groq-direct output.
+[llm.endpoints.cheaperinference]
+base_url   = "https://api.cheaperinference.com/v1"
+key_secret = "cheaperinference_api_key"
+# Served labels accepted as the requested model (adapter: served_matches; anything not listed is refused).
+# 2026-10-05: the endpoint began answering "qwen3.8-27b" for qwen-3-8-27b (same catalogue entry, new label).
+served_aliases = { "qwen-3-8-27b" = ["qwen3.8-27b"] }
+[llm.endpoints.cheaperinference.reasoning_effort]
+"gpt-oss-120b" = "low"
+# Its qwen3.8-27b thinks by default (168-491 output tokens on the normaliser prompt); Groq's does not
+# (<= 156). Thinking off brings it to 63-97 (2026-10-05 check).
+[llm.endpoints.cheaperinference.extra_body."qwen-3-8-27b"]
+reasoning = { enabled = false }
+
+[llm.endpoints.gemini_studio]          # Google AI Studio's OpenAI-compatible endpoint
+base_url   = "https://generativelanguage.googleapis.com/v1beta/openai/"
+key_secret = "gemini_api_key"
+
+[llm.endpoints.local_router]           # e.g. OmniRoute on this machine (compression OFF)
+base_url   = "http://host.docker.internal:20128/v1"
+key_secret = "local_router_api_key"
+max_retries = 1                        # OmniRoute retries and cools down itself; ours on top deepen its lockouts
+omit_temperature = ["zed-hosted/gpt-5-mini", "zed-hosted/gpt-5-nano"]   # reasoning models reject temperature
+[llm.endpoints.local_router.reasoning_effort]
+"zed-hosted/gpt-5-mini" = "low"
+
+[llm.models.openai_compat]
+supervisor        = "groq:qwen/qwen3.8-27b"
+sql               = "local_router:zed-hosted/gpt-5-mini"
+synthesizer       = "local_router:zed-hosted/gpt-5-mini"
+memory_summarizer = "groq:qwen/qwen3.8-27b"
+normalizer        = "groq:qwen/qwen3.8-27b"
+decomposer        = "groq:qwen/qwen3.8-27b"
+judge             = "groq:openai/gpt-oss-120b"
+rewriter          = "groq:qwen/qwen3.8-27b"
 
 # THREE LOCAL MODELS MEASURED, all seven roles, corrected fixture, 25 queries.
 # 7b ships because a 14b buys NOTHING and costs 3x the latency:
@@ -226,18 +295,32 @@ enabled                         = false  # D11 stretch; resolved at process star
 # Groq baseline (scripts/eval_groq.py) shows accuracy holds and cost falls.
 # Guarded by scripts/shipped_flags.py SHIPPED_DEFAULTS.
 [pipeline]
+front_door                      = "off"      # "off" | "llm" | "jev" | "jev_rw" | "jev_choice": one model call before routing replaces the normaliser, the follow-up rewriter and the router; it reads the database's tables and the best-matching documents and returns the standalone question, the route (sql, docs, hybrid or neither) and the split (docs/specs/partd_tasks/T4a_front_door.md, F-FD; "jev": Jev makes every routing decision and the model writes text only for a follow-up, a two-source split or a non-English question, T4b_jev_front_door.md; "jev_rw": the same Jev, but the text comes from the shipped normaliser (non-English only) and follow-up rewriter, run before one Jev request; "jev_choice": one Jev choice question (sql, docs, both or neither) names the sources and no model is called, T4c_jev_choice_and_context.md)
+debug_hooks                     = "off"      # "off" | "on": /query accepts debug_route_only and debug_history (evaluation only; "on" only in Part D's own container; HTTP 400 when "off")
 language_gate                   = "llm"      # "llm": ask the model every time | "script": only for non-English text
 router_mode                     = "always"   # "always" | "when_documents": skip routing for sources without documents
 sql_draft_mode                  = "llm"      # "llm": draft + live sampling | "profiles": one SQL call with column profiles
 synth_style                     = "full"     # "full" | "short": <= 3 sentences, no chart proposal, numbers formatted by rule
 answer_checks                   = "off"      # "off" | "on": deterministic checks after the SQL runs (join fan-out, date coverage, truncation, empty aggregates)
 templates                       = "off"      # "off" | "on": answer from a template of an approved query when only the values differ (the "compiled" tier)
+sql_no_data                     = "off"      # "off" | "on": the SQL writer and corrector may reply NOT_ANSWERABLE instead of SQL (terminal no_data_source); with "off", Layer 1's "reads no table" stays permission_denied (docs/specs/partd_tasks/T2_sql_outcomes_recovery.md, F-S1)
+plain_failures                  = "off"      # "off" | "on": the writer explains a failed query or zero rows in plain words, with no internal category (F-S3, F-S4)
+route_recovery                  = "off"      # "off" | "on": a SQL route that ends in no_data_source, in a workspace with documents, runs the documents route once (recovered_from = "sql"; F-RR)
 number_grounding                = "on"       # "off" | "on": trace every figure in the prose to a result cell, total, the question or a cited passage; unmatched figures become a caveat (never changes SQL or rows)
+repair_loop                     = "off"      # "off" | "evidence" | "plain": one repair attempt when figure grounding (or a join fan-out) flags an answer; "plain" withholds the evidence (study control). repair_loop.py, docs/research/evidence_tiers_study.md RQ4
+sql_row_cap                     = "prompt"   # "prompt": the SQL prompt asks for LIMIT max_rows | "executor": LIMIT only when the question asks for a number of results; data.run_select caps rows either way. Study fix F1 (docs/research/evidence_tiers_study.md v2)
+grounding_version               = "v1"       # "v1" | "v2": also trace how many rows the answer writer was shown ("the first 50 rows", and remainders of it) and inline "(1) (2)" enumerators. Study fix F3
+self_consistency_k              = 0          # 0 = off | k > 0: resample the final SQL prompt k times and record how many results agree (the study's baseline; measurement only, never changes the answer). self_consistency.py
 retrieval_mode                  = "dense"    # "dense" | "hybrid": keyword (BM25) leg fused with the dense search by reciprocal rank fusion (docs/specs/rag_v2.md Phase D)
 doc_scope                       = "all"      # "all" | "dataset": sample-corpus documents limited to the question's dataset (prefixes: retrieval.dataset_document_prefixes in statesync.toml); uploads unaffected (Phase E)
 doc_abstain                     = "off"      # "off" | "on": the docs route answers "not found" without a model call when nothing relevant was retrieved (Phase E; thresholds: retrieval.abstain_min_* in statesync.toml)
-rerank                          = "off"      # "off" | "minilm" | "bge": re-score the top candidates with a cross-encoder (reranker service; docs/specs/rag_v3.md)
+rerank                          = "bge"      # "off" | "minilm" | "bge": re-score the top candidates with a cross-encoder (docs/specs/rag_v3.md). "bge" since 2026-10-03 (owner): +16.0 pts page hit@5 on FinanceBench, ~4.5 s per search on the Mac GPU
 query_rewrite                   = "off"      # "off" | "llm": the docs route searches with a short rewrite of the question from the normaliser model (docs/specs/rag_v3.md)
+passage_order                   = "document" # "document" | "relevance": the answer writer's passages are the most relevant ones (grouped by document), not the first by document order (docs/specs/routing_docs_fixes.md F-D)
+passage_titles                  = "off"      # "off" | "on": the writer's passage label names the document title and page (F-T)
+rerank_titles                   = "off"      # "off" | "on": the re-ranker also reads each passage's document title (F-T; needs rerank on)
+hybrid_entities                 = "off"      # "off" | "on": the hybrid documents half searches only the workspace documents whose titles name entities from the SQL half's result, when the front door says the documents depend on the database (docs/specs/partd_tasks/T5_hybrid_split.md; needs front_door on)
+context_carry                   = "off"      # "off" | "on": a follow-up question (an anaphor, or no company named when the previous turn named one) gets one context line for the SQL and documents writers and the carried company and year in the documents search text, with no extra model call (docs/specs/partd_tasks/T4d_context_carry.md; needs front_door on)
 
 [tenancy]
 enforced                        = false  # D6; threading is mandatory even when false

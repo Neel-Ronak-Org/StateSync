@@ -27,7 +27,7 @@ ErrorCategory = Literal[
     "syntax", "unknown_column", "unknown_table", "ambiguous_column",
     "type_mismatch", "join_cardinality", "aggregation_misuse",
     "empty_result", "timeout", "permission_denied", "spatial_invalid",
-    "vector_dim_mismatch", "unclassified",
+    "vector_dim_mismatch", "no_data_source", "not_answerable_unconfirmed", "unclassified",
 ]
 
 
@@ -52,6 +52,8 @@ class Provenance(BaseModel):
     # The heading path of an uploaded chunk ("2. Definitions"), from the layout
     # chunker (docs/specs/rag_v2.md Phase C); None for flat chunks and the sample corpus.
     section:      str | None = None
+    # The re-ranker's score, when it scored this passage (pipeline.passage_order reads it).
+    rerank_score: float | None = None
 
 
 class RetrievalResult(BaseModel):
@@ -102,6 +104,14 @@ _LAST_WRITE_WINS_FIELDS: frozenset[str] = frozenset({
     "verified_example",
     "compiled_template",
     "doc_abstained",
+    "self_consistency",
+    "recovered_from",
+    "out_of_scope",
+    "front_door",
+    "docs_depend_on_sql",
+    "hybrid_entities",
+    "conversation_context",
+    "carried",
 })
 
 # Fields whose reducer is "append" (list concatenation)
@@ -214,7 +224,31 @@ class StateSyncState(BaseModel):
     allow_fast_path:  bool = True
     verified_example: bool = False   # the SQL is an approved example, run as-is
     compiled_template: bool = False  # the SQL is an approved example's template filled in code (Phase 3c)
+    # The study's self-consistency baseline (self_consistency.py; [pipeline] self_consistency_k, 0 when shipped).
+    self_consistency: dict | None = None
     doc_abstained: bool = False      # the docs route found nothing relevant; the synthesizer answers "not found" with no model call (RAG v2 Phase E)
+    # Route recovery (pipeline.route_recovery, routing_docs_fixes.md F-RR): "sql" when the SQL route ended in
+    # no_data_source and the documents route ran once in its place; None otherwise.
+    recovered_from: str | None = None
+    # The front door (pipeline.front_door, docs/specs/partd_tasks/T4a_front_door.md): out_of_scope sends the graph
+    # straight to the writer, which answers with a fixed message and no model call (route stays None; the trace
+    # and the stored turn say "neither"); front_door is the step's trace (None when the step did not run);
+    # debug_history is the evaluation hook's gold earlier turns (None unless pipeline.debug_hooks = "on" and
+    # the request set it), read by the front door and the legacy rewrite node instead of the stored history.
+    out_of_scope: bool = False
+    front_door: dict | None = None
+    debug_history: list[dict] | None = None
+    # Hybrid documents half narrowed by the SQL half's entities (pipeline.hybrid_entities, docs/specs/partd_tasks/
+    # T5_hybrid_split.md): docs_depend_on_sql is the front door's documents_depend_on_database (False on the legacy
+    # path); hybrid_entities is the step's trace {entities, matched_documents, narrowed} (None when it did not run).
+    docs_depend_on_sql: bool = False
+    hybrid_entities: dict | None = None
+    # Multi-turn context with no extra model call (pipeline.context_carry, docs/specs/partd_tasks/T4d_context_carry.md):
+    # conversation_context is the one line the SQL and documents writers read after the question (set only for a
+    # follow-up); carried is {company, year, reason}: the company and year the question names or the previous turn
+    # gave it (None unless the step ran).
+    conversation_context: str | None = None
+    carried: dict | None = None
 
     # --- output (Part E2) ---
     answer_text: str | None = None

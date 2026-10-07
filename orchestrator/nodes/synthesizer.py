@@ -33,14 +33,16 @@ from decimal import Decimal
 from numbers import Real
 from typing import Any
 
+import context_carry
 from config_loader import cfg
 from llm.provider import get_agent_llm
+from profiles import profile_for
 from schemas.synthesizer_output import safe_synthesizer_output
 
 logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = """\
-You are a data analytics assistant for an ONDC logistics network. Answer \
+You are a data analytics assistant. Answer \
 the user's question using only the data context provided below -- SQL \
 query results, retrieved document passages, or both.
 
@@ -87,9 +89,10 @@ Rules:
 # chart instructions at all. The browser draws the chart from the rows (as the
 # dashboards do) and the full table is shown under the answer, so the tokens
 # spent on chart shapes and on restating rows are pure cost. {max_sentences} is
-# filled from config by _short_system_prompt().
+# filled from config by _short_system_prompt(). Both writer prompts here are the neutral ones; the
+# ONDC sample's are in profiles_ondc.py, chosen by profiles.profile_for(target_schema).
 _SYSTEM_PROMPT_SHORT = """\
-You are a data analytics assistant for an ONDC logistics network. Answer \
+You are a data analytics assistant. Answer \
 the user's question using only the data context provided below -- SQL \
 query results, retrieved document passages, or both.
 
@@ -120,8 +123,8 @@ _SECTION_SEP = " › "  # citation title: "{document title} › {section}" for a
 _PCT_NAME_WORDS = ("rate", "share", "ratio", "pct", "percent", "conversion", "fraction")
 
 
-def _short_system_prompt() -> str:
-    return _SYSTEM_PROMPT_SHORT.replace(
+def _short_system_prompt(target_schema: str | None = None) -> str:
+    return profile_for(target_schema).synthesizer_short_prompt.replace(
         "{max_sentences}", str(cfg.pipeline.synth_short_max_sentences)
     )
 
@@ -498,16 +501,56 @@ def build_citations(
         prov = r["provenance"]
         citation = {"kind": "chunk", "ref": prov["chunk_id"], "page": prov.get("page")}
         if prov.get("title"):
-            citation["title"] = _SECTION_SEP.join(filter(None, (prov["title"], prov.get("section"))))
+            # A7 caps a citation title at title_max_chars; "{title} › {section}" can run longer.
+            citation["title"] = _SECTION_SEP.join(filter(None, (prov["title"], prov.get("section"))))[:cfg.library.title_max_chars]
         citations.append(citation)
 
     return citations
 
 
-def _format_doc_context(retrievals: list[dict]) -> str:
+# [pipeline] plain_failures (routing_docs_fixes.md F-S3, F-S4): what the writer is told, in plain words,
+# when the query did not produce an answer. Keyed by the classifier's category, which stays in state.errors
+# and the trace; a category not listed gets _PLAIN_FAILURE_OTHER.
+_PLAIN_FAILURES = {
+    "no_data_source": "the database in this workspace does not hold the data this question asks about.",
+    "permission_denied": "the request was refused, because this system only runs single, read-only queries.",
+    "timeout": "the query took too long and was stopped.",
+    "empty_result": "no records matched.",
+}
+_PLAIN_FAILURE_OTHER = "the query could not be completed."
+
+_PLAIN_FAILURE_CONTEXT = (
+    "The data query did not produce an answer: {plain}\n"
+    "Explain this to the user plainly in one or two sentences. Do not mention internal labels, error\n"
+    "categories or codes. Do not invent a number or fact that was never computed."
+)
+_PLAIN_ZERO_ROWS_CONTEXT = (
+    "The SQL query returned zero rows: no records matched it. Say that no matching records were found. "
+    "Do not turn this into a figure about something the query did not measure."
+)
+# [pipeline] route_recovery: the documents route ran in place of a SQL route whose data the database lacks.
+_RECOVERED_FROM_SQL_CONTEXT = (
+    "The database did not hold this, so the answer comes from the document passages below. "
+    "Say so in one short clause."
+)
+
+
+def plain_failure_context(category: str) -> str:
+    """The failed-query block of the writer's context when plain_failures is on."""
+    return _PLAIN_FAILURE_CONTEXT.format(plain=_PLAIN_FAILURES.get(category, _PLAIN_FAILURE_OTHER))
+
+
+def _format_doc_context(retrievals: list[dict], with_titles: bool = False) -> str:
     parts = [f"Retrieved {len(retrievals)} document passage(s):"]
     for r in retrievals[: cfg.retrieval.semantic_top_k]:
         prov = r["provenance"]
+        if with_titles:  # pipeline.passage_titles: the writer sees which filing a passage comes from
+            page = prov.get("page")
+            parts.append(
+                f"  [Document: {prov.get('title') or prov['document_id']} · page {'?' if page is None else page} · "
+                f"chunk_id={prov['chunk_id']} · score={prov['score']:.3f}]\n{r['content']}"
+            )
+            continue
         parts.append(
             f"  [chunk_id={prov['chunk_id']} document_id={prov['document_id']} "
             f"page={prov.get('page')} score={prov['score']:.3f}]\n{r['content']}"
@@ -530,6 +573,25 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     short_style = (
         state_dict.get("flags_snapshot", {}).get("pipeline.synth_style", "full") == "short"
     )
+    plain_failures = state_dict.get("flags_snapshot", {}).get("pipeline.plain_failures", "off") == "on"
+
+    if state_dict.get("out_of_scope"):
+        # The front door (pipeline.front_door) found that neither the database nor the documents could
+        # answer. The answer is the fixed message: no model call, no citations and no chart, as for the
+        # abstention below; it still goes through the A7 validator.
+        start_ms = int(time.monotonic() * 1000)
+        safe_out = safe_synthesizer_output({
+            "answer_text": cfg.front_door.out_of_scope_message, "chart": None, "citations": [],
+        })
+        logger.info("Synthesizer: out of scope for query_id=%s (no model call).", query_id)
+        return {
+            "answer_text": safe_out["answer_text"],
+            "vega_spec": None,
+            "metrics": {
+                "tokens_in": 0, "tokens_out": 0, "llm_calls": 0, "trajectory_steps": 1,
+                "latency_ms": int(time.monotonic() * 1000) - start_ms,
+            },
+        }
 
     if state_dict.get("doc_abstained"):
         # RAG v2 Phase E: the docs route found nothing relevant (pipeline.doc_abstain). The answer
@@ -571,7 +633,9 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     # other's shape.
     context_parts: list[str] = []
 
-    if sql_error:
+    if sql_error and plain_failures:
+        context_parts.append(plain_failure_context(sql_error.get("category", "unclassified")))
+    elif sql_error:
         # Category is C2's classifier output (A3), never LLM-generated.
         category = sql_error.get("category", "unclassified")
         context_parts.append(
@@ -608,10 +672,14 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 f"Results (first {len(rows_preview)} rows):\n{rows_text}"
             )
         else:
-            context_parts.append("The SQL query returned zero rows. The answer may be 'none' or 'zero'.")
+            context_parts.append(_PLAIN_ZERO_ROWS_CONTEXT if plain_failures
+                                 else "The SQL query returned zero rows. The answer may be 'none' or 'zero'.")
 
     if retrievals:
-        context_parts.append(_format_doc_context(retrievals))
+        if state_dict.get("recovered_from") == "sql":
+            context_parts.append(_RECOVERED_FROM_SQL_CONTEXT)
+        context_parts.append(_format_doc_context(
+            retrievals, state_dict.get("flags_snapshot", {}).get("pipeline.passage_titles", "off") == "on"))
 
     caveats: list[str] = state_dict.get("caveats") or []
     if caveats:
@@ -620,16 +688,31 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     if not context_parts:
         context_parts.append("No data was retrieved for this question.")
 
-    user_message = f"Question: {raw_query}\n\nData context:\n" + "\n\n".join(context_parts)
+    # pipeline.context_carry (T4d): the documents and hybrid writers read the follow-up's context line after the question.
+    context_line = context_carry.question_context(state_dict) if state_dict.get("route") in ("docs", "hybrid") else ""
+    user_message = f"Question: {raw_query}{context_line}\n\nData context:\n" + "\n\n".join(context_parts)
+    # The repair loop's single second attempt (repair_loop.py): the previous answer and what failed.
+    if state_dict.get("repair_note") and state_dict.get("previous_answer"):
+        user_message += (f"\n\nYour previous answer was:\n{state_dict['previous_answer']}\n\n"
+                         f"{state_dict['repair_note']}")
 
     llm = get_agent_llm("synthesizer")
 
     try:
-        result = await llm.complete(
-            system=_short_system_prompt() if short_style else _SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_message}],
-            max_tokens=cfg.sql.max_tokens_synthesizer,
-        )
+        target_schema = state_dict.get("target_schema")
+        call = {"system": _short_system_prompt(target_schema) if short_style
+                else profile_for(target_schema).synthesizer_prompt,
+                "messages": [{"role": "user", "content": user_message}],
+                "max_tokens": cfg.sql.max_tokens_synthesizer}
+        result = await llm.complete(**call)
+        calls, spent_in, spent_out = 1, 0, 0
+        if not (result.text or "").strip():
+            # An empty answer is never useful to the reader. Seen on a reseller host (6 of 93
+            # answers in the evidence-tiers robustness run: a normal finish, no visible text), so
+            # one more call before the empty text would reach the user.
+            logger.warning("Synthesizer returned an empty answer for query_id=%s; asking once more.", query_id)
+            calls, spent_in, spent_out = 2, result.tokens_in, result.tokens_out
+            result = await llm.complete(**call)
         elapsed_ms = int(time.monotonic() * 1000) - start_ms
 
         # Parse the JSON response (fences stripped first -- a fenced response
@@ -690,7 +773,8 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         # Validate against A7
         safe_out = safe_synthesizer_output(parsed)
         answer_text = _strip_executable_content(safe_out["answer_text"], query_id)
-        answer_text = _ensure_category_mentioned(answer_text, sql_error)
+        # plain_failures: the category stays in state.errors and the trace, not in the user's answer.
+        answer_text = _ensure_category_mentioned(answer_text, None if plain_failures else sql_error)
 
         # safe_out["chart"] is the A7-VALIDATED chart: safe_synthesizer_output
         # nullifies it (never repairs it) if it failed the schema or the BD7
@@ -709,9 +793,9 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             "answer_text": answer_text,
             "vega_spec": final_chart,
             "metrics": {
-                "tokens_in":        result.tokens_in,
-                "tokens_out":       result.tokens_out,
-                "llm_calls":        1,
+                "tokens_in":        result.tokens_in + spent_in,
+                "tokens_out":       result.tokens_out + spent_out,
+                "llm_calls":        calls,
                 "trajectory_steps": 1,
                 "latency_ms":       elapsed_ms,
             },
@@ -726,7 +810,7 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             "citations": citations,
         }
         safe_out = safe_synthesizer_output(fallback)
-        answer_text = _ensure_category_mentioned(safe_out["answer_text"], sql_error)
+        answer_text = _ensure_category_mentioned(safe_out["answer_text"], None if plain_failures else sql_error)
         return {
             "answer_text": answer_text,
             "vega_spec": None,

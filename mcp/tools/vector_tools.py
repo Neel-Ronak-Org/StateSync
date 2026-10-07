@@ -261,6 +261,7 @@ async def semantic_search(
     dataset: str | None = None,
     scope: str | None = None,
     rerank: str | None = None,
+    rerank_titles: bool | None = None,
 ) -> dict[str, Any]:
     top_k_max = cfg.retrieval.semantic_top_k_max
     if top_k is not None and not (1 <= top_k <= top_k_max):
@@ -271,6 +272,8 @@ async def semantic_search(
     effective_rerank = rerank if rerank is not None else "off"
     if effective_rerank not in _RERANKERS:
         raise ValueError(f"rerank must be one of {list(_RERANKERS)}, got {effective_rerank!r}")
+    if rerank_titles is not None and not isinstance(rerank_titles, bool):
+        raise ValueError(f"rerank_titles must be a boolean, got {rerank_titles!r}")
     prefixes = _scope_prefixes(scope, dataset)
     effective_top_k = top_k if top_k is not None else cfg.retrieval.semantic_top_k
     if effective_rerank == "off":
@@ -279,11 +282,21 @@ async def semantic_search(
     # cross-encoder re-score them, return the top_k in its order.
     fetch_k = max(effective_top_k, int(cfg.retrieval.rerank_candidates))
     result = await _retrieve(query_text, fetch_k, document_ids, effective_mode, prefixes, scope)
-    ranked, info = await _rerank(effective_rerank, query_text, result["matches"])
+    ranked, info = await _rerank(effective_rerank, query_text, result["matches"], bool(rerank_titles))
     return {**result, "matches": ranked[:effective_top_k], "rerank": info}
 
 
-async def _rerank(model: str, query_text: str, matches: list[dict]) -> tuple[list[dict], dict[str, Any]]:
+def _rerank_passage(match: dict, with_titles: bool) -> str:
+    """The text the re-ranker scores for one passage: its content, led by the document title when
+    rerank_titles is on and the passage has one."""
+    content = match["content_md"] or ""
+    title = match.get("title")
+    return f"Document: {title}\n{content}" if with_titles and title else content
+
+
+async def _rerank(
+    model: str, query_text: str, matches: list[dict], with_titles: bool = False,
+) -> tuple[list[dict], dict[str, Any]]:
     """(matches in re-ranker order with rerank_score, info). Any failure keeps the original order:
     a re-ranker problem degrades ranking quality, it never fails a search."""
     if not matches:
@@ -292,7 +305,7 @@ async def _rerank(model: str, query_text: str, matches: list[dict]) -> tuple[lis
     try:
         async with httpx.AsyncClient(timeout=float(cfg.retrieval.rerank_timeout_s)) as client:
             reply = await client.post(_RERANKER_URL.rstrip("/") + "/rerank", json={
-                "model": model, "query": query_text, "passages": [m["content_md"] or "" for m in matches]})
+                "model": model, "query": query_text, "passages": [_rerank_passage(m, with_titles) for m in matches]})
         body = reply.json()
         scores = body.get("scores") if reply.status_code == 200 and body.get("ok") else None
         if not isinstance(scores, list) or len(scores) != len(matches):

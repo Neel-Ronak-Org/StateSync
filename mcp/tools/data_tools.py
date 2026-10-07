@@ -313,16 +313,24 @@ async def sample_rows(
     effective_limit_in = limit if limit is not None else _cfg.mcp.sample_rows_default_limit
     effective_limit = min(max(1, effective_limit_in), _SAMPLE_ROWS_HARD_CAP)
 
-    if columns:
-        # Validate column names before interpolating into SQL
-        for col in columns:
-            if not IDENTIFIER.match(col):
-                raise ValueError(f"Invalid column name: {col!r}")
-        col_list = ", ".join(f'"{c}"' for c in columns[:_cfg.mcp.sample_rows_max_columns])
-    else:
-        col_list = "*"
+    if columns is not None and (not isinstance(columns, list) or not all(isinstance(c, str) for c in columns)):
+        raise ValueError("columns must be a list of column names.")
 
     async with source(schema) as (conn, real_schema):
+        col_list = "*"
+        if columns:
+            # A column is accepted when it EXISTS in this table (the catalog is the allowlist) and
+            # is always quoted, so real-world names such as "Academic Year" or "Charter School (Y/N)"
+            # work and nothing else can be interpolated. Until 2026-10-03 a strict identifier
+            # pattern refused such names and one refused sample failed the whole question (BIRD).
+            cur = await conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema = %s AND table_name = %s",
+                (real_schema, table))
+            existing = {r[0] for r in await cur.fetchall()}
+            unknown = [c for c in columns if c not in existing]
+            if unknown:
+                raise ValueError(f"Invalid column name: {unknown[0]!r}")
+            col_list = ", ".join(connections.quote_ident(c) for c in columns[:_cfg.mcp.sample_rows_max_columns])
         sql = f'SELECT {col_list} FROM {connections.quote_ident(real_schema)}."{table}" LIMIT {effective_limit}'
         # Run through Layer 1 gate (even though we built the SQL, belt-and-suspenders)
         rejection = _check_layer1(sql)

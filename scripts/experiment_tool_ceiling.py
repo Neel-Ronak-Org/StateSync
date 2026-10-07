@@ -72,7 +72,8 @@ os.environ.setdefault("CONFIG_DIR", str(REPO_ROOT / "config"))
 
 from config_loader import cfg                                          # noqa: E402
 from llm.provider import get_agent_llm                                 # noqa: E402
-from nodes.supervisor import _SYSTEM_PROMPT, _extract_route            # noqa: E402
+from nodes.supervisor import _extract_route                            # noqa: E402
+from profiles_ondc import ROUTER_PROMPT as _SYSTEM_PROMPT              # noqa: E402 - the ONDC router it measured
 
 FIXTURE = REPO_ROOT / "fixtures" / "golden" / "phase_f_routing.json"
 ORCH_URL = os.environ.get("ORCHESTRATOR_URL", "http://localhost:8090")

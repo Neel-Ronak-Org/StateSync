@@ -117,34 +117,41 @@ def train(args) -> None:
     rows = [json.loads(l) for l in open(HERE / "out" / "train.jsonl")]
     for extra in args.extra or []:  # README addition 3, variant B: the generator's own labelled candidates
         rows += [{**r, "source": r.get("source", "llm")} for r in (json.loads(l) for l in open(HERE / extra)) if r.get("runs", True)]
+    train_rows(rows, args.loss, args.epochs, HERE / args.out)
+
+
+def train_rows(rows: list[dict], objective: str, epochs: int, out: Path) -> Path:
+    """The recipe on given rows ({qid, question, sql, result, correct}); saves the checkpoint to `out`.
+    `train` (the pilot's CLI) and Paper B (scripts/paperb_laya.py) both call this. Behaviour is the pilot's:
+    only the inputs became parameters."""
     # Calibration slice by QUESTION, so no question's candidates are on both sides.
     qids = sorted({r["qid"] for r in rows})
     random.Random(SEED).shuffle(qids)
     calib_q = set(qids[: max(1, int(len(qids) * CALIB_SHARE))])
-    train_rows = [r for r in rows if r["qid"] not in calib_q]
+    fit_rows = [r for r in rows if r["qid"] not in calib_q]
     calib_rows = [r for r in rows if r["qid"] in calib_q]
-    balance(train_rows)
+    balance(fit_rows)
     torch.manual_seed(SEED)
     model, cfg, tok = load_model(base_checkpoint())
     if hasattr(model.encoder, "gradient_checkpointing_enable"):
         model.encoder.gradient_checkpointing_enable()  # activations recomputed in backward: far less GPU memory
-    items, dropped = to_items(train_rows, tok, cfg)
+    items, dropped = to_items(fit_rows, tok, cfg)
     calib, _ = to_items(calib_rows, tok, cfg)
-    print(f"{len(train_rows)} train rows -> {len(items)} sequences ({dropped} dropped: markers cut); "
-          f"{len(calib)} calibration; correct share {sum(r['correct'] for r in train_rows) / len(train_rows):.2f}", flush=True)
+    print(f"{len(fit_rows)} train rows -> {len(items)} sequences ({dropped} dropped: markers cut); "
+          f"{len(calib)} calibration; correct share {sum(r['correct'] for r in fit_rows) / len(fit_rows):.2f}", flush=True)
     enc = [p for n, p in model.named_parameters() if n.startswith("encoder.")]
     head = [p for n, p in model.named_parameters() if not n.startswith("encoder.")]
     opt = torch.optim.AdamW([{"params": enc, "lr": LR_ENCODER}, {"params": head, "lr": LR_HEAD}], weight_decay=0.01)
-    updates = max(1, len(items) // (MICRO_BATCH * GRAD_ACCUM) * args.epochs)
+    updates = max(1, len(items) // (MICRO_BATCH * GRAD_ACCUM) * epochs)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=updates, eta_min=1e-6)
     model.train()
     step, t0 = 0, time.time()
-    for epoch in range(args.epochs):
-        sigma = SIGMA_START + (SIGMA_END - SIGMA_START) * epoch / max(1, args.epochs - 1)
+    for epoch in range(epochs):
+        sigma = SIGMA_START + (SIGMA_END - SIGMA_START) * epoch / max(1, epochs - 1)
         random.Random(SEED + epoch).shuffle(items)
         for start in range(0, len(items), MICRO_BATCH):
             batch = collate_items([items[start:start + MICRO_BATCH]], tok.pad_token_id)
-            loss = loss_on(model, batch, sigma, args.loss == "rlcd") / GRAD_ACCUM
+            loss = loss_on(model, batch, sigma, objective == "rlcd") / GRAD_ACCUM
             loss.backward()
             step += 1
             if step % GRAD_ACCUM == 0 or start + MICRO_BATCH >= len(items):
@@ -153,18 +160,22 @@ def train(args) -> None:
                 if DEVICE.type == "mps":
                     torch.mps.empty_cache()  # variable sequence lengths otherwise grow the MPS cache to ~19 GB (measured)
             if step % 25 == 0:
-                print(f"epoch {epoch + 1}/{args.epochs} step {step} loss {loss.item() * GRAD_ACCUM:.4f} "
+                print(f"epoch {epoch + 1}/{epochs} step {step} loss {loss.item() * GRAD_ACCUM:.4f} "
                       f"{step * MICRO_BATCH / (time.time() - t0):.1f} seq/s", flush=True)
     print(f"trained {step} steps in {time.time() - t0:.0f} s", flush=True)
     temp = fit_temperature(model, calib, tok.pad_token_id)
-    out = HERE / args.out
+    out = Path(out)
     os.makedirs(out, exist_ok=True)
     save_file({k: v.half().contiguous().cpu() for k, v in model.state_dict().items()}, str(out / "model.safetensors"))
     model.encoder.config.save_pretrained(out / "encoder")
     tok.save_pretrained(out / "tokenizer")
-    json.dump({**cfg, "fine_tuned": True, "model_name": f"sql-verifier-{args.loss}", "temperature": [temp, 1.0, 1.0],
+    json.dump({**cfg, "fine_tuned": True, "model_name": f"sql-verifier-{objective}", "temperature": [temp, 1.0, 1.0],
                "train_seconds": round(time.time() - t0)}, open(out / "rl_agent_config.json", "w"), indent=2)
     print(f"saved {out}; choice temperature {temp:.3f}")
+    del model, opt
+    if DEVICE.type == "mps":
+        torch.mps.empty_cache()
+    return out
 
 
 @torch.no_grad()
@@ -194,6 +205,26 @@ def fit_temperature(model, calib: list[dict], pad_id: int) -> float:
 
     opt.step(closure)
     return float(torch.clamp(log_t.exp(), 0.1, 10.0).item())
+
+
+def score_rows(model_dir: str | None, rows: list[dict]) -> tuple[list[float | None], float]:
+    """P(correct) per row ({question, sql, result}) from a checkpoint (None = the pinned base checkpoint,
+    temperature 1, as `score --model base`), and milliseconds per item batched. A row whose option
+    markers were cut off gets None. Paper B (scripts/paperb_laya.py) calls this."""
+    model, cfg, tok = load_model(base_checkpoint() if model_dir is None else str(model_dir))
+    temp = 1.0 if model_dir is None else (cfg.get("temperature") or [1.0])[0]
+    keyed = [{**r, "qid": i, "correct": bool(r.get("correct", False))} for i, r in enumerate(rows)]
+    items, _ = to_items(keyed, tok, cfg)
+    t0 = time.perf_counter()
+    logits = logits_of(model, items, tok.pad_token_id)
+    per_item_ms = (time.perf_counter() - t0) * 1000 / max(1, len(items))
+    out: list[float | None] = [None] * len(rows)
+    for it, z in zip(items, logits):
+        out[it["row"]["qid"]] = torch.softmax(z / temp, -1)[0].item()  # P(correct)
+    del model
+    if DEVICE.type == "mps":
+        torch.mps.empty_cache()
+    return out, per_item_ms
 
 
 def score(args) -> None:

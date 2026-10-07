@@ -1,0 +1,46 @@
+{
+ "california_schools": {
+  "workspace_id": "30829297-26f7-43b8-9085-bede61764e9c",
+  "connection_id": "cn_9240ceb08edb4938"
+ },
+ "card_games": {
+  "workspace_id": "c35c11f8-bfe7-44c9-9d2f-06e65459c50d",
+  "connection_id": "cn_2bf53571f75f4c79"
+ },
+ "codebase_community": {
+  "workspace_id": "5b45893b-2f16-4bbb-b669-7d6fe6b509ff",
+  "connection_id": "cn_f084a0aafeb24880"
+ },
+ "debit_card_specializing": {
+  "workspace_id": "9f2abb90-96b4-4a58-98a3-a1ee3270cac0",
+  "connection_id": "cn_dfa531d796da43e7"
+ },
+ "european_football_2": {
+  "workspace_id": "b8b03157-1d34-4a5f-8e1e-05c249bb5946",
+  "connection_id": "cn_e1b70dcdfda248fc"
+ },
+ "financial": {
+  "workspace_id": "91605548-831e-4558-bc8d-88b092f677f7",
+  "connection_id": "cn_b7185de16da64408"
+ },
+ "formula_1": {
+  "workspace_id": "de696d5f-c161-4787-82d0-a5b1ec77806a",
+  "connection_id": "cn_dbd54b57e3f84128"
+ },
+ "student_club": {
+  "workspace_id": "b5197038-b281-4be3-ba41-f58aa39ca5db",
+  "connection_id": "cn_97b3964026cb47ff"
+ },
+ "superhero": {
+  "workspace_id": "860e7a02-6ab8-4d8a-8413-7c3380087e73",
+  "connection_id": "cn_b710015657fa447c"
+ },
+ "thrombosis_prediction": {
+  "workspace_id": "41d9fcfb-38b2-45a0-b938-57697d53cabf",
+  "connection_id": "cn_be782f3725e34f54"
+ },
+ "toxicology": {
+  "workspace_id": "8157559f-71f6-4068-ad30-54cf812ee350",
+  "connection_id": "cn_426229f583924ad0"
+ }
+}

@@ -76,6 +76,11 @@ import time
 from typing import Any
 
 import answer_checks
+import context_carry
+import httpx
+import repair_loop
+import self_consistency
+import sql_outcomes
 import templates as sql_templates
 from column_profiles import format_profiles, get_profiles
 from config_loader import cfg
@@ -84,8 +89,9 @@ from llm.provider import get_agent_llm
 from table_selection import tables_in_sql
 from mcp_client import MCPSession, data_run_select, data_sample_rows, schema_describe_table, schema_list_tables, workspaces_manage
 from memory_store import get_trajectory_store
-from schema_retriever import get_schema_retriever, target_schema
-from datasets import frame_prompt, synthetic_features
+from schema_retriever import format_table_block, get_schema_retriever, target_schema
+from profiles import profile_for
+from profiles_ondc import SQL_DOMAIN as _ONDC_SQL_DOMAIN
 from spatial_resolver import get_spatial_resolver
 from workspace_context import format_context, system_suffix
 
@@ -151,6 +157,27 @@ Rules:
 7. Directly address every remediation hint below — do not repeat a mistake a hint
    already explained.
 8. Return ONLY the SQL query text — no markdown, no explanation, no comments."""
+
+# [pipeline] sql_row_cap. "prompt" (shipped) asks the model for LIMIT max_rows; in the BIRD pilot
+# that instruction also replaced the LIMIT 1 of "which is the highest" questions (97 of 100 queries
+# ended in LIMIT 1000; docs/eval/bird_pilot_report.md). "executor" leaves the cap to data.run_select,
+# which never returns more than max_rows rows whatever the SQL says.
+_PROMPT_LIMIT_RULE = "Apply LIMIT {max_rows} unless the question explicitly asks for all rows."
+_EXECUTOR_LIMIT_RULE = ('Use LIMIT only when the question asks for a number of results ("the highest", '
+                        '"the top 5"); the system itself caps how many rows are returned.')
+
+
+def sql_system_prompt(template: str, max_rows: int, schema: Any, flags_snapshot: dict[str, Any]) -> str:
+    """The SQL writer's system prompt: the row-cap rule the flags choose, then the dataset profile's
+    domain phrase in place of the ONDC one the two templates are written with."""
+    if flags_snapshot.get("pipeline.sql_row_cap", "prompt") == "executor":
+        template = template.replace(_PROMPT_LIMIT_RULE, _EXECUTOR_LIMIT_RULE)
+    prompt = template.format(max_rows=max_rows).replace(_ONDC_SQL_DOMAIN, profile_for(schema).sql_domain)
+    if sql_outcomes.sql_no_data_on(flags_snapshot):
+        # [pipeline] sql_no_data (F-S1): the writer and the corrector may say the database cannot answer.
+        prompt += "\n" + sql_outcomes.not_answerable_rule(prompt)
+    return prompt
+
 
 _SUMMARIZER_SYSTEM_PROMPT = """\
 You are documenting how a PostgreSQL query was constructed, so the navigation
@@ -232,6 +259,17 @@ def _parse_referenced_tables(sql: str) -> list[str]:
 
     _RangeVarCollector()(tree)
     return found
+
+
+async def _sample_or_skip(session: Any, target: dict, schema: str, query_id: str) -> dict | None:
+    """A sample of the target's columns, or None when the MCP refuses it: samples only help
+    the SQL model, so one refused sample must never fail the question (found on BIRD, 2026-10-03)."""
+    try:
+        return await data_sample_rows(session, target["table"], columns=target["columns"], schema=schema)
+    except httpx.HTTPStatusError as exc:
+        logger.warning("SQL Agent: sample of %s refused (HTTP %s) for query_id=%s; skipped",
+                       target["table"], exc.response.status_code, query_id)
+        return None
 
 
 def question_for(state_dict: dict[str, Any]) -> str:
@@ -350,6 +388,13 @@ def _format_entity_hint(preserved_entities: dict[str, str]) -> str:
     for original in preserved_entities.keys():
         lines.append(f"  '{original}'")
     return "\n".join(lines)
+
+
+def _spatial_resolution(raw_query: str, schema: str | None) -> dict[str, Any] | None:
+    """The DIGIPIN resolver's result, only for a dataset whose profile has it (the ONDC sample)."""
+    if not profile_for(schema).spatial_resolver:
+        return None
+    return get_spatial_resolver().resolve(raw_query)
 
 
 def _format_spatial_hint(spatial: dict[str, Any]) -> str:
@@ -587,6 +632,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     decides whether to loop back.
     """
     raw_query: str = question_for(state_dict)
+    context_line: str = context_carry.question_context(state_dict)   # "" unless pipeline.context_carry gave a follow-up its context
     tenant_id: str = state_dict["tenant_id"]
     query_id: str = state_dict.get("query_id", "")
     session_id: str = state_dict.get("session_id", "")
@@ -722,10 +768,10 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                     draft_sql: str = state_dict.get("debug_candidate_sql") or ""
                     if not draft_sql:
                         draft_result = await get_agent_llm("sql").complete(
-                            system=frame_prompt(_SYSTEM_PROMPT.format(max_rows=cfg.mcp.max_rows_default),
-                                                _schema) + ws_suffix,
+                            system=sql_system_prompt(_SYSTEM_PROMPT, cfg.mcp.max_rows_default,
+                                                     _schema, flags_snapshot) + ws_suffix,
                             messages=[{"role": "user", "content": (
-                                f"{context_block}\n\nQuestion: {raw_query}\n\n"
+                                f"{context_block}\n\nQuestion: {raw_query}{context_line}\n\n"
                                 f"Write a single PostgreSQL SELECT query to answer this question."
                             )}],
                             max_tokens=cfg.sql.max_tokens_sql,
@@ -749,10 +795,9 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                         referenced_tables=referenced_tables,
                     )
                     for target in targets:
-                        sample_result = await data_sample_rows(
-                            session, target["table"], columns=target["columns"],
-                            schema=_schema,
-                        )
+                        sample_result = await _sample_or_skip(session, target, _schema, query_id)
+                        if sample_result is None:
+                            continue
                         new_interrogation_samples.append({
                             "table": target["table"],
                             "columns_sampled": target["columns_display"],
@@ -772,6 +817,34 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 must_include=_example_tables(ws_ctx), fingerprint=schema_fingerprint)
             trajectory_steps += len(table_names)
             context_block = f"Schema:\n{schema_context}"
+            if sql_outcomes.sql_no_data_on(flags_snapshot) and sql_outcomes.confirmation_pending(existing_errors):
+                # T2b/T2c: the last attempt said NOT_ANSWERABLE. This one is shown every table of the
+                # dataset (the retrieved ones first, so a cut drops the least relevant), then the columns
+                # whose names resemble words in the question or that reply (every described table, cut or not).
+                shown_names = {d.get("table") for d in table_descriptions}
+                blocks = [format_table_block(str(d.get("table")), d, _schema) for d in table_descriptions]
+                for tname in table_names:
+                    if tname in shown_names:
+                        continue
+                    try:
+                        extra = await schema_describe_table(session, tname, _schema)
+                    except httpx.HTTPStatusError as exc:
+                        logger.warning("SQL Agent: describe_table(%s) refused (%s); left out of the full view",
+                                       tname, exc.response.status_code)
+                        continue
+                    trajectory_steps += 1
+                    table_descriptions = [*table_descriptions, extra]
+                    blocks.append(format_table_block(tname, extra, _schema))
+                view, described = sql_outcomes.cut_schema_view(blocks, int(cfg.sql.full_schema_max_chars))
+                context_block = f"Schema (every table of the dataset):\n{view}"
+                if described < len(blocks):
+                    context_block += (f"\n\n(The description is cut at {cfg.sql.full_schema_max_chars} characters: "
+                                      f"{described} of {len(blocks)} tables are described.)")
+                near_block = sql_outcomes.near_match_block(
+                    raw_query, str(existing_errors[-1].get("message") or ""), table_descriptions,
+                    int(cfg.sql.near_match_max))
+                if near_block:
+                    context_block += "\n\n" + near_block
             if ws_block:
                 context_block += "\n\n" + ws_block
 
@@ -790,10 +863,9 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                     cfg.sql.interrogation_max_samples,
                     referenced_tables=_parse_referenced_tables(failed_sql),
                 ):
-                    sample_result = await data_sample_rows(
-                        session, target["table"], columns=target["columns"],
-                        schema=_schema,
-                    )
+                    sample_result = await _sample_or_skip(session, target, _schema, query_id)
+                    if sample_result is None:
+                        continue
                     new_interrogation_samples.append({
                         "table": target["table"],
                         "columns_sampled": target["columns_display"],
@@ -813,8 +885,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         if entity_hint:
             context_block += "\n\n" + entity_hint
 
-        # DIGIPIN belongs to the synthetic ONDC corpus (datasets.py).
-        spatial_resolution = get_spatial_resolver().resolve(raw_query) if synthetic_features(_schema) else None
+        spatial_resolution = _spatial_resolution(raw_query, _schema)
         if spatial_resolution:
             context_block += "\n\n" + _format_spatial_hint(spatial_resolution)
 
@@ -825,6 +896,8 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         debug_sql = state_dict.get("debug_candidate_sql")
         verified_example = False
         used_debug_sql = False
+        sc_prompt: tuple[str, str] | None = None   # the model-written SQL's prompt, for self-consistency
+        not_answerable: str | None = None   # [pipeline] sql_no_data: the writer's NOT_ANSWERABLE reply, never run
         if attempt == 0 and exact_sql:
             candidate_sql = exact_sql
             verified_example = True
@@ -844,24 +917,25 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         else:
             llm = get_agent_llm("sql")
             if attempt == 0:
-                system_prompt = frame_prompt(_SYSTEM_PROMPT.format(max_rows=max_rows), _schema) + ws_suffix
+                system_prompt = sql_system_prompt(_SYSTEM_PROMPT, max_rows, _schema, flags_snapshot) + ws_suffix
                 user_message = (
-                    f"{context_block}\n\nQuestion: {raw_query}\n\n"
+                    f"{context_block}\n\nQuestion: {raw_query}{context_line}\n\n"
                     f"Write a single PostgreSQL SELECT query to answer this question."
                 )
             else:
-                system_prompt = frame_prompt(_CORRECTION_SYSTEM_PROMPT.format(max_rows=max_rows), _schema) + ws_suffix
+                system_prompt = sql_system_prompt(_CORRECTION_SYSTEM_PROMPT, max_rows, _schema, flags_snapshot) + ws_suffix
                 error_history_text = _format_error_history(existing_errors)
                 # Error history first, schema second: the fix is the most
                 # important, actionable content, and leading with it reads
                 # more reliably than burying it after a full multi-table
                 # schema dump.
                 user_message = (
-                    f"Question: {raw_query}\n\n{error_history_text}\n\n"
+                    f"Question: {raw_query}{context_line}\n\n{error_history_text}\n\n"
                     f"Full schema (find the correct column/table/join path here):\n{context_block}\n\n"
                     f"Write a single corrected PostgreSQL SELECT query."
                 )
 
+            sc_prompt = (system_prompt, user_message)
             sql_result = await llm.complete(
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_message}],
@@ -871,6 +945,8 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             tokens_out_total += sql_result.tokens_out
             llm_calls_total += 1
             candidate_sql = sql_result.text
+            if sql_outcomes.sql_no_data_on(flags_snapshot):
+                not_answerable = sql_outcomes.parse_not_answerable(candidate_sql)
 
         candidate_sql = _strip_sql_fences(candidate_sql)
 
@@ -879,17 +955,22 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             query_id, attempt, memory_hit, candidate_sql,
         )
 
-        candidate_sql, script_repairs = _repair_script_column_mismatch(
-            candidate_sql, table_descriptions,
-        )
+        if not_answerable is None:
+            candidate_sql, script_repairs = _repair_script_column_mismatch(
+                candidate_sql, table_descriptions,
+            )
+        else:
+            script_repairs = []
         for repair_note in script_repairs:
             logger.info(
                 "SQL Agent script repair for query_id=%s: %s",
                 query_id, repair_note,
             )
 
-        # Step 5: execute.
-        if compiled_exec is not None and candidate_sql == compiled_sql:
+        # Step 5: execute. A NOT_ANSWERABLE reply is not SQL and never reaches the database.
+        if not_answerable is not None:
+            exec_result = {}
+        elif compiled_exec is not None and candidate_sql == compiled_sql:
             exec_result = compiled_exec  # already executed while deciding to use the template
         else:
             exec_result = await data_run_select(session, candidate_sql, max_rows=max_rows)
@@ -970,7 +1051,18 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             else:
                 caveats.append("These figures may count some rows more than once (join fan-out).")
 
-        if fanout_retry:
+        if not_answerable is not None:
+            # [pipeline] sql_no_data (F-S1): a typed outcome, terminal (no_data_source) once confirmed, so the loop stops.
+            # There is no statement to report, so candidate_sql is cleared.
+            logger.info("SQL Agent: query_id=%s attempt=%d replied NOT_ANSWERABLE.", query_id, attempt)
+            update["candidate_sql"] = None
+            update["sql_rows"] = []
+            update["sql_columns"] = []
+            # T2b/T2c: the first reply is the retriable not_answerable_unconfirmed instead, and the next
+            # attempt is shown every table and the near-matching columns; a second reply is final.
+            update["errors"] = [sql_outcomes.not_answerable_record(attempt, not_answerable, existing_errors)]
+
+        elif fanout_retry:
             # Failure-shaped, like any other failed attempt: no executed_sql, so the graph
             # retries and the correction prompt shows this message and hint.
             logger.warning(
@@ -983,7 +1075,10 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 "attempt": attempt,
                 "category": "join_cardinality",
                 "engine_code": None,
-                "message": fanout_finding.message,
+                # The repair loop's control (repair_loop.py): "plain" withholds the evidence.
+                "message": (repair_loop.PLAIN_SQL_MESSAGE
+                            if flags_snapshot.get("pipeline.repair_loop", "off") == "plain"
+                            else fanout_finding.message),
                 "offending_sql": candidate_sql,
                 "remediation_hint": (
                     "Aggregate the joined table in a subquery before joining, or aggregate at the "
@@ -1004,6 +1099,20 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 "SQL Agent success for query_id=%s attempt=%d: %d rows returned.",
                 query_id, attempt, len(rows),
             )
+
+            # [pipeline] self_consistency_k (the study's baseline; 0 = off when shipped): resample
+            # the prompt that wrote this SQL and compare results. Measurement only (self_consistency.py).
+            sc_k = int(flags_snapshot.get("pipeline.self_consistency_k", 0) or 0)
+            if sc_k > 0 and sc_prompt is not None:
+                sc_system, sc_user = sc_prompt
+                sc_llm = get_agent_llm("sql")
+                update["self_consistency"] = await self_consistency.sample(
+                    complete=lambda: sc_llm.complete(system=sc_system, messages=[{"role": "user", "content": sc_user}],
+                                                     max_tokens=cfg.sql.max_tokens_sql),
+                    run=lambda sql: data_run_select(session, sql, max_rows=max_rows),
+                    prepare=lambda text: _repair_script_column_mismatch(_strip_sql_fences(text), table_descriptions)[0],
+                    answer_rows=rows, k=sc_k,
+                )
 
             # Write back unless this is a clean attempt-0 memory hit (C1 GAP-1).
             # A compiled answer adds no new insight either, and must not cost a model call.
@@ -1044,7 +1153,7 @@ async def sql_agent_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             error_obj = exec_result.get("error") or {}
             sqlstate: str | None = error_obj.get("sqlstate")
             message: str = error_obj.get("message", "Unknown error")
-            category, hint = classify_error(sqlstate=sqlstate, message=message, empty_result=False)
+            category, hint = sql_outcomes.classify_engine_failure(sqlstate, message, flags_snapshot)
 
             logger.warning(
                 "SQL Agent failure for query_id=%s attempt=%d: category=%s sqlstate=%s message=%s",

@@ -1,0 +1,1008 @@
+{
+ "label": "pilot_gpt5mini",
+ "endpoint": "local_router",
+ "model": "zed-hosted/gemini-3.8-flash",
+ "system": "You check answers from a text-to-SQL system on a PostgreSQL database. You are given the user's question (with an optional hint), the database's tables and columns, the SQL the system ran, the first rows of its result and the answer it wrote. Decide whether the result correctly answers the question. Reply with JSON only: {\"p_correct\": <number between 0 and 1>, \"reason\": \"<one sentence>\"}.",
+ "verdicts": [
+  {
+   "id": "17",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins schools and satscores, filters for school level (rtype='S'), valid charter number (is not null), and avgscrwrite > 499, and ranks schools by average writing score in descending order.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 2561,
+   "tokens_out": 67,
+   "ms": 234,
+   "p_correct": 1.0
+  },
+  {
+   "id": "28",
+   "text": "{\"p_correct\": 0.0, \"reason\": \"The model refused to answer and claimed it needed more columns, failing to recognize that the SQL query had already computed the filter and returned the requested school names and DOC types.\"}",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1209,
+   "tokens_out": 49,
+   "ms": 9,
+   "p_correct": 0.0
+  },
+  {
+   "id": "37",
+   "text": "```json\n{\"p_correct\": 0.0, \"reason\": \"The system refused to answer, failing to realize the SQL query had already sorted by the excellence rate to place the lowest school first.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1235,
+   "tokens_out": 46,
+   "ms": 22,
+   "p_correct": 0.0
+  },
+  {
+   "id": "40",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins schools and satscores on CDS code, filters by district 'Fresno Unified', finds the minimum non-null reading score, and returns the school's telephone number.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 875,
+   "tokens_out": 58,
+   "ms": 22,
+   "p_correct": 1.0
+  },
+  {
+   "id": "46",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly filters for state special schools using DOC = '31' and orders by K-12 enrollment descending, providing a complete and accurate answer.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 964,
+   "tokens_out": 53,
+   "ms": 21,
+   "p_correct": 1.0
+  },
+  {
+   "id": "62",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly joins the schools and frpm tables, filters for Los Angeles county, non-chartered schools, avoids division by zero, and applies the given formula and threshold accurately.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 900,
+   "tokens_out": 58,
+   "ms": 26,
+   "p_correct": 1.0
+  },
+  {
+   "id": "77",
+   "text": "```json\n{\"p_correct\": 0.8, \"reason\": \"The database stores grade span in schools.gsserved (e.g., 'K-9') or frpm, and the query returned no rows largely because such schools do not exist or 'K-9' is represented differently.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 963,
+   "tokens_out": 68,
+   "ms": 12,
+   "p_correct": 0.8
+  },
+  {
+   "id": "82",
+   "text": "```json\n{\"p_correct\": 0.0, \"reason\": \"The system failed to answer the question, refusing based on lack of longitude in the output even though the SQL query was already sorted by `abs(s.longitude) DESC`.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 837,
+   "tokens_out": 56,
+   "ms": 8,
+   "p_correct": 0.0
+  },
+  {
+   "id": "83",
+   "text": "```json\n{\"p_correct\": 0.4, \"reason\": \"The query restricted all cities and school counts to magnet schools only (`WHERE s.magnet = 1`), whereas the second part of the question asked for all cities/schools serving Kindergarten to 8th grade span regardless of magnet status, and the question asked for two separate answers that were conflated.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1189,
+   "tokens_out": 80,
+   "ms": 22,
+   "p_correct": 0.4
+  },
+  {
+   "id": "99",
+   "text": "```json\n{\"p_correct\": 0.8, \"reason\": \"The model arbitrarily restricted the loan status to 'A' (approved/finished without issues) when the question asked for highest approved amount across loans without specifying status 'A'.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 749,
+   "tokens_out": 54,
+   "ms": 22,
+   "p_correct": 0.8
+  },
+  {
+   "id": "112",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins client, disp, account, and district to find the district name (a2) where the account was opened for the specified female client.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 627,
+   "tokens_out": 52,
+   "ms": 16,
+   "p_correct": 1.0
+  },
+  {
+   "id": "115",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly identifies the district in 'south Bohemia' with the maximum number of inhabitants (a4) and calculates the percentage of male clients living in that district.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 684,
+   "tokens_out": 53,
+   "ms": 22,
+   "p_correct": 1.0
+  },
+  {
+   "id": "145",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly filters for account owner client IDs who had credit card withdrawal transactions in 1998 below the 1998 average amount for such transactions.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1038,
+   "tokens_out": 177,
+   "ms": 35,
+   "p_correct": 1.0
+  },
+  {
+   "id": "189",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly identifies female clients with the earliest birth date and the minimum average salary among them, returning the associated account ID.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 813,
+   "tokens_out": 116,
+   "ms": 21,
+   "p_correct": 1.0
+  },
+  {
+   "id": "192",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query accurately filters for running loan contracts (statuses 'C' and 'D') and statement issuance after each transaction ('POPLATEK PO OBRATU'), calculating the average loan amount correctly.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 609,
+   "tokens_out": 60,
+   "ms": 19,
+   "p_correct": 1.0
+  },
+  {
+   "id": "206",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins the connected and atom tables on both connected atoms for the specified bond_id and selects the distinct elements.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 358,
+   "tokens_out": 45,
+   "ms": 20,
+   "p_correct": 1.0
+  },
+  {
+   "id": "212",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly identifies the elements with the minimum count in non-carcinogenic molecules, and the answer accurately reports the tied results.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 445,
+   "tokens_out": 48,
+   "ms": 21,
+   "p_correct": 1.0
+  },
+  {
+   "id": "219",
+   "text": "```json\n{\"p_correct\": 0.0, \"reason\": \"The SQL calculates the percentage of triple bonds belonging to carcinogenic molecules rather than following the hint's formula, which computes the percentage of triple bonds among all bonds in carcinogenic molecules.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 437,
+   "tokens_out": 339,
+   "ms": 17,
+   "p_correct": 0.0
+  },
+  {
+   "id": "236",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins the bond and connected tables to retrieve the bond type and connected atoms for the given bond_id, and the answer accurately reports these results.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 411,
+   "tokens_out": 52,
+   "ms": 19,
+   "p_correct": 1.0
+  },
+  {
+   "id": "242",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query accurately implements the hint conditions for filtering carcinogenic molecules containing atoms 21 to 25 and correctly returns the distinct molecule IDs.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 674,
+   "tokens_out": 49,
+   "ms": 19,
+   "p_correct": 1.0
+  },
+  {
+   "id": "327",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly joins the molecule and atom tables, filters for non-carcinogenic molecules (label = '-'), groups by molecule_id, and filters for groups having more than 5 atoms.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 677,
+   "tokens_out": 61,
+   "ms": 20,
+   "p_correct": 1.0
+  },
+  {
+   "id": "345",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query accurately implements the filters specified in the prompt and hint, and the answer accurately summarizes the distinct statuses found.\"}\n```",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "tokens_in": 1059,
+   "tokens_out": 44,
+   "ms": 4456,
+   "p_correct": 1.0
+  },
+  {
+   "id": "347",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins cards with rulings for the specified artist, filters/retrieves the card id, ruling text, and hascontentwarning status, and the answer accurately addresses all parts of the user question.\"}\n```",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "tokens_in": 2664,
+   "tokens_out": 62,
+   "ms": 3829,
+   "p_correct": 1.0
+  },
+  {
+   "id": "366",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins the cards and legalities tables based on the hint, and the answer accurately summarizes the formats and statuses.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 847,
+   "tokens_out": 45,
+   "ms": 21,
+   "p_correct": 1.0
+  },
+  {
+   "id": "379",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly filters cards where dueldeck = 'a' and selects the card ID as requested.\"}\n```",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "tokens_in": 1139,
+   "tokens_out": 41,
+   "ms": 4107,
+   "p_correct": 1.0
+  },
+  {
+   "id": "402",
+   "text": "```json\n{\"p_correct\": 0.8, \"reason\": \"The hint defines percentage as dividing by the total count of all cards (SUM(count(id))), whereas the SQL divided by total story spotlight cards; however, both the list of IDs and percentage were provided.\"}\n```",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "tokens_in": 1443,
+   "tokens_out": 62,
+   "ms": 3627,
+   "p_correct": 0.8
+  },
+  {
+   "id": "466",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly joins the sets, set_translations, and cards tables according to the hint and accurately filters for the translation and artist.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 846,
+   "tokens_out": 48,
+   "ms": 33,
+   "p_correct": 1.0
+  },
+  {
+   "id": "472",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins the sets and set_translations tables, applies the requested filters for block and Italian translation, and counts the distinct sets matching the criteria.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 821,
+   "tokens_out": 51,
+   "ms": 10,
+   "p_correct": 1.0
+  },
+  {
+   "id": "479",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query accurately joins the sets and cards tables, filters by the specified set name, converted mana cost threshold, and power conditions as given in the hint, and correctly counts the matching cards.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 851,
+   "tokens_out": 59,
+   "ms": 20,
+   "p_correct": 1.0
+  },
+  {
+   "id": "480",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins cards with foreign_data on uuid, filters by the specified card name and Italian language, and returns the accurate flavor texts.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 838,
+   "tokens_out": 49,
+   "ms": 21,
+   "p_correct": 1.0
+  },
+  {
+   "id": "483",
+   "text": "```json\n{\"p_correct\": 0.0, \"reason\": \"The question asks for the rulings ('text ruling') which are stored in the rulings table, but the query retrieves the card oracle/rules text from the foreign_data table (and rulings are not localized in this database schema anyway).\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 2426,
+   "tokens_out": 66,
+   "ms": 220,
+   "p_correct": 0.0
+  },
+  {
+   "id": "518",
+   "text": "```json\n{\"p_correct\": 0.0, \"reason\": \"The model refused to provide the format and card names despite the SQL query already filtering for the format with the maximum count of banned cards ('legacy').\"}\n```",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "tokens_in": 1151,
+   "tokens_out": 49,
+   "ms": 3950,
+   "p_correct": 0.0
+  },
+  {
+   "id": "529",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly identifies sets that have a Korean translation but lack a Japanese translation in set_translations, and accurately reports the empty result.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 855,
+   "tokens_out": 48,
+   "ms": 22,
+   "p_correct": 1.0
+  },
+  {
+   "id": "532",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly filters users with CreationDate in the year 2011 and selects their display names.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 911,
+   "tokens_out": 43,
+   "ms": 21,
+   "p_correct": 1.0
+  },
+  {
+   "id": "565",
+   "text": "```json\n{\"p_correct\": 0.0, \"reason\": \"The query returned 0 rows because timestamp with time zone matching failed or the schema prefix/data formatting mismatched, leading to a failure to answer whether the post was well-finished.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 785,
+   "tokens_out": 56,
+   "ms": 13,
+   "p_correct": 0.0
+  },
+  {
+   "id": "586",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins votes, posts, and users filtering by bounty amount and title containing 'variance' to find the display names.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 659,
+   "tokens_out": 46,
+   "ms": 20,
+   "p_correct": 1.0
+  },
+  {
+   "id": "634",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly groups and sums the view counts for the two users, and the answer accurately identifies Harvey Motulsky as having the higher popularity based on the data.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 705,
+   "tokens_out": 53,
+   "ms": 23,
+   "p_correct": 1.0
+  },
+  {
+   "id": "640",
+   "text": "```json\n{\"p_correct\": 0.0, \"reason\": \"The query incorrectly checks `posts.ownerdisplayname` instead of joining with the `users` table on `owneruserid = users.id` and filtering by `users.displayname`.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 651,
+   "tokens_out": 59,
+   "ms": 24,
+   "p_correct": 0.0
+  },
+  {
+   "id": "678",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query accurately filters for posts by the user 'Harvey Motulsky', identifies the post with the maximum view count, and returns its ID and title.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 743,
+   "tokens_out": 51,
+   "ms": 20,
+   "p_correct": 1.0
+  },
+  {
+   "id": "687",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly finds the post with the maximum score and counts its comments, accurately answering the question.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 611,
+   "tokens_out": 41,
+   "ms": 23,
+   "p_correct": 1.0
+  },
+  {
+   "id": "717",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins the superhero, hero_power, and superpower tables to retrieve the superpower names for '3-D Man', and the answer faithfully lists the results.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 492,
+   "tokens_out": 54,
+   "ms": 19,
+   "p_correct": 1.0
+  },
+  {
+   "id": "728",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins the superhero, publisher, and colour tables, filters for Marvel Comics, and groups and orders by superhero count descending.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 746,
+   "tokens_out": 47,
+   "ms": 21,
+   "p_correct": 1.0
+  },
+  {
+   "id": "733",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly joins the superhero, colour, and publisher tables, filters on Marvel Comics and Gold eye colour according to the hint, and counts the matching superheroes.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 505,
+   "tokens_out": 53,
+   "ms": 18,
+   "p_correct": 1.0
+  },
+  {
+   "id": "738",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly filters superheroes by Durability attribute value less than 50 as guided by the hint.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 913,
+   "tokens_out": 107,
+   "ms": 22,
+   "p_correct": 1.0
+  },
+  {
+   "id": "743",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly follows the hint to calculate the percentage of 'Bad' superheroes and the count of those published by Marvel Comics.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 682,
+   "tokens_out": 45,
+   "ms": 20,
+   "p_correct": 1.0
+  },
+  {
+   "id": "765",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query accurately follows the provided hint and correctly counts the distinct heroes with the 'stealth' power.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 433,
+   "tokens_out": 41,
+   "ms": 15,
+   "p_correct": 1.0
+  },
+  {
+   "id": "766",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query accurately retrieves the full names of all heroes who possess the maximum strength attribute value according to the schema and hint.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 777,
+   "tokens_out": 44,
+   "ms": 20,
+   "p_correct": 1.0
+  },
+  {
+   "id": "773",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query accurately joins the superhero and publisher tables, filters for identical eye, hair, and skin colour IDs according to the hint, and outputs the requested superhero and publisher names.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1163,
+   "tokens_out": 56,
+   "ms": 24,
+   "p_correct": 1.0
+  },
+  {
+   "id": "775",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query accurately calculates the percentage of female superheroes with blue skin colour out of all female superheroes, exactly adhering to the hint.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 591,
+   "tokens_out": 45,
+   "ms": 9,
+   "p_correct": 1.0
+  },
+  {
+   "id": "791",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query accurately follows the provided formula in the hint to calculate the average height across all superheroes.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 459,
+   "tokens_out": 100,
+   "ms": 13,
+   "p_correct": 1.0
+  },
+  {
+   "id": "796",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins the superhero, hero_attribute, and attribute tables to retrieve all attribute names and their corresponding values for '3-D Man'.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 570,
+   "tokens_out": 50,
+   "ms": 13,
+   "p_correct": 1.0
+  },
+  {
+   "id": "798",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly retrieves the publisher names for each requested superhero and the answer accurately lists them.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 507,
+   "tokens_out": 38,
+   "ms": 18,
+   "p_correct": 1.0
+  },
+  {
+   "id": "806",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query accurately joins the superhero table with the colour table on eye_colour_id to find the eye colour of Karen Beecher-Duncan, and the answer reflects the result correctly.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 452,
+   "tokens_out": 57,
+   "ms": 12,
+   "p_correct": 1.0
+  },
+  {
+   "id": "847",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly identifies the driver with the minimum lap time in Q2 for race 19 by parsing the time strings and returning the driver's surname.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 752,
+   "tokens_out": 52,
+   "ms": 20,
+   "p_correct": 1.0
+  },
+  {
+   "id": "854",
+   "text": "```json\n{\"p_correct\": 0.8, \"reason\":",
+   "served_model": "gemini-3.8-flash",
+   "endpoint": "local_router",
+   "tokens_in": 874,
+   "tokens_out": 396,
+   "ms": 7308,
+   "p_correct": 0.8
+  },
+  {
+   "id": "879",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly finds the maximum fastest lap speed cast to real, retrieves the corresponding driver's nationality, and accurately answers the question.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 704,
+   "tokens_out": 48,
+   "ms": 21,
+   "p_correct": 1.0
+  },
+  {
+   "id": "906",
+   "text": "```json\n{\"p_correct\": 0.0, \"reason\": \"Lewis Hamilton's debut race in 2007 was the Australian Grand Prix (round 1), not the Malaysian Grand Prix (round 2).\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1033,
+   "tokens_out": 52,
+   "ms": 23,
+   "p_correct": 0.0
+  },
+  {
+   "id": "912",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly retrieves the circuitRef for Marina Bay Street Circuit, and the answer accurately states it.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 617,
+   "tokens_out": 41,
+   "ms": 22,
+   "p_correct": 1.0
+  },
+  {
+   "id": "915",
+   "text": "```json\n{\"p_correct\": 0.0, \"reason\": \"The query already ordered drivers by date of birth ascending, making the first row (French) the nationality of the oldest driver, but the answer incorrectly refused to answer.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 705,
+   "tokens_out": 53,
+   "ms": 22,
+   "p_correct": 0.0
+  },
+  {
+   "id": "963",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query accurately filters French drivers with lap times under 2 minutes (120 seconds) from the laptimes table and counts the distinct drivers.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 688,
+   "tokens_out": 51,
+   "ms": 19,
+   "p_correct": 1.0
+  },
+  {
+   "id": "990",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins races, results, and constructors to find the winning constructor reference name and URL for the 2009 Singapore Grand Prix.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 762,
+   "tokens_out": 50,
+   "ms": 24,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1002",
+   "text": "```json\n{\"p_correct\": 0.8, \"reason\": \"Lance Stroll's first race was actually the 2017 Australian Grand Prix (round 1), but sorting by date might have had issues or Australian GP date was tied/missing, leading to Chinese GP (round 2).\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 834,
+   "tokens_out": 69,
+   "ms": 19,
+   "p_correct": 0.8
+  },
+  {
+   "id": "1011",
+   "text": "```json\n{\"p_correct\": 0.0, \"reason\": \"The query incorrectly interprets 'top 20 driver' as 'drivers.number <= 20' (the driver's permanent car racing number) rather than ranking drivers by standings/points or filtering by a finishing position.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 778,
+   "tokens_out": 66,
+   "ms": 22,
+   "p_correct": 0.0
+  },
+  {
+   "id": "1029",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly identifies the top 4 teams with the highest buildUpPlaySpeed using MAX(buildupplayspeed) as guided by the hint, and the answer accurately presents the results.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1606,
+   "tokens_out": 61,
+   "ms": 22,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1031",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins the player and player_attributes tables, filters for sprint speed >= 97 and dates between 2013 and 2015, and calculates the player's current age accurately.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1662,
+   "tokens_out": 65,
+   "ms": 21,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1036",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query accurately calculates the overall average build-up play passing for 2012 and filters teams whose 2012 build-up play passing exceeds that average.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1955,
+   "tokens_out": 56,
+   "ms": 24,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1048",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query accurately filters for player Gabriel Tamas in the year 2011 and retrieves the overall rating correctly.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1541,
+   "tokens_out": 45,
+   "ms": 17,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1057",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins the match and country tables, filters by Poland and the 2010/2011 season, and calculates the average home team goals.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1578,
+   "tokens_out": 55,
+   "ms": 19,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1088",
+   "text": "```json\n{\"p_correct\": 0.0, \"reason\": \"The model incorrectly refused to answer, failing to realize that the SQL query had already applied the requested filters for volleys and dribbling scores over 70.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1631,
+   "tokens_out": 127,
+   "ms": 21,
+   "p_correct": 0.0
+  },
+  {
+   "id": "1096",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins the player and player_attributes tables to compute the average overall rating for Pietro Marino.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1507,
+   "tokens_out": 41,
+   "ms": 31,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1102",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins the player and player_attributes tables, filters for overall_rating = 77 on the specified date, sorts by birthday ascending to find the oldest player, and retrieves the player's name.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1542,
+   "tokens_out": 64,
+   "ms": 15,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1107",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly finds the dates when Kevin Constant had his maximum crossing score ordered chronologically, and the answer identifies the first date.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1651,
+   "tokens_out": 46,
+   "ms": 13,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1116",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly retrieves the player(s) with the maximum height matching rank 1 as specified in the hint.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1451,
+   "tokens_out": 43,
+   "ms": 16,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1134",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins the player_attributes table for IDs 6 and 23 as specified in the hint and computes the difference in their jumping scores.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 1501,
+   "tokens_out": 230,
+   "ms": 19,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1152",
+   "text": "```json\n{\"p_correct\": 0.8, \"reason\": \"The SQL computed outpatient-to-inpatient ratio (outpatient/inpatient) matching the question text, but the textual answer erroneously described the result as inpatient-to-outpatient.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 627,
+   "tokens_out": 58,
+   "ms": 8,
+   "p_correct": 0.8
+  },
+  {
+   "id": "1157",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query accurately joins the patient and examination tables, filters by severe thrombosis (thrombosis = 2), and retrieves the requested columns.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 611,
+   "tokens_out": 48,
+   "ms": 19,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1162",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query accurately applies all conditions specified in the question and hint to filter and count the target female patients.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 586,
+   "tokens_out": 42,
+   "ms": 9,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1164",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query accurately filters for examinations with thrombosis = 1 in the year 1997 for female patients and counts the distinct patients.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 634,
+   "tokens_out": 48,
+   "ms": 21,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1169",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly implements the logic requested in the question and hint, dividing the distinct count of male patients with UA <= 8.0 by female patients with UA <= 6.5.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 728,
+   "tokens_out": 59,
+   "ms": 20,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1171",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins patient and examination, filters for examinations between 1990 and 1993, calculates the patient age at examination to ensure they were underage (< 18), and counts distinct patient IDs.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 602,
+   "tokens_out": 66,
+   "ms": 15,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1239",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query accurately follows the user prompt and hints, filtering for HCT >= 52 and COUNT(l.id) > 2, and correctly computing the patient's age.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 663,
+   "tokens_out": 152,
+   "ms": 15,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1254",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query accurately applies the filters specified in the question and hint, joining the patient and laboratory tables and counting distinct patients.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 646,
+   "tokens_out": 44,
+   "ms": 17,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1256",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query accurately joins the patient and laboratory tables, applies the correct filter conditions based on the question and hint, counts distinct patient IDs, and reports the correct count.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 543,
+   "tokens_out": 53,
+   "ms": 19,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1267",
+   "text": "```json\n{\"p_correct\": 0.0, \"reason\": \"The hint explicitly notes that SM values in the table are encoded as 'negative' for '-' and '0' for '+-', but the query filtered for literal '-' and '+-', returning 0 rows incorrectly.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 587,
+   "tokens_out": 61,
+   "ms": 20,
+   "p_correct": 0.0
+  },
+  {
+   "id": "1371",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins the event and attendance tables to count distinct members attending 'Women''s Soccer'.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 502,
+   "tokens_out": 40,
+   "ms": 20,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1376",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query accurately calculates the spend-to-budget ratio for closed events by aggregating spent and amount, ordering in descending order, and selecting the top event.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 639,
+   "tokens_out": 51,
+   "ms": 22,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1389",
+   "text": "```json\n{\"p_correct\": 0.0, \"reason\": \"The system failed to answer the question despite the SQL result containing the events with the minimum expense cost.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 612,
+   "tokens_out": 40,
+   "ms": 21,
+   "p_correct": 0.0
+  },
+  {
+   "id": "1401",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL correctly joins expense, budget, and event tables to filter for 'Posters' and 'September Speaker' and returns the accurate cost.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 553,
+   "tokens_out": 49,
+   "ms": 21,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1410",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query accurately retrieves the full name and sums the incurred expense costs for the specified member ID.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 583,
+   "tokens_out": 39,
+   "ms": 21,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1411",
+   "text": "```json\n{\"p_correct\": 0.8, \"reason\": \"The SQL query correctly retrieves the expense descriptions for Sacha Harrison, though the natural language answer includes 'Bakery - Donuts, muffins' which does not appear in the first 10 rows of the SQL result.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 574,
+   "tokens_out": 63,
+   "ms": 7,
+   "p_correct": 0.8
+  },
+  {
+   "id": "1426",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly joins the member and major tables, filters for 'Environmental Engineering', and selects the requested attributes.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 569,
+   "tokens_out": 43,
+   "ms": 20,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1498",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly selects the maximum consumption from the yearmonth table for the year 2012 by substring matching the date column.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 396,
+   "tokens_out": 47,
+   "ms": 32,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1501",
+   "text": "```json\n{\"p_correct\": 0.2, \"reason\": \"The query filters by the customer's presence in the yearmonth table for June 2013 instead of checking the actual transaction date in transactions_1k.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 437,
+   "tokens_out": 231,
+   "ms": 28,
+   "p_correct": 0.2
+  },
+  {
+   "id": "1509",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins transactions with gas stations, filters for Czech Republic ('CZE') and dates after '2012-01-01', and counts the resulting records.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 452,
+   "tokens_out": 58,
+   "ms": 21,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1514",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly joins transactions and customers on the specified timestamp to find the currency paid by the customer.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 408,
+   "tokens_out": 40,
+   "ms": 23,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1521",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly joins the transactions and gasstations tables, filters by country 'CZE' and the specified date and time interval, and properly counts the matching transactions.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 555,
+   "tokens_out": 54,
+   "ms": 19,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1525",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The SQL query correctly finds distinct customers with transactions on 2012-08-25, joins with the customers table to check currency, and computes the percentage who use EUR.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 479,
+   "tokens_out": 59,
+   "ms": 20,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1526",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly identifies the customer based on transaction date and price, and computes the consumption decrease rate between 2012 and 2013 as defined in the hint.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 628,
+   "tokens_out": 57,
+   "ms": 22,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1528",
+   "text": "```json\n{\"p_correct\": 1.0, \"reason\": \"The query correctly calculates the percentage of gas stations with the 'premium' segment in Slovakia (country 'SVK').\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 382,
+   "tokens_out": 43,
+   "ms": 17,
+   "p_correct": 1.0
+  },
+  {
+   "id": "1529",
+   "text": "```json\n{\"p_correct\": 0.8, \"reason\": \"The query answers both parts of the question using appropriate tables (transactions_1k for total price spent at gas stations, and yearmonth for January 2012 consumption as indicated by the hint), though `transactions_1k` is only a sample table.\"}\n```",
+   "served_model": "gemini",
+   "endpoint": "local_router",
+   "tokens_in": 526,
+   "tokens_out": 74,
+   "ms": 16,
+   "p_correct": 0.8
+  }
+ ]
+}

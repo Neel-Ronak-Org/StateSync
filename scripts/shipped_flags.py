@@ -98,8 +98,23 @@ SHIPPED_DEFAULTS: dict[tuple[str, str], str] = {
     ("pipeline", "doc_scope"): "all",
     ("pipeline", "doc_abstain"): "off",
     # RAG v3 (docs/specs/rag_v3.md): cross-encoder re-ranking and search-query rewriting, both off.
-    ("pipeline", "rerank"): "off",
+    ("pipeline", "repair_loop"): "off",   # the study's RQ4 loop; on only in measurement runs
+    ("pipeline", "sql_row_cap"): "prompt",       # study fix F1; "executor" only in measurement runs until measured
+    ("pipeline", "grounding_version"): "v1",     # study fix F3; "v2" only in measurement runs until measured
+    ("pipeline", "self_consistency_k"): "0",     # the study's baseline; measurement runs only
+    ("pipeline", "rerank"): "bge",   # owner decision 2026-10-03 (docs/eval/rag_v3_report.md)
     ("pipeline", "query_rewrite"): "off",
+    # Part D v3 (docs/specs/routing_docs_fixes.md F-D, F-T): the writer's passage order and titles.
+    ("pipeline", "front_door"): "off",         # Part D v3 T4a: the one-call front door (llm) or Jev (jev)
+    ("pipeline", "debug_hooks"): "off",        # T4a: debug_route_only / debug_history, evaluation only
+    ("pipeline", "hybrid_entities"): "off",    # T5: the hybrid documents half narrowed by the SQL half's entities
+    ("pipeline", "context_carry"): "off",      # T4d: multi-turn context with no extra LLM call
+    ("pipeline", "sql_no_data"): "off",        # Part D v3 F-S1: the SQL agent may say the data is not here
+    ("pipeline", "plain_failures"): "off",     # F-S3, F-S4: plain-words failures and zero rows
+    ("pipeline", "route_recovery"): "off",     # F-RR: a SQL route with no data falls back to documents
+    ("pipeline", "passage_order"): "document",
+    ("pipeline", "passage_titles"): "off",
+    ("pipeline", "rerank_titles"): "off",
     # RAG v2 (docs/specs/rag_v2.md): how an upload is cut into chunks. "paragraph" is
     # today's flat-page chunker; "layout" cuts by heading and keeps tables whole.
     ("library", "chunker"): "paragraph",
@@ -126,30 +141,36 @@ def _statesync_value(section: str, key: str) -> str | None:
 
 
 def read_flag_state(flags_text: str | None = None) -> dict[str, str | None]:
-    """Parse the guarded flags out of flags.toml. A key that cannot be found
-    reads as None, which never equals an expected value, so a parse failure
-    fails the guard rather than silently passing it.
+    """The guarded flags of flags.toml, as strings: a quoted string unquoted, a boolean as
+    "true"/"false", an integer as its digits (self_consistency_k). A key that cannot be found reads
+    as None, which never equals an expected value, and so does every key of a file that does not
+    parse: a parse failure fails the guard rather than silently passing it.
 
-    The value alternation (true|false|quoted-string) covers both flag shapes
-    in SHIPPED_DEFAULTS. The skip-group changed from `?` to `*` (audit 001
-    F-001-1) so a key can sit behind more than one comment line before it --
-    `schema_retriever.target_schema` has five; the four boolean flags this
-    guarded before all have zero, so their match is unchanged."""
+    Parsed with tomllib (2026-10-06). It was a regex whose lazy skip group backtracked
+    exponentially once lines followed the guarded keys in [pipeline] (T4a's tests hung on it); the
+    values it returned are unchanged (checked on every flags file in the repo)."""
+    import tomllib
     if flags_text is None:
         flags_text = FLAGS_PATH.read_text()
+    try:
+        parsed: dict | None = tomllib.loads(flags_text)
+    except tomllib.TOMLDecodeError:
+        parsed = None
     state: dict[str, str | None] = {}
     for section, key in SHIPPED_DEFAULTS:
         if section in STATESYNC_SECTIONS:
             state[f"{section}.{key}"] = _statesync_value(section, key)
             continue
-        pattern = (rf"\[{re.escape(section)}\]\s*\n(?:[^\[]*?\n)*\s*"
-                   rf"{re.escape(key)}\s*=\s*(true|false|\"[^\"]*\")")
-        m = re.search(pattern, flags_text)
-        if m is None:
-            state[f"{section}.{key}"] = None
+        node: object = parsed
+        for part in section.split("."):
+            node = node.get(part) if isinstance(node, dict) else None
+        value = node.get(key) if isinstance(node, dict) else None
+        if isinstance(value, bool):
+            state[f"{section}.{key}"] = str(value).lower()
+        elif isinstance(value, (str, int)):
+            state[f"{section}.{key}"] = str(value)
         else:
-            val = m.group(1)
-            state[f"{section}.{key}"] = val[1:-1] if val.startswith('"') else val
+            state[f"{section}.{key}"] = None
     return state
 
 

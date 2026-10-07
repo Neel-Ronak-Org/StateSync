@@ -1,0 +1,181 @@
+{
+ "scores": "docs/eval/bird_scores_heldout_gpt5mini_repeat_v2_corrected.json",
+ "label": "heldout_gpt5mini_repeat",
+ "n": 50,
+ "wrong": 7,
+ "accuracy": 0.86,
+ "judges": [],
+ "signals": {
+  "fanout_retry": {
+   "flagged": 0,
+   "caught": 0,
+   "precision": null,
+   "recall": 0.0,
+   "false_alarm_rate": 0.0,
+   "auroc": 0.5
+  },
+  "truncation": {
+   "flagged": 0,
+   "caught": 0,
+   "precision": null,
+   "recall": 0.0,
+   "false_alarm_rate": 0.0,
+   "auroc": 0.5
+  },
+  "null_heavy": {
+   "flagged": 0,
+   "caught": 0,
+   "precision": null,
+   "recall": 0.0,
+   "false_alarm_rate": 0.0,
+   "auroc": 0.5
+  },
+  "grounding_before_repair": {
+   "flagged": 0,
+   "caught": 0,
+   "precision": null,
+   "recall": 0.0,
+   "false_alarm_rate": 0.0,
+   "auroc": 0.5
+  },
+  "any_data_check": {
+   "flagged": 0,
+   "caught": 0,
+   "precision": null,
+   "recall": 0.0,
+   "false_alarm_rate": 0.0,
+   "auroc": 0.5
+  },
+  "no_sql": {
+   "flagged": 1,
+   "caught": 1,
+   "precision": 1.0,
+   "recall": 0.1429,
+   "false_alarm_rate": 0.0,
+   "auroc": 0.5714
+  },
+  "empty_result": {
+   "flagged": 0,
+   "caught": 0,
+   "precision": null,
+   "recall": 0.0,
+   "false_alarm_rate": 0.0,
+   "auroc": 0.5
+  },
+  "any_sql_retry": {
+   "flagged": 2,
+   "caught": 1,
+   "precision": 0.5,
+   "recall": 0.1429,
+   "false_alarm_rate": 0.0233,
+   "auroc": 0.5598
+  },
+  "refusal": {
+   "flagged": 1,
+   "caught": 0,
+   "precision": 0.0,
+   "recall": 0.0,
+   "false_alarm_rate": 0.0233,
+   "auroc": 0.4884
+  }
+ },
+ "matched_k": {},
+ "risk_coverage": {},
+ "tests": {
+  "H3": {
+   "false_alarms": 0,
+   "of": 33,
+   "rate": 0.0,
+   "upper_95": 0.0868,
+   "p_one_sided": 0.184
+  },
+  "H4": {
+   "triggered": 0,
+   "labelled": 37,
+   "fixed": 0,
+   "broken": 0,
+   "accuracy_gain": 0.0,
+   "status": "untestable: 0 repairs triggered (precondition 10)"
+  }
+ },
+ "holm": {
+  "pvalues": {
+   "H3": 0.184
+  },
+  "rejected": {
+   "H3": false
+  }
+ },
+ "run_to_run": {
+  "first_run": "docs/eval/bird_scores_heldout_gpt5mini_v2_corrected.json",
+  "questions": 50,
+  "labels": {
+   "correct": {
+    "n": 50,
+    "flips": 5,
+    "rate": 0.1,
+    "right_to_wrong": 1,
+    "wrong_to_right": 4,
+    "accuracy_first": 0.8,
+    "accuracy_second": 0.86
+   },
+   "correct_strict": {
+    "n": 50,
+    "flips": 5,
+    "rate": 0.1
+   },
+   "answer_correct_before": {
+    "n": 37,
+    "flips": 3,
+    "rate": 0.0811
+   }
+  },
+  "signals": {
+   "fanout_retry": {
+    "n": 50,
+    "flips": 0,
+    "rate": 0.0
+   },
+   "truncation": {
+    "n": 50,
+    "flips": 0,
+    "rate": 0.0
+   },
+   "null_heavy": {
+    "n": 50,
+    "flips": 0,
+    "rate": 0.0
+   },
+   "grounding_before_repair": {
+    "n": 50,
+    "flips": 1,
+    "rate": 0.02
+   },
+   "any_data_check": {
+    "n": 50,
+    "flips": 1,
+    "rate": 0.02
+   },
+   "no_sql": {
+    "n": 50,
+    "flips": 1,
+    "rate": 0.02
+   },
+   "empty_result": {
+    "n": 50,
+    "flips": 1,
+    "rate": 0.02
+   },
+   "any_sql_retry": {
+    "n": 50,
+    "flips": 2,
+    "rate": 0.04
+   },
+   "refusal": {
+    "n": 50,
+    "flips": 1,
+    "rate": 0.02
+   }
+  }
+ }
+}

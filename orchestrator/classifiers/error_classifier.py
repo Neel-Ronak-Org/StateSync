@@ -2,7 +2,7 @@
 orchestrator/classifiers/error_classifier.py
 A3 -- deterministic, non-LLM error classifier (D14 hook).
 
-Loads config/error_taxonomy.json. Maps (sqlstate, message, empty_result) to
+Loads config/error_taxonomy.json (after error_taxonomy_overrides.json's rules). Maps (sqlstate, message, empty_result) to
 (ErrorCategory, remediation_hint). Runs before anything is written to
 state.errors -- a raw engine string never enters state unclassified;
 "unclassified" is itself a classification and carries the fallback hint.
@@ -30,7 +30,10 @@ _TAXONOMY_FILENAME = "error_taxonomy.json"
 # ("do not guess at a repair"). This pair is a Strategy-level decision (A3
 # prose), not a per-category rule, so it lives here rather than in the
 # taxonomy file's data.
-TERMINAL_CATEGORIES: frozenset[str] = frozenset({"permission_denied", "unclassified"})
+# no_data_source (routing_docs_fixes.md F-S2) is terminal too: the query read no table because the
+# database does not hold what was asked, and a retry only produces another constant or a guess at an
+# unrelated table. It is the signal for route recovery, not for a SQL repair.
+TERMINAL_CATEGORIES: frozenset[str] = frozenset({"permission_denied", "no_data_source", "unclassified"})
 
 
 def _taxonomy_path() -> Path:
@@ -47,10 +50,23 @@ def _taxonomy_path() -> Path:
     )
 
 
-@lru_cache(maxsize=1)
-def _load_taxonomy() -> dict[str, Any]:
-    with open(_taxonomy_path()) as f:
-        return json.load(f)
+# Rules only this code reads, checked before error_taxonomy.json's own (routing_docs_fixes.md F-S2). They
+# live in their own file because the shared MCP and orchestrator images read error_taxonomy.json live
+# from the mounted config directory, and images built before 2026-10-05 cannot represent the categories
+# these rules add. Merge them into error_taxonomy.json once both shared images are rebuilt.
+_OVERRIDES_FILENAME = "error_taxonomy_overrides.json"
+
+
+@lru_cache(maxsize=2)  # noqa: literals - the two cache keys: with and without the overrides
+def _load_taxonomy(use_overrides: bool = True) -> dict[str, Any]:
+    path = _taxonomy_path()
+    with open(path) as f:
+        taxonomy = json.load(f)
+    overrides = path.with_name(_OVERRIDES_FILENAME)
+    if use_overrides and overrides.is_file():
+        with open(overrides) as f:
+            taxonomy = {**taxonomy, "rules": json.load(f)["rules"] + taxonomy["rules"]}
+    return taxonomy
 
 
 def classify_error(
@@ -58,6 +74,7 @@ def classify_error(
     sqlstate: str | None,
     message: str | None,
     empty_result: bool = False,
+    use_overrides: bool = True,
 ) -> tuple[str, str]:
     """
     Classify an engine failure, or an empty-but-ok: true result, per A3.
@@ -69,12 +86,15 @@ def classify_error(
                       empty/None) when classifying an empty_result.
         empty_result: True when the caller is classifying an ok: true
                       response with zero rows, not an engine failure.
+        use_overrides: False skips error_taxonomy_overrides.json, giving the
+                      label the base taxonomy alone gave before F-S2
+                      ([pipeline] sql_no_data = "off").
 
     Returns:
         (category, remediation_hint) -- hint is the taxonomy's verbatim
         text, never LLM-generated (A3, C2-V1 condition 2).
     """
-    taxonomy = _load_taxonomy()
+    taxonomy = _load_taxonomy(use_overrides)
     message = message or ""
 
     for rule in taxonomy["rules"]:
@@ -91,3 +111,13 @@ def classify_error(
 
     fallback = taxonomy["fallback"]
     return fallback["category"], fallback["hint"]
+
+
+def category_hint(category: str) -> str:
+    """The taxonomy's hint for a category: the first rule (overrides first) that names it, else the
+    fallback's. Read from data, so a caller never copies a hint's text (A3)."""
+    taxonomy = _load_taxonomy(True)
+    for rule in taxonomy["rules"]:
+        if rule["category"] == category:
+            return rule["hint"]
+    return taxonomy["fallback"]["hint"]

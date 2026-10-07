@@ -1,0 +1,1528 @@
+{
+ "seed": 20261006,
+ "n": 150,
+ "summary": {
+  "questions_in_both": 150,
+  "accuracy": {
+   "off": 0.76,
+   "on": 0.7267
+  },
+  "paired": {
+   "on_only_correct": 6,
+   "off_only_correct": 11,
+   "p_mcnemar": 0.3323
+  },
+  "false_not_answerable": {
+   "on": 2,
+   "off": 0
+  },
+  "bar": "false NOT_ANSWERABLE <= 1% of questions; no significant accuracy drop",
+  "false_not_answerable_rate_on": 0.0133
+ },
+ "per_question": {
+  "off": {
+   "5": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "12": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "23": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "24": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "25": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "39": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "47": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "50": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "72": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "85": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "87": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "93": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "100": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "117": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "118": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "128": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "129": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "136": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "138": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "149": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "152": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "169": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "173": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "186": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "195": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "201": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "207": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "215": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "218": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "220": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "227": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "228": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "230": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "239": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "243": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "244": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "247": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "255": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "282": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "344": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "349": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "356": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "358": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "383": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "405": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "407": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "416": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "465": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "468": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "473": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "474": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "484": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "522": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "528": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "531": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "537": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "539": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "547": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "555": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "572": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "573": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "598": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "669": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "671": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "672": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "685": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "705": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "716": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "737": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "745": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "772": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "782": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "785": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "797": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "801": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "857": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "862": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "872": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "875": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "881": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "884": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "892": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "901": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "909": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "928": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "937": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "948": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "950": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "954": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "959": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "960": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "962": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "971": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "989": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "994": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1001": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1014": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1025": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1028": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1030": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1032": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1037": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1042": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1044": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1084": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1092": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1094": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1105": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1113": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1115": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1135": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1139": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1141": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1147": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1150": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1153": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1155": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1156": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1175": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1179": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1209": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": false
+   },
+   "1232": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1242": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1270": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1275": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1302": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1322": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1323": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1344": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1346": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1352": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1359": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1362": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1368": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1380": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1390": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1392": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1403": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1427": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1435": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1457": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1472": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1479": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1490": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1500": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1506": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1524": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1531": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1533": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1247": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   }
+  },
+  "on": {
+   "5": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "12": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "23": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "24": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "25": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "39": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "47": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "50": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "72": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "85": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "87": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "93": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "100": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "117": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "118": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "128": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "129": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "136": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "138": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "149": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "152": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "169": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "173": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "186": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "195": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "201": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "207": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "215": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "218": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "220": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "227": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "228": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "230": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "239": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "243": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "244": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "247": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "255": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "282": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "344": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "349": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "356": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "358": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "383": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "405": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "407": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "416": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "465": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "468": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "473": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "474": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "484": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "522": {
+    "correct": false,
+    "not_answerable": true,
+    "ran": false
+   },
+   "528": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "531": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "537": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "539": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "547": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "555": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "572": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "573": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "598": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "669": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "671": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "672": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "685": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "705": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "716": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "737": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "745": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "772": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "782": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "785": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "797": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "801": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "857": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "862": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "872": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "875": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "881": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "884": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "892": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "901": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "909": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "928": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "937": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "948": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "950": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "954": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "959": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "960": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "962": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "971": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "989": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "994": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1001": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1014": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1025": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1028": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1030": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1032": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1037": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1042": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1044": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1084": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1092": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1094": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1105": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1113": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1115": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1135": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1139": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1141": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1147": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1150": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1153": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1155": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1156": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1175": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1179": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1209": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": false
+   },
+   "1232": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1242": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1247": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1270": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1275": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1302": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1323": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1344": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1346": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1352": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1359": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1362": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1368": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1380": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1390": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1392": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1403": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1427": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1435": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1457": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1472": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1479": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1490": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1500": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1506": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   },
+   "1524": {
+    "correct": false,
+    "not_answerable": true,
+    "ran": false
+   },
+   "1531": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": false
+   },
+   "1533": {
+    "correct": false,
+    "not_answerable": false,
+    "ran": false
+   },
+   "1322": {
+    "correct": true,
+    "not_answerable": false,
+    "ran": true
+   }
+  }
+ }
+}

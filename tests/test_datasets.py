@@ -2,10 +2,10 @@
 tests/test_datasets.py
 Which code runs for which kind of dataset (orchestrator/datasets.py).
 
-WHY THIS EXISTS. The built-in datasets were measured with the ONDC framing
-and the DIGIPIN resolver on; that must not change (synthetic_schemas ships as
-all three). An owner's own database must get neither, and, with no uploaded
-documents, must not spend a router call whose prompt describes ONDC tables.
+WHY THIS EXISTS. The ONDC sample (public) was measured with the ONDC framing and the DIGIPIN
+resolver on; that must not change. Every other dataset gets a neutral framing (profiles.py), and
+an owner's own database, with no uploaded documents, must not spend a router call whose prompt
+describes ONDC tables.
 """
 
 from __future__ import annotations
@@ -26,16 +26,22 @@ from nodes import supervisor as supervisor_mod  # noqa: E402
 OWN = "cn_0123456789abcdef"
 
 
-def test_the_built_in_datasets_keep_the_synthetic_handling():
-    for name in ("public", "olist", "live"):
-        assert datasets.synthetic_features(name)
-        assert datasets.frame_prompt(sql_agent._SYSTEM_PROMPT, name) == sql_agent._SYSTEM_PROMPT
+def test_the_ondc_sample_keeps_its_sql_framing():
+    for template in (sql_agent._SYSTEM_PROMPT, sql_agent._CORRECTION_SYSTEM_PROMPT):
+        assert sql_agent.sql_system_prompt(template, 1000, "public", {}) == template.format(max_rows=1000)
+
+
+def test_olist_and_live_get_the_neutral_sql_framing():
+    for name in ("olist", "live"):
+        for prompt in (sql_agent._SYSTEM_PROMPT, sql_agent._CORRECTION_SYSTEM_PROMPT):
+            framed = sql_agent.sql_system_prompt(prompt, 1000, name, {})
+            assert "ONDC" not in framed and "business analytics system over a PostgreSQL database" in framed
 
 
 def test_an_own_database_gets_a_neutral_framing_in_every_sql_prompt():
-    assert not datasets.synthetic_features(OWN) and datasets.is_connection_dataset(OWN)
+    assert datasets.is_connection_dataset(OWN)
     for prompt in (sql_agent._SYSTEM_PROMPT, sql_agent._CORRECTION_SYSTEM_PROMPT):
-        framed = datasets.frame_prompt(prompt, OWN)
+        framed = sql_agent.sql_system_prompt(prompt, 1000, OWN, {})
         assert "ONDC" not in framed and "owner's own PostgreSQL database" in framed
 
 

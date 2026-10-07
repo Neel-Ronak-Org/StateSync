@@ -1,0 +1,394 @@
+{
+ "purpose": "Protocol v2 change 16: the normaliser prompt on 20 dev (pilot) questions through qwen3.8-27b on Groq direct and on Cheaper Inference (qwen-3-8-27b, thinking off). Compares what the pipeline keeps: the language gate and the preserved entities after the substring filter. 2026-10-05.",
+ "groq": [
+  {
+   "id": 17,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 63,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"Rank schools by their average score in Writing where the score is greater than 499, s"
+  },
+  {
+   "id": 28,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 124,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"Consider the average difference between K-12 enrollment and 15-17 enrollment of schoo"
+  },
+  {
+   "id": 37,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 64,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"What is the complete address of the school with the lowest excellence rate? Indicate "
+  },
+  {
+   "id": 40,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [
+    "Fresno Unified"
+   ],
+   "tokens_out": 68,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n\"detected_language\": \"en\",\n\"confidence\": 1.0,\n\"normalized_query\": \"What is the telephone number for the school with the lowest average score in reading in Fre"
+  },
+  {
+   "id": 46,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 60,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"Which state special schools have the highest number of enrollees from grades 1 throug"
+  },
+  {
+   "id": 62,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [
+    "Los Angeles"
+   ],
+   "tokens_out": 95,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"What is the total number of non-chartered schools in the county of Los Angeles with a"
+  },
+  {
+   "id": 77,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [
+    "Los Angeles"
+   ],
+   "tokens_out": 85,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n\"detected_language\": \"en\",\n\"confidence\": 1.0,\n\"normalized_query\": \"Which schools served a grade span of Kindergarten to 9th grade in the county of Los Angeles"
+  },
+  {
+   "id": 82,
+   "error": "RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01m39gk72ceqzbqaf53m9ddskp` service tier `on_demand` on tokens per day (TPD): Limit 200000"
+  },
+  {
+   "id": 83,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 140,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"Of the schools that offers a magnet program serving a grade span of Kindergarten to 8"
+  },
+  {
+   "id": 99,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 75,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"Among the accounts who have loan validity more than 12 months, list out the accounts "
+  },
+  {
+   "id": 112,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 62,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n\"detected_language\": \"en\",\n\"confidence\": 1.0,\n\"normalized_query\": \"For the female client who was born in 1976/1/29, which district did she opened her account?"
+  },
+  {
+   "id": 115,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 60,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n\"detected_language\": \"en\",\n\"confidence\": 1.0,\n\"normalized_query\": \"For the branch which located in the south Bohemia with biggest number of inhabitants, what "
+  },
+  {
+   "id": 145,
+   "error": "RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01m39gk72ceqzbqaf53m9ddskp` service tier `on_demand` on tokens per day (TPD): Limit 200000"
+  },
+  {
+   "id": 189,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 55,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"Name the account numbers of female clients who are oldest and have lowest average sal"
+  },
+  {
+   "id": 192,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 59,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"What is the average amount of loan which are still on running contract with statement"
+  },
+  {
+   "id": 206,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [
+    "TR004_8_9"
+   ],
+   "tokens_out": 74,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n\"detected_language\": \"en\",\n\"confidence\": 1.0,\n\"normalized_query\": \"What elements are in the TR004_8_9 bond atoms?\",\n\"preserved_entities\": {\n\"TR004_8_9\": \"TR00"
+  },
+  {
+   "id": 212,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 49,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n\"detected_language\": \"en\",\n\"confidence\": 1.0,\n\"normalized_query\": \"Which element is the least numerous in non-carcinogenic molecules?\",\n\"preserved_entities\": "
+  },
+  {
+   "id": 219,
+   "error": "RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `qwen/qwen3.8-27b` in organization `org_01m39gk72ceqzbqaf53m9ddskp` service tier `on_demand` on tokens per day (TPD): Limit 200000"
+  },
+  {
+   "id": 236,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [
+    "TR001_6_9"
+   ],
+   "tokens_out": 86,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"What are the bond type and the atoms of the bond ID of TR001_6_9?\",\n  \"preserved_enti"
+  },
+  {
+   "id": 242,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 57,
+   "served": "qwen/qwen3.8-27b",
+   "raw": "{\n\"detected_language\": \"en\",\n\"confidence\": 1.0,\n\"normalized_query\": \"Among all the atoms from 21 to 25, list all the molecules that are carcinogenic.\",\n\"preserv"
+  }
+ ],
+ "cheaperinference": [
+  {
+   "id": 17,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 63,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"Rank schools by their average score in Writing where the score is greater than 499, s"
+  },
+  {
+   "id": 28,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 70,
+   "served": "qwen-3-8-27b",
+   "raw": "{\"detected_language\": \"en\", \"confidence\": 1.0, \"normalized_query\": \"Consider the average difference between K-12 enrollment and 15-17 enrollment of schools that"
+  },
+  {
+   "id": 37,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 97,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"What is the complete address of the school with the lowest excellence rate? Indicate "
+  },
+  {
+   "id": 40,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [
+    "Fresno Unified"
+   ],
+   "tokens_out": 75,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"What is the telephone number for the school with the lowest average score in reading "
+  },
+  {
+   "id": 46,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 60,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"Which state special schools have the highest number of enrollees from grades 1 throug"
+  },
+  {
+   "id": 62,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 82,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"What is the total number of non-chartered schools in the county of Los Angeles with a"
+  },
+  {
+   "id": 77,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 68,
+   "served": "qwen-3-8-27b",
+   "raw": "{\"detected_language\": \"en\", \"confidence\": 1.0, \"normalized_query\": \"Which schools served a grade span of Kindergarten to 9th grade in the county of Los Angeles "
+  },
+  {
+   "id": 82,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 53,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"What is the grade span offered in the school with the highest longitude?\",\n  \"preserv"
+  },
+  {
+   "id": 83,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 140,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"Of the schools that offers a magnet program serving a grade span of Kindergarten to 8"
+  },
+  {
+   "id": 99,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 75,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"Among the accounts who have loan validity more than 12 months, list out the accounts "
+  },
+  {
+   "id": 112,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 66,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"For the female client who was born in 1976/1/29, which district did she opened her ac"
+  },
+  {
+   "id": 115,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 64,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"For the branch which located in the south Bohemia with biggest number of inhabitants,"
+  },
+  {
+   "id": 145,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 70,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"Who are the account holder identification numbers whose who have transactions on the "
+  },
+  {
+   "id": 189,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 55,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"Name the account numbers of female clients who are oldest and have lowest average sal"
+  },
+  {
+   "id": 192,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 59,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"What is the average amount of loan which are still on running contract with statement"
+  },
+  {
+   "id": 206,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [
+    "TR004_8_9"
+   ],
+   "tokens_out": 80,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"What elements are in the TR004_8_9 bond atoms?\",\n  \"preserved_entities\": {\n    \"TR004"
+  },
+  {
+   "id": 212,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 43,
+   "served": "qwen-3-8-27b",
+   "raw": "{\"detected_language\": \"en\", \"confidence\": 1.0, \"normalized_query\": \"Which element is the least numerous in non-carcinogenic molecules?\", \"preserved_entities\": {"
+  },
+  {
+   "id": 219,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 52,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"What is the percentage of carcinogenic molecules in triple type bonds?\",\n  \"preserved"
+  },
+  {
+   "id": 236,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [
+    "TR001_6_9"
+   ],
+   "tokens_out": 86,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"What are the bond type and the atoms of the bond ID of TR001_6_9?\",\n  \"preserved_enti"
+  },
+  {
+   "id": 242,
+   "lang": "en",
+   "confidence": 1.0,
+   "entities": [],
+   "tokens_out": 61,
+   "served": "qwen-3-8-27b",
+   "raw": "{\n  \"detected_language\": \"en\",\n  \"confidence\": 1.0,\n  \"normalized_query\": \"Among all the atoms from 21 to 25, list all the molecules that are carcinogenic.\",\n  "
+  }
+ ],
+ "report": {
+  "n": 20,
+  "both_ok": 17,
+  "same_language_gate": 17,
+  "same_entities": 15,
+  "differences": [
+   {
+    "id": 62,
+    "groq": [
+     "Los Angeles"
+    ],
+    "cheaperinference": []
+   },
+   {
+    "id": 77,
+    "groq": [
+     "Los Angeles"
+    ],
+    "cheaperinference": []
+   }
+  ],
+  "max_tokens_out": {
+   "groq": 140,
+   "cheaperinference": 140
+  }
+ }
+}
