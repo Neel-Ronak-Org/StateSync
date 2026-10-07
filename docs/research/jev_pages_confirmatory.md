@@ -72,8 +72,8 @@ little). Searches: 200 of 200 in both configurations, 400 re-ranked searches, 0 
 | B bge + titles (evaluated setting) | 0.130 | 0.750 | 0.875 | 0.785 |
 | JB Jev over bge + titles | **0.545** | 0.760 | 0.895 | 0.785 |
 
-- **H-P1 (primary), JB vs B, page first: confirmed.** 0.545 vs 0.130, +85 / -2, exact McNemar p = 2.4e-23.
+- **H-P1 (primary), JB vs B, page first: confirmed.** 0.545 vs 0.130, +85 / -2, exact McNemar p = 4.9e-23.
 - H-S1, JB vs B, window: not confirmed (0.760 vs 0.750, +4 / -2, Holm p = 0.69).
-- H-S2, JD vs B, page first: confirmed (0.510 vs 0.130, +81 / -5, Holm p < 1e-17).
+- H-S2, JD vs B, page first: confirmed (0.510 vs 0.130, +81 / -5, p = 9.6e-19, Holm p < 3e-18).
 - H-S3, JD vs B, window: not significant (0.710 vs 0.750, +5 / -13, Holm p = 0.19); a difference this test cannot
   rule out, so "Jev replaces the GPU re-ranker for the writer's window" is not claimed.
