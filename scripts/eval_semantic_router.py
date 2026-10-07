@@ -10,10 +10,14 @@ embedded as the front door's search text: the question, then the previous turn's
 A predicted class becomes a route as eval_routing scores it (either -> docs).
 
     python3 scripts/eval_semantic_router.py        writes docs/eval/routing_semantic.json and prints the summary
+    python3 scripts/eval_semantic_router.py --set r2
+        rerun R2 (docs/research/paperb_reruns_prereg.md): the R2 questions, each voting over the SAME labelled
+        dev rows of the first routing set (frozen); writes docs/eval/routing_semantic_r2.json
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import subprocess
@@ -55,6 +59,11 @@ def cosine(a: list[float], b: list[float]) -> float:
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--set", choices=["routing", "r2"], default="routing")
+    args = ap.parse_args()
+    if args.set == "r2":
+        return main_r2()
     rs = json.loads(SET.read_text())
     rows = [{"key": it["id"], "text": it["question"], "class": it["class"], "acceptable": it["acceptable"],
              "split": it["split"], "kind": "item"} for it in rs["items"]]
@@ -91,6 +100,45 @@ def main() -> int:
                 "by_class": {c: f"{a}/{b}" for c, (a, b) in sorted(by.items())}}
             print(f"semantic|{split}|{kind}", json.dumps(summary[f"semantic|{split}|{kind}"]))
     OUT.write_text(json.dumps({"model": MODEL, "k": K, "summary": summary, "results": results}, indent=1) + "\n")
+    return 0
+
+
+def dev_rows() -> list[dict]:
+    rs = json.loads(SET.read_text())
+    rows = [{"key": it["id"], "text": it["question"], "class": it["class"]} for it in rs["items"] if it["split"] == "dev"]
+    for conv in rs["conversations"]:
+        if conv["split"] != "dev":
+            continue
+        prev = None
+        for t in conv["turns"]:
+            rows.append({"key": f"{conv['id']}|{t['turn']}", "text": t["question"] + (f" {prev}" if prev else ""), "class": t["class"]})
+            prev = t["standalone"]
+    return rows
+
+
+def main_r2() -> int:
+    r2 = json.loads((REPO / "docs" / "eval" / "routing_set_r2.json").read_text())["items"]
+    dev = dev_rows()
+    vectors = embed([r["text"] for r in dev] + [i["question"] for i in r2])
+    dv, qv = vectors[: len(dev)], vectors[len(dev):]
+    results = {}
+    for it, v in zip(r2, qv):
+        neighbours = sorted(((cosine(v, w), d["class"]) for d, w in zip(dev, dv)), reverse=True)[:K]
+        votes = Counter(c for _, c in neighbours)
+        top = max(votes.values())
+        pred_class = next(c for _, c in neighbours if votes[c] == top)
+        route = CLASS_ROUTE[pred_class]
+        results[it["id"]] = {"gold": it["class"], "subclass": it["subclass"], "pred_class": pred_class, "route": route,
+                             "correct": route in it["acceptable"]}
+    by = defaultdict(lambda: [0, 0])
+    for x in results.values():
+        by[x["subclass"]][0] += x["correct"]
+        by[x["subclass"]][1] += 1
+    summary = {"n": len(results), "route_accuracy": round(sum(x["correct"] for x in results.values()) / len(results), 3),
+               "by_subclass": {c: f"{a}/{b}" for c, (a, b) in sorted(by.items())}}
+    print(json.dumps(summary))
+    (REPO / "docs" / "eval" / "routing_semantic_r2.json").write_text(
+        json.dumps({"model": MODEL, "k": K, "neighbours": "first routing set, dev rows", "summary": summary, "results": results}, indent=1) + "\n")
     return 0
 
 

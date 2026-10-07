@@ -95,7 +95,15 @@ asyncio.run(main())
 PAGE_SET = REPO / "docs" / "eval" / "page_set.json"     # the held-out page-finding set (scripts/build_page_set.py)
 
 
+PAGE_SET_R1 = REPO / "docs" / "eval" / "page_set_r1.json"   # rerun R1 (docs/research/paperb_reruns_prereg.md)
+ROUTING_SETUP = REPO / "docs" / "eval" / "routing_setup.json"  # the SEC database + filings workspace (no e-commerce data)
+
+
 def items_for(set_name: str, workspace: str | None) -> list[dict]:
+    if set_name == "pages_r1":
+        setup = json.loads(ROUTING_SETUP.read_text())
+        return [{"id": q["id"], "text": q["question"], "workspace": setup["workspace_id"], "dataset": setup["target_schema"]}
+                for q in json.loads(PAGE_SET_R1.read_text())["items"]]
     if set_name == "pages_heldout":
         return [{"id": q["id"], "text": q["question"], "workspace": workspace, "dataset": pd.WORKSPACE_DATASET}
                 for q in json.loads(PAGE_SET.read_text())["items"]]

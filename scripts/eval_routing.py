@@ -261,12 +261,17 @@ def main() -> int:
     r = sub.add_parser("route")
     r.add_argument("--arm", choices=sorted(ARMS), required=True)
     r.add_argument("--port", type=int, required=True)
-    r.add_argument("--split", choices=["dev", "test", "all"], default="dev")
+    r.add_argument("--split", choices=["dev", "test", "all", "r2"], default="dev")
     r.add_argument("--repeat", type=int, default=1)
     r.add_argument("--history", choices=["gold", "raw"], default="gold")
     r.add_argument("--tag", default="", help="a variant of the arm (e.g. a mounted wording), stored as <arm>+<tag>")
     sub.add_parser("report")
+    ap.add_argument("--set", choices=["routing", "r2"], default="routing",
+                    help="r2: rerun R2's fresh set (docs/eval/routing_set_r2.json, split r2) -> docs/eval/routing_runs_r2.json")
     args = ap.parse_args()
+    if args.set == "r2":
+        global SET, OUT
+        SET, OUT = REPO / "docs" / "eval" / "routing_set_r2.json", REPO / "docs" / "eval" / "routing_runs_r2.json"
     if args.cmd == "setup":
         return cmd_setup(args.port)
     if args.cmd == "route":
