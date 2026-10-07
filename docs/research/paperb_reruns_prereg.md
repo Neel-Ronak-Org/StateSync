@@ -156,3 +156,7 @@ it is.
    split into 8 concurrent batches (`build_page_set.py`, `PARALLEL`). Prompts, models, seed and sampling are
    unchanged; only the sampled outputs of a non-deterministic model differ from what the stopped run would have
    produced.
+3. **2026-10-08, R1 set (a shortfall, nothing changed).** Under the pre-registered cap of 4 pages per filing only
+   330 pages could be sampled (83 filings), not 420. The checker kept 329 (1 dropped: the page does not answer it),
+   so the first 300 kept, in sampling order, form the set as planned.
+
