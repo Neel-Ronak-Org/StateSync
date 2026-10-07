@@ -4902,59 +4902,45 @@
   }
  },
  "comparisons": {
-  "financebench|rel_off|jev vs financebench|rel_off|recorded [window]": {
-   "n": 150,
-   "wins": 28,
-   "losses": 0,
-   "p": 0.0
-  },
-  "financebench|rel_off|jev vs financebench|rel_off|recorded [page_first]": {
-   "n": 150,
-   "wins": 48,
-   "losses": 5,
-   "p": 0.0
-  },
-  "financebench|rel_off|jev vs financebench|rel_off|recorded [doc_first]": {
-   "n": 150,
-   "wins": 50,
-   "losses": 10,
-   "p": 0.0
-  },
-  "financebench|rel_bge_titles|jev vs financebench|rel_bge_titles|recorded [window]": {
-   "n": 150,
-   "wins": 10,
-   "losses": 1,
-   "p": 0.0117
-  },
-  "financebench|rel_bge_titles|jev vs financebench|rel_bge_titles|recorded [page_first]": {
+  "H-P1 JB vs B [page_first]": {
    "n": 150,
    "wins": 51,
    "losses": 6,
    "p": 0.0
   },
-  "financebench|rel_bge_titles|jev vs financebench|rel_bge_titles|recorded [doc_first]": {
+  "H-S1 JB vs B [window]": {
    "n": 150,
-   "wins": 15,
-   "losses": 9,
-   "p": 0.3075
+   "wins": 10,
+   "losses": 1,
+   "p": 0.011719,
+   "p_holm": 0.023438
   },
-  "financebench|rel_off|jev vs financebench|rel_bge_titles|recorded [window]": {
-   "n": 150,
-   "wins": 9,
-   "losses": 13,
-   "p": 0.5235
-  },
-  "financebench|rel_off|jev vs financebench|rel_bge_titles|recorded [page_first]": {
+  "H-S2 JD vs B [page_first]": {
    "n": 150,
    "wins": 47,
    "losses": 8,
+   "p": 0.0,
+   "p_holm": 0.0
+  },
+  "H-S3 JD vs B [window]": {
+   "n": 150,
+   "wins": 9,
+   "losses": 13,
+   "p": 0.523467,
+   "p_holm": 0.523467
+  },
+  "JD vs D [page_first]": {
+   "n": 150,
+   "wins": 48,
+   "losses": 5,
    "p": 0.0
   },
-  "financebench|rel_off|jev vs financebench|rel_bge_titles|recorded [doc_first]": {
+  "JD vs D [window]": {
    "n": 150,
-   "wins": 12,
-   "losses": 18,
-   "p": 0.3616
-  }
+   "wins": 28,
+   "losses": 0,
+   "p": 0.0
+  },
+  "dropped_items": 0
  }
 }
