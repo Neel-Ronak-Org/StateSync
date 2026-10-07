@@ -219,7 +219,8 @@ def r1_orders() -> tuple[dict, dict]:
     record = load()
     qs = questions()
     name_of = {d["document_id"]: d["doc_name"] for d in json.loads(pd.INGEST.read_text())["documents"] if d.get("document_id")}
-    dense, bge = runs["pages_r1|rel_off"]["results"], runs["pages_r1|rel_bge_titles"]["results"]
+    c0, c1 = configs()      # the same orders for any set (the earlier sets are re-analysed as development evidence)
+    dense, bge = runs[c0]["results"], runs[c1]["results"]
     out, excluded = {}, {"search failed": 0, "re-ranker failed": 0, "a Jev score missing": 0}
     for qid in qs:
         d, b = dense.get(qid) or {"error": "missing"}, bge.get(qid) or {"error": "missing"}

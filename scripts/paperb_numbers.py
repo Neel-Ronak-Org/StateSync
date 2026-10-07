@@ -298,6 +298,19 @@ def main() -> int:
         for tag, t in tests.items():
             N[f"rtwo{tag}W"], N[f"rtwo{tag}L"], N[f"rtwo{tag}P"] = str(t["w"]), str(t["l"]), pval(t["p"])
             N[f"rtwo{tag}Diff"], N[f"rtwo{tag}CI"] = f"{t['d']:+.1f}", f"[{t['ci'][0]:+.1f}, {t['ci'][1]:+.1f}]"
+    # ── earlier page sets re-analysed with the pre-registered R1 orders (development / superseded evidence) ──
+    import sys as _sys
+    _sys.path.insert(0, str(REPO / "scripts"))
+    import eval_jev_pages as ejp
+    for set_name, tag in (("financebench", "Fb"), ("pages_heldout", "Old")):
+        ejp.SET_NAME = set_name
+        orders, _ = ejp.r1_orders()
+        qs = ejp.questions()
+        for arm in ("D", "B", "JD", "JB"):
+            N[f"dev{tag}{arm}One"] = pct(sum(orders[q][arm][0] in qs[q]["gold"] for q in orders) / len(orders))
+        w = sum(orders[q]["JB"][0] in qs[q]["gold"] and orders[q]["B"][0] not in qs[q]["gold"] for q in orders)
+        l_ = sum(orders[q]["B"][0] in qs[q]["gold"] and orders[q]["JB"][0] not in qs[q]["gold"] for q in orders)
+        N[f"dev{tag}N"], N[f"dev{tag}W"], N[f"dev{tag}L"], N[f"dev{tag}P"] = str(len(orders)), str(w), str(l_), pval(mcnemar(w, l_))
     # ── rerun R1: page finding (only once its report exists) ──
     r1p = E / "jev_pages_r1.json"
     if r1p.exists() and "r1_summary" in json.loads(r1p.read_text()):

@@ -65,7 +65,16 @@ We evaluate Jev, zero-shot, in four such roles: (i)~detecting wrong SQL answers 
 other candidate queries; (ii)~deciding whether a database can answer a question; (iii)~routing a question between
 a database and a filing library; and (iv)~finding the page of a long filing that answers a question. For each role
 we compare it with the component it would replace, on data built for the test, with the hypotheses, measures and
-baselines committed before the data existed. \textbf{[Summary of findings: written once R1 and R2 are in.]}
+baselines committed before the data existed.
+
+The results draw a consistent line. Jev does well when the decision can be read off the text in front of it: it
+flags SQL results that look wrong almost as well as an LLM judge, tells whether a schema holds the columns a question
+needs, routes questions about as accurately as an LLM router when the routing is posed as one joint choice, and finds
+the right page of a filing more often than a GPU cross-encoder. It does poorly when the decision has to be derived or
+is split up: it is a weak chooser among plausible SQL queries, and routing posed as two independent yes/no questions
+loses most of the questions that need both sources. Because all of this costs a fraction of a cent per question and
+no text generation, the practical result is a set of decision calls that can be moved off the LLM, and a set that
+should not be.
 
 \section{Related Work}
 \paragraph{Typed decision models.} Since Jev's release, studies have measured it on general classification and
@@ -274,15 +283,60 @@ Jev over cross-encoder (JB) & \N{roneJBOne} & \N{roneJBThree} & \N{roneJBEight} 
 \end{tabular}
 \end{table}
 
-\paragraph{Results.} \textbf{[R1 results paragraph: written once the runs finish.]}
+\paragraph{Results.} Re-ordering the cross-encoder's list by Jev put the source page first for \N{roneJBOne} of
+questions, against \N{roneBOne} for the cross-encoder's own ranking (Table~\ref{tab:pages}; \N{roneHoneDiff} points,
+\N{roneHoneCI}, \N{roneHoneP}), and it also raised the share with the source page in the top three (\N{roneHfourDiff}
+points, \N{roneHfourP}). Without the GPU, over the dense list alone, Jev reached \N{roneJDOne}: \N{roneHthreeDiff}
+points above dense similarity (\N{roneHthreeP}) and \N{roneHtwoDiff} points above the GPU cross-encoder, a difference
+that falls just short of significance after correction (\N{roneHtwoCI}, \N{roneHtwoP}). The gain is at the top of the
+list; whether the source page is anywhere among the eight passages the answer writer reads barely changes
+(\N{roneJBEight} against \N{roneBEight}), because that depends on which passages the search found, not on their order.
+
+On the development questions, FinanceBench's own analyst-written questions, the gap was larger: \N{devFbJBOne}
+against \N{devFbBOne} (+\N{devFbW}/$-$\N{devFbL}). On an earlier set of generated questions it was smaller and not
+significant (\N{devOldJBOne} against \N{devOldBOne}, \N{devOldP}). One possible reason is that questions written
+from a single page share its wording, which suits a cross-encoder, while analysts' questions are less literal; we did
+not test this.
+
+\paragraph{Cost and latency.} Scoring one question's 25 passages took Jev a median \N{roneJevMs}\,ms with eight
+requests at a time (the API refused 25 at once) and cost \N{roneCost} per question. On our machine the two-round search
+took \N{roneDenseMs}\,ms without re-ranking and \N{roneBgeMs}\,ms with the cross-encoder, measured while other jobs
+shared the GPU, so the cross-encoder figure is only indicative.
 
 \section{Discussion}\label{sec:discussion}
-\textbf{[Written once R1 and R2 are in.]}
+\paragraph{Reading off versus working out.} Across the four roles, Jev's results follow one distinction. Where the
+answer is visible in the input, whether a passage states a figure, whether a schema has the needed columns, whether a
+query's result looks plausible, it matches or beats the component it would replace. Where the answer has to be
+worked out, which of two plausible SQL queries is right, it falls behind, as Li et al.\ found for judging math and
+code~\cite{li2026jevjudge}. For a system designer this suggests using a decision model to \emph{trigger} work (fall
+back, re-rank, decline) and leaving the \emph{choice} among generated answers to execution, voting or a trained
+verifier.
+
+\paragraph{Ask one question, not two.} The clearest design lesson is about how a decision is posed. Routing between a
+database and documents is one decision with four outcomes; split into ``needs the database?'' and ``needs the
+documents?'', each probability is reasonable on its own, but the pair does not separate questions that need both
+sources from questions either source can answer. This is a concrete case of the incoherence that
+Joy~\cite{coherence2026} measured on classification tasks, and it cost \N{rtwoHtwoDiff} points here. Posing the
+whole decision as one choice removed it.
+
+\paragraph{What the router cannot see.} Every router we tested, LLM or not, sent questions about companies absent
+from the database to SQL, because it was shown the database's columns but not its coverage. A one-line summary of what
+the rows cover (which companies, which years) in the card shown to the router is a cheap fix that our results suggest
+but did not test.
+
+\paragraph{Cost.} Every Jev decision in this paper cost well under a cent: \N{sJevCost} to score all 6,056 SQL
+candidates, \N{roneCost} per question to re-rank 25 passages, and no LLM call to route. The constraint we met in
+practice was the API's rate limit, not price.
 
 \section{Threats to Validity}\label{sec:threats}
 \paragraph{Generated questions.} The routing and page-finding questions were generated, from templates and by an
 LLM, and may be cleaner than real users' questions. A page other than the source page may also answer a question,
 which lowers every order's page accuracy alike.
+\paragraph{How the questions were selected.} The second Jev wording was written after an earlier routing test had
+shown the first wording's errors on documents-only questions; both were frozen before the new set existed. A question
+writer that reasons before answering failed to return a usable figure question for some pages, so the figure
+questions come from the pages where it did. BIRD's hints often name columns, which helps the answerability gate, so we
+report it with and without them.
 \paragraph{Labels and checks.} Routing labels are fixed by construction. Both authors labelled a stratified sample of
 40 routing questions and checked 30 page questions themselves, independently: \textbf{[agreement, once returned]}.
 \paragraph{One benchmark per role.} BIRD for SQL, one financial database and one filing library for the rest; English
@@ -295,7 +349,14 @@ order rather than the cross-encoder's ranking, and an earlier routing test reuse
 replaced both with the pre-registered tests reported here; the earlier results are in the repository.
 
 \section{Conclusion}
-\textbf{[Written once R1 and R2 are in.]} Code, prompts, pre-registrations and every result file are kept with the
+We asked whether a typed decision model can make the small decisions of an assistant that answers from a database and
+documents. Tested zero-shot on data built for each test, with the analysis fixed in advance, Jev detected wrong SQL
+answers almost as well as an LLM judge, judged whether a schema can answer a question with AUROC \N{rthreeAucCol},
+routed \N{rtwoJevTwoAcc} of new questions correctly without an LLM call, and put the right filing page first more
+often than a GPU cross-encoder (\N{roneJBOne} against \N{roneBOne}). It was a poor chooser among SQL candidates, and
+it failed when a single routing decision was split into independent questions. Decisions that can be read off the
+input can be moved to such a model; decisions that must be worked out, and decisions posed as separate questions,
+should stay where they are. Code, prompts, pre-registrations and every result file are kept with the
 project (availability: \textbf{to be decided by the authors}).
 
 \begin{credits}
