@@ -121,6 +121,12 @@ def main() -> int:
         N[f"s{name}"] = pct(jc[key]["accuracy"])
         N[f"s{name}Fall"] = pct(jc[key]["fallback_share"])
         N[f"s{name}P"] = pval(jc[key]["vs_first_test"]["p_one_sided"])
+        ci = jc[key]["vs_first"]["ci95"]
+        N[f"s{name}CI"] = f"[{100 * ci[0]:+.1f}, {100 * ci[1]:+.1f}]"
+        if "vs_P6" in jc[key]:
+            ci = jc[key]["vs_P6"]["ci95"]
+            N[f"s{name}vsPsixCI"] = f"[{100 * ci[0]:+.1f}, {100 * ci[1]:+.1f}]"
+            N[f"s{name}vsPsixDiff"] = f"{100 * jc[key]['vs_P6']['difference']:+.1f}"
     ex = a["approved_examples"]
     for k in ("E0", "E1", "E2"):
         N[f"sEx{k}"] = pct(ex["accuracy"][k])
@@ -138,6 +144,12 @@ def main() -> int:
     N["sLayaZSMax"] = pct(P["pool Laya-max (zero-shot)"])
     N["sReVote"] = pct(P["P1 judge-triggered re-vote (GPT-5 mini's 6)"])
     N["sEscalate"] = pct(P["P2 judge-triggered escalation (gpt-oss answer)"])
+    cpq = a["cost_per_question"]
+    other = cpq["the other 20 candidates"]
+    N["sCostFirstTok"] = f"{cpq['first answer (GPT-5 mini pipeline)']['tokens'] / 1000:.1f}k"
+    N["sCostOtherTok"] = f"{other['tokens'] / 1000:.1f}k"
+    N["sPsixExtraTok"] = f"{a['P6_fallback_share'] * other['tokens'] / 1000:.1f}k"     # expected, generating on fallback only
+    N["sJthreeExtraTok"] = f"{jc['J3 Jev doubt at 0.5, ModernBERT + vote fallback']['fallback_share'] * other['tokens'] / 1000:.1f}k"
     rt = j("paperb_jev_retest.json")["summary"]
     N["sJevRetest"] = fx(rt["spearman"])
     N["sJevCost"] = f"\\${j('paperb_scores_jev_zeroshot.json')['cost']:.2f}"
@@ -229,6 +241,86 @@ def main() -> int:
     N["naCaught"] = ja["test_half_at_fitted"]["unanswerable_refused"]
     # ── Jev document checker ──
     N["dcAuroc"] = fx(j("jev_doc_checker.json")["summary"]["pooled"]["auroc"])
+    # ── rerun R3: answerability with hard negatives (docs/research/paperb_reruns_prereg.md) ──
+    r3 = j("jev_answerable_r3.json")["summary"]
+    N["rthreeN"] = str(r3["questions"])
+    for form, tag in (("hint", ""), ("no_hint", "NoHint")):
+        f = r3[form]
+        for neg, nm in (("N_column", "Col"), ("N_table", "Tab")):
+            a, lo, hi = f[f"auroc_P_vs_{neg}"]
+            N[f"rthreeAuc{nm}{tag}"], N[f"rthreeAuc{nm}{tag}CI"] = fx(a), f"[{lo:.3f}, {hi:.3f}]"
+        cf = f["cross_fitted"]
+        N[f"rthreeFalse{tag}"] = cf["P"].split()[0]
+        N[f"rthreeCatchCol{tag}"] = cf["N_column"].split()[0]
+        N[f"rthreeCatchTab{tag}"] = cf["N_table"].split()[0]
+    for tag, src in (("FrozenFalse", "P"), ("FrozenCol", "N_column"), ("FrozenTab", "N_table")):
+        N[f"rthree{tag}"] = r3["hint"]["at_frozen_0.11"][src].split()[0]
+    # ── rerun R2: fresh routing set (only once its runs exist) ──
+    r2runs = E / "routing_runs_r2.json"
+    if r2runs.exists():
+        import random
+        items = {i["id"]: i for i in j("routing_set_r2.json")["items"]}
+        R2 = json.loads(r2runs.read_text())["runs"]
+        sem = j("routing_semantic_r2.json")["results"] if (E / "routing_semantic_r2.json").exists() else {}
+
+        def pred2(r: dict) -> str | None:
+            return None if r.get("http_status") != 200 else ("neither" if r.get("out_of_scope") else r.get("route"))
+        arms = {"LLM": "llm|r2|0", "JevOne": "jev_choice|r2|0", "JevTwo": "jev_choice+v2|r2|0", "JevYN": "jev|r2|0"}
+        ok: dict[str, dict[str, bool]] = {}
+        for nm, key in arms.items():
+            if key in R2:
+                ok[nm] = {i: pred2(R2[key]["items"][i]) in items[i]["acceptable"] for i in items if i in R2[key]["items"]}
+                lat = sorted(r["ms"] for r in R2[key]["items"].values() if r.get("ms") is not None)
+                N[f"rtwo{nm}Ms"] = f"{lat[len(lat) // 2] / 1000:.1f}"
+        if sem:
+            ok["Sem"] = {i: sem[i]["correct"] for i in items}
+        N["rtwoN"] = str(len(items))
+        for nm, o in ok.items():
+            N[f"rtwo{nm}Acc"] = pct(sum(o.values()) / len(o))
+            for cls, col in (("docs", "Docs"), ("either", "Either"), ("sql", "Sql"), ("hybrid", "Hybrid"), ("neither", "Neither")):
+                ids = [i for i in o if items[i]["class"] == cls]
+                N[f"rtwo{nm}{col}"] = f"{sum(o[i] for i in ids)}/{len(ids)}"
+        rng = random.Random(20261008)
+        tests = {}
+        for tag, a2, b2 in (("Hone", "JevTwo", "LLM"), ("Htwo", "JevTwo", "JevYN"), ("Hthree", "JevOne", "LLM"), ("Hfour", "Sem", "LLM")):
+            if a2 in ok and b2 in ok:
+                ids = sorted(set(ok[a2]) & set(ok[b2]))
+                x = [ok[a2][i] - ok[b2][i] for i in ids]
+                w, l_ = sum(v > 0 for v in x), sum(v < 0 for v in x)
+                boots = sorted(sum(rng.choice(x) for _ in x) / len(x) for _ in range(2000))
+                tests[tag] = {"w": w, "l": l_, "p": mcnemar(w, l_), "d": 100 * sum(x) / len(x),
+                              "ci": (100 * boots[50], 100 * boots[1949])}
+        sec = sorted((t for t in tests if t != "Hone"), key=lambda t: tests[t]["p"])
+        run = 0.0
+        for k, t in enumerate(sec):
+            run = max(run, min(1.0, (len(sec) - k) * tests[t]["p"]))
+            tests[t]["p"] = run
+        for tag, t in tests.items():
+            N[f"rtwo{tag}W"], N[f"rtwo{tag}L"], N[f"rtwo{tag}P"] = str(t["w"]), str(t["l"]), pval(t["p"])
+            N[f"rtwo{tag}Diff"], N[f"rtwo{tag}CI"] = f"{t['d']:+.1f}", f"[{t['ci'][0]:+.1f}, {t['ci'][1]:+.1f}]"
+    # ── rerun R1: page finding (only once its report exists) ──
+    r1p = E / "jev_pages_r1.json"
+    if r1p.exists() and "r1_summary" in json.loads(r1p.read_text()):
+        rec = json.loads(r1p.read_text())
+        s1 = rec["r1_summary"]
+        N["roneN"] = str(s1["n"])
+        for arm in ("D", "B", "JD", "JB", "D_display", "B_display"):
+            nm = arm.replace("_display", "Disp")
+            for m, mm in (("page@1", "One"), ("page@3", "Three"), ("page@8", "Eight")):
+                N[f"rone{nm}{mm}"] = pct(s1[arm][m])
+        for key, tag in (("R1-H1 JB vs B page@1", "Hone"), ("R1-H2 JD vs B page@1", "Htwo"),
+                         ("R1-H3 JD vs D page@1", "Hthree"), ("R1-H4 JB vs B page@3", "Hfour")):
+            t = s1["tests"][key]
+            N[f"rone{tag}W"], N[f"rone{tag}L"] = str(t["wins"]), str(t["losses"])
+            N[f"rone{tag}P"] = pval(t.get("p_holm", t["p"]))
+            N[f"rone{tag}Diff"] = f"{t['diff_points']:+.1f}"
+            N[f"rone{tag}CI"] = f"[{t['ci95'][0]:+.1f}, {t['ci95'][1]:+.1f}]"
+        if "r1_latency" in rec:
+            lt = rec["r1_latency"]
+            N["roneJevMs"] = str(lt["jev_25_passages_ms"]["p50"])
+            N["roneBgeMs"] = str(lt["two_round_search_ms"]["rel_bge_titles"]["p50"])
+            N["roneDenseMs"] = str(lt["two_round_search_ms"]["rel_off"]["p50"])
+            N["roneCost"] = f"\\${lt['jev_cost_per_question_usd']:.4f}"
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     lines = ["% GENERATED by scripts/paperb_numbers.py from docs/eval/*.json -- do not edit by hand."]
