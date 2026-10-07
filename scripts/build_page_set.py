@@ -10,12 +10,17 @@ The held-out page-finding set of docs/research/jev_pages_confirmatory.md (pre-re
   5. Checker (gpt-oss-120b, cheaperinference): does the page answer it, specifically (prompt CHECKER).
   6. The first 200 kept, in sampling order, form docs/eval/page_set.json (dropped ones are recorded with why).
 
-    python3 scripts/build_page_set.py
+    python3 scripts/build_page_set.py              the first set (above)
+    python3 scripts/build_page_set.py --set r1     rerun R1 (docs/research/paperb_reruns_prereg.md): seed 20261008,
+                                                   writer glm-5.3-flash (Cheaper Inference), 420 candidates, 300 kept,
+                                                   the first set's pages (sampled or kept) and their neighbours
+                                                   excluded too; written to docs/eval/page_set_r1.json
 """
 
 from __future__ import annotations
 
 import json
+import argparse
 import random
 import re
 import subprocess
@@ -83,7 +88,27 @@ def parse(text: str) -> dict | None:
         return None
 
 
+SETS = {   # name -> (out, seed, writer, candidates, keep, exclude the first set's pages)
+    "first": (OUT, SEED, WRITER, CANDIDATES, N_KEEP, False),
+    "r1": (REPO / "docs" / "eval" / "page_set_r1.json", 20261008, ("glm-5.3-flash", "cheaperinference"), 420, 300, True),
+}
+
+
+def first_set_pages() -> set[tuple[str, int]]:
+    d = json.loads(OUT.read_text())
+    return {(x["doc_name"], int(x["page"]) + k) for x in d["items"] + d["dropped"] for k in (-1, 0, 1)}
+
+
 def main() -> int:
+    global OUT, SEED, WRITER, CANDIDATES, N_KEEP
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--set", choices=sorted(SETS), default="first")
+    args = ap.parse_args()
+    out, seed, writer, candidates, keep, exclude_first = SETS[args.set]
+    extra_excluded = first_set_pages() if exclude_first else set()
+    if out.exists():
+        raise SystemExit(f"{out} exists; a pre-registered set is built once")
+    OUT, SEED, WRITER, CANDIDATES, N_KEEP = out, seed, writer, candidates, keep
     ingest = json.loads(pd.INGEST.read_text())
     docs = {d["document_id"]: d["doc_name"] for d in ingest["documents"] if d.get("status") == "ready" and d.get("document_id")}
     res = subprocess.run(["docker", "exec", "-i", "statesync-mcp-paperb", "python", "-c", _PAGES],
@@ -91,7 +116,7 @@ def main() -> int:
     if res.returncode:
         raise SystemExit(res.stderr[-600:])
     pages = json.loads(res.stdout.strip().splitlines()[-1])
-    excluded = {(name, p + d) for q in pd.questions() for name, p in pd.gold_pages(q) for d in (-1, 0, 1)}
+    excluded = {(name, p + d) for q in pd.questions() for name, p in pd.gold_pages(q) for d in (-1, 0, 1)} | extra_excluded
     eligible = sorted((docs[i], int(p), t) for i, p, t in pages
                       if len(t or "") >= MIN_CHARS and (docs[i], int(p)) not in excluded)
     random.Random(SEED).shuffle(eligible)
@@ -100,7 +125,7 @@ def main() -> int:
     for name, page, text in eligible:
         if per_doc[name] < PER_DOCUMENT:
             per_doc[name] += 1
-            sampled.append({"id": f"pg{len(sampled) + 1:03d}", "doc_name": name, "page": page, "text": text[:PAGE_CHARS]})
+            sampled.append({"id": f"{'pg' if args.set == 'first' else args.set + 'p'}{len(sampled) + 1:03d}", "doc_name": name, "page": page, "text": text[:PAGE_CHARS]})
         if len(sampled) == CANDIDATES:
             break
     print(f"{len(pages)} pages, {len(eligible)} eligible, {len(sampled)} sampled from {len(per_doc)} filings", flush=True)
@@ -122,7 +147,7 @@ def main() -> int:
                "question": (s["written"] or {}).get("question"), "answer": (s["written"] or {}).get("answer")}
         (dropped if why else kept).append({**rec, **({"dropped": why} if why else {})})
     items = kept[:N_KEEP]
-    OUT.write_text(json.dumps({"preregistration": "docs/research/jev_pages_confirmatory.md", "seed": SEED, "writer": WRITER,
+    OUT.write_text(json.dumps({"preregistration": ("docs/research/jev_pages_confirmatory.md" if args.set == "first" else "docs/research/paperb_reruns_prereg.md"), "seed": SEED, "writer": WRITER,
                                "checker": CHECKER, "eligible_pages": len(eligible), "sampled": len(sampled),
                                "kept": len(kept), "used": len(items), "dropped": dropped, "items": items}, indent=1) + "\n")
     print(f"kept {len(kept)}, dropped {len(dropped)} ({Counter(d['dropped'] for d in dropped)}); using {len(items)}")
