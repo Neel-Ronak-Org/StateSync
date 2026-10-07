@@ -49,7 +49,7 @@ SEED = 20261009
 WRITER = ("glm-5.3-flash", "cheaperinference")
 CHECKER = ("gpt-oss-120b", "cheaperinference")
 PER_KIND = 30               # noqa: literals - pre-registered
-CANDIDATES_PER_KIND = 48    # noqa: literals - sampled before the checker drops some
+CANDIDATES_PER_KIND = 80    # noqa: literals - sampled before the checker drops some (raised from 48, change log 4)
 PER_FILING = 2              # noqa: literals - pages per filing
 CHECK_SAMPLE = {"docs_statement": 6, "docs_figure": 7, "either": 7, "sql": 7, "hybrid": 7, "neither": 6}
 

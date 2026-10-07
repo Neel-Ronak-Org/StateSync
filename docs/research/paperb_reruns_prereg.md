@@ -159,4 +159,8 @@ it is.
 3. **2026-10-08, R1 set (a shortfall, nothing changed).** Under the pre-registered cap of 4 pages per filing only
    330 pages could be sampled (83 filings), not 420. The checker kept 329 (1 dropped: the page does not answer it),
    so the first 300 kept, in sampling order, form the set as planned.
+4. **2026-10-08, R2 set build (operational).** With 48 candidate pages per documents kind, the checker kept only
+   25 figure questions (fewer than 30), and the builder stopped, as written, before saving anything; no question
+   was looked at. The candidate pool was raised to 80 pages per kind (same seed, same alternation, same prompts and
+   checks); the first 30 kept of each kind are used.
 
