@@ -144,7 +144,7 @@ change log for anything altered later. Analyses decided after seeing results are
 \paragraph{Grading.} SQL answers are scored by execution against the corrected gold under a relaxed row
 comparison. Document answers are graded by an LLM grader (Gemini 3.8 Flash) against FinanceBench's answer and
 justification, with a fixed prompt, in one shuffled order, blind to the configuration: correct, partly correct,
-incorrect or refused. The primary label is \emph{correct}. A blind human check of a random sample of grades is
+incorrect or refused. The primary label is \emph{correct}. A blind second-model check of a random sample of grades is
 reported in Sect.~\ref{sec:threats}.
 
 \paragraph{Statistics.} Paired comparisons use the exact McNemar test (sign-flip permutation tests where
@@ -392,9 +392,11 @@ Generated questions may be cleaner than users' questions. For pages, another pag
 lowers every arm's measured page accuracy alike. The LLM that wrote page questions (Gemini) also grades document
 answers; it never ranks passages.
 
-\paragraph{Graders.} Document answers are graded by an LLM. A blind human check of a random sample of grades is
-pending at the time of writing and will be reported in the final version. SQL answers are scored by execution,
-not by a grader.
+\paragraph{Graders.} Document answers are graded by an LLM. As a check, a second model (\textbf{[model name]}), blind
+to the grader's verdicts and to which configuration produced each answer, graded a random sample of 30 answers. It
+agreed with the grader on 27 of 30 (29 of 30 on correct vs.\ not correct). All three disagreements were between
+\emph{partly correct} and an adjacent label. This is a check between models, not a human check, and we report it as
+such. SQL answers are scored by execution, not by a grader.
 
 \paragraph{A discarded afternoon of runs.} A Docker restart left the SEC database stopped. For several hours, every
 front door decided without the database card. We found it when SQL answers failed, discarded the affected runs
