@@ -92,7 +92,13 @@ asyncio.run(main())
 """
 
 
+PAGE_SET = REPO / "docs" / "eval" / "page_set.json"     # the held-out page-finding set (scripts/build_page_set.py)
+
+
 def items_for(set_name: str, workspace: str | None) -> list[dict]:
+    if set_name == "pages_heldout":
+        return [{"id": q["id"], "text": q["question"], "workspace": workspace, "dataset": pd.WORKSPACE_DATASET}
+                for q in json.loads(PAGE_SET.read_text())["items"]]
     if set_name == "financebench":
         return [{"id": q["financebench_id"], "text": q["question"], "workspace": workspace, "dataset": pd.WORKSPACE_DATASET}
                 for q in pd.questions()]
@@ -119,7 +125,7 @@ def cmd_run(sets: list[str], configs: list[str]) -> int:
     token = api_token()
     workspace = None
     try:
-        if "financebench" in sets:
+        if "financebench" in sets or "pages_heldout" in sets:      # both search the FinanceBench library
             ingest = json.loads(pd.INGEST.read_text())
             st, body = pd.api(API_BASE, "POST", "/workspaces", token, {"name": f"partd-window-{int(time.time())}",
                                                                       "target_schema": pd.WORKSPACE_DATASET})
@@ -172,6 +178,19 @@ def score(set_name: str, run: dict) -> dict[str, dict]:
     """Per question: hit in the writer's window, hit anywhere, right document first, right document in window."""
     window = run["window"]
     out: dict[str, dict] = {}
+    if set_name == "pages_heldout":
+        ingest = json.loads(pd.INGEST.read_text())
+        name_of = {d["document_id"]: d["doc_name"] for d in ingest["documents"] if d.get("document_id")}
+        qs = {q["id"]: q for q in json.loads(PAGE_SET.read_text())["items"]}
+        for qid, r in run["results"].items():
+            if r.get("error"):
+                continue
+            q = qs[qid]
+            got = [(name_of.get(p["document_id"]), p.get("page")) for p in r["passages"]]
+            gold = (q["doc_name"], q["page"])
+            out[qid] = {"window": gold in got[:window], "anywhere": gold in got, "doc_first": bool(got) and got[0][0] == q["doc_name"],
+                        "doc_window": any(d == q["doc_name"] for d, _ in got[:window]), "group": "held-out"}
+        return out
     if set_name == "financebench":
         qs = {q["financebench_id"]: q for q in pd.questions()}
         ingest = json.loads(pd.INGEST.read_text())

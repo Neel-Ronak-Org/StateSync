@@ -36,8 +36,29 @@ import paperb_docs as pd  # noqa: E402
 from eval_writer_window import TENANT  # noqa: E402  (the tenant the recorded searches ran as)
 
 RUNS = REPO / "docs" / "eval" / "partd_writer_window.json"
-OUT = REPO / "docs" / "eval" / "jev_pages.json"
-CONFIGS = ("financebench|rel_off", "financebench|rel_bge_titles")
+# --set financebench: the exploratory run (development set); --set pages_heldout: the pre-registered confirmatory
+# test (docs/research/jev_pages_confirmatory.md) on docs/eval/page_set.json. Same Jev text, model and method.
+SETS = {"financebench": REPO / "docs" / "eval" / "jev_pages.json",
+        "pages_heldout": REPO / "docs" / "eval" / "jev_pages_heldout.json"}
+SET_NAME = "financebench"
+PAGE_SET = REPO / "docs" / "eval" / "page_set.json"
+
+
+def out_path() -> Path:
+    return SETS[SET_NAME]
+
+
+def configs() -> tuple[str, str]:
+    return (f"{SET_NAME}|rel_off", f"{SET_NAME}|rel_bge_titles")
+
+
+def questions() -> dict[str, dict]:
+    """id -> {"question", "gold": {(doc_name, page), ...}, "doc_name"}."""
+    if SET_NAME == "pages_heldout":
+        return {q["id"]: {"question": q["question"], "gold": {(q["doc_name"], q["page"])}, "doc_name": q["doc_name"]}
+                for q in json.loads(PAGE_SET.read_text())["items"]}
+    return {q["financebench_id"]: {"question": q["question"], "gold": pd.gold_pages(q), "doc_name": q["doc_name"]}
+            for q in pd.questions()}
 URL = "https://opencode.ai/zen/v1/systemone"
 MODEL = "jev-1.13"
 INSTRUCTIONS = "Does this passage contain the information needed to answer the question?"
@@ -61,14 +82,14 @@ print(json.dumps({r[0]: {"title": r[1], "page": r[2], "text": r[3]} for r in row
 
 
 def load() -> dict:
-    return json.loads(OUT.read_text()) if OUT.exists() else {"model": MODEL, "instructions": INSTRUCTIONS,
+    return json.loads(out_path().read_text()) if out_path().exists() else {"model": MODEL, "instructions": INSTRUCTIONS,
                                                              "scores": {}, "cost": 0.0}
 
 
 def cmd_score(workers: int) -> int:
     runs = json.loads(RUNS.read_text())["runs"]
-    qs = {q["financebench_id"]: q for q in pd.questions()}
-    pairs = {(qid, p["chunk_id"]) for c in CONFIGS for qid, r in runs[c]["results"].items() if not r.get("error")
+    qs = questions()
+    pairs = {(qid, p["chunk_id"]) for c in configs() for qid, r in runs[c]["results"].items() if not r.get("error")
              for p in r["passages"]}
     record = load()
     todo = sorted(p for p in pairs if f"{p[0]}|{p[1]}" not in record["scores"])
@@ -116,9 +137,9 @@ def cmd_score(workers: int) -> int:
                     record["scores"][k] = p
                     record["cost"] += tokens * USD_PER_M_INPUT / 1e6
                 if done % SAVE_EVERY == 0 or done == len(todo):
-                    OUT.write_text(json.dumps(record, indent=1) + "\n")
+                    out_path().write_text(json.dumps(record, indent=1) + "\n")
                     print(f"{done}/{len(todo)}; cost ${record['cost']:.4f}", flush=True)
-    OUT.write_text(json.dumps(record, indent=1) + "\n")
+    out_path().write_text(json.dumps(record, indent=1) + "\n")
     return 0
 
 
@@ -130,11 +151,11 @@ def mcnemar(b: int, c: int) -> float:
 def cmd_report() -> int:
     runs = json.loads(RUNS.read_text())["runs"]
     record = load()
-    qs = {q["financebench_id"]: q for q in pd.questions()}
+    qs = questions()
     ingest = json.loads(pd.INGEST.read_text())
     name_of = {d["document_id"]: d["doc_name"] for d in ingest["documents"] if d.get("document_id")}
     summary, per = {}, {}
-    for conf in CONFIGS:
+    for conf in configs():
         window = runs[conf]["window"]
         for order in ("recorded", "jev"):
             rows = {}
@@ -147,7 +168,7 @@ def cmd_report() -> int:
                     if any(s is None for s, _, _ in scored):
                         continue
                     ps = [p for _, _, p in sorted(scored, key=lambda x: (-x[0], x[1]))]
-                q, gold = qs[qid], pd.gold_pages(qs[qid])
+                q, gold = qs[qid], qs[qid]["gold"]
                 got = [(name_of.get(p["document_id"]), p.get("page")) for p in ps]
                 rows[qid] = {"window": any(g in gold for g in got[:window]), "page_first": bool(got) and got[0] in gold,
                              "doc_first": bool(got) and got[0][0] == q["doc_name"], "anywhere": any(g in gold for g in got)}
@@ -157,26 +178,40 @@ def cmd_report() -> int:
                                                      for m in ("window", "page_first", "doc_first", "anywhere")}}
             print(f"{conf}|{order}", json.dumps(summary[f"{conf}|{order}"]))
     comparisons = {}
-    for a, b in ((f"{CONFIGS[0]}|jev", f"{CONFIGS[0]}|recorded"), (f"{CONFIGS[1]}|jev", f"{CONFIGS[1]}|recorded"),
-                 (f"{CONFIGS[0]}|jev", f"{CONFIGS[1]}|recorded")):
-        ids = sorted(set(per[a]) & set(per[b]))
-        for m in ("window", "page_first", "doc_first"):
-            w = sum(per[a][i][m] and not per[b][i][m] for i in ids)
-            l_ = sum(per[b][i][m] and not per[a][i][m] for i in ids)
-            comparisons[f"{a} vs {b} [{m}]"] = {"n": len(ids), "wins": w, "losses": l_, "p": round(mcnemar(w, l_), 4)}
-            print(f"{a} vs {b} [{m}]: +{w}/-{l_}, p = {mcnemar(w, l_):.4f}")
+    c0, c1 = configs()
+    D, B, JD, JB = f"{c0}|recorded", f"{c1}|recorded", f"{c0}|jev", f"{c1}|jev"
+    # both configurations must have the item (a failed search drops it from every comparison)
+    common = set.intersection(*(set(per[k]) for k in (D, B, JD, JB)))
+    tests = [("H-P1 JB vs B [page_first]", JB, B, "page_first"), ("H-S1 JB vs B [window]", JB, B, "window"),
+             ("H-S2 JD vs B [page_first]", JD, B, "page_first"), ("H-S3 JD vs B [window]", JD, B, "window"),
+             ("JD vs D [page_first]", JD, D, "page_first"), ("JD vs D [window]", JD, D, "window")]
+    for name, a, b, m in tests:
+        ids = sorted(common)
+        w = sum(per[a][i][m] and not per[b][i][m] for i in ids)
+        l_ = sum(per[b][i][m] and not per[a][i][m] for i in ids)
+        comparisons[name] = {"n": len(ids), "wins": w, "losses": l_, "p": round(mcnemar(w, l_), 6)}
+    secondary = sorted((k for k in comparisons if k.startswith("H-S")), key=lambda k: comparisons[k]["p"])
+    for rank, k in enumerate(secondary):           # Holm over the three secondary hypotheses
+        comparisons[k]["p_holm"] = round(min(1.0, max(comparisons[s2]["p"] * (len(secondary) - r2)
+                                                     for r2, s2 in enumerate(secondary[:rank + 1]))), 6)
+    comparisons["dropped_items"] = len(qs) - len(common)
+    for k, v in comparisons.items():
+        print(k, v)
     record["summary"], record["comparisons"] = summary, comparisons
-    OUT.write_text(json.dumps(record, indent=1) + "\n")
+    out_path().write_text(json.dumps(record, indent=1) + "\n")
     return 0
 
 
 def main() -> int:
+    global SET_NAME
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--set", choices=sorted(SETS), default="financebench")
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("score")
     s.add_argument("--workers", type=int, default=4)
     sub.add_parser("report")
     args = ap.parse_args()
+    SET_NAME = args.set
     return cmd_score(args.workers) if args.cmd == "score" else cmd_report()
 
 
