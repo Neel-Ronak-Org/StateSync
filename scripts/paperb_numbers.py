@@ -113,6 +113,23 @@ def main() -> int:
         N[f"s{name}"] = pct(jc[key]["accuracy"])
         N[f"s{name}Fall"] = pct(jc[key]["fallback_share"])
         N[f"s{name}P"] = pval(jc[key]["vs_first_test"]["p_one_sided"])
+    ex = a["approved_examples"]
+    for k in ("E0", "E1", "E2"):
+        N[f"sEx{k}"] = pct(ex["accuracy"][k])
+    for k, name in (("E1 - E0", "ExOne"), ("E2 - E0", "ExTwo")):
+        d = ex[k]
+        N[f"s{name}Diff"] = f"{100 * d['difference']:+.1f}"
+        N[f"s{name}CI"] = f"[{100 * d['ci95'][0]:+.1f}, {100 * d['ci95'][1]:+.1f}]"
+    N["sPsixFall"] = pct(a["P6_fallback_share"])
+    d = a["vs_first"]["P6 ModernBERT-triggered cascade"]
+    N["sPsixCI"] = f"[{100 * d['ci95'][0]:+.1f}, {100 * d['ci95'][1]:+.1f}]"
+    N["sJudgeDoubts"] = pct(a["judge_doubts_first"])
+    N["sPfive"] = pct(P["P5 pool ModernBERT-max (real)"])
+    N["sPfivem"] = pct(P["P5m pool ModernBERT-max (mutation)"])
+    N["sLayaMax"] = pct(P["P5L pool Laya-max (fine-tuned)"])
+    N["sLayaZSMax"] = pct(P["pool Laya-max (zero-shot)"])
+    N["sReVote"] = pct(P["P1 judge-triggered re-vote (GPT-5 mini's 6)"])
+    N["sEscalate"] = pct(P["P2 judge-triggered escalation (gpt-oss answer)"])
     rt = j("paperb_jev_retest.json")["summary"]
     N["sJevRetest"] = fx(rt["spearman"])
     N["sJevCost"] = f"\\${j('paperb_scores_jev_zeroshot.json')['cost']:.2f}"
