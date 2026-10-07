@@ -210,6 +210,7 @@ def cmd_report() -> int:
 R1_SEED = 20261008          # noqa: literals - pre-registered (bootstrap, latency sample)
 R1_BOOT = 2000              # noqa: literals - pre-registered resamples
 R1_LATENCY_N = 50           # noqa: literals - pre-registered latency sample
+R1_LATENCY_CONCURRENCY = 8  # noqa: literals - change log 7 (25 at once is refused with HTTP 429)
 
 
 def r1_orders() -> tuple[dict, dict]:
@@ -297,25 +298,35 @@ def cmd_latency_r1() -> int:
     chunks = json.loads(res.stdout.strip().splitlines()[-1])
     key = (REPO / "secrets" / "opencode_api_key").read_text().strip()
 
-    def call(state):
+    rate_limited = [0]
+
+    def call(state):   # change log 7: at most 8 at once, 429s retried with back-off, retries inside the wall time
         body = json.dumps({"model": MODEL, "state": state, "questions": {"contains": {"type": "noul", "instructions": INSTRUCTIONS}}}).encode()
-        req = urllib.request.Request(URL, data=body, headers={"Authorization": "Bearer " + key, "Content-Type": "application/json",
-                                                              "User-Agent": "statesync-research/1.0"})
-        return json.load(urllib.request.urlopen(req, timeout=60))
+        for attempt in range(8):
+            req = urllib.request.Request(URL, data=body, headers={"Authorization": "Bearer " + key, "Content-Type": "application/json",
+                                                                  "User-Agent": "statesync-research/1.0"})
+            try:
+                return json.load(urllib.request.urlopen(req, timeout=60))
+            except urllib.error.HTTPError as e:
+                if e.code != 429 or attempt == 7:
+                    raise
+                rate_limited[0] += 1
+                time.sleep(1 + attempt)
 
     walls = []
     for q in pick:
         states = [(f"Question: {qs[q]['question']}\n\nPassage from {chunks[p['chunk_id']]['title']}, page {chunks[p['chunk_id']]['page']}:\n"
                    f"{(chunks[p['chunk_id']]['text'] or '')[:TEXT_CHARS]}") for p in bge[q]["passages"]]
         t = time.monotonic()
-        with ThreadPoolExecutor(len(states)) as ex:
+        with ThreadPoolExecutor(R1_LATENCY_CONCURRENCY) as ex:
             list(ex.map(call, states))
         walls.append(round((time.monotonic() - t) * 1000))
     walls.sort()
     search_ms = {c: sorted(r["ms"] for r in runs[f"pages_r1|{c}"]["results"].values() if r.get("ms")) for c in ("rel_off", "rel_bge_titles")}
     lat = {"jev_25_passages_ms": {"n": len(walls), "p50": walls[len(walls) // 2], "p90": walls[int(0.9 * len(walls))]},
            "two_round_search_ms": {c: {"p50": v[len(v) // 2], "p90": v[int(0.9 * len(v))]} for c, v in search_ms.items()},
-           "jev_cost_per_question_usd": round(load()["cost"] / max(1, len(qs)), 5)}
+           "jev_cost_per_question_usd": round(load()["cost"] / max(1, len(qs)), 5),
+           "concurrency": R1_LATENCY_CONCURRENCY, "rate_limited_retries": rate_limited[0]}
     record = load()
     record["r1_latency"] = lat
     out_path().write_text(json.dumps(record, indent=1) + "\n")

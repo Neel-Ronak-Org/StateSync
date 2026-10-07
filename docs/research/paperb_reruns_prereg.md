@@ -172,4 +172,8 @@ it is.
    figure-question replies did not parse (the reasoning writer most likely used its output budget before writing
    JSON), so the 30 figure questions come from the pages where it did produce one. Statement questions: 1 of 80
    dropped by the checker. The set and the authors' sheet are committed before any router runs.
+7. **2026-10-08, R1 latency (after the results, descriptive only).** Sending one question's 25 Jev calls at once
+   was refused by the API (HTTP 429). The latency measure therefore sends at most 8 at once and retries 429s with
+   back-off, counting the retries in the wall time, and reports how many retries were needed. The rate limit
+   itself is reported as a deployment constraint.
 
