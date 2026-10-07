@@ -141,6 +141,25 @@ def main() -> int:
     c1, n1 = correct("paperb_docs_grades_v3.json", "v3_dense")
     c2, n2 = correct("paperb_docs_grades_v3.json", "v3_bge")
     N["fbShip"], N["fbDense"], N["fbBge"], N["fbN"] = pct(c0 / n0), pct(c1 / n1), pct(c2 / n2), str(n0)
+    # paired FinanceBench counts and the shipped system's routes (the diagnosis)
+    def verdicts(path: str, label: str) -> dict[str, str]:
+        return {k.split("|", 1)[1]: x.get("verdict") for k, x in j(path)["verdicts"].items() if k.startswith(label + "|")}
+    vs = verdicts("paperb_docs_grades_preliminary_dense.json", "dense")
+    for name, lab in (("Dense", "v3_dense"), ("Bge", "v3_bge")):
+        vv = verdicts("paperb_docs_grades_v3.json", lab)
+        w = sum(vv[i] == "correct" and vs.get(i) != "correct" for i in vv)
+        l_ = sum(vs.get(i) == "correct" and vv[i] != "correct" for i in vv)
+        N[f"fb{name}W"], N[f"fb{name}L"], N[f"fb{name}P"] = str(w), str(l_), pval(mcnemar(w, l_))
+    ship = j("paperb_docs_answers_dense.json")["answers"]
+    routes = {k: v["route"] for k, v in ship.items()}
+    N["fbShipToSql"] = str(sum(r == "sql" for r in routes.values()))
+    reached = [k for k, r in routes.items() if r in ("docs", "hybrid")]
+    N["fbShipReached"] = str(len(reached))
+    N["fbShipReachedCorrect"] = pct(sum(vs.get(k) == "correct" for k in reached) / len(reached))
+    N["fbShipRefused"] = str(sum(v == "refused" for v in vs.values()))
+    sem = j("routing_semantic.json")["summary"]["semantic|test|item"]
+    N["rtSemAcc"], N["rtSemHybrid"], N["rtSemNeither"], N["rtSemDocs"] = (pct(sem["route_accuracy"]), sem["by_class"]["hybrid"],
+                                                                         sem["by_class"]["neither"], sem["by_class"]["docs"])
     # ── writer window ──
     w = j("partd_writer_window.json")["summary"]
     for k, name in (("financebench|doc_off", "Doc"), ("financebench|rel_off", "Rel"), ("financebench|rel_bge_titles", "BgeT")):
@@ -160,11 +179,29 @@ def main() -> int:
         N[f"hy{name}"] = str(h[arm]["all"]["both"])
         N[f"hy{name}Dep"] = str(h[arm]["dependent"]["both"])
     N["hyMainP"] = pval(h["v3_vs_shipped"]["p_mcnemar"])
+    N["hyMainW"], N["hyMainL"] = str(h["v3_vs_shipped"]["wins"]), str(h["v3_vs_shipped"]["losses"])
+    sc = j("partd_hybrid_heldout.json")["scored"]
+    dep = [i for i, x in sc["v3"].items() if x["dependent"]]
+    w = sum(sc["v3_entities"][i]["both"] and not sc["v3"][i]["both"] for i in dep)
+    l_ = sum(sc["v3"][i]["both"] and not sc["v3_entities"][i]["both"] for i in dep)
+    N["hyEntW"], N["hyEntL"], N["hyEntP"] = str(w), str(l_), pval(mcnemar(w, l_))
+    N["hyVthreeToSql"] = str(sum(sc["v3"][i]["route"] == "sql" for i in dep))
+    N["hyDbRight"] = str(h["v3"]["all"]["database_correct"])
     # ── follow-up turns ──
     tt = j("turns_e2e.json")["summary"]
     for arm, name in (("llm", "LLM"), ("jev_choice_carry", "Carry"), ("shipped", "Ship"), ("jev_choice", "NoCtx")):
         N[f"tu{name}"] = str(tt[arm]["correct"])
     N["tuN"] = str(tt["llm"]["graded"])
+    G = j("turns_e2e.json")["grades"]
+    gid = sorted({k.split("|", 1)[1] for k in G})
+    ok = lambda arm, i: (G.get(f"{arm}|{i}") or {}).get("verdict") == "correct"
+    for tag, a2, b2 in (("CarryNo", "jev_choice_carry", "jev_choice"), ("CarryLLM", "jev_choice_carry", "llm"),
+                        ("LLMShip", "llm", "shipped"), ("CarryShip", "jev_choice_carry", "shipped")):
+        w = sum(ok(a2, i) and not ok(b2, i) for i in gid)
+        l_ = sum(ok(b2, i) and not ok(a2, i) for i in gid)
+        N[f"tu{tag}W"], N[f"tu{tag}L"], N[f"tu{tag}P"] = str(w), str(l_), pval(mcnemar(w, l_))
+    first_g1 = j("partd_g1_bird_firstrun.json")["summary"]
+    N["gFirstFalseNA"] = f"{first_g1['false_not_answerable']['on']}/{first_g1['questions_in_both']}"
     cc = j("context_carry_offline.json")["summary"]
     N["ccDetected"] = f"{cc['detected']}/{cc['follow_ups']}"
     N["ccBoth"] = cc["both_right_on_follow_ups"]
