@@ -30,7 +30,7 @@ uploaded filings, or both. On FinanceBench's open sample the shipped system answ
 most recent document titles and nothing of the database, and an answer writer that read the first 8 of 25
 retrieved passages in document order. Fixing the design flaws raised accuracy on this development set to
 \N{fbBge}, and on a held-out
-routing test a single front-door LLM call routed \N{rtLLMAcc} of questions correctly against \N{rtShipAcc} for the shipped
+routing test a single front-door LLM call routed \N{rtLLMrawAcc} of questions correctly against \N{rtShipAcc} for the shipped
 router. For SQL answers, falling back to a pool of candidates when a small trained verifier doubts the first
 answer raised execution accuracy on \N{sN} held-out BIRD questions from \N{sFirst} to \N{sPsix}
 (pre-registered, \N{sH3P}). Across both parts we test a hosted decision model, Jev, as a cheap replacement for LLM
@@ -70,9 +70,8 @@ a document assistant's accuracy, and how fixing them raises FinanceBench accurac
 \item \textbf{Detect-then-fallback for SQL.} On \N{sN} held-out BIRD questions \cite{li2023bird}, a trained
 verifier's doubt about the first answer triggers a fallback to a pool of 21 candidate queries, raising
 execution accuracy from \N{sFirst} to \N{sPsix} (pre-registered, confirmed after Holm correction). Two other pre-registered hypotheses were not confirmed.
-\item \textbf{A decision model as a cheap layer.} Jev replaces an LLM judge for flagging wrong SQL answers at
-some loss (AUROC \N{sAurocJev} vs \N{sAurocJudge}). Asked one choice question, it replaces the LLM router
-(\N{rtJevCAcc} vs \N{rtLLMrawAcc}, no significant difference). In a pre-registered held-out test it moves the right
+\item \textbf{A decision model as a cheap layer.} Jev flags wrong SQL answers nearly as well as an LLM judge, with no training (AUROC \N{sAurocJev} vs \N{sAurocJudge}). Asked one choice question, it matches the LLM router
+(\N{rtJevCAcc} vs \N{rtLLMrawAcc}, no significant difference) with no LLM call. In a pre-registered held-out test it moves the right
 page to the top of the retrieved passages \N{pgJBFirst} vs \N{pgBFirst} of the time. It fails when its decisions
 are posed as independent yes/no questions.
 \item \textbf{Negative results, reported.} A ``not answerable'' reply for SQL missed its pre-set bar for false
@@ -116,7 +115,7 @@ SQL result returned.
 \paragraph{Jev.} Jev \cite{typesafe2026jev} is a hosted decision model. A request carries a state (any text) and typed
 questions: \emph{noul} (is this statement true? answered with a probability) or \emph{choice} (pick one of
 named options, with a probability each). It writes no text. We call \texttt{jev-1.13} through OpenCode Zen at
-\$0.042 per million input tokens. Sect.~\ref{sec:jev} uses it in five places.
+\$0.042 per million input tokens. Sect.~\ref{sec:jev} tests it in seven roles.
 
 \section{Method}\label{sec:method}
 \paragraph{Development and held-out data.} We distinguish data we used to find problems from data we used to
@@ -203,7 +202,7 @@ Any candidate right (oracle) & \N{sOracle} & bound \\
 \end{table}
 
 \paragraph{Results.} Table~\ref{tab:sql}. H3 is confirmed: the cascade raises accuracy from \N{sFirst} to
-\N{sPsix} (paired difference \N{sPsixCI} points, 95\% interval), falling back on \N{sPsixFall} of questions. H1 and
+\N{sPsix} (95\% interval for the gain: \N{sPsixCI} points), falling back on \N{sPsixFall} of questions. H1 and
 H2 point the expected way but do not survive Holm correction. The best policy we found adds ModernBERT's scores
 within each cluster of agreeing candidates (\N{sPfivev}). We found it after the pre-registered analysis, so we
 report it as exploratory. Cheaper fallbacks that a product would try first help little: when the judge
@@ -252,8 +251,9 @@ verifier training data.
 \section{Documents and routing}\label{sec:docs}
 \paragraph{Diagnosis.} On FinanceBench the shipped system answered \N{fbShip} of questions correctly and declined
 \N{fbShipRefused} of \N{fbN}. Two flaws explain most of it. First, the router sent \N{fbShipToSql} of the \N{fbN}
-document questions to SQL: it saw only the 20 newest of 84 titles and nothing of the database, so a question about
-a filing outside those 20 looked like a database question. Second, of the \N{fbShipReached} questions that did reach
+document questions to SQL, although the FinanceBench workspace's database held unrelated e-commerce data and could
+answer none of them. The router saw only the 20 newest of 84 titles and nothing of the database, so a question about a
+filing outside those 20 looked like a database question. Second, of the \N{fbShipReached} questions that did reach
 the documents, only \N{fbShipReachedCorrect} were answered correctly. The search often found the right page, but
 the writer read the first 8 of 25 passages \emph{in document order}. The right page was among the 25 for
 \N{wwDocAny} of questions but among the writer's 8 for only \N{wwDoc}.
@@ -318,11 +318,11 @@ had to keep false refusals on 150 answerable held-out BIRD questions at or below
 \section{Jev as a cheap decision layer}\label{sec:jev}
 Across the system, several LLM calls only \emph{decide} something: is this answer wrong, which source is needed,
 which passage holds the answer, does this database hold the data. We asked whether a decision model that writes no
-text can take these over. Table~\ref{tab:jev} summarises the five uses.
+text can take these over. Table~\ref{tab:jev} summarises the seven roles.
 
 \begin{table}[t]
 \centering
-\caption{Jev (\texttt{jev-1.13}, zero-shot) in five roles. ``Held-out'' marks results on data that played no part in
+\caption{Jev (\texttt{jev-1.13}, zero-shot) in seven roles. ``Held-out'' marks results on data that played no part in
 the design; ``dev'' marks development-set or exploratory results.}
 \label{tab:jev}
 \setlength{\tabcolsep}{3pt}
