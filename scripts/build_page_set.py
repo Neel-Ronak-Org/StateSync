@@ -70,7 +70,10 @@ print(json.dumps([[r[0], r[1], r[2]] for r in rows]))
 """
 
 
-def llm(model_endpoint: tuple[str, str], system: str, items: list[dict]) -> dict[str, str]:
+PARALLEL = 8                # noqa: literals - concurrent batches (operational; each call is independent)
+
+
+def _llm_batch(model_endpoint: tuple[str, str], system: str, items: list[dict]) -> dict[str, str]:
     req = {"endpoint": model_endpoint[1], "model": model_endpoint[0], "system": system, "max_tokens": eb.JUDGE_MAX_TOKENS,
            "spacing_s": 0.5, "items": items}
     res = subprocess.run(["docker", "exec", "-i", CONTAINER, "python", "-c", eb._JUDGE_SNIPPET],  # noqa: SLF001
@@ -78,6 +81,18 @@ def llm(model_endpoint: tuple[str, str], system: str, items: list[dict]) -> dict
     if res.returncode:
         raise SystemExit(res.stderr[-600:])
     return {v["id"]: v.get("text") or "" for v in json.loads(res.stdout.strip().splitlines()[-1])}
+
+
+def llm(model_endpoint: tuple[str, str], system: str, items: list[dict]) -> dict[str, str]:
+    """The same calls as one sequential batch, split into PARALLEL batches run at once (2026-10-07: the
+    reasoning writer takes 8-20 s a call). Each item is still one independent call with the same prompt."""
+    from concurrent.futures import ThreadPoolExecutor
+    chunks = [items[i::PARALLEL] for i in range(PARALLEL) if items[i::PARALLEL]]
+    out: dict[str, str] = {}
+    with ThreadPoolExecutor(len(chunks) or 1) as ex:
+        for part in ex.map(lambda c: _llm_batch(model_endpoint, system, c), chunks):
+            out.update(part)
+    return out
 
 
 def parse(text: str) -> dict | None:

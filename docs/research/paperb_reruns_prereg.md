@@ -150,3 +150,9 @@ it is.
    (for example, school names are in both `schools` and `frpm`), so a few N-column negatives may still be
    answerable through another column; the N-column AUROC is therefore a lower bound on how well Jev separates
    answerable from unanswerable cards.
+2. **2026-10-07, R1 set build (operational).** The first build ran the 420 writer calls one at a time; the
+   reasoning writer takes 8–20 s a call (about 2 hours). It was stopped after about 55 minutes, before it had
+   written anything (the script saves only at the end, so no question was seen), and rerun with the same calls
+   split into 8 concurrent batches (`build_page_set.py`, `PARALLEL`). Prompts, models, seed and sampling are
+   unchanged; only the sampled outputs of a non-deterministic model differ from what the stopped run would have
+   produced.
