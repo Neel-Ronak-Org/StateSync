@@ -163,4 +163,9 @@ it is.
    25 figure questions (fewer than 30), and the builder stopped, as written, before saving anything; no question
    was looked at. The candidate pool was raised to 80 pages per kind (same seed, same alternation, same prompts and
    checks); the first 30 kept of each kind are used.
+5. **2026-10-08, R2 set build (operational).** The rebuild kept only 15 statement questions, far fewer than the first
+   attempt, and stopped before saving. Calls that fail at the provider (for example under concurrency) return no
+   text and were being counted as "writer reply did not parse". Failed calls are now asked again (up to three
+   rounds, same prompt; answered calls are never asked again), and the builder prints the drop reasons and call
+   errors. Nothing else changed; no question was looked at.
 

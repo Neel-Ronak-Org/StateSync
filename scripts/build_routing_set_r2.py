@@ -150,6 +150,9 @@ def docs_items(rng: random.Random) -> list[dict]:
             out.append({"id": s["id"], "class": "docs", "subclass": f"docs_{kind}", "question": (s["written"] or {}).get("question"),
                         "gold_answer": (s["written"] or {}).get("answer"), "filing": s["doc_name"], "page": s["page"],
                         "acceptable": ["docs"], "source": "page", **({"dropped": why} if why else {})})
+        reasons = Counter(o["dropped"] for o in out if o["subclass"] == f"docs_{kind}" and "dropped" in o)
+        print(f"{kind}: {kept} kept of {len(batch)}; dropped {dict(reasons)}; call errors so far {len(bp.CALL_ERRORS)} "
+              f"{Counter(e['error'][:60] for e in bp.CALL_ERRORS).most_common(3)}", flush=True)
         if kept < PER_KIND:
             raise SystemExit(f"only {kept} {kind} questions kept; log the shortfall before going on")
     return out

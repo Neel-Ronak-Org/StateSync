@@ -80,7 +80,13 @@ def _llm_batch(model_endpoint: tuple[str, str], system: str, items: list[dict]) 
                          input=json.dumps(req), capture_output=True, text=True, timeout=max(600, len(items) * 120))
     if res.returncode:
         raise SystemExit(res.stderr[-600:])
-    return {v["id"]: v.get("text") or "" for v in json.loads(res.stdout.strip().splitlines()[-1])}
+    out = json.loads(res.stdout.strip().splitlines()[-1])
+    CALL_ERRORS.extend(v for v in out if v.get("error"))
+    return {v["id"]: v.get("text") or "" for v in out if not v.get("error")}
+
+
+CALL_ERRORS: list[dict] = []      # transport or provider failures (no output), retried below
+RETRY_ROUNDS = 3                  # noqa: literals - failed calls are asked again, never the answered ones
 
 
 def llm(model_endpoint: tuple[str, str], system: str, items: list[dict]) -> dict[str, str]:
@@ -92,6 +98,12 @@ def llm(model_endpoint: tuple[str, str], system: str, items: list[dict]) -> dict
     with ThreadPoolExecutor(len(chunks) or 1) as ex:
         for part in ex.map(lambda c: _llm_batch(model_endpoint, system, c), chunks):
             out.update(part)
+    for _ in range(RETRY_ROUNDS):       # a call that failed returned nothing: ask it again (same prompt)
+        missing = [i for i in items if i["id"] not in out]
+        if not missing:
+            break
+        print(f"retrying {len(missing)} failed calls ({model_endpoint[0]})", flush=True)
+        out.update(_llm_batch(model_endpoint, system, missing))
     return out
 
 
