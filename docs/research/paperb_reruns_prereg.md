@@ -168,4 +168,8 @@ it is.
    text and were being counted as "writer reply did not parse". Failed calls are now asked again (up to three
    rounds, same prompt; answered calls are never asked again), and the builder prints the drop reasons and call
    errors. Nothing else changed; no question was looked at.
+6. **2026-10-08, R2 set built (a note, nothing changed).** 180 items, 30 per class. No call failed; 35 of 80
+   figure-question replies did not parse (the reasoning writer most likely used its output budget before writing
+   JSON), so the 30 figure questions come from the pages where it did produce one. Statement questions: 1 of 80
+   dropped by the checker. The set and the authors' sheet are committed before any router runs.
 
