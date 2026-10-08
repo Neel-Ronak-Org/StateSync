@@ -74,11 +74,11 @@ def test_build_lists_small_columns_skips_large_and_failed():
     assert ".tag:" not in line and ".unit:" not in line and ".value:" not in line
 
 
-def test_order_puts_ranges_and_short_lists_first_and_drops_repeats():
+def test_order_is_shortest_first_and_drops_repeats():
     entries = [("a.tag", ["x"] * 0 + [f"T{i}" for i in range(30)]), ("a.period", "2006 to 2026"),
                ("m.company", ["3M", "Adobe"]), ("r.company", ["3M", "Adobe"]), ("a.unit", ["USD"])]
     ordered = cc.order_entries(entries)
-    assert [k for k, _ in ordered] == ["a.period", "a.unit", "m.company", "a.tag"]
+    assert [k for k, _ in ordered] == ["a.unit", "m.company", "a.period", "a.tag"]
 
 
 def _fake_schema(listing, describe):

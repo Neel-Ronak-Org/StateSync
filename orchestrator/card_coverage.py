@@ -55,20 +55,18 @@ def range_sql(schema: str, table: str, column: str) -> str:
 
 
 def order_entries(entries: list[tuple[str, list[str] | str]]) -> list[tuple[str, str]]:
-    """Ranges first, then value lists from fewest values to most, so the short, telling columns (units, forms,
-    names of the entities the rows describe) survive the cap ahead of long code lists; a value list identical to
-    one already kept (the same column repeated in another table or view) is dropped."""
-    ranges = [(k, v) for k, v in entries if isinstance(v, str)]
-    lists = sorted(((k, v) for k, v in entries if not isinstance(v, str)), key=lambda kv: (len(kv[1]), kv[0]))
-    seen: set[tuple[str, ...]] = set()
+    """Shortest item first (rendered length), so the most items, and the short telling ones (ranges, units,
+    entity names) survive the cap ahead of long code lists; an item whose text repeats one already kept (the
+    same column in another table or view) is dropped."""
+    rendered = [(k, v if isinstance(v, str) else ", ".join(v)) for k, v in entries]
+    seen: set[str] = set()
     kept: list[tuple[str, str]] = []
-    for k, v in lists:
-        sig = tuple(v)
-        if sig in seen:
+    for k, text in sorted(rendered, key=lambda kv: (len(kv[1]), kv[0])):
+        if text in seen:
             continue
-        seen.add(sig)
-        kept.append((k, ", ".join(v)))
-    return ranges + kept
+        seen.add(text)
+        kept.append((k, text))
+    return kept
 
 
 def format_coverage(entries: list[tuple[str, str]], max_chars: int) -> str:
