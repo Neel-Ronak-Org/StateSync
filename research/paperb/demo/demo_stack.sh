@@ -3,7 +3,7 @@
 # A second copy of StateSync running the architecture Paper B evaluated, for demos. Nothing shared is touched:
 # the shared app (localhost:3000 -> orchestrator 8090) keeps config/flags.toml's defaults.
 #   up    : Part D MCP + an orchestrator on 127.0.0.1:8091 with research/paperb/demo/flags_demo.toml and
-#           statesync_demo.toml mounted, and a web app on http://localhost:3001 calling it, with the demo's
+#           statesync_demo.toml mounted, and a web app on http://127.0.0.1:3090 calling it, with the demo's
 #           sample questions. Images: :partd (research/paperb/partd_stack.sh build) and statesync-frontend:demo.
 #   build : build the :partd images and the demo web image from HEAD
 #   down  : remove the demo containers
@@ -24,9 +24,9 @@ case "${1:-}" in
       -v "$PWD/$D/flags_demo.toml:/app/config/flags.toml:ro" -v "$PWD/$D/statesync_demo.toml:/app/config/statesync.toml:ro" \
       -v "$PWD/secrets/opencode_api_key:/run/secrets/opencode_api_key:ro" orchestrator >/dev/null
     for _ in $(seq 1 90); do [[ $(docker inspect -f '{{.State.Health.Status}}' $ORCH) == healthy ]] && break; sleep 2; done
-    docker run -d --name "$WEB" -p 127.0.0.1:3001:80 -e ORCHESTRATOR_URL=http://localhost:8091 \
+    docker run -d --name "$WEB" -p 127.0.0.1:3090:80 -e ORCHESTRATOR_URL=http://127.0.0.1:8091 \
       -v "$PWD/$D/suggestions.json:/etc/statesync/suggestions.json:ro" statesync-frontend:demo >/dev/null
-    echo "demo up: http://localhost:3001 (API 127.0.0.1:8091)" ;;
+    echo "demo up: http://127.0.0.1:3090 (API 127.0.0.1:8091)" ;;
   down)
     docker rm -f "$MCP" "$ORCH" "$WEB" >/dev/null 2>&1 || true; echo "demo removed" ;;
   *) echo "usage: $0 build | up | down" >&2; exit 2 ;;

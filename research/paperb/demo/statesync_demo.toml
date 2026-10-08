@@ -1,4 +1,4 @@
-# Paper B demo: Jev choice wording 2 + the coverage line + the demo app's origin (localhost:3001). Demo-only.
+# Paper B demo: Jev choice wording 2 + the coverage line + the demo app's origin (127.0.0.1:3090). Demo-only.
 # Paper B R4: research/paperb/statesync_jev_choice_v2.toml with [front_door] card_coverage = "on" (nothing else changed).
 # Jev choice wording v2 (database limits), designed on the routing set's dev split; config/statesync.toml otherwise.
 # config/statesync.toml
@@ -548,7 +548,7 @@ rate_limit_window_seconds = 60
 # configuration used allow_origins=["*"], but a wildcard origin is incompatible
 # with credentialed requests and unsafe for authenticated APIs. The frontend is
 # served on port 3000 in development.
-cors_allowed_origins      = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001"]
+cors_allowed_origins      = ["http://localhost:3000", "http://127.0.0.1:3000", "http://127.0.0.1:3090", "http://localhost:3090"]
 # The web app's HttpOnly session cookie (orchestrator/session_api.py) lasts this long; then
 # the user signs in again. The token itself does not expire (README, Limitations).
 session_cookie_max_age_s  = 604800   # 7 days
