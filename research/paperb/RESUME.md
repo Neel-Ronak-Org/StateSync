@@ -33,3 +33,9 @@ orchestrators, keeps their images and flags.
   pattern: docker compose run --no-deps, -v flags, -v statesync override, -v secrets/opencode_api_key), then
   `python3 scripts/eval_routing.py --set r2 route --arm llm --port 8093 --split r2 --tag cov` (resumes at 79/180).
 - Then: `python3 scripts/paperb_numbers.py`, write R4 into the paper, rebuild, commit.
+
+## Demo of the evaluated architecture (2026-10-08)
+`research/paperb/demo/demo_stack.sh build` then `up`: web app http://127.0.0.1:3090 (sign in with the usual API token),
+API 127.0.0.1:8091; workspace "partd-routing-sec-filings" (SEC database + 84 filings). Jev choice routing + coverage line,
+relevance order, bge reading titles, Jev passage re-ranking, entity narrowing, context carry. `down` removes it.
+The shared app (localhost:3000) is unchanged.
