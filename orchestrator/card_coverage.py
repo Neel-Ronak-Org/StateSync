@@ -54,6 +54,23 @@ def range_sql(schema: str, table: str, column: str) -> str:
     return f"SELECT min({_q(column)})::text AS lo, max({_q(column)})::text AS hi FROM {_q(schema)}.{_q(table)}"
 
 
+def order_entries(entries: list[tuple[str, list[str] | str]]) -> list[tuple[str, str]]:
+    """Ranges first, then value lists from fewest values to most, so the short, telling columns (units, forms,
+    names of the entities the rows describe) survive the cap ahead of long code lists; a value list identical to
+    one already kept (the same column repeated in another table or view) is dropped."""
+    ranges = [(k, v) for k, v in entries if isinstance(v, str)]
+    lists = sorted(((k, v) for k, v in entries if not isinstance(v, str)), key=lambda kv: (len(kv[1]), kv[0]))
+    seen: set[tuple[str, ...]] = set()
+    kept: list[tuple[str, str]] = []
+    for k, v in lists:
+        sig = tuple(v)
+        if sig in seen:
+            continue
+        seen.add(sig)
+        kept.append((k, ", ".join(v)))
+    return ranges + kept
+
+
 def format_coverage(entries: list[tuple[str, str]], max_chars: int) -> str:
     """One block: the header, then "table.column: ..." items separated by "; ", cut at an item boundary to
     max_chars; "" when there is nothing to say."""
@@ -71,7 +88,7 @@ def format_coverage(entries: list[tuple[str, str]], max_chars: int) -> str:
 async def build_coverage(session: MCPSession, schema: str, tables: list[tuple[str, list[dict[str, Any]]]],
                          max_values: int, max_chars: int) -> str:
     """The coverage line for the card's tables ([(table, [{"name", "type"}, ...]), ...])."""
-    entries: list[tuple[str, str]] = []
+    entries: list[tuple[str, list[str] | str]] = []
     for table, columns in tables:
         for col in columns:
             name, kind = str(col.get("name")), column_kind(str(col.get("name")), str(col.get("type", "")))
@@ -87,7 +104,7 @@ async def build_coverage(session: MCPSession, schema: str, tables: list[tuple[st
             if kind == "values":
                 vals = [str(r.get("v")) for r in rows if r.get("v") is not None]
                 if vals and len(vals) <= max_values:
-                    entries.append((f"{table}.{name}", ", ".join(vals)))
+                    entries.append((f"{table}.{name}", vals))
             elif rows and rows[0].get("lo") is not None:
                 entries.append((f"{table}.{name}", f"{rows[0]['lo']} to {rows[0]['hi']}"))
-    return format_coverage(entries, max_chars)
+    return format_coverage(order_entries(entries), max_chars)

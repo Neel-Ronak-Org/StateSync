@@ -211,4 +211,9 @@ questions for wording only.
    was refused by the API (HTTP 429). The latency measure therefore sends at most 8 at once and retries 429s with
    back-off, counting the retries in the wall time, and reports how many retries were needed. The rate limit
    itself is reported as a deployment constraint.
+8. **2026-10-08, R4, before any R4 run (design fix).** A one-question smoke test (not part of R4) showed the coverage
+   line filled its 2,500-character cap with the first table's tag and label lists before reaching the company names,
+   so it could not do what R4 tests. The line now lists date ranges first, then value lists from fewest values to
+   most, and drops a list identical to one already kept (the same column in another table or view). Cap, value
+   limit and everything else unchanged; images rebuilt from the fixing commit.
 
