@@ -55,9 +55,9 @@ Typed decision models offer a cheaper path. Jev~\cite{typesafe2026jev}, released
 text and one or more declared questions, either yes/no or a choice among named options, and returns a probability
 for each answer without generating any text. Early evaluations report strong zero-shot accuracy and good
 calibration on classification benchmarks~\cite{deusser2026jev}, competitive performance as a fast judge that
-escalates uncertain cases to a stronger model~\cite{li2026jevjudge}, and clear failure modes: probabilities that do
-not stay coherent when one decision is split into smaller ones~\cite{coherence2026}, and option labels that outweigh
-the definitions attached to them~\cite{labels2026}. What has not been tested, as far as we found, is whether such a
+escalates uncertain cases to a stronger model~\cite{li2026jevjudge}, and clear failure modes: probabilities for logically related questions that do not fit
+together~\cite{axioms2026,coherence2026}, and option names that outweigh the definitions attached to
+them~\cite{sun2026typesafe,labels2026}. What has not been tested, as far as we found, is whether such a
 model can make the decisions of a database-and-documents assistant, where the input is long (a schema, a page of a
 filing) and some verdicts, such as whether a SQL query is right, have to be worked out rather than read off.
 
@@ -80,9 +80,12 @@ should not be.
 \paragraph{Typed decision models.} Since Jev's release, studies have measured it on general classification and
 routing benchmarks~\cite{deusser2026jev}, as an LLM judge with confidence-based escalation~\cite{li2026jevjudge},
 and at agent decision points such as tool choice and relevance gating, where it tied an open model on relevance
-gating and neither beat chance at choosing between models~\cite{fastslow2026}. Others report that its
-probabilities are incoherent across related questions~\cite{coherence2026}, that labels override
-definitions~\cite{labels2026}, and that it rarely rejects when no option is right, although a yes/no check
+gating and neither beat chance at choosing between models~\cite{fastslow2026}. Others report that its probabilities
+for related questions do not obey the probability axioms, with single-label statements over-endorsed~\cite{axioms2026},
+that decomposing a decision into coarse and fine steps changes its answers~\cite{coherence2026}, that it follows an
+option's name rather than the rubric bound to it~\cite{sun2026typesafe} (as do open-weight models with the same
+interface~\cite{labels2026}), that a single accuracy figure moves by about five points with the question's
+wording~\cite{fastslow2026}, and that it rarely rejects when no option is right, although a yes/no check
 works~\cite{missing2026}. We found no evaluation on text-to-SQL, on choosing between a database and documents, or
 on ranking passages of long documents.
 
@@ -96,7 +99,8 @@ corrected labels.
 
 \paragraph{Routing and retrieval.} Adaptive-RAG~\cite{jeong2024adaptiverag} routes by predicted question complexity
 and CRAG~\cite{yan2024crag} triggers corrective retrieval from an evaluator; Bai et al.~\cite{bai2025routing} route
-between structured and unstructured sources with rules. Pointwise LLM re-ranking by the probability of ``yes'' is
+between structured and unstructured sources with rules, and Dai et al.~\cite{dai2026xgboost} train an XGBoost router
+that chooses document search, SQL or a refusal, with a confidence threshold but no route that uses both sources. Pointwise LLM re-ranking by the probability of ``yes'' is
 established~\cite{zhuang2023yesno}; cross-encoders such as BGE~\cite{chen2024bgem3} remain the standard second
 stage.
 
@@ -304,19 +308,22 @@ took \N{roneDenseMs}\,ms without re-ranking and \N{roneBgeMs}\,ms with the cross
 shared the GPU, so the cross-encoder figure is only indicative.
 
 \section{Discussion}\label{sec:discussion}
-\paragraph{Reading off versus working out.} Across the four roles, Jev's results follow one distinction. Where the
-answer is visible in the input, whether a passage states a figure, whether a schema has the needed columns, whether a
+\paragraph{Reading off versus working out.} Li et al.\ found that Jev judges as well as a frontier model when a
+verdict can be read off the text and falls behind when it must be derived~\cite{li2026jevjudge}. Our four roles
+extend that distinction to a database-and-documents assistant. Where the answer is visible in the input, whether a passage states a figure, whether a schema has the needed columns, whether a
 query's result looks plausible, it matches or beats the component it would replace. Where the answer has to be
-worked out, which of two plausible SQL queries is right, it falls behind, as Li et al.\ found for judging math and
-code~\cite{li2026jevjudge}. For a system designer this suggests using a decision model to \emph{trigger} work (fall
+worked out, which of two plausible SQL queries is right, it falls behind. SQL shows both sides of the line: a
+wrong query often returns a result that looks wrong, which Jev can see, whereas choosing between two plausible
+queries requires tracing what each computes. For a system designer this suggests using a decision model to \emph{trigger} work (fall
 back, re-rank, decline) and leaving the \emph{choice} among generated answers to execution, voting or a trained
 verifier.
 
 \paragraph{Ask one question, not two.} The clearest design lesson is about how a decision is posed. Routing between a
 database and documents is one decision with four outcomes; split into ``needs the database?'' and ``needs the
 documents?'', each probability is reasonable on its own, but the pair does not separate questions that need both
-sources from questions either source can answer. This is a concrete case of the incoherence that
-Joy~\cite{coherence2026} measured on classification tasks, and it cost \N{rtwoHtwoDiff} points here. Posing the
+sources from questions either source can answer. This fits the over-endorsement of single statements reported by Li
+et al.~\cite{axioms2026}: both needs score high whenever either source is plausible. Posed as two questions, the
+decision cost \N{rtwoHtwoDiff} points here. Posing the
 whole decision as one choice removed it.
 
 \paragraph{What the router cannot see.} Every router we tested, LLM or not, sent questions about companies absent
@@ -339,6 +346,9 @@ questions come from the pages where it did. BIRD's hints often name columns, whi
 report it with and without them.
 \paragraph{Labels and checks.} Routing labels are fixed by construction. Both authors labelled a stratified sample of
 40 routing questions and checked 30 page questions themselves, independently: \textbf{[agreement, once returned]}.
+\paragraph{Wording.} Each Jev role used one fixed wording (two for routing). Accuracy of typed decision models
+moves by about five points with wording~\cite{fastslow2026}; our two routing wordings differed by
+\N{rtwoJevTwoAcc} against \N{rtwoJevOneAcc}, and single figures should be read with that band in mind.
 \paragraph{One benchmark per role.} BIRD for SQL, one financial database and one filing library for the rest; English
 only. Jev is a commercial model whose training data we do not know, and the models may have seen BIRD.
 \paragraph{Hosts.} GPT-5 mini and the Gemini judge of the SQL experiment were reached through a subscription router;
