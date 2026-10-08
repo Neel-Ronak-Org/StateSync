@@ -225,9 +225,9 @@ async def _targeted_doc_search(
     return result["rows"]
 
 
-async def _maybe_jev_order(question: str, matches: list[dict]) -> tuple[list[dict], dict | None]:
-    """pipeline.passage_rerank = "jev": the passages in Jev's order (passage_jev.py); otherwise unchanged."""
-    if str(getattr(cfg.pipeline, "passage_rerank", "off")) != "jev" or not matches:
+async def _maybe_jev_order(question: str, matches: list[dict], mode: str) -> tuple[list[dict], dict | None]:
+    """mode = flags_snapshot["pipeline.passage_rerank"]: "jev" puts the passages in Jev's order (passage_jev.py)."""
+    if mode != "jev" or not matches:
         return matches, None
     ordered, trace = await passage_jev.jev_order(question, matches)
     logger.info("UKE passage_rerank jev: scored=%d failed=%d ms=%d", trace["scored"], trace["failed"], trace["ms"])
@@ -438,7 +438,7 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
             doc_scope, abstain_on, rerank, passage_order, rerank_titles,
         )
         trajectory_steps += 1 if meta["abstained"] else 2  # the expanded call is a second round-trip
-        matches, jev_trace = await _maybe_jev_order(query_text, matches)
+        matches, jev_trace = await _maybe_jev_order(query_text, matches, flags_snapshot.get("pipeline.passage_rerank", "off"))
         elapsed_ms = int(time.monotonic() * 1000) - start_ms
         logger.info(
             "UKE docs route: query_id=%s matches=%d abstained=%s elapsed_ms=%d",
@@ -555,7 +555,8 @@ async def hybrid_docs_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             # Nothing relevant: the doc retrievals are dropped and the answer is built from the SQL
             # result alone, with no fixed message (the SQL half may well be the whole answer).
             trajectory_steps += 1 if meta["abstained"] else 2
-    matches, _ = await _maybe_jev_order(doc_query, matches)
+    matches, _ = await _maybe_jev_order(doc_query, matches,
+                                        (state_dict.get("flags_snapshot") or {}).get("pipeline.passage_rerank", "off"))
     elapsed_ms = int(time.monotonic() * 1000) - start_ms
     logger.info("UKE hybrid docs: query_id=%s party_ids=%s sql_rows=%d doc_matches=%d elapsed_ms=%d",
                 state_dict.get("query_id", ""), party_ids, len(rows), len(matches), elapsed_ms)

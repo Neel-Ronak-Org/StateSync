@@ -51,10 +51,14 @@ def test_jev_order_uses_scores_and_survives_errors():
     assert trace == {"scored": 2, "failed": 1, "ms": 5}
 
 
-def test_flag_off_leaves_order(monkeypatch):
+def test_flag_off_leaves_order_and_on_reorders():
     import nodes.unstructured_knowledge as uk
-    data = object.__getattribute__(uk.cfg.pipeline, "_data")
-    monkeypatch.setitem(data, "passage_rerank", "off")
-    ms = [_m("a"), _m("b")]
-    out, trace = asyncio.run(uk._maybe_jev_order("q", ms))
+    ms = [_m("a", text="AAA"), _m("b", text="BBB")]
+    out, trace = asyncio.run(uk._maybe_jev_order("q", ms, "off"))
     assert out == ms and trace is None
+
+    async def fake_ask(state, questions):
+        return SimpleNamespace(error=None, probabilities={"contains": 0.9 if "BBB" in state else 0.1}, ms=3)
+    with patch.object(pj.jev_client, "ask", fake_ask):
+        out, trace = asyncio.run(uk._maybe_jev_order("q", ms, "jev"))
+    assert [m["chunk_id"] for m in out] == ["b", "a"] and trace["scored"] == 2
