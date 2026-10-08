@@ -63026,6 +63026,5196 @@
       "latency_ms": 7038
      },
      "ms": 7078
+    },
+    "r2e020": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Tell me Pfizer's depreciation and amortization for fiscal year 2021.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Tell me Pfizer's depreciation and amortization for fiscal year 2021.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "PFIZER 2021 10K",
+        "score": 0.7611825750848615
+       },
+       {
+        "title": "Pfizer 2023Q2 10Q",
+        "score": 0.7537233380244186
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "ok",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1925,
+      "tokens_out": 95,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 11062
+     },
+     "ms": 11194
+    },
+    "r2e021": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Tell me Coca-Cola's depreciation and amortization for fiscal year 2021.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Tell me Coca-Cola's depreciation and amortization for fiscal year 2021.",
+      "database_question": "What is Coca-Cola's depreciation and amortization for fiscal year 2021?",
+      "documents_question": "What is Coca-Cola's depreciation and amortization for fiscal year 2021?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "COCACOLA 2022 10K",
+        "score": 0.7703297001319959
+       },
+       {
+        "title": "COCACOLA 2021 10K",
+        "score": 0.751921206025694
+       },
+       {
+        "title": "COCACOLA 2017 10K",
+        "score": 0.725448554647334
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2047,
+      "tokens_out": 132,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 8566
+     },
+     "ms": 8624
+    },
+    "r2e022": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Tell me MGM Resorts's revenue for fiscal year 2018.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Tell me MGM Resorts's revenue for fiscal year 2018.",
+      "database_question": "What was MGM Resorts's revenue for fiscal year 2018?",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "MGMRESORTS 2020 10K",
+        "score": 0.8069542646408081
+       },
+       {
+        "title": "MGMRESORTS 2018 10K",
+        "score": 0.8064329143504566
+       },
+       {
+        "title": "MGMRESORTS 2022 10K",
+        "score": 0.7954177382339409
+       },
+       {
+        "title": "MGMRESORTS 2023Q2 10Q",
+        "score": 0.793380618095398
+       },
+       {
+        "title": "MGMRESORTS 2022Q4 EARNINGS",
+        "score": 0.7732930874788573
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2436,
+      "tokens_out": 108,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 10739
+     },
+     "ms": 10787
+    },
+    "r2e023": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "What was General Mills's operating cash flow in fiscal 2019?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "What was General Mills's operating cash flow in fiscal 2019?",
+      "database_question": "What was General Mills's operating cash flow in fiscal 2019?",
+      "documents_question": "What was General Mills's operating cash flow in fiscal 2019?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "GENERALMILLS 2020 10K",
+        "score": 0.803858804932763
+       },
+       {
+        "title": "GENERALMILLS 2019 10K",
+        "score": 0.7914022481552015
+       },
+       {
+        "title": "GENERALMILLS 2022 10K",
+        "score": 0.7732286127533237
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1986,
+      "tokens_out": 126,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6530
+     },
+     "ms": 6584
+    },
+    "r2e024": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Tell me MGM Resorts's capital expenditure for fiscal year 2020.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Tell me MGM Resorts's capital expenditure for fiscal year 2020.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "MGMRESORTS 2020 10K",
+        "score": 0.7980943087170892
+       },
+       {
+        "title": "MGMRESORTS 2022 10K",
+        "score": 0.7924313072901199
+       },
+       {
+        "title": "MGMRESORTS 2023Q2 10Q",
+        "score": 0.7800083160400391
+       },
+       {
+        "title": "MGMRESORTS 2022Q4 EARNINGS",
+        "score": 0.770300218787812
+       },
+       {
+        "title": "MGMRESORTS 2018 10K",
+        "score": 0.7650452816378617
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2405,
+      "tokens_out": 94,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7713
+     },
+     "ms": 7759
+    },
+    "r2e025": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Tell me CVS Health's share repurchases for fiscal year 2022.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "unsure",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Tell me CVS Health's share repurchases for fiscal year 2022.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "CVSHEALTH 2022 10K",
+        "score": 0.8050448894500732
+       },
+       {
+        "title": "CVSHEALTH 2018 10K",
+        "score": 0.7773655785700347
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1819,
+      "tokens_out": 96,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6248
+     },
+     "ms": 6302
+    },
+    "r2e026": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Tell me Amcor's revenue for fiscal year 2020.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "unsure",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Tell me Amcor's revenue for fiscal year 2020.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "AMCOR 2020 10K",
+        "score": 0.7806698447266298
+       },
+       {
+        "title": "AMCOR 2023 10K",
+        "score": 0.7804004186511168
+       },
+       {
+        "title": "AMCOR 2023Q4 EARNINGS",
+        "score": 0.779488520132938
+       },
+       {
+        "title": "AMCOR 2023Q2 10Q",
+        "score": 0.768433231431233
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2083,
+      "tokens_out": 94,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7550
+     },
+     "ms": 7595
+    },
+    "r2e027": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Tell me Lockheed Martin's current assets for fiscal year 2021.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Tell me Lockheed Martin's current assets for fiscal year 2021.",
+      "database_question": "What is Lockheed Martin's current assets for fiscal year 2021?",
+      "documents_question": "What is Lockheed Martin's current assets for fiscal year 2021?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "LOCKHEEDMARTIN 2021 10K",
+        "score": 0.8019215104673549
+       },
+       {
+        "title": "LOCKHEEDMARTIN 2022 10K",
+        "score": 0.7915817275795358
+       },
+       {
+        "title": "LOCKHEEDMARTIN 2020 10K",
+        "score": 0.7873494371592383
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2039,
+      "tokens_out": 126,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 11481
+     },
+     "ms": 11530
+    },
+    "r2e028": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "What was American Express's operating cash flow in fiscal 2022?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "unsure",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "What was American Express's operating cash flow in fiscal 2022?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "AMERICANEXPRESS 2022 10K",
+        "score": 0.7951389536676026
+       },
+       {
+        "title": "AMD 2022 10K",
+        "score": 0.7040412316420831
+       },
+       {
+        "title": "AES 2022 10K",
+        "score": 0.6998223304536786
+       },
+       {
+        "title": "VERIZON 2022 10K",
+        "score": 0.6918329000473022
+       },
+       {
+        "title": "CORNING 2022 10K",
+        "score": 0.6911737007267303
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2199,
+      "tokens_out": 95,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7571
+     },
+     "ms": 7630
+    },
+    "r2e029": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "What was American Water Works's operating cash flow in fiscal 2022?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "unsure",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "What was American Water Works's operating cash flow in fiscal 2022?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "AMERICANWATERWORKS 2021 10K",
+        "score": 0.8076076530241291
+       },
+       {
+        "title": "AMERICANWATERWORKS 2020 10K",
+        "score": 0.8076076530241291
+       },
+       {
+        "title": "AMERICANWATERWORKS 2022 10K",
+        "score": 0.7920586862285149
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1855,
+      "tokens_out": 96,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7846
+     },
+     "ms": 7885
+    },
+    "r2e030": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Tell me AMD's stockholders' equity for fiscal year 2022.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Tell me AMD's stockholders' equity for fiscal year 2022.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "AMD 2015 10K",
+        "score": 0.7463608090447468
+       },
+       {
+        "title": "AMD 2022 10K",
+        "score": 0.7435793945413316
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1810,
+      "tokens_out": 95,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6782
+     },
+     "ms": 6824
+    },
+    "r2s001": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Which company had the highest depreciation and amortization in fiscal 2019?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "unsure",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Which company had the highest depreciation and amortization in fiscal 2019?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "BLOCK 2020 10K",
+        "score": 0.680083378580739
+       },
+       {
+        "title": "AMERICANWATERWORKS 2020 10K",
+        "score": 0.6796392034624156
+       },
+       {
+        "title": "WALMART 2019 10K",
+        "score": 0.6625791773483384
+       },
+       {
+        "title": "AMERICANWATERWORKS 2021 10K",
+        "score": 0.6524618449761683
+       },
+       {
+        "title": "VERIZON 2021 10K",
+        "score": 0.6467110760901207
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2246,
+      "tokens_out": 96,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7255
+     },
+     "ms": 7300
+    },
+    "r2s002": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Name the company with the lowest long-term debt in fiscal 2021.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Name the company with the lowest long-term debt in fiscal 2021.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "COCACOLA 2021 10K",
+        "score": 0.7014351100157237
+       },
+       {
+        "title": "COSTCO 2021 10K",
+        "score": 0.6989492501718256
+       },
+       {
+        "title": "VERIZON 2021 10K",
+        "score": 0.697397475969345
+       },
+       {
+        "title": "VERIZON 2022 10K",
+        "score": 0.6909929264500841
+       },
+       {
+        "title": "MGMRESORTS 2020 10K",
+        "score": 0.6878304276516933
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2342,
+      "tokens_out": 95,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6924
+     },
+     "ms": 6960
+    },
+    "r2s003": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Which company had the highest accounts receivable in fiscal 2018?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Which company had the highest accounts receivable in fiscal 2018?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "NIKE 2023 10K",
+        "score": 0.6454873469762424
+       },
+       {
+        "title": "NIKE 2019 10K",
+        "score": 0.6429588986324939
+       },
+       {
+        "title": "NIKE 2021 10K",
+        "score": 0.6423623392150043
+       },
+       {
+        "title": "AMD 2022 10K",
+        "score": 0.6392313002394658
+       },
+       {
+        "title": "CVSHEALTH 2018 10K",
+        "score": 0.6377741236811677
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2030,
+      "tokens_out": 94,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 8145
+     },
+     "ms": 8187
+    },
+    "r2s004": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Name the company with the highest accounts receivable in fiscal 2021.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Name the company with the highest accounts receivable in fiscal 2021.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "PEPSICO 2022 10K",
+        "score": 0.6793390287347918
+       },
+       {
+        "title": "CORNING 2021 10K",
+        "score": 0.6783871448520704
+       },
+       {
+        "title": "AMERICANWATERWORKS 2021 10K",
+        "score": 0.6780862626561941
+       },
+       {
+        "title": "PEPSICO 2021 10K",
+        "score": 0.6741641558955889
+       },
+       {
+        "title": "AMD 2022 10K",
+        "score": 0.6735349905851514
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2178,
+      "tokens_out": 95,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6209
+     },
+     "ms": 6250
+    },
+    "r2s005": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Name the company with the lowest long-term debt in fiscal 2020.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Name the company with the lowest long-term debt in fiscal 2020.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "VERIZON 2021 10K",
+        "score": 0.701207205833086
+       },
+       {
+        "title": "COSTCO 2021 10K",
+        "score": 0.699422192366952
+       },
+       {
+        "title": "MGMRESORTS 2020 10K",
+        "score": 0.6941560093071467
+       },
+       {
+        "title": "AMCOR 2020 10K",
+        "score": 0.6941544280420567
+       },
+       {
+        "title": "VERIZON 2022 10K",
+        "score": 0.6940209999034602
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2445,
+      "tokens_out": 95,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 8567
+     },
+     "ms": 8622
+    },
+    "r2s006": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "List the 4 companies with the most net property, plant and equipment in fiscal 2018.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "List the 4 companies with the most net property, plant and equipment in fiscal 2018.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "NIKE 2019 10K",
+        "score": 0.6829721651210774
+       },
+       {
+        "title": "AMCOR 2023 10K",
+        "score": 0.6607555172126058
+       },
+       {
+        "title": "AMCOR 2020 10K",
+        "score": 0.6581203152990012
+       },
+       {
+        "title": "3M 2018 10K",
+        "score": 0.6575859001176523
+       },
+       {
+        "title": "NIKE 2021 10K",
+        "score": 0.6550261172667823
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2264,
+      "tokens_out": 100,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 10094
+     },
+     "ms": 10120
+    },
+    "r2s007": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "List the 3 companies with the most revenue in fiscal 2021.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "List the 3 companies with the most revenue in fiscal 2021.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "GENERALMILLS 2020 10K",
+        "score": 0.6689559817314148
+       },
+       {
+        "title": "AMD 2022 10K",
+        "score": 0.6575129015766907
+       },
+       {
+        "title": "AES 2022 10K",
+        "score": 0.6446831728539375
+       },
+       {
+        "title": "NIKE 2021 10K",
+        "score": 0.6440282979113149
+       },
+       {
+        "title": "VERIZON 2021 10K",
+        "score": 0.641203458524379
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2246,
+      "tokens_out": 95,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 9762
+     },
+     "ms": 9795
+    },
+    "r2s008": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Rank the top 5 companies by stockholders' equity for fiscal 2020.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Rank the top 5 companies by stockholders' equity for fiscal 2020.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "JPMORGAN 2022 10K",
+        "score": 0.6641209917212763
+       },
+       {
+        "title": "FOOTLOCKER 2022 8K dated 2022 05 20",
+        "score": 0.6423554376999429
+       },
+       {
+        "title": "PFIZER 2021 10K",
+        "score": 0.6421481032018598
+       },
+       {
+        "title": "AMD 2022 10K",
+        "score": 0.641951279872813
+       },
+       {
+        "title": "AMERICANWATERWORKS 2020 10K",
+        "score": 0.6409930708984036
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2289,
+      "tokens_out": 97,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 12460
+     },
+     "ms": 12507
+    },
+    "r2s009": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Rank the top 5 companies by revenue for fiscal 2023.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Rank the top 5 companies by revenue for fiscal 2023.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "MICROSOFT 2023 10K",
+        "score": 0.6391449785742278
+       },
+       {
+        "title": "AMERICANWATERWORKS 2022 10K",
+        "score": 0.6355906613793535
+       },
+       {
+        "title": "AMERICANWATERWORKS 2020 10K",
+        "score": 0.6313287052743091
+       },
+       {
+        "title": "BESTBUY 2019 10K",
+        "score": 0.6265025361476917
+       },
+       {
+        "title": "NIKE 2023 10K",
+        "score": 0.6264081826721278
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2182,
+      "tokens_out": 94,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 10963
+     },
+     "ms": 11007
+    },
+    "r2s010": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "List the 3 companies with the most depreciation and amortization in fiscal 2018.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "List the 3 companies with the most depreciation and amortization in fiscal 2018.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "BLOCK 2020 10K",
+        "score": 0.6619674550803868
+       },
+       {
+        "title": "WALMART 2019 10K",
+        "score": 0.6422131187359138
+       },
+       {
+        "title": "PEPSICO 2022 10K",
+        "score": 0.6394290113108773
+       },
+       {
+        "title": "AMERICANWATERWORKS 2020 10K",
+        "score": 0.631829851596935
+       },
+       {
+        "title": "3M 2018 10K",
+        "score": 0.6302802718019854
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2249,
+      "tokens_out": 98,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 9026
+     },
+     "ms": 9069
+    },
+    "r2s011": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Count the companies whose operating cash flow exceeded 4 billion dollars in fiscal 2018.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Count the companies whose operating cash flow exceeded 4 billion dollars in fiscal 2018.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "BESTBUY 2023 10K",
+        "score": 0.6886221912808158
+       },
+       {
+        "title": "CVSHEALTH 2018 10K",
+        "score": 0.6689367688969696
+       },
+       {
+        "title": "BLOCK 2020 10K",
+        "score": 0.6659092903137207
+       },
+       {
+        "title": "BESTBUY 2019 10K",
+        "score": 0.6618190214849732
+       },
+       {
+        "title": "ACTIVISIONBLIZZARD 2019 10K",
+        "score": 0.6577779634794036
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2072,
+      "tokens_out": 98,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7174
+     },
+     "ms": 7203
+    },
+    "r2s012": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "How many of the companies reported total liabilities above 34 billion dollars in fiscal 2019?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "How many of the companies reported total liabilities above 34 billion dollars in fiscal 2019?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "AES 2022 10K",
+        "score": 0.6824274673248056
+       },
+       {
+        "title": "AMCOR 2020 10K",
+        "score": 0.6795393859104804
+       },
+       {
+        "title": "AMERICANWATERWORKS 2021 10K",
+        "score": 0.673716309837888
+       },
+       {
+        "title": "JPMORGAN 2022 10K",
+        "score": 0.6717155571238274
+       },
+       {
+        "title": "JPMORGAN 2022Q2 10Q",
+        "score": 0.6704023490435371
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2405,
+      "tokens_out": 100,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7017
+     },
+     "ms": 7054
+    },
+    "r2s013": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "How many of the companies reported revenue above 32 billion dollars in fiscal 2018?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "How many of the companies reported revenue above 32 billion dollars in fiscal 2018?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "3M 2018 10K",
+        "score": 0.630353582277165
+       },
+       {
+        "title": "ACTIVISIONBLIZZARD 2019 10K",
+        "score": 0.6280204126798469
+       },
+       {
+        "title": "ADOBE 2017 10K",
+        "score": 0.6268170324782139
+       },
+       {
+        "title": "CORNING 2020 10K",
+        "score": 0.6267514379920334
+       },
+       {
+        "title": "CVSHEALTH 2018 10K",
+        "score": 0.6194408989619181
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2232,
+      "tokens_out": 99,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6888
+     },
+     "ms": 6935
+    },
+    "r2s014": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Count the companies whose research and development expense exceeded 1 billion dollars in fiscal 2018.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Count the companies whose research and development expense exceeded 1 billion dollars in fiscal 2018.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "3M 2018 10K",
+        "score": 0.7030145204395698
+       },
+       {
+        "title": "BOEING 2018 10K",
+        "score": 0.6707783544991487
+       },
+       {
+        "title": "AMD 2022 10K",
+        "score": 0.6601675748825073
+       },
+       {
+        "title": "3M 2022 10K",
+        "score": 0.6546238660812378
+       },
+       {
+        "title": "MICROSOFT 2016 10K",
+        "score": 0.6462540397426617
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2119,
+      "tokens_out": 99,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7301
+     },
+     "ms": 7351
+    },
+    "r2s015": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Count the companies whose capital expenditure exceeded 1 billion dollars in fiscal 2018.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Count the companies whose capital expenditure exceeded 1 billion dollars in fiscal 2018.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "AMERICANWATERWORKS 2020 10K",
+        "score": 0.6749854691313654
+       },
+       {
+        "title": "BESTBUY 2017 10K",
+        "score": 0.6666208505589557
+       },
+       {
+        "title": "BOEING 2018 10K",
+        "score": 0.6643112701998675
+       },
+       {
+        "title": "COCACOLA 2017 10K",
+        "score": 0.6618029865329021
+       },
+       {
+        "title": "BESTBUY 2023 10K",
+        "score": 0.6604288433960045
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2156,
+      "tokens_out": 97,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 5997
+     },
+     "ms": 6034
+    },
+    "r2s016": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Across the companies, what was the median capital expenditure in fiscal 2019?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Across the companies, what was the median capital expenditure in fiscal 2019?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "LOCKHEEDMARTIN 2020 10K",
+        "score": 0.7255436240330845
+       },
+       {
+        "title": "WALMART 2019 10K",
+        "score": 0.7181956004020942
+       },
+       {
+        "title": "AMERICANWATERWORKS 2020 10K",
+        "score": 0.6996896892508615
+       },
+       {
+        "title": "BESTBUY 2019 10K",
+        "score": 0.6936846971511841
+       },
+       {
+        "title": "GENERALMILLS 2019 10K",
+        "score": 0.6920588680663898
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2135,
+      "tokens_out": 96,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 8333
+     },
+     "ms": 8380
+    },
+    "r2s017": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "What was the median long-term debt across all the companies in fiscal 2018?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "What was the median long-term debt across all the companies in fiscal 2018?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "COCACOLA 2017 10K",
+        "score": 0.7387959828145653
+       },
+       {
+        "title": "VERIZON 2021 10K",
+        "score": 0.7286934746345176
+       },
+       {
+        "title": "MGMRESORTS 2018 10K",
+        "score": 0.7235904704304272
+       },
+       {
+        "title": "VERIZON 2022 10K",
+        "score": 0.7207695315433871
+       },
+       {
+        "title": "AMERICANWATERWORKS 2020 10K",
+        "score": 0.720158133487929
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2321,
+      "tokens_out": 97,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6304
+     },
+     "ms": 6347
+    },
+    "r2s018": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Across the companies, what was the median dividends paid in fiscal 2017?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Across the companies, what was the median dividends paid in fiscal 2017?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "BESTBUY 2017 10K",
+        "score": 0.7151192173717391
+       },
+       {
+        "title": "BESTBUY 2019 10K",
+        "score": 0.6868061796657874
+       },
+       {
+        "title": "NIKE 2018 10K",
+        "score": 0.6799436593122937
+       },
+       {
+        "title": "WALMART 2018 10K",
+        "score": 0.6716479249840153
+       },
+       {
+        "title": "COCACOLA 2017 10K",
+        "score": 0.6704746088527029
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2224,
+      "tokens_out": 96,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7649
+     },
+     "ms": 7699
+    },
+    "r2s019": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Across the companies, what was the median inventory in fiscal 2017?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Across the companies, what was the median inventory in fiscal 2017?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "ACTIVISIONBLIZZARD 2019 10K",
+        "score": 0.678016625229015
+       },
+       {
+        "title": "NIKE 2023 10K",
+        "score": 0.6700152951469949
+       },
+       {
+        "title": "BESTBUY 2017 10K",
+        "score": 0.6680735544983446
+       },
+       {
+        "title": "COCACOLA 2017 10K",
+        "score": 0.6588574816330688
+       },
+       {
+        "title": "NIKE 2018 10K",
+        "score": 0.6578041903201515
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2125,
+      "tokens_out": 95,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6385
+     },
+     "ms": 6435
+    },
+    "r2s020": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "What was the average accounts receivable across all the companies in fiscal 2017?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "What was the average accounts receivable across all the companies in fiscal 2017?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "CVSHEALTH 2022 10K",
+        "score": 0.720056822289798
+       },
+       {
+        "title": "ADOBE 2017 10K",
+        "score": 0.7061189133283852
+       },
+       {
+        "title": "NIKE 2023 10K",
+        "score": 0.7016513347625782
+       },
+       {
+        "title": "PEPSICO 2021 10K",
+        "score": 0.6983957054143303
+       },
+       {
+        "title": "BESTBUY 2017 10K",
+        "score": 0.6974788974313878
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2150,
+      "tokens_out": 97,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6697
+     },
+     "ms": 6742
+    },
+    "r2s021": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "What was Microsoft's long-term debt in each fiscal year from 2018 to 2022?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "What was Microsoft's long-term debt in each fiscal year from 2018 to 2022?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "MICROSOFT 2023 10K",
+        "score": 0.7190102580159249
+       },
+       {
+        "title": "VERIZON 2022 10K",
+        "score": 0.6867984123946195
+       },
+       {
+        "title": "MGMRESORTS 2020 10K",
+        "score": 0.686646975678566
+       },
+       {
+        "title": "COCACOLA 2017 10K",
+        "score": 0.6838929214732883
+       },
+       {
+        "title": "WALMART 2018 10K",
+        "score": 0.6826197301560748
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2291,
+      "tokens_out": 102,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 8054
+     },
+     "ms": 8094
+    },
+    "r2s022": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Show Verizon's operating income for every fiscal year between 2014 and 2018.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Show Verizon's operating income for every fiscal year between 2014 and 2018.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "VERIZON 2022 10K",
+        "score": 0.788737653007782
+       },
+       {
+        "title": "VERIZON 2021 10K",
+        "score": 0.7800864970529396
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1927,
+      "tokens_out": 100,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6563
+     },
+     "ms": 6600
+    },
+    "r2s023": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "What was Kraft Heinz's net income in each fiscal year from 2016 to 2020?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "unsure",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "What was Kraft Heinz's net income in each fiscal year from 2016 to 2020?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "KRAFTHEINZ 2019 10K",
+        "score": 0.8202060002272729
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1753,
+      "tokens_out": 103,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 10428
+     },
+     "ms": 10460
+    },
+    "r2s024": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "What was Foot Locker's accounts payable in each fiscal year from 2015 to 2019?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "What was Foot Locker's accounts payable in each fiscal year from 2015 to 2019?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "NIKE 2019 10K",
+        "score": 0.7228833336442824
+       },
+       {
+        "title": "NIKE 2021 10K",
+        "score": 0.7173563118810006
+       },
+       {
+        "title": "NIKE 2018 10K",
+        "score": 0.7041792097198505
+       },
+       {
+        "title": "NIKE 2023 10K",
+        "score": 0.7040634784755269
+       },
+       {
+        "title": "FOOTLOCKER 2022 8K dated 2022 08 19",
+        "score": 0.6990383620445865
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2236,
+      "tokens_out": 102,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 5970
+     },
+     "ms": 6004
+    },
+    "r2s025": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "What was American Express's total liabilities in each fiscal year from 2018 to 2022?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "What was American Express's total liabilities in each fiscal year from 2018 to 2022?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "AMERICANEXPRESS 2022 10K",
+        "score": 0.7682744813374432
+       },
+       {
+        "title": "PEPSICO 2021 10K",
+        "score": 0.6856344733943229
+       },
+       {
+        "title": "PEPSICO 2022 10K",
+        "score": 0.6844461920522893
+       },
+       {
+        "title": "VERIZON 2021 10K",
+        "score": 0.6827205070020473
+       },
+       {
+        "title": "MGMRESORTS 2020 10K",
+        "score": 0.6824705397346482
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2345,
+      "tokens_out": 102,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 9809
+     },
+     "ms": 9843
+    },
+    "r2s026": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Which company grew its capital expenditure the most from fiscal 2019 to fiscal 2020?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Which company grew its capital expenditure the most from fiscal 2019 to fiscal 2020?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "WALMART 2020 10K",
+        "score": 0.7411969503990659
+       },
+       {
+        "title": "AMERICANWATERWORKS 2020 10K",
+        "score": 0.7367063760757498
+       },
+       {
+        "title": "LOCKHEEDMARTIN 2020 10K",
+        "score": 0.725874413393575
+       },
+       {
+        "title": "WALMART 2019 10K",
+        "score": 0.7230595386873072
+       },
+       {
+        "title": "AMERICANWATERWORKS 2021 10K",
+        "score": 0.718758063390382
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2074,
+      "tokens_out": 101,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7136
+     },
+     "ms": 7186
+    },
+    "r2s027": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Which company grew its gross profit the most from fiscal 2020 to fiscal 2021?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Which company grew its gross profit the most from fiscal 2020 to fiscal 2021?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "ULTABEAUTY 2023Q4 EARNINGS",
+        "score": 0.7141103701357524
+       },
+       {
+        "title": "NIKE 2023 10K",
+        "score": 0.7130543501506801
+       },
+       {
+        "title": "ULTABEAUTY 2023 10K",
+        "score": 0.7098218837221164
+       },
+       {
+        "title": "CORNING 2021 10K",
+        "score": 0.6829159870370618
+       },
+       {
+        "title": "AMCOR 2020 10K",
+        "score": 0.6809195863378493
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2192,
+      "tokens_out": 101,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 5902
+     },
+     "ms": 5947
+    },
+    "r2s028": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Which company grew its total liabilities the most from fiscal 2022 to fiscal 2023?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Which company grew its total liabilities the most from fiscal 2022 to fiscal 2023?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "JPMORGAN 2022 10K",
+        "score": 0.6915099348098541
+       },
+       {
+        "title": "AMCOR 2020 10K",
+        "score": 0.6868958918800292
+       },
+       {
+        "title": "3M 2022 10K",
+        "score": 0.6842686910309016
+       },
+       {
+        "title": "AES 2022 10K",
+        "score": 0.6842240502967877
+       },
+       {
+        "title": "JOHNSON JOHNSON 2022 10K",
+        "score": 0.6818849878037141
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2261,
+      "tokens_out": 101,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 8264
+     },
+     "ms": 8310
+    },
+    "r2s029": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Which company grew its inventory the most from fiscal 2021 to fiscal 2022?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Which company grew its inventory the most from fiscal 2021 to fiscal 2022?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "ULTABEAUTY 2023 10K",
+        "score": 0.7110849539485972
+       },
+       {
+        "title": "NIKE 2021 10K",
+        "score": 0.6844816427804998
+       },
+       {
+        "title": "AMD 2022 10K",
+        "score": 0.6813518241290675
+       },
+       {
+        "title": "WALMART 2020 10K",
+        "score": 0.6764596130888691
+       },
+       {
+        "title": "JOHNSON JOHNSON 2022 10K",
+        "score": 0.6757367237085302
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2140,
+      "tokens_out": 100,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6391
+     },
+     "ms": 6436
+    },
+    "r2s030": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Which company grew its accounts payable the most from fiscal 2017 to fiscal 2018?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "no",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Which company grew its accounts payable the most from fiscal 2017 to fiscal 2018?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "NIKE 2018 10K",
+        "score": 0.7208197879302641
+       },
+       {
+        "title": "CVSHEALTH 2018 10K",
+        "score": 0.7099757540254936
+       },
+       {
+        "title": "WALMART 2019 10K",
+        "score": 0.6847847259558095
+       },
+       {
+        "title": "WALMART 2018 10K",
+        "score": 0.6846611768185205
+       },
+       {
+        "title": "AMAZON 2017 10K",
+        "score": 0.6798898994758651
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2122,
+      "tokens_out": 101,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6089
+     },
+     "ms": 6136
+    },
+    "r2h001": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Of JPMorgan, Johnson & Johnson and PepsiCo, which reported the lowest operating cash flow in fiscal 2022? Summarise what that company's 2022 annual report says about what drove its results that year.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Of JPMorgan, Johnson & Johnson and PepsiCo, which reported the lowest operating cash flow in fiscal 2022? Summarise what that company's 2022 annual report says about what drove its results that year.",
+      "database_question": "Which of JPMorgan, Johnson & Johnson, and PepsiCo reported the lowest operating cash flow in fiscal 2022?",
+      "documents_question": "Summarise what the 2022 annual report of the company with the lowest operating cash flow in fiscal 2022 among JPMorgan, Johnson & Johnson, and PepsiCo says about what drove its results that year.",
+      "documents_depend_on_database": true,
+      "documents": [
+       {
+        "title": "PEPSICO 2022 10K",
+        "score": 0.7023746662215505
+       },
+       {
+        "title": "JOHNSON JOHNSON 2022 10K",
+        "score": 0.7019967488064338
+       },
+       {
+        "title": "PEPSICO 2021 10K",
+        "score": 0.695580917860216
+       },
+       {
+        "title": "PEPSICO 2023Q1 EARNINGS",
+        "score": 0.6834073414184735
+       },
+       {
+        "title": "JOHNSON JOHNSON 2023 8K dated 2023 08 30",
+        "score": 0.6790478207383488
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2289,
+      "tokens_out": 204,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 10758
+     },
+     "ms": 10793
+    },
+    "r2h002": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Which company among Nike and Lockheed Martin had the highest cash and cash equivalents at year end in fiscal 2021, and what does its 2021 10-K say about any material legal proceedings?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Which company among Nike and Lockheed Martin had the highest cash and cash equivalents at year end in fiscal 2021, and what does its 2021 10-K say about any material legal proceedings?",
+      "database_question": "Which company among Nike and Lockheed Martin had the highest cash and cash equivalents at year end in fiscal 2021?",
+      "documents_question": "What does the 2021 10-K of the company with the highest cash and cash equivalents at year end in fiscal 2021 among Nike and Lockheed Martin say about any material legal proceedings?",
+      "documents_depend_on_database": true,
+      "documents": [
+       {
+        "title": "NIKE 2023 10K",
+        "score": 0.7378868084516252
+       },
+       {
+        "title": "NIKE 2021 10K",
+        "score": 0.7332071721441165
+       },
+       {
+        "title": "NIKE 2019 10K",
+        "score": 0.7224116524738844
+       },
+       {
+        "title": "LOCKHEEDMARTIN 2022 10K",
+        "score": 0.721737027168279
+       },
+       {
+        "title": "LOCKHEEDMARTIN 2021 10K",
+        "score": 0.7152581641231988
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2264,
+      "tokens_out": 192,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 9927
+     },
+     "ms": 9959
+    },
+    "r2h003": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Of Coca-Cola and Johnson & Johnson, which reported the highest long-term debt at year end in fiscal 2022? Summarise what that company's 2022 annual report says about the main risks it faces.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Of Coca-Cola and Johnson & Johnson, which reported the highest long-term debt at year end in fiscal 2022? Summarise what that company's 2022 annual report says about the main risks it faces.",
+      "database_question": "Which of Coca-Cola or Johnson & Johnson reported the highest long-term debt at year end in fiscal 2022?",
+      "documents_question": "Summarise what the 2022 annual report of the company with the highest long-term debt at year end in fiscal 2022 (between Coca-Cola and Johnson & Johnson) says about the main risks it faces.",
+      "documents_depend_on_database": true,
+      "documents": [
+       {
+        "title": "JOHNSON JOHNSON 2023Q2 EARNINGS",
+        "score": 0.7234238601751289
+       },
+       {
+        "title": "JOHNSON JOHNSON 2023 8K dated 2023 08 30",
+        "score": 0.7092124570354921
+       },
+       {
+        "title": "COCACOLA 2021 10K",
+        "score": 0.703548515266008
+       },
+       {
+        "title": "COCACOLA 2022 10K",
+        "score": 0.6996073781742049
+       },
+       {
+        "title": "JOHNSON JOHNSON 2022Q4 EARNINGS",
+        "score": 0.6958236305661094
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2164,
+      "tokens_out": 199,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 12467
+     },
+     "ms": 12523
+    },
+    "r2h004": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Which company among PepsiCo, American Water Works and Coca-Cola had the highest cash and cash equivalents at year end in fiscal 2021, and what does its 2021 10-K say about its competition?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Which company among PepsiCo, American Water Works and Coca-Cola had the highest cash and cash equivalents at year end in fiscal 2021, and what does its 2021 10-K say about its competition?",
+      "database_question": "Which company among PepsiCo, American Water Works and Coca-Cola had the highest cash and cash equivalents at year end in fiscal 2021?",
+      "documents_question": "What does the 2021 10-K of the company with the highest cash and cash equivalents at year end in fiscal 2021 among PepsiCo, American Water Works and Coca-Cola say about its competition?",
+      "documents_depend_on_database": true,
+      "documents": [
+       {
+        "title": "PEPSICO 2022 10K",
+        "score": 0.7550684560489747
+       },
+       {
+        "title": "PEPSICO 2021 10K",
+        "score": 0.7492836937094839
+       },
+       {
+        "title": "AMERICANWATERWORKS 2021 10K",
+        "score": 0.7042658043700074
+       },
+       {
+        "title": "AMERICANWATERWORKS 2022 10K",
+        "score": 0.6987996367096221
+       },
+       {
+        "title": "AMERICANWATERWORKS 2020 10K",
+        "score": 0.6943365227491435
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2149,
+      "tokens_out": 203,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7852
+     },
+     "ms": 7887
+    },
+    "r2h005": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Which company among General Mills, Amcor and Corning had the highest operating income in fiscal 2020, and what does its 2020 10-K say about what drove its results that year?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Which company among General Mills, Amcor and Corning had the highest operating income in fiscal 2020, and what does its 2020 10-K say about what drove its results that year?",
+      "database_question": "Which company among General Mills, Amcor and Corning had the highest operating income in fiscal 2020?",
+      "documents_question": "What does the 2020 10-K of the company with the highest operating income in fiscal 2020 among General Mills, Amcor and Corning say about what drove its results that year?",
+      "documents_depend_on_database": true,
+      "documents": [
+       {
+        "title": "AMCOR 2020 10K",
+        "score": 0.75628079436536
+       },
+       {
+        "title": "CORNING 2020 10K",
+        "score": 0.7421141709157344
+       },
+       {
+        "title": "AMCOR 2023 10K",
+        "score": 0.7252730131149292
+       },
+       {
+        "title": "AMCOR 2023Q4 EARNINGS",
+        "score": 0.7242884101180258
+       },
+       {
+        "title": "CORNING 2022 10K",
+        "score": 0.7242414622594721
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2175,
+      "tokens_out": 193,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 10481
+     },
+     "ms": 10507
+    },
+    "r2h006": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Of Lockheed Martin, American Water Works and MGM Resorts, which reported the lowest dividends paid in fiscal 2020? Summarise what that company's 2020 annual report says about any material legal proceedings.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Of Lockheed Martin, American Water Works and MGM Resorts, which reported the lowest dividends paid in fiscal 2020? Summarise what that company's 2020 annual report says about any material legal proceedings.",
+      "database_question": "Which of Lockheed Martin, American Water Works, and MGM Resorts reported the lowest dividends paid in fiscal 2020?",
+      "documents_question": "Summarise what the 2020 annual report of the company with the lowest dividends paid in fiscal 2020 among Lockheed Martin, American Water Works, and MGM Resorts says about any material legal proceedings.",
+      "documents_depend_on_database": true,
+      "documents": [
+       {
+        "title": "AMERICANWATERWORKS 2021 10K",
+        "score": 0.7338257787851163
+       },
+       {
+        "title": "MGMRESORTS 2018 10K",
+        "score": 0.6814435667597849
+       },
+       {
+        "title": "MGMRESORTS 2020 10K",
+        "score": 0.6806408141897762
+       },
+       {
+        "title": "MGMRESORTS 2023Q2 10Q",
+        "score": 0.6792666102330005
+       },
+       {
+        "title": "MGMRESORTS 2022 10K",
+        "score": 0.6773705655645168
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2169,
+      "tokens_out": 194,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 9965
+     },
+     "ms": 9991
+    },
+    "r2h007": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Of Costco and American Water Works, which reported the highest capital expenditure in fiscal 2021? Summarise what that company's 2021 annual report says about what drove its results that year.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Of Costco and American Water Works, which reported the highest capital expenditure in fiscal 2021? Summarise what that company's 2021 annual report says about what drove its results that year.",
+      "database_question": "Which company, Costco or American Water Works, reported the highest capital expenditure in fiscal 2021?",
+      "documents_question": "Summarise what the 2021 annual report of the company with the highest capital expenditure in fiscal 2021 (between Costco and American Water Works) says about what drove its results that year.",
+      "documents_depend_on_database": true,
+      "documents": [
+       {
+        "title": "AMERICANWATERWORKS 2021 10K",
+        "score": 0.7511762229485126
+       },
+       {
+        "title": "AMERICANWATERWORKS 2022 10K",
+        "score": 0.7359321241257739
+       },
+       {
+        "title": "AMERICANWATERWORKS 2020 10K",
+        "score": 0.7358516173539618
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1886,
+      "tokens_out": 188,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 5488
+     },
+     "ms": 5521
+    },
+    "r2h008": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Which company among Walmart and American Water Works had the lowest operating cash flow in fiscal 2020, and what does its 2020 10-K say about any material legal proceedings?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Which company among Walmart and American Water Works had the lowest operating cash flow in fiscal 2020, and what does its 2020 10-K say about any material legal proceedings?",
+      "database_question": "Which company among Walmart and American Water Works had the lowest operating cash flow in fiscal 2020?",
+      "documents_question": "What does the 2020 10-K of the company with the lowest operating cash flow in fiscal 2020 among Walmart and American Water Works say about any material legal proceedings?",
+      "documents_depend_on_database": true,
+      "documents": [
+       {
+        "title": "AMERICANWATERWORKS 2022 10K",
+        "score": 0.7129972924605256
+       },
+       {
+        "title": "AMERICANWATERWORKS 2021 10K",
+        "score": 0.7110554655293778
+       },
+       {
+        "title": "AMERICANWATERWORKS 2020 10K",
+        "score": 0.7084794119261958
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2021,
+      "tokens_out": 183,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 10690
+     },
+     "ms": 10725
+    },
+    "r2h009": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Which company among AES, CVS Health and 3M had the lowest total assets at year end in fiscal 2022, and what does its 2022 10-K say about any material legal proceedings?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Which company among AES, CVS Health and 3M had the lowest total assets at year end in fiscal 2022, and what does its 2022 10-K say about any material legal proceedings?",
+      "database_question": "Which company among AES, CVS Health and 3M had the lowest total assets at year end in fiscal 2022?",
+      "documents_question": "What does the 2022 10-K of the company with the lowest total assets at year end in fiscal 2022 among AES, CVS Health and 3M say about any material legal proceedings?",
+      "documents_depend_on_database": true,
+      "documents": [
+       {
+        "title": "AES 2022 10K",
+        "score": 0.6907404953130537
+       },
+       {
+        "title": "3M 2023Q2 10Q",
+        "score": 0.6898679137229919
+       },
+       {
+        "title": "CVSHEALTH 2022 10K",
+        "score": 0.6857279539108276
+       },
+       {
+        "title": "CVSHEALTH 2018 10K",
+        "score": 0.6853490250886698
+       },
+       {
+        "title": "3M 2022 10K",
+        "score": 0.6811905719269052
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2337,
+      "tokens_out": 198,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6373
+     },
+     "ms": 6392
+    },
+    "r2h010": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Which company among MGM Resorts, American Express and AMD had the lowest long-term debt at year end in fiscal 2022, and what does its 2022 10-K say about what drove its results that year?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Which company among MGM Resorts, American Express and AMD had the lowest long-term debt at year end in fiscal 2022, and what does its 2022 10-K say about what drove its results that year?",
+      "database_question": "Which company among MGM Resorts, American Express and AMD had the lowest long-term debt at year end in fiscal 2022?",
+      "documents_question": "What does the 2022 10-K of the company with the lowest long-term debt at year end in fiscal 2022 among MGM Resorts, American Express and AMD say about what drove its results that year?",
+      "documents_depend_on_database": true,
+      "documents": [
+       {
+        "title": "MGMRESORTS 2018 10K",
+        "score": 0.7094792896819551
+       },
+       {
+        "title": "AMERICANEXPRESS 2022 10K",
+        "score": 0.7037694873672431
+       },
+       {
+        "title": "MGMRESORTS 2020 10K",
+        "score": 0.7022617877877837
+       },
+       {
+        "title": "MGMRESORTS 2022 10K",
+        "score": 0.6989493370056152
+       },
+       {
+        "title": "MGMRESORTS 2023Q2 10Q",
+        "score": 0.6984525947379433
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2297,
+      "tokens_out": 202,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 9497
+     },
+     "ms": 9527
+    },
+    "r2h011": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Of Verizon and Nike, which reported the highest net income in fiscal 2021? Summarise what that company's 2021 annual report says about its employees and workforce.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Of Verizon and Nike, which reported the highest net income in fiscal 2021? Summarise what that company's 2021 annual report says about its employees and workforce.",
+      "database_question": "Which company, Verizon or Nike, reported the highest net income in fiscal 2021?",
+      "documents_question": "Summarise what the 2021 annual report of the company with the highest net income in fiscal 2021 (between Verizon and Nike) says about its employees and workforce.",
+      "documents_depend_on_database": true,
+      "documents": [
+       {
+        "title": "NIKE 2021 10K",
+        "score": 0.7124099649650237
+       },
+       {
+        "title": "NIKE 2023 10K",
+        "score": 0.7013838833384338
+       },
+       {
+        "title": "VERIZON 2021 10K",
+        "score": 0.6946212417338996
+       },
+       {
+        "title": "NIKE 2019 10K",
+        "score": 0.6937393205218118
+       },
+       {
+        "title": "VERIZON 2022 10K",
+        "score": 0.6838275836243781
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2207,
+      "tokens_out": 178,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 12495
+     },
+     "ms": 12542
+    },
+    "r2h012": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Of PepsiCo, Coca-Cola and American Express, which reported the highest dividends paid in fiscal 2022? Summarise what that company's 2022 annual report says about its employees and workforce.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Of PepsiCo, Coca-Cola and American Express, which reported the highest dividends paid in fiscal 2022? Summarise what that company's 2022 annual report says about its employees and workforce.",
+      "database_question": "Which of PepsiCo, Coca-Cola, or American Express reported the highest dividends paid in fiscal 2022?",
+      "documents_question": "Summarise what the 2022 annual report of the company with the highest dividends paid in fiscal 2022 among PepsiCo, Coca-Cola, and American Express says about its employees and workforce.",
+      "documents_depend_on_database": true,
+      "documents": [
+       {
+        "title": "PEPSICO 2021 10K",
+        "score": 0.7124420445360584
+       },
+       {
+        "title": "COCACOLA 2021 10K",
+        "score": 0.7122625374012204
+       },
+       {
+        "title": "JOHNSON JOHNSON 2022 10K",
+        "score": 0.7108473181724598
+       },
+       {
+        "title": "PEPSICO 2022 10K",
+        "score": 0.7103980372439516
+       },
+       {
+        "title": "COCACOLA 2022 10K",
+        "score": 0.7074438013304488
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2333,
+      "tokens_out": 191,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7316
+     },
+     "ms": 7356
+    },
+    "r2h013": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Of AMD and PepsiCo, which reported the highest revenue in fiscal 2022? Summarise what that company's 2022 annual report says about its competition.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Of AMD and PepsiCo, which reported the highest revenue in fiscal 2022? Summarise what that company's 2022 annual report says about its competition.",
+      "database_question": "Which company reported higher revenue in fiscal 2022, AMD or PepsiCo?",
+      "documents_question": "Summarise what the 2022 annual report of the company with higher fiscal 2022 revenue (AMD or PepsiCo) says about its competition.",
+      "documents_depend_on_database": true,
+      "documents": [
+       {
+        "title": "PEPSICO 2021 10K",
+        "score": 0.6932065486907959
+       },
+       {
+        "title": "PEPSICO 2022 10K",
+        "score": 0.6916002497434272
+       },
+       {
+        "title": "AMCOR 2020 10K",
+        "score": 0.6722315354485247
+       },
+       {
+        "title": "COCACOLA 2021 10K",
+        "score": 0.6637294888496399
+       },
+       {
+        "title": "PEPSICO 2023Q1 EARNINGS",
+        "score": 0.6585280110206637
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2124,
+      "tokens_out": 169,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6550
+     },
+     "ms": 6586
+    },
+    "r2h014": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Which company among MGM Resorts, Verizon and General Mills had the highest cash and cash equivalents at year end in fiscal 2022, and what does its 2022 10-K say about the main risks it faces?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "unsure",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Which company among MGM Resorts, Verizon and General Mills had the highest cash and cash equivalents at year end in fiscal 2022, and what does its 2022 10-K say about the main risks it faces?",
+      "database_question": "Which company among MGM Resorts, Verizon and General Mills had the highest cash and cash equivalents at year end in fiscal 2022?",
+      "documents_question": "What does the 2022 10-K of the company with the highest cash and cash equivalents at year end in fiscal 2022 among MGM Resorts, Verizon and General Mills say about the main risks it faces?",
+      "documents_depend_on_database": true,
+      "documents": [
+       {
+        "title": "MGMRESORTS 2020 10K",
+        "score": 0.7286312150264224
+       },
+       {
+        "title": "MGMRESORTS 2022 10K",
+        "score": 0.7234324825478945
+       },
+       {
+        "title": "MGMRESORTS 2018 10K",
+        "score": 0.722783067143471
+       },
+       {
+        "title": "MGMRESORTS 2023Q2 10Q",
+        "score": 0.7166989828139876
+       },
+       {
+        "title": "MGMRESORTS 2022Q4 EARNINGS",
+        "score": 0.7076114140783195
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2310,
+      "tokens_out": 204,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6836
+     },
+     "ms": 6879
+    },
+    "r2h015": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "Which company among 3M, Boeing and MGM Resorts had the lowest current ratio in fiscal 2022, and what does its 2022 10-K say about its competition?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "unsure",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "Which company among 3M, Boeing and MGM Resorts had the lowest current ratio in fiscal 2022, and what does its 2022 10-K say about its competition?",
+      "database_question": "Which company among 3M, Boeing and MGM Resorts had the lowest current ratio in fiscal 2022?",
+      "documents_question": "What does the 2022 10-K of the company with the lowest current ratio among 3M, Boeing and MGM Resorts say about its competition?",
+      "documents_depend_on_database": true,
+      "documents": [
+       {
+        "title": "MGMRESORTS 2020 10K",
+        "score": 0.7040649123308018
+       },
+       {
+        "title": "MGMRESORTS 2018 10K",
+        "score": 0.7013994037270914
+       },
+       {
+        "title": "MGMRESORTS 2022 10K",
+        "score": 0.6914741904232263
+       },
+       {
+        "title": "MGMRESORTS 2022Q4 EARNINGS",
+        "score": 0.6914373106639573
+       },
+       {
+        "title": "MGMRESORTS 2023Q2 10Q",
+        "score": 0.6817147921493786
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2260,
+      "tokens_out": 179,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6756
+     },
+     "ms": 6813
+    },
+    "r2h016": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "For fiscal 2023: which company held the most cash and cash equivalents, and how does Ulta Beauty's 2023 annual report describe its liquidity and capital resources?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "For fiscal 2023: which company held the most cash and cash equivalents, and how does Ulta Beauty's 2023 annual report describe its liquidity and capital resources?",
+      "database_question": "Which company had the highest cash and cash equivalents value for fiscal year 2023?",
+      "documents_question": "How does Ulta Beauty's 2023 annual report describe its liquidity and capital resources?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "ULTABEAUTY 2023Q4 EARNINGS",
+        "score": 0.7969959024195844
+       },
+       {
+        "title": "ULTABEAUTY 2023 10K",
+        "score": 0.7958703758793859
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1934,
+      "tokens_out": 156,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6951
+     },
+     "ms": 6988
+    },
+    "r2h017": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Which two companies reported the most long-term debt in fiscal 2022? Also, what does General Mills's 2022 10-K say about its properties and facilities?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Which two companies reported the most long-term debt in fiscal 2022? Also, what does General Mills's 2022 10-K say about its properties and facilities?",
+      "database_question": "Which two companies reported the most long-term debt in fiscal 2022?",
+      "documents_question": "What does General Mills's 2022 10-K say about its properties and facilities?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "GENERALMILLS 2020 10K",
+        "score": 0.6930983249486503
+       },
+       {
+        "title": "GENERALMILLS 2022 10K",
+        "score": 0.6917013821637544
+       },
+       {
+        "title": "GENERALMILLS 2019 10K",
+        "score": 0.6820802309608783
+       },
+       {
+        "title": "AMCOR 2020 10K",
+        "score": 0.679093642018729
+       },
+       {
+        "title": "CVSHEALTH 2022 10K",
+        "score": 0.6726600712156318
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2232,
+      "tokens_out": 156,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 9030
+     },
+     "ms": 9075
+    },
+    "r2h018": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "For fiscal 2022: which two companies reported the most long-term debt, and how does AMD's 2022 annual report describe its competition?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "For fiscal 2022: which two companies reported the most long-term debt, and how does AMD's 2022 annual report describe its competition?",
+      "database_question": "Which two companies reported the highest long-term debt for fiscal year 2022?",
+      "documents_question": "How does AMD's 2022 annual report describe its competition?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "AMD 2022 10K",
+        "score": 0.7219136406702107
+       },
+       {
+        "title": "AMD 2015 10K",
+        "score": 0.7024425026842999
+       },
+       {
+        "title": "VERIZON 2022 10K",
+        "score": 0.6695633722392815
+       },
+       {
+        "title": "AMCOR 2020 10K",
+        "score": 0.6650911963203611
+       },
+       {
+        "title": "AMERICANEXPRESS 2022 10K",
+        "score": 0.6636670426925518
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2302,
+      "tokens_out": 145,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7431
+     },
+     "ms": 7470
+    },
+    "r2h019": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "What was the average diluted earnings per share across the companies in fiscal 2017? Also, what does Best Buy's 2017 10-K say about its liquidity and capital resources?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "What was the average diluted earnings per share across the companies in fiscal 2017? Also, what does Best Buy's 2017 10-K say about its liquidity and capital resources?",
+      "database_question": "What was the average diluted earnings per share across the companies in fiscal 2017?",
+      "documents_question": "What does Best Buy's 2017 10-K say about its liquidity and capital resources?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "BESTBUY 2017 10K",
+        "score": 0.7986212256858037
+       },
+       {
+        "title": "BESTBUY 2019 10K",
+        "score": 0.7499590814064891
+       },
+       {
+        "title": "NIKE 2023 10K",
+        "score": 0.7302004316508902
+       },
+       {
+        "title": "BESTBUY 2024Q2 10Q",
+        "score": 0.7275907125960983
+       },
+       {
+        "title": "NIKE 2018 10K",
+        "score": 0.7252230480446261
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2253,
+      "tokens_out": 162,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7375
+     },
+     "ms": 7424
+    },
+    "r2h020": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "For fiscal 2020: what was the average diluted earnings per share across the companies, and how does American Water Works's 2020 annual report describe its liquidity and capital resources?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "For fiscal 2020: what was the average diluted earnings per share across the companies, and how does American Water Works's 2020 annual report describe its liquidity and capital resources?",
+      "database_question": "What was the average diluted earnings per share across all companies for fiscal year 2020?",
+      "documents_question": "How does American Water Works's 2020 annual report describe its liquidity and capital resources?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "AMERICANWATERWORKS 2022 10K",
+        "score": 0.8203899646270466
+       },
+       {
+        "title": "AMERICANWATERWORKS 2020 10K",
+        "score": 0.8148775961776612
+       },
+       {
+        "title": "AMERICANWATERWORKS 2021 10K",
+        "score": 0.8132119683171881
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2017,
+      "tokens_out": 159,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7242
+     },
+     "ms": 7327
+    },
+    "r2h021": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "For fiscal 2020: how many of the companies had negative net income, and how does Amcor's 2020 annual report describe its liquidity and capital resources?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "For fiscal 2020: how many of the companies had negative net income, and how does Amcor's 2020 annual report describe its liquidity and capital resources?",
+      "database_question": "For fiscal year 2020, how many companies in the database had negative net income?",
+      "documents_question": "How does Amcor's 2020 annual report describe its liquidity and capital resources?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "AMCOR 2020 10K",
+        "score": 0.7460496283680879
+       },
+       {
+        "title": "AMCOR 2023Q4 EARNINGS",
+        "score": 0.7319643061182329
+       },
+       {
+        "title": "AMCOR 2023 10K",
+        "score": 0.7280864877649268
+       },
+       {
+        "title": "AMCOR 2023Q2 10Q",
+        "score": 0.7088680116410415
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2148,
+      "tokens_out": 155,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6322
+     },
+     "ms": 6366
+    },
+    "r2h022": {
+     "http_status": 200,
+     "detail": null,
+     "route": "sql",
+     "out_of_scope": false,
+     "normalized_query": "For fiscal 2021: which company held the most cash and cash equivalents, and how does Verizon's 2021 annual report describe its employees and workforce?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "unsure",
+      "out_of_scope": false,
+      "route": "sql",
+      "parse_ok": true,
+      "standalone_question": "For fiscal 2021: which company held the most cash and cash equivalents, and how does Verizon's 2021 annual report describe its employees and workforce?",
+      "database_question": "Which company held the most cash and cash equivalents for fiscal year 2021?",
+      "documents_question": "How does Verizon's 2021 annual report describe its employees and workforce?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "VERIZON 2022 10K",
+        "score": 0.7814861796514829
+       },
+       {
+        "title": "VERIZON 2021 10K",
+        "score": 0.7704777536793005
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1848,
+      "tokens_out": 150,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7149
+     },
+     "ms": 7187
+    },
+    "r2h023": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "For fiscal 2020: how many of the companies had negative net income, and how does General Mills's 2020 annual report describe its liquidity and capital resources?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "For fiscal 2020: how many of the companies had negative net income, and how does General Mills's 2020 annual report describe its liquidity and capital resources?",
+      "database_question": "For fiscal 2020, how many of the companies had negative net income?",
+      "documents_question": "How does General Mills's 2020 annual report describe its liquidity and capital resources?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "GENERALMILLS 2020 10K",
+        "score": 0.7483477292475431
+       },
+       {
+        "title": "GENERALMILLS 2022 10K",
+        "score": 0.7287196516990662
+       },
+       {
+        "title": "GENERALMILLS 2019 10K",
+        "score": 0.7003321946657595
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2019,
+      "tokens_out": 153,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6984
+     },
+     "ms": 7042
+    },
+    "r2h024": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "How many of the companies had negative net income in fiscal 2022? Also, what does Corning's 2022 10-K say about its employees and workforce?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "How many of the companies had negative net income in fiscal 2022? Also, what does Corning's 2022 10-K say about its employees and workforce?",
+      "database_question": "How many of the companies had negative net income in fiscal 2022?",
+      "documents_question": "What does Corning's 2022 10-K say about its employees and workforce?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "CORNING 2020 10K",
+        "score": 0.7329562902450614
+       },
+       {
+        "title": "CORNING 2021 10K",
+        "score": 0.7214359836946296
+       },
+       {
+        "title": "CORNING 2022 10K",
+        "score": 0.719529209333424
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1964,
+      "tokens_out": 156,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 10687
+     },
+     "ms": 10730
+    },
+    "r2h025": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Which two companies reported the most long-term debt in fiscal 2021? Also, what does Lockheed Martin's 2021 10-K say about any material legal proceedings?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Which two companies reported the most long-term debt in fiscal 2021? Also, what does Lockheed Martin's 2021 10-K say about any material legal proceedings?",
+      "database_question": "Which two companies reported the most long-term debt in fiscal 2021?",
+      "documents_question": "What does Lockheed Martin's 2021 10-K say about any material legal proceedings?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "LOCKHEEDMARTIN 2021 10K",
+        "score": 0.7161012976350835
+       },
+       {
+        "title": "LOCKHEEDMARTIN 2020 10K",
+        "score": 0.7132699831402373
+       },
+       {
+        "title": "LOCKHEEDMARTIN 2022 10K",
+        "score": 0.7058752003833784
+       },
+       {
+        "title": "BOEING 2018 10K",
+        "score": 0.69578369805619
+       },
+       {
+        "title": "GENERALMILLS 2020 10K",
+        "score": 0.6837612706369841
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2156,
+      "tokens_out": 156,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 27263
+     },
+     "ms": 27302
+    },
+    "r2h026": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "For fiscal 2019: which company held the most cash and cash equivalents, and how does General Mills's 2019 annual report describe how its business segments are organised?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "For fiscal 2019: which company held the most cash and cash equivalents, and how does General Mills's 2019 annual report describe how its business segments are organised?",
+      "database_question": "Which company had the highest cash and cash equivalents value for fiscal year 2019?",
+      "documents_question": "How does General Mills's 2019 annual report describe how its business segments are organised?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "GENERALMILLS 2020 10K",
+        "score": 0.7685342706997127
+       },
+       {
+        "title": "GENERALMILLS 2019 10K",
+        "score": 0.7582715029333877
+       },
+       {
+        "title": "GENERALMILLS 2022 10K",
+        "score": 0.7537528569993005
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2069,
+      "tokens_out": 156,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 11616
+     },
+     "ms": 11661
+    },
+    "r2h027": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "What was the combined capital expenditure of all the companies in fiscal 2022? Also, what does PepsiCo's 2022 10-K say about its liquidity and capital resources?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "What was the combined capital expenditure of all the companies in fiscal 2022? Also, what does PepsiCo's 2022 10-K say about its liquidity and capital resources?",
+      "database_question": "What was the combined capital expenditure of all the companies in fiscal 2022?",
+      "documents_question": "What does PepsiCo's 2022 10-K say about its liquidity and capital resources?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "PEPSICO 2022 10K",
+        "score": 0.805348944345181
+       },
+       {
+        "title": "PEPSICO 2021 10K",
+        "score": 0.7832922339439392
+       },
+       {
+        "title": "PEPSICO 2023Q1 EARNINGS",
+        "score": 0.7663373440209668
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1975,
+      "tokens_out": 160,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7844
+     },
+     "ms": 7910
+    },
+    "r2h028": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "Which company held the most cash and cash equivalents in fiscal 2019? Also, what does Kraft Heinz's 2019 10-K say about how its business segments are organised?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "Which company held the most cash and cash equivalents in fiscal 2019? Also, what does Kraft Heinz's 2019 10-K say about how its business segments are organised?",
+      "database_question": "Which company held the most cash and cash equivalents in fiscal 2019?",
+      "documents_question": "What does Kraft Heinz's 2019 10-K say about how its business segments are organised?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "KRAFTHEINZ 2019 10K",
+        "score": 0.7404258870063571
+       },
+       {
+        "title": "PEPSICO 2021 10K",
+        "score": 0.6979963599441279
+       },
+       {
+        "title": "PEPSICO 2022 10K",
+        "score": 0.6912541669588521
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1951,
+      "tokens_out": 160,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6900
+     },
+     "ms": 6941
+    },
+    "r2h029": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "How many of the companies had negative net income in fiscal 2022? Also, what does JPMorgan's 2022 10-K say about any material legal proceedings?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "How many of the companies had negative net income in fiscal 2022? Also, what does JPMorgan's 2022 10-K say about any material legal proceedings?",
+      "database_question": "How many of the companies had negative net income in fiscal 2022?",
+      "documents_question": "What does JPMorgan's 2022 10-K say about any material legal proceedings?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "JPMORGAN 2022Q2 10Q",
+        "score": 0.754619076572713
+       },
+       {
+        "title": "JPMORGAN 2023Q2 10Q",
+        "score": 0.7525652352053421
+       },
+       {
+        "title": "JPMORGAN 2021Q1 10Q",
+        "score": 0.7500123828627392
+       },
+       {
+        "title": "JPMORGAN 2022 10K",
+        "score": 0.7398072350369881
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2134,
+      "tokens_out": 158,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7668
+     },
+     "ms": 7707
+    },
+    "r2h030": {
+     "http_status": 200,
+     "detail": null,
+     "route": "hybrid",
+     "out_of_scope": false,
+     "normalized_query": "What was the average diluted earnings per share across the companies in fiscal 2019? Also, what does Nike's 2019 10-K say about its employees and workforce?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "yes",
+      "needs_documents": "yes",
+      "out_of_scope": false,
+      "route": "hybrid",
+      "parse_ok": true,
+      "standalone_question": "What was the average diluted earnings per share across the companies in fiscal 2019? Also, what does Nike's 2019 10-K say about its employees and workforce?",
+      "database_question": "What was the average diluted earnings per share across the companies in fiscal 2019?",
+      "documents_question": "What does Nike's 2019 10-K say about its employees and workforce?",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "NIKE 2019 10K",
+        "score": 0.7949953316150709
+       },
+       {
+        "title": "NIKE 2021 10K",
+        "score": 0.7835179413743664
+       },
+       {
+        "title": "NIKE 2018 10K",
+        "score": 0.7661636750503028
+       },
+       {
+        "title": "NIKE 2023 10K",
+        "score": 0.7612411691237944
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2328,
+      "tokens_out": 158,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7962
+     },
+     "ms": 7995
+    },
+    "r2n001": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "What was Visa's long-term debt in fiscal 2020?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "unsure",
+      "needs_documents": "unsure",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "What was Visa's long-term debt in fiscal 2020?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "GENERALMILLS 2019 10K",
+        "score": 0.7036564901826355
+       },
+       {
+        "title": "3M 2022 10K",
+        "score": 0.7005970774302266
+       },
+       {
+        "title": "AMERICANEXPRESS 2022 10K",
+        "score": 0.7001352012560483
+       },
+       {
+        "title": "WALMART 2020 10K",
+        "score": 0.6986299042833988
+       },
+       {
+        "title": "GENERALMILLS 2020 10K",
+        "score": 0.6962812723945925
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2178,
+      "tokens_out": 95,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7362
+     },
+     "ms": 7419
+    },
+    "r2n002": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "How much accounts receivable did Target report for fiscal 2022?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "unsure",
+      "needs_documents": "unsure",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "How much accounts receivable did Target report for fiscal 2022?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "AMERICANWATERWORKS 2022 10K",
+        "score": 0.7073408714126552
+       },
+       {
+        "title": "CVSHEALTH 2022 10K",
+        "score": 0.7070010653732988
+       },
+       {
+        "title": "PEPSICO 2021 10K",
+        "score": 0.7026431141708438
+       },
+       {
+        "title": "LOCKHEEDMARTIN 2020 10K",
+        "score": 0.7009135128156608
+       },
+       {
+        "title": "PEPSICO 2022 10K",
+        "score": 0.6958465109237604
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2265,
+      "tokens_out": 96,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7194
+     },
+     "ms": 7235
+    },
+    "r2n003": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "How much accounts payable did McDonald's report for fiscal 2022?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "unsure",
+      "needs_documents": "unsure",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "How much accounts payable did McDonald's report for fiscal 2022?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "PEPSICO 2022 10K",
+        "score": 0.6876385956672397
+       },
+       {
+        "title": "GENERALMILLS 2020 10K",
+        "score": 0.6834151466298181
+       },
+       {
+        "title": "CVSHEALTH 2022 10K",
+        "score": 0.6731779781792185
+       },
+       {
+        "title": "PEPSICO 2021 10K",
+        "score": 0.6726351575472869
+       },
+       {
+        "title": "VERIZON 2021 10K",
+        "score": 0.6678258183727613
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2310,
+      "tokens_out": 96,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 9301
+     },
+     "ms": 9351
+    },
+    "r2n004": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "How much dividends paid did Mastercard report for fiscal 2018?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "unsure",
+      "needs_documents": "unsure",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "How much dividends paid did Mastercard report for fiscal 2018?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "MGMRESORTS 2018 10K",
+        "score": 0.7039222011380876
+       },
+       {
+        "title": "AMERICANEXPRESS 2022 10K",
+        "score": 0.6860421930627085
+       },
+       {
+        "title": "JOHNSON JOHNSON 2022 10K",
+        "score": 0.6800334048251281
+       },
+       {
+        "title": "GENERALMILLS 2022 10K",
+        "score": 0.6795009305771151
+       },
+       {
+        "title": "COCACOLA 2017 10K",
+        "score": 0.677806099587861
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2176,
+      "tokens_out": 95,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 12068
+     },
+     "ms": 12111
+    },
+    "r2n005": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "How much accounts payable did Disney report for fiscal 2018?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "unsure",
+      "needs_documents": "unsure",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "How much accounts payable did Disney report for fiscal 2018?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "NIKE 2018 10K",
+        "score": 0.6883000321209424
+       },
+       {
+        "title": "PEPSICO 2022 10K",
+        "score": 0.6857786927751038
+       },
+       {
+        "title": "PEPSICO 2021 10K",
+        "score": 0.6752221181856335
+       },
+       {
+        "title": "AMAZON 2019 10K",
+        "score": 0.6742010089632672
+       },
+       {
+        "title": "GENERALMILLS 2019 10K",
+        "score": 0.6666334867447778
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2214,
+      "tokens_out": 95,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7201
+     },
+     "ms": 7243
+    },
+    "r2n006": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "How much current liabilities did Intel report for fiscal 2018?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "unsure",
+      "needs_documents": "unsure",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "How much current liabilities did Intel report for fiscal 2018?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "AMD 2022 10K",
+        "score": 0.6972209215164185
+       },
+       {
+        "title": "ACTIVISIONBLIZZARD 2019 10K",
+        "score": 0.66165550579694
+       },
+       {
+        "title": "ADOBE 2022 10K",
+        "score": 0.6518353585804549
+       },
+       {
+        "title": "BESTBUY 2017 10K",
+        "score": 0.6517622289941084
+       },
+       {
+        "title": "NIKE 2023 10K",
+        "score": 0.6487923216560983
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2215,
+      "tokens_out": 95,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 9465
+     },
+     "ms": 9506
+    },
+    "r2n007": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "How much dividends paid did Home Depot report for fiscal 2020?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "How much dividends paid did Home Depot report for fiscal 2020?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "WALMART 2019 10K",
+        "score": 0.7216865487846225
+       },
+       {
+        "title": "GENERALMILLS 2020 10K",
+        "score": 0.7139318330369245
+       },
+       {
+        "title": "WALMART 2020 10K",
+        "score": 0.7135427252701244
+       },
+       {
+        "title": "LOCKHEEDMARTIN 2020 10K",
+        "score": 0.7043290490711919
+       },
+       {
+        "title": "LOCKHEEDMARTIN 2022 10K",
+        "score": 0.696541345531785
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2241,
+      "tokens_out": 94,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 14554
+     },
+     "ms": 14586
+    },
+    "r2n008": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "How much revenue did Chevron report for fiscal 2020?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "unsure",
+      "needs_documents": "unsure",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "How much revenue did Chevron report for fiscal 2020?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "ADOBE 2022 10K",
+        "score": 0.6637070579878069
+       },
+       {
+        "title": "AES 2022 10K",
+        "score": 0.6623516880064209
+       },
+       {
+        "title": "VERIZON 2022 10K",
+        "score": 0.6508048593038535
+       },
+       {
+        "title": "AMERICANWATERWORKS 2020 10K",
+        "score": 0.6486736954839639
+       },
+       {
+        "title": "AMD 2022 10K",
+        "score": 0.6429890735123516
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2189,
+      "tokens_out": 94,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6947
+     },
+     "ms": 6982
+    },
+    "r2n009": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "What was Starbucks's cost of revenue in fiscal 2022?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "unsure",
+      "needs_documents": "unsure",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "What was Starbucks's cost of revenue in fiscal 2022?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "BLOCK 2016 10K",
+        "score": 0.7273211154128503
+       },
+       {
+        "title": "ADOBE 2022 10K",
+        "score": 0.676828065296647
+       },
+       {
+        "title": "MICROSOFT 2023 10K",
+        "score": 0.6718265805451226
+       },
+       {
+        "title": "CVSHEALTH 2022 10K",
+        "score": 0.6653890410297549
+       },
+       {
+        "title": "NIKE 2023 10K",
+        "score": 0.662670750579111
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2380,
+      "tokens_out": 95,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 8805
+     },
+     "ms": 8829
+    },
+    "r2n010": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "How much share repurchases did General Motors report for fiscal 2020?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "unsure",
+      "needs_documents": "unsure",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "How much share repurchases did General Motors report for fiscal 2020?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "JOHNSON JOHNSON 2022 10K",
+        "score": 0.7155540672935482
+       },
+       {
+        "title": "WALMART 2020 10K",
+        "score": 0.7068966067042921
+       },
+       {
+        "title": "MGMRESORTS 2020 10K",
+        "score": 0.7036566844805239
+       },
+       {
+        "title": "CORNING 2021 10K",
+        "score": 0.7011755999399735
+       },
+       {
+        "title": "LOCKHEEDMARTIN 2021 10K",
+        "score": 0.6975642747985807
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2166,
+      "tokens_out": 97,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7098
+     },
+     "ms": 7128
+    },
+    "r2n011": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "What is Nike's market capitalization today?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "unsure",
+      "needs_documents": "unsure",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "What is Nike's market capitalization today?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "NIKE 2023 10K",
+        "score": 0.7276707237061292
+       },
+       {
+        "title": "NIKE 2018 10K",
+        "score": 0.7259092604707496
+       },
+       {
+        "title": "NIKE 2021 10K",
+        "score": 0.7178214819421025
+       },
+       {
+        "title": "NIKE 2019 10K",
+        "score": 0.7087103837249866
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1961,
+      "tokens_out": 89,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7802
+     },
+     "ms": 7842
+    },
+    "r2n012": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "What is PepsiCo's market capitalization today?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "unsure",
+      "needs_documents": "unsure",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "What is PepsiCo's market capitalization today?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "PEPSICO 2021 10K",
+        "score": 0.718663184921699
+       },
+       {
+        "title": "PEPSICO 2022 10K",
+        "score": 0.7184622548177558
+       },
+       {
+        "title": "AMCOR 2020 10K",
+        "score": 0.705338481545909
+       },
+       {
+        "title": "PEPSICO 2023Q1 EARNINGS",
+        "score": 0.6821520314676809
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2000,
+      "tokens_out": 90,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6049
+     },
+     "ms": 6082
+    },
+    "r2n013": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "How did Verizon's stock trade this morning?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "How did Verizon's stock trade this morning?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "VERIZON 2022 10K",
+        "score": 0.6915738905746182
+       },
+       {
+        "title": "VERIZON 2021 10K",
+        "score": 0.687079742651052
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1838,
+      "tokens_out": 87,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7495
+     },
+     "ms": 7531
+    },
+    "r2n014": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "How did Walmart's stock trade this morning?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "How did Walmart's stock trade this morning?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "WALMART 2020 10K",
+        "score": 0.7252518370897789
+       },
+       {
+        "title": "WALMART 2019 10K",
+        "score": 0.7246545345826827
+       },
+       {
+        "title": "WALMART 2018 10K",
+        "score": 0.717073678970342
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1901,
+      "tokens_out": 87,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6952
+     },
+     "ms": 6985
+    },
+    "r2n015": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "What is Boeing's market capitalization today?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "What is Boeing's market capitalization today?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "BOEING 2022 10K",
+        "score": 0.6945324308237565
+       },
+       {
+        "title": "BOEING 2018 10K",
+        "score": 0.686688505016392
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1818,
+      "tokens_out": 87,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 8749
+     },
+     "ms": 8794
+    },
+    "r2n016": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "How did Block's stock trade this morning?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "How did Block's stock trade this morning?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "NETFLIX 2015 10K",
+        "score": 0.598221748802333
+       },
+       {
+        "title": "BLOCK 2020 10K",
+        "score": 0.5947452912190131
+       },
+       {
+        "title": "NETFLIX 2017 10K",
+        "score": 0.5918566256082584
+       },
+       {
+        "title": "WALMART 2020 10K",
+        "score": 0.5904422294566399
+       },
+       {
+        "title": "BESTBUY 2019 10K",
+        "score": 0.5869903596917673
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2135,
+      "tokens_out": 87,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6944
+     },
+     "ms": 6991
+    },
+    "r2n017": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "What do analysts expect Costco to earn per share in fiscal 2027?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "unsure",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "What do analysts expect Costco to earn per share in fiscal 2027?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "COSTCO 2021 10K",
+        "score": 0.7342397095393941
+       },
+       {
+        "title": "BESTBUY 2023 10K",
+        "score": 0.6680685872786519
+       },
+       {
+        "title": "NIKE 2023 10K",
+        "score": 0.6647351387616756
+       },
+       {
+        "title": "ULTABEAUTY 2023Q4 EARNINGS",
+        "score": 0.659234525102165
+       },
+       {
+        "title": "GENERALMILLS 2019 10K",
+        "score": 0.6583969985483393
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2397,
+      "tokens_out": 96,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7242
+     },
+     "ms": 7288
+    },
+    "r2n018": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "What is Johnson & Johnson's share price right now?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "What is Johnson & Johnson's share price right now?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "JOHNSON JOHNSON 2023 8K dated 2023 08 30",
+        "score": 0.7480195019210288
+       },
+       {
+        "title": "JOHNSON JOHNSON 2022Q4 EARNINGS",
+        "score": 0.7347951689484628
+       },
+       {
+        "title": "JOHNSON JOHNSON 2022 10K",
+        "score": 0.7247883469623485
+       },
+       {
+        "title": "JOHNSON JOHNSON 2023Q2 EARNINGS",
+        "score": 0.7135660435686723
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2054,
+      "tokens_out": 89,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 9662
+     },
+     "ms": 9706
+    },
+    "r2n019": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "How did American Express's stock trade this morning?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "How did American Express's stock trade this morning?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "AMERICANEXPRESS 2022 10K",
+        "score": 0.6670945485943065
+       },
+       {
+        "title": "JPMORGAN 2022 10K",
+        "score": 0.6288552640684885
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1860,
+      "tokens_out": 88,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 8759
+     },
+     "ms": 8801
+    },
+    "r2n020": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "What is 3M's share price right now?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "What is 3M's share price right now?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "3M 2018 10K",
+        "score": 0.761166391094613
+       },
+       {
+        "title": "3M 2023Q2 10Q",
+        "score": 0.7360547938314216
+       },
+       {
+        "title": "3M 2022 10K",
+        "score": 0.7239880766826413
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 1895,
+      "tokens_out": 89,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6287
+     },
+     "ms": 6335
+    },
+    "r2n021": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "Write a short poem about autumn leaves.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "Write a short poem about autumn leaves.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "WALMART 2019 10K",
+        "score": 0.48678867085803323
+       },
+       {
+        "title": "doc_review_digest_8602a61d680a10a82cceeeda0d99ea3d",
+        "score": 0.4833117763252929
+       },
+       {
+        "title": "WALMART 2018 10K",
+        "score": 0.47250466883295184
+       },
+       {
+        "title": "doc_review_digest_c7dcd301ecfe5ab7f778ac172cf74be7",
+        "score": 0.46766621259854024
+       },
+       {
+        "title": "PEPSICO 2022 10K",
+        "score": 0.4669522305670093
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2327,
+      "tokens_out": 86,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7990
+     },
+     "ms": 8031
+    },
+    "r2n022": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "Recommend a good science fiction novel.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "unsure",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "Recommend a good science fiction novel.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "doc_review_digest_527801b552d0077ffd170872eb49683b",
+        "score": 0.4391162584631976
+       },
+       {
+        "title": "doc_review_digest_9803a40e82e45418ab7fb84091af5231",
+        "score": 0.43263830530137015
+       },
+       {
+        "title": "doc_review_digest_f0b47fbbc6dee9aafe415a6e33051b3f",
+        "score": 0.4051257115153173
+       },
+       {
+        "title": "LOCKHEEDMARTIN 2020 10K",
+        "score": 0.4041463961252336
+       },
+       {
+        "title": "doc_review_digest_343e716476e3748b069f980efbaa294e",
+        "score": 0.40019543162778404
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2557,
+      "tokens_out": 86,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 13968
+     },
+     "ms": 14011
+    },
+    "r2n023": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "Explain how a rainbow forms, in simple words.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "Explain how a rainbow forms, in simple words.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "doc_review_digest_eb72802c83dc7547529c9546d1a9b8ef",
+        "score": 0.5122349720211322
+       },
+       {
+        "title": "doc_review_digest_18a349e75d307f4b4cc646a691ed4216",
+        "score": 0.49550521346957854
+       },
+       {
+        "title": "doc_review_digest_36a968b544695394e4e9d7572688598f",
+        "score": 0.4946162684608526
+       },
+       {
+        "title": "doc_review_digest_1025f0e2d44d7041d6cf58b6550e0bfa",
+        "score": 0.4944500759259247
+       },
+       {
+        "title": "doc_review_digest_f8db351d8c4c4c22c6835c19a46f01b0",
+        "score": 0.49346038543234927
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2615,
+      "tokens_out": 89,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 11009
+     },
+     "ms": 11052
+    },
+    "r2n024": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "Write a limerick about a sleepy cat.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "Write a limerick about a sleepy cat.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "doc_review_digest_dd7ddc04e1b6c2c614352b383efe2d36",
+        "score": 0.47874929200864735
+       },
+       {
+        "title": "doc_review_digest_c4f7fee5b0db50e87766f5a4d1b1b758",
+        "score": 0.4738329256525664
+       },
+       {
+        "title": "doc_review_digest_46dc3b2cc0980fb8ec44634e21d2718e",
+        "score": 0.4702538094000166
+       },
+       {
+        "title": "doc_review_digest_cc419e0650a3c5ba77189a1882b7556a",
+        "score": 0.469028237383602
+       },
+       {
+        "title": "doc_review_digest_25c5c91f63607446a97b143d2d535d31",
+        "score": 0.4681921816663531
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2598,
+      "tokens_out": 88,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 6549
+     },
+     "ms": 6596
+    },
+    "r2n025": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "Translate 'thank you very much' into Spanish.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "Translate 'thank you very much' into Spanish.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "doc_review_digest_6548c2550b6e2d8f18053216e1c7b6f3",
+        "score": 0.6300361842025155
+       },
+       {
+        "title": "doc_review_digest_c8b0e2b0a7095e5d8219575d5e7e1181",
+        "score": 0.6266615684839502
+       },
+       {
+        "title": "doc_review_digest_dbc22125167c298ef99da25668e1011f",
+        "score": 0.6166725710039674
+       },
+       {
+        "title": "doc_review_digest_7238f877570096ae403c51898fa64566",
+        "score": 0.6142035858873871
+       },
+       {
+        "title": "doc_review_digest_95e03ca3d4146e4011985981aeb959b9",
+        "score": 0.6104694341494176
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2489,
+      "tokens_out": 88,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 8810
+     },
+     "ms": 8844
+    },
+    "r2n026": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "Summarise the plot of Romeo and Juliet in two sentences.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "Summarise the plot of Romeo and Juliet in two sentences.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "doc_review_digest_e8f6dc8e6a1dcde89d20e3995c8d90b3",
+        "score": 0.5482000266909763
+       },
+       {
+        "title": "doc_review_digest_0afccdb8a34ee5c79f7c06faf2b4d56e",
+        "score": 0.5431036080779805
+       },
+       {
+        "title": "doc_review_digest_669ae81880e08f269a64487cfb287169",
+        "score": 0.5423145839793024
+       },
+       {
+        "title": "doc_review_digest_4d6d651bd7684af3fffabd5f08d12e5a",
+        "score": 0.5405090902415537
+       },
+       {
+        "title": "MICROSOFT 2016 10K",
+        "score": 0.5404110711935484
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2500,
+      "tokens_out": 91,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 8466
+     },
+     "ms": 8499
+    },
+    "r2n027": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "Suggest a name for a pet goldfish.",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "Suggest a name for a pet goldfish.",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "doc_review_digest_8b321bb669392f5163d04c59e235e066",
+        "score": 0.523360607223442
+       },
+       {
+        "title": "doc_review_digest_66922902710d126a0e7d26b0e3805106",
+        "score": 0.5138028827183673
+       },
+       {
+        "title": "doc_review_digest_e067ad2c1c0b48758eb1b5228bcf7a68",
+        "score": 0.5137180024538612
+       },
+       {
+        "title": "doc_review_digest_4c2b230173bb36f9b240f2b8ac11786e",
+        "score": 0.5061053928074015
+       },
+       {
+        "title": "doc_review_digest_c8467937e403e76a8ee9f0ab13f6f5ef",
+        "score": 0.49943301098557225
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2660,
+      "tokens_out": 88,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 9544
+     },
+     "ms": 9591
+    },
+    "r2n028": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "What is the boiling point of water at sea level in Fahrenheit?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "What is the boiling point of water at sea level in Fahrenheit?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "AMERICANWATERWORKS 2021 10K",
+        "score": 0.5334315697645096
+       },
+       {
+        "title": "AMERICANWATERWORKS 2022 10K",
+        "score": 0.5265657808172957
+       },
+       {
+        "title": "AMERICANWATERWORKS 2020 10K",
+        "score": 0.5228762992848089
+       },
+       {
+        "title": "3M 2023Q2 10Q",
+        "score": 0.5184037067408949
+       },
+       {
+        "title": "3M 2022 10K",
+        "score": 0.5103946632382081
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2068,
+      "tokens_out": 91,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 7866
+     },
+     "ms": 7912
+    },
+    "r2n029": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "Who painted the Mona Lisa?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "Who painted the Mona Lisa?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "doc_review_digest_c847e075301870dd144a116762eaff9a",
+        "score": 0.45576380021462826
+       },
+       {
+        "title": "doc_review_digest_c31eff8334d6b3047ed34bebd4d62c36",
+        "score": 0.45352798700332964
+       },
+       {
+        "title": "doc_review_digest_1025f0e2d44d7041d6cf58b6550e0bfa",
+        "score": 0.4412027439588009
+       },
+       {
+        "title": "doc_review_digest_252e76235acb79183cfca6e34f13337d",
+        "score": 0.4376373700552115
+       },
+       {
+        "title": "doc_review_digest_955fee9216a65b617aa5c0531780ce60",
+        "score": 0.43712774293854084
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2588,
+      "tokens_out": 84,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 9610
+     },
+     "ms": 9647
+    },
+    "r2n030": {
+     "http_status": 200,
+     "detail": null,
+     "route": "neither",
+     "out_of_scope": true,
+     "normalized_query": "How do I make a cup of masala chai?",
+     "front_door": {
+      "arm": "llm",
+      "language": "en",
+      "uses_history": false,
+      "needs_database": "no",
+      "needs_documents": "no",
+      "out_of_scope": true,
+      "route": "neither",
+      "parse_ok": true,
+      "standalone_question": "How do I make a cup of masala chai?",
+      "database_question": "",
+      "documents_question": "",
+      "documents_depend_on_database": false,
+      "documents": [
+       {
+        "title": "GENERALMILLS 2019 10K",
+        "score": 0.4805233203740964
+       },
+       {
+        "title": "COCACOLA 2017 10K",
+        "score": 0.47793114448414853
+       },
+       {
+        "title": "COCACOLA 2021 10K",
+        "score": 0.47423794865608215
+       },
+       {
+        "title": "COCACOLA 2022 10K",
+        "score": 0.47423794865608215
+       },
+       {
+        "title": "doc_review_digest_4c498c7345e89aebad651544829beca0",
+        "score": 0.46400661778177943
+       }
+      ],
+      "card_chars": 3512,
+      "card_status": "cached",
+      "history_turns": 0
+     },
+     "metrics": {
+      "tokens_in": 2122,
+      "tokens_out": 89,
+      "llm_calls": 1,
+      "trajectory_steps": 1,
+      "latency_ms": 8403
+     },
+     "ms": 8435
     }
    },
    "turns": {}

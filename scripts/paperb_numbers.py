@@ -375,6 +375,10 @@ def main() -> int:
                 N[f"rtwo{nm}CovAcc"] = pct(sum(o.values()) / len(o))
                 nei = [i for i in items2 if items2[i]["class"] == "neither"]
                 N[f"rtwo{nm}CovNeither"] = f"{sum(o[i] for i in nei if i in o)}/{len(nei)}"
+                base = {"LLM": "llm|r2|0", "JevTwo": "jev_choice+v2|r2|0"}[nm]
+                ob = {i: p4(R2b[base]["items"][i]) in items2[i]["acceptable"] for i in items2}
+                N[f"rtwo{nm}CovW"] = str(sum(o[i] and not ob[i] for i in o))
+                N[f"rtwo{nm}CovL"] = str(sum(ob[i] and not o[i] for i in o))
     # ── rerun R1: page finding (only once its report exists) ──
     r1p = E / "jev_pages_r1.json"
     if r1p.exists() and "r1_summary" in json.loads(r1p.read_text()):

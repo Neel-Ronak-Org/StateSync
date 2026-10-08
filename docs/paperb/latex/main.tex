@@ -285,6 +285,23 @@ being these ten); the semantic router declined only \N{rtwoSemNeither}. The rout
 unknown company looks like an ordinary database question. These four routers declined every question about live
 or future figures and every request outside data analysis.
 
+\paragraph{Telling the router what the database covers.} We then tested the fix this suggests, pre-registered before
+its code or data existed. A switchable addition to the database card lists, with no model call, every value of each
+text column with few distinct values (company names, tickers, metric names, units) and the range of each date or
+year column. On 90 new questions that use the same three phrasings in every class, so that only coverage tells them
+apart (45 about companies the database does not hold or years before its first period, 45 about companies and years
+it does hold), coverage raised the share of uncovered questions that Jev declined from \N{rfourJevOffNeither} to
+\N{rfourJevOnNeither} (\N{rfourHoneDiff} points, \N{rfourHoneCI}, \N{rfourHoneP}) and for the LLM router from
+\N{rfourLLMOffNeither} to \N{rfourLLMOnNeither} (\N{rfourHtwoP}). Unknown companies were almost all caught
+(\N{rfourJevOnUnknown} and \N{rfourLLMOnUnknown}); years outside the database's range mostly were not
+(\N{rfourJevOnYears} and \N{rfourLLMOnYears}), although the range was in the card. Jev's routing of covered
+questions did not change (\N{rfourHthreeDiff} points), and the LLM router's improved (\N{rfourHfourDiff} points,
+\N{rfourHfourP}) because, seeing that the database holds the company and the metric, it stopped sending
+single-figure questions to both sources. Re-run on the \N{rtwoN} routing questions above, coverage raised Jev's
+accuracy from \N{rtwoJevTwoAcc} to \N{rtwoJevTwoCovAcc} (+\N{rtwoJevTwoCovW}/$-$\N{rtwoJevTwoCovL}) and the LLM
+router's from \N{rtwoLLMAcc} to \N{rtwoLLMCovAcc} (+\N{rtwoLLMCovW}/$-$\N{rtwoLLMCovL}). Because those questions'
+unknown-company errors are what motivated the change, this second result is descriptive only.
+
 \section{Finding the Right Page in Long Filings}\label{sec:pages}
 \paragraph{Setup.} We sampled pages at random from the 84 filings, at most four per filing (330 pages from 83
 filings, fewer than the 420 planned), (excluding FinanceBench's evidence pages,
@@ -351,10 +368,11 @@ et al.~\cite{axioms2026}: both needs score high whenever either source is plausi
 decision cost \N{rtwoHtwoDiff} points here. Posing the
 whole decision as one choice removed it.
 
-\paragraph{What the router cannot see.} The LLM router and every Jev router sent questions about companies absent
-from the database to SQL, because it was shown the database's columns but not its coverage. A one-line summary of what
-the rows cover (which companies, which years) in the card shown to the router is a cheap fix that our results suggest
-but did not test.
+\paragraph{What the router cannot see.} A router shown only a database's columns cannot tell a question about an
+entity the database holds from one about an entity it does not. Listing what the rows cover, which costs a few
+read-only queries per database and no model call, fixed most unknown-entity errors for both routers. Ranges helped
+far less than lists: neither router reliably compared a year in the question with the date range it was given, so
+period coverage may need a more explicit form.
 
 \paragraph{Cost.} Every Jev decision in this paper cost well under a cent: \N{sJevCost} to score all 6,056 SQL
 candidates, \N{roneCost} per question to re-rank 25 passages, and no LLM call to route. The constraint we met in
@@ -390,7 +408,10 @@ answers about as well as an LLM judge, judged whether a schema can answer a ques
 routed \N{rtwoJevTwoAcc} of new questions correctly without an LLM call (not significantly different from an LLM
 router), and, re-ranking a cross-encoder's passages, put the right filing page first more often than the
 cross-encoder alone (\N{roneJBOne} against \N{roneBOne}). It was a poor chooser among SQL candidates, and
-it failed when a single routing decision was split into independent questions. Decisions that can be read off the
+it failed when a single routing decision was split into independent questions. One limit was shared with the LLM router: neither could
+tell a question about an entity the database lacks from an ordinary database question, until the card listed what
+the rows cover, which made both decline most such questions (\N{rfourJevOnUnknown} and \N{rfourLLMOnUnknown} for
+unknown companies). Decisions that can be read off the
 input can be moved to such a model; decisions that must be worked out, and decisions posed as separate questions,
 should stay where they are. Code, prompts, pre-registrations and every result file are kept with the
 project (availability: \textbf{to be decided by the authors}).
