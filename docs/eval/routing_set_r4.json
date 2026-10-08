@@ -1,0 +1,1347 @@
+{
+ "preregistration": "docs/research/paperb_reruns_prereg.md (R4)",
+ "seed": 20261010,
+ "forms": [
+  "What {m} did {c} report for fiscal {y}?",
+  "Give me {c}'s {m} for fiscal year {y}.",
+  "How much was {c}'s {m} in fiscal {y}?"
+ ],
+ "items": [
+  {
+   "id": "r4u001",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "How much was Meta Platforms's long-term debt in fiscal 2019?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Meta Platforms",
+   "year": 2019,
+   "metric": "long_term_debt"
+  },
+  {
+   "id": "r4u002",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "Give me Broadcom's net income for fiscal year 2020.",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Broadcom",
+   "year": 2020,
+   "metric": "net_income"
+  },
+  {
+   "id": "r4u003",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "Give me Eli Lilly's cash and cash equivalents for fiscal year 2021.",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Eli Lilly",
+   "year": 2021,
+   "metric": "cash_and_equivalents"
+  },
+  {
+   "id": "r4u004",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "What current assets did Merck report for fiscal 2018?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Merck",
+   "year": 2018,
+   "metric": "current_assets"
+  },
+  {
+   "id": "r4u005",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "What cash and cash equivalents did AbbVie report for fiscal 2023?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "AbbVie",
+   "year": 2023,
+   "metric": "cash_and_equivalents"
+  },
+  {
+   "id": "r4u006",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "Give me Abbott Laboratories's capital expenditure for fiscal year 2020.",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Abbott Laboratories",
+   "year": 2020,
+   "metric": "capital_expenditure"
+  },
+  {
+   "id": "r4u007",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "What accounts receivable did Thermo Fisher Scientific report for fiscal 2018?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Thermo Fisher Scientific",
+   "year": 2018,
+   "metric": "accounts_receivable"
+  },
+  {
+   "id": "r4u008",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "Give me Danaher's long-term debt for fiscal year 2020.",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Danaher",
+   "year": 2020,
+   "metric": "long_term_debt"
+  },
+  {
+   "id": "r4u009",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "How much was Texas Instruments's gross profit in fiscal 2017?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Texas Instruments",
+   "year": 2017,
+   "metric": "gross_profit"
+  },
+  {
+   "id": "r4u010",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "Give me Qualcomm's net income for fiscal year 2017.",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Qualcomm",
+   "year": 2017,
+   "metric": "net_income"
+  },
+  {
+   "id": "r4u011",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "Give me Honeywell's stockholders' equity for fiscal year 2022.",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Honeywell",
+   "year": 2022,
+   "metric": "stockholders_equity"
+  },
+  {
+   "id": "r4u012",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "Give me Union Pacific's depreciation and amortization for fiscal year 2016.",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Union Pacific",
+   "year": 2016,
+   "metric": "depreciation_and_amortization"
+  },
+  {
+   "id": "r4u013",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "How much was UPS's cash and cash equivalents in fiscal 2018?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "UPS",
+   "year": 2018,
+   "metric": "cash_and_equivalents"
+  },
+  {
+   "id": "r4u014",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "How much was FedEx's cash and cash equivalents in fiscal 2016?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "FedEx",
+   "year": 2016,
+   "metric": "cash_and_equivalents"
+  },
+  {
+   "id": "r4u015",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "How much was Lowe's's inventory in fiscal 2018?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Lowe's",
+   "year": 2018,
+   "metric": "inventory"
+  },
+  {
+   "id": "r4u016",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "How much was TJX Companies's total assets in fiscal 2017?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "TJX Companies",
+   "year": 2017,
+   "metric": "total_assets"
+  },
+  {
+   "id": "r4u017",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "How much was Booking Holdings's stockholders' equity in fiscal 2020?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Booking Holdings",
+   "year": 2020,
+   "metric": "stockholders_equity"
+  },
+  {
+   "id": "r4u018",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "How much was Morgan Stanley's capital expenditure in fiscal 2022?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Morgan Stanley",
+   "year": 2022,
+   "metric": "capital_expenditure"
+  },
+  {
+   "id": "r4u019",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "Give me Goldman Sachs's total assets for fiscal year 2022.",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Goldman Sachs",
+   "year": 2022,
+   "metric": "total_assets"
+  },
+  {
+   "id": "r4u020",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "What gross profit did Wells Fargo report for fiscal 2021?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Wells Fargo",
+   "year": 2021,
+   "metric": "gross_profit"
+  },
+  {
+   "id": "r4u021",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "How much was Bank of America's accounts payable in fiscal 2023?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Bank of America",
+   "year": 2023,
+   "metric": "accounts_payable"
+  },
+  {
+   "id": "r4u022",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "What current assets did Citigroup report for fiscal 2018?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Citigroup",
+   "year": 2018,
+   "metric": "current_assets"
+  },
+  {
+   "id": "r4u023",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "Give me Delta Air Lines's share repurchases for fiscal year 2017.",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Delta Air Lines",
+   "year": 2017,
+   "metric": "share_repurchases"
+  },
+  {
+   "id": "r4u024",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "How much was General Electric's cost of revenue in fiscal 2022?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "General Electric",
+   "year": 2022,
+   "metric": "cost_of_revenue"
+  },
+  {
+   "id": "r4u025",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "How much was Deere & Company's accounts payable in fiscal 2020?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Deere & Company",
+   "year": 2020,
+   "metric": "accounts_payable"
+  },
+  {
+   "id": "r4u026",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "Give me Dow's total assets for fiscal year 2018.",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Dow",
+   "year": 2018,
+   "metric": "total_assets"
+  },
+  {
+   "id": "r4u027",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "Give me Kimberly-Clark's share repurchases for fiscal year 2020.",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Kimberly-Clark",
+   "year": 2020,
+   "metric": "share_repurchases"
+  },
+  {
+   "id": "r4u028",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "Give me Colgate-Palmolive's total liabilities for fiscal year 2017.",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Colgate-Palmolive",
+   "year": 2017,
+   "metric": "total_liabilities"
+  },
+  {
+   "id": "r4u029",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "What current assets did Mondelez report for fiscal 2020?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Mondelez",
+   "year": 2020,
+   "metric": "current_assets"
+  },
+  {
+   "id": "r4u030",
+   "class": "neither",
+   "subclass": "unknown_company",
+   "question": "What revenue did AT&T report for fiscal 2018?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "AT&T",
+   "year": 2018,
+   "metric": "revenue"
+  },
+  {
+   "id": "r4o001",
+   "class": "neither",
+   "subclass": "out_of_range_year",
+   "question": "What net property, plant and equipment did 3M report for fiscal 2004?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "3M",
+   "year": 2004,
+   "metric": "property_plant_equipment_net"
+  },
+  {
+   "id": "r4o002",
+   "class": "neither",
+   "subclass": "out_of_range_year",
+   "question": "What total liabilities did Verizon report for fiscal 2001?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Verizon",
+   "year": 2001,
+   "metric": "total_liabilities"
+  },
+  {
+   "id": "r4o003",
+   "class": "neither",
+   "subclass": "out_of_range_year",
+   "question": "What operating cash flow did Best Buy report for fiscal 2003?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Best Buy",
+   "year": 2003,
+   "metric": "operating_cash_flow"
+  },
+  {
+   "id": "r4o004",
+   "class": "neither",
+   "subclass": "out_of_range_year",
+   "question": "What capital expenditure did Microsoft report for fiscal 2002?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Microsoft",
+   "year": 2002,
+   "metric": "capital_expenditure"
+  },
+  {
+   "id": "r4o005",
+   "class": "neither",
+   "subclass": "out_of_range_year",
+   "question": "What revenue did AES report for fiscal 1998?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "AES",
+   "year": 1998,
+   "metric": "revenue"
+  },
+  {
+   "id": "r4o006",
+   "class": "neither",
+   "subclass": "out_of_range_year",
+   "question": "How much was Adobe's accounts payable in fiscal 2004?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Adobe",
+   "year": 2004,
+   "metric": "accounts_payable"
+  },
+  {
+   "id": "r4o007",
+   "class": "neither",
+   "subclass": "out_of_range_year",
+   "question": "What cash and cash equivalents did American Express report for fiscal 2002?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "American Express",
+   "year": 2002,
+   "metric": "cash_and_equivalents"
+  },
+  {
+   "id": "r4o008",
+   "class": "neither",
+   "subclass": "out_of_range_year",
+   "question": "What revenue did Amazon report for fiscal 1999?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Amazon",
+   "year": 1999,
+   "metric": "revenue"
+  },
+  {
+   "id": "r4o009",
+   "class": "neither",
+   "subclass": "out_of_range_year",
+   "question": "What stockholders' equity did Netflix report for fiscal 1998?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Netflix",
+   "year": 1998,
+   "metric": "stockholders_equity"
+  },
+  {
+   "id": "r4o010",
+   "class": "neither",
+   "subclass": "out_of_range_year",
+   "question": "How much was Lockheed Martin's capital expenditure in fiscal 2004?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Lockheed Martin",
+   "year": 2004,
+   "metric": "capital_expenditure"
+  },
+  {
+   "id": "r4o011",
+   "class": "neither",
+   "subclass": "out_of_range_year",
+   "question": "How much was MGM Resorts's inventory in fiscal 2004?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "MGM Resorts",
+   "year": 2004,
+   "metric": "inventory"
+  },
+  {
+   "id": "r4o012",
+   "class": "neither",
+   "subclass": "out_of_range_year",
+   "question": "How much was Kraft Heinz's net income in fiscal 2002?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Kraft Heinz",
+   "year": 2002,
+   "metric": "net_income"
+  },
+  {
+   "id": "r4o013",
+   "class": "neither",
+   "subclass": "out_of_range_year",
+   "question": "How much was AMD's dividends paid in fiscal 2001?",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "AMD",
+   "year": 2001,
+   "metric": "dividends_paid"
+  },
+  {
+   "id": "r4o014",
+   "class": "neither",
+   "subclass": "out_of_range_year",
+   "question": "Give me Block's total liabilities for fiscal year 2001.",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "Block",
+   "year": 2001,
+   "metric": "total_liabilities"
+  },
+  {
+   "id": "r4o015",
+   "class": "neither",
+   "subclass": "out_of_range_year",
+   "question": "Give me PayPal's accounts receivable for fiscal year 2002.",
+   "acceptable": [
+    "neither"
+   ],
+   "split": "r4",
+   "company": "PayPal",
+   "year": 2002,
+   "metric": "accounts_receivable"
+  },
+  {
+   "id": "r4s001",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "What share repurchases did Pfizer report for fiscal 2016?",
+   "acceptable": [
+    "sql"
+   ],
+   "split": "r4",
+   "company": "Pfizer",
+   "year": 2016,
+   "metric": "share_repurchases",
+   "filing": null,
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'PFE' AND metric = 'share_repurchases' AND period_end_year = 2016",
+   "sql_answer": "5000000000"
+  },
+  {
+   "id": "r4s002",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "What net income did Nike report for fiscal 2015?",
+   "acceptable": [
+    "sql"
+   ],
+   "split": "r4",
+   "company": "Nike",
+   "year": 2015,
+   "metric": "net_income",
+   "filing": null,
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'NKE' AND metric = 'net_income' AND period_end_year = 2015",
+   "sql_answer": "3273000000"
+  },
+  {
+   "id": "r4s003",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "How much was Costco's stockholders' equity in fiscal 2023?",
+   "acceptable": [
+    "sql"
+   ],
+   "split": "r4",
+   "company": "Costco",
+   "year": 2023,
+   "metric": "stockholders_equity",
+   "filing": null,
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'COST' AND metric = 'stockholders_equity' AND period_end_year = 2023",
+   "sql_answer": "25058000000"
+  },
+  {
+   "id": "r4s004",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Give me AMD's current liabilities for fiscal year 2016.",
+   "acceptable": [
+    "sql"
+   ],
+   "split": "r4",
+   "company": "AMD",
+   "year": 2016,
+   "metric": "current_liabilities",
+   "filing": null,
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'AMD' AND metric = 'current_liabilities' AND period_end_year = 2016",
+   "sql_answer": "1346000000"
+  },
+  {
+   "id": "r4e001",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much was CVS Health's share repurchases in fiscal 2022?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "CVS Health",
+   "year": 2022,
+   "metric": "share_repurchases",
+   "filing": "CVSHEALTH_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'CVS' AND metric = 'share_repurchases' AND period_end_year = 2022",
+   "sql_answer": "3500000000"
+  },
+  {
+   "id": "r4s005",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Give me AMD's share repurchases for fiscal year 2021.",
+   "acceptable": [
+    "sql"
+   ],
+   "split": "r4",
+   "company": "AMD",
+   "year": 2021,
+   "metric": "share_repurchases",
+   "filing": null,
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'AMD' AND metric = 'share_repurchases' AND period_end_year = 2021",
+   "sql_answer": "1762000000"
+  },
+  {
+   "id": "r4e002",
+   "class": "either",
+   "subclass": "either",
+   "question": "Give me Coca-Cola's net income for fiscal year 2022.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Coca-Cola",
+   "year": 2022,
+   "metric": "net_income",
+   "filing": "COCACOLA_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'KO' AND metric = 'net_income' AND period_end_year = 2022",
+   "sql_answer": "9542000000"
+  },
+  {
+   "id": "r4s006",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Give me Costco's total liabilities for fiscal year 2018.",
+   "acceptable": [
+    "sql"
+   ],
+   "split": "r4",
+   "company": "Costco",
+   "year": 2018,
+   "metric": "total_liabilities",
+   "filing": null,
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'COST' AND metric = 'total_liabilities' AND period_end_year = 2018",
+   "sql_answer": "27727000000"
+  },
+  {
+   "id": "r4e003",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much was Best Buy's long-term debt in fiscal 2023?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Best Buy",
+   "year": 2023,
+   "metric": "long_term_debt",
+   "filing": "BESTBUY_2023_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'BBY' AND metric = 'long_term_debt' AND period_end_year = 2023",
+   "sql_answer": "1176000000"
+  },
+  {
+   "id": "r4s007",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Give me JPMorgan's net income for fiscal year 2019.",
+   "acceptable": [
+    "sql"
+   ],
+   "split": "r4",
+   "company": "JPMorgan",
+   "year": 2019,
+   "metric": "net_income",
+   "filing": null,
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'JPM' AND metric = 'net_income' AND period_end_year = 2019",
+   "sql_answer": "36431000000"
+  },
+  {
+   "id": "r4s008",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "What long-term debt did PayPal report for fiscal 2020?",
+   "acceptable": [
+    "sql"
+   ],
+   "split": "r4",
+   "company": "PayPal",
+   "year": 2020,
+   "metric": "long_term_debt",
+   "filing": null,
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'PYPL' AND metric = 'long_term_debt' AND period_end_year = 2020",
+   "sql_answer": "8939000000"
+  },
+  {
+   "id": "r4e004",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much was Pfizer's depreciation and amortization in fiscal 2021?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Pfizer",
+   "year": 2021,
+   "metric": "depreciation_and_amortization",
+   "filing": "PFIZER_2021_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'PFE' AND metric = 'depreciation_and_amortization' AND period_end_year = 2021",
+   "sql_answer": "5191000000"
+  },
+  {
+   "id": "r4s009",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Give me 3M's net income for fiscal year 2023.",
+   "acceptable": [
+    "sql"
+   ],
+   "split": "r4",
+   "company": "3M",
+   "year": 2023,
+   "metric": "net_income",
+   "filing": null,
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'MMM' AND metric = 'net_income' AND period_end_year = 2023",
+   "sql_answer": "-6995000000"
+  },
+  {
+   "id": "r4e005",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much was PayPal's accounts payable in fiscal 2022?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "PayPal",
+   "year": 2022,
+   "metric": "accounts_payable",
+   "filing": "PAYPAL_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'PYPL' AND metric = 'accounts_payable' AND period_end_year = 2022",
+   "sql_answer": "126000000"
+  },
+  {
+   "id": "r4e006",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much was Lockheed Martin's gross profit in fiscal 2021?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Lockheed Martin",
+   "year": 2021,
+   "metric": "gross_profit",
+   "filing": "LOCKHEEDMARTIN_2021_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'LMT' AND metric = 'gross_profit' AND period_end_year = 2021",
+   "sql_answer": "9061000000"
+  },
+  {
+   "id": "r4e007",
+   "class": "either",
+   "subclass": "either",
+   "question": "What operating cash flow did Boeing report for fiscal 2018?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Boeing",
+   "year": 2018,
+   "metric": "operating_cash_flow",
+   "filing": "BOEING_2018_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'BA' AND metric = 'operating_cash_flow' AND period_end_year = 2018",
+   "sql_answer": "15322000000"
+  },
+  {
+   "id": "r4s010",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Give me AMD's net property, plant and equipment for fiscal year 2019.",
+   "acceptable": [
+    "sql"
+   ],
+   "split": "r4",
+   "company": "AMD",
+   "year": 2019,
+   "metric": "property_plant_equipment_net",
+   "filing": null,
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'AMD' AND metric = 'property_plant_equipment_net' AND period_end_year = 2019",
+   "sql_answer": "500000000"
+  },
+  {
+   "id": "r4s011",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "How much was General Mills's net income in fiscal 2017?",
+   "acceptable": [
+    "sql"
+   ],
+   "split": "r4",
+   "company": "General Mills",
+   "year": 2017,
+   "metric": "net_income",
+   "filing": null,
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'GIS' AND metric = 'net_income' AND period_end_year = 2017",
+   "sql_answer": "1657500000"
+  },
+  {
+   "id": "r4s012",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "What total liabilities did Amcor report for fiscal 2019?",
+   "acceptable": [
+    "sql"
+   ],
+   "split": "r4",
+   "company": "Amcor",
+   "year": 2019,
+   "metric": "total_liabilities",
+   "filing": null,
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'AMCR' AND metric = 'total_liabilities' AND period_end_year = 2019",
+   "sql_answer": "11490300000"
+  },
+  {
+   "id": "r4s013",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "How much was Coca-Cola's net property, plant and equipment in fiscal 2023?",
+   "acceptable": [
+    "sql"
+   ],
+   "split": "r4",
+   "company": "Coca-Cola",
+   "year": 2023,
+   "metric": "property_plant_equipment_net",
+   "filing": null,
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'KO' AND metric = 'property_plant_equipment_net' AND period_end_year = 2023",
+   "sql_answer": "9236000000"
+  },
+  {
+   "id": "r4s014",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "How much was Costco's total liabilities in fiscal 2016?",
+   "acceptable": [
+    "sql"
+   ],
+   "split": "r4",
+   "company": "Costco",
+   "year": 2016,
+   "metric": "total_liabilities",
+   "filing": null,
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'COST' AND metric = 'total_liabilities' AND period_end_year = 2016",
+   "sql_answer": "20831000000"
+  },
+  {
+   "id": "r4s015",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Give me American Express's long-term debt for fiscal year 2021.",
+   "acceptable": [
+    "sql"
+   ],
+   "split": "r4",
+   "company": "American Express",
+   "year": 2021,
+   "metric": "long_term_debt",
+   "filing": null,
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'AXP' AND metric = 'long_term_debt' AND period_end_year = 2021",
+   "sql_answer": "38675000000"
+  },
+  {
+   "id": "r4e008",
+   "class": "either",
+   "subclass": "either",
+   "question": "What cash and cash equivalents did Netflix report for fiscal 2017?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Netflix",
+   "year": 2017,
+   "metric": "cash_and_equivalents",
+   "filing": "NETFLIX_2017_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'NFLX' AND metric = 'cash_and_equivalents' AND period_end_year = 2017",
+   "sql_answer": "2822795000"
+  },
+  {
+   "id": "r4e009",
+   "class": "either",
+   "subclass": "either",
+   "question": "What revenue did Microsoft report for fiscal 2016?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Microsoft",
+   "year": 2016,
+   "metric": "revenue",
+   "filing": "MICROSOFT_2016_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'MSFT' AND metric = 'revenue' AND period_end_year = 2016",
+   "sql_answer": "91154000000"
+  },
+  {
+   "id": "r4e010",
+   "class": "either",
+   "subclass": "either",
+   "question": "What current liabilities did Kraft Heinz report for fiscal 2019?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Kraft Heinz",
+   "year": 2019,
+   "metric": "current_liabilities",
+   "filing": "KRAFTHEINZ_2019_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'KHC' AND metric = 'current_liabilities' AND period_end_year = 2019",
+   "sql_answer": "7875000000"
+  },
+  {
+   "id": "r4e011",
+   "class": "either",
+   "subclass": "either",
+   "question": "Give me Adobe's share repurchases for fiscal year 2015.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Adobe",
+   "year": 2015,
+   "metric": "share_repurchases",
+   "filing": "ADOBE_2015_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'ADBE' AND metric = 'share_repurchases' AND period_end_year = 2015",
+   "sql_answer": "625000000"
+  },
+  {
+   "id": "r4e012",
+   "class": "either",
+   "subclass": "either",
+   "question": "Give me American Water Works's total assets for fiscal year 2021.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "American Water Works",
+   "year": 2021,
+   "metric": "total_assets",
+   "filing": "AMERICANWATERWORKS_2021_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'AWK' AND metric = 'total_assets' AND period_end_year = 2021",
+   "sql_answer": "26075000000"
+  },
+  {
+   "id": "r4e013",
+   "class": "either",
+   "subclass": "either",
+   "question": "What net income did Microsoft report for fiscal 2023?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Microsoft",
+   "year": 2023,
+   "metric": "net_income",
+   "filing": "MICROSOFT_2023_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'MSFT' AND metric = 'net_income' AND period_end_year = 2023",
+   "sql_answer": "72361000000"
+  },
+  {
+   "id": "r4e014",
+   "class": "either",
+   "subclass": "either",
+   "question": "What current assets did Nike report for fiscal 2023?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Nike",
+   "year": 2023,
+   "metric": "current_assets",
+   "filing": "NIKE_2023_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'NKE' AND metric = 'current_assets' AND period_end_year = 2023",
+   "sql_answer": "25202000000"
+  },
+  {
+   "id": "r4e015",
+   "class": "either",
+   "subclass": "either",
+   "question": "Give me Walmart's cash and cash equivalents for fiscal year 2020.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Walmart",
+   "year": 2020,
+   "metric": "cash_and_equivalents",
+   "filing": "WALMART_2020_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'WMT' AND metric = 'cash_and_equivalents' AND period_end_year = 2020",
+   "sql_answer": "9465000000"
+  },
+  {
+   "id": "r4e016",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much was Ulta Beauty's depreciation and amortization in fiscal 2023?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Ulta Beauty",
+   "year": 2023,
+   "metric": "depreciation_and_amortization",
+   "filing": "ULTABEAUTY_2023_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'ULTA' AND metric = 'depreciation_and_amortization' AND period_end_year = 2023",
+   "sql_answer": "241372000"
+  },
+  {
+   "id": "r4e017",
+   "class": "either",
+   "subclass": "either",
+   "question": "Give me AES's revenue for fiscal year 2022.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "AES",
+   "year": 2022,
+   "metric": "revenue",
+   "filing": "AES_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'AES' AND metric = 'revenue' AND period_end_year = 2022",
+   "sql_answer": "12617000000"
+  },
+  {
+   "id": "r4e018",
+   "class": "either",
+   "subclass": "either",
+   "question": "What share repurchases did Nike report for fiscal 2021?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Nike",
+   "year": 2021,
+   "metric": "share_repurchases",
+   "filing": "NIKE_2021_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'NKE' AND metric = 'share_repurchases' AND period_end_year = 2021",
+   "sql_answer": "608000000"
+  },
+  {
+   "id": "r4e019",
+   "class": "either",
+   "subclass": "either",
+   "question": "Give me Best Buy's depreciation and amortization for fiscal year 2019.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Best Buy",
+   "year": 2019,
+   "metric": "depreciation_and_amortization",
+   "filing": "BESTBUY_2019_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'BBY' AND metric = 'depreciation_and_amortization' AND period_end_year = 2019",
+   "sql_answer": "770000000"
+  },
+  {
+   "id": "r4e020",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much was PepsiCo's current assets in fiscal 2021?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "PepsiCo",
+   "year": 2021,
+   "metric": "current_assets",
+   "filing": "PEPSICO_2021_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'PEP' AND metric = 'current_assets' AND period_end_year = 2021",
+   "sql_answer": "21783000000"
+  },
+  {
+   "id": "r4e021",
+   "class": "either",
+   "subclass": "either",
+   "question": "Give me Corning's gross profit for fiscal year 2022.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Corning",
+   "year": 2022,
+   "metric": "gross_profit",
+   "filing": "CORNING_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'GLW' AND metric = 'gross_profit' AND period_end_year = 2022",
+   "sql_answer": "4506000000"
+  },
+  {
+   "id": "r4e022",
+   "class": "either",
+   "subclass": "either",
+   "question": "What inventory did General Mills report for fiscal 2019?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "General Mills",
+   "year": 2019,
+   "metric": "inventory",
+   "filing": "GENERALMILLS_2019_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'GIS' AND metric = 'inventory' AND period_end_year = 2019",
+   "sql_answer": "1559300000"
+  },
+  {
+   "id": "r4e023",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much was Walmart's dividends paid in fiscal 2019?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Walmart",
+   "year": 2019,
+   "metric": "dividends_paid",
+   "filing": "WALMART_2019_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'WMT' AND metric = 'dividends_paid' AND period_end_year = 2019",
+   "sql_answer": "6102000000"
+  },
+  {
+   "id": "r4e024",
+   "class": "either",
+   "subclass": "either",
+   "question": "What share repurchases did Adobe report for fiscal 2016?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Adobe",
+   "year": 2016,
+   "metric": "share_repurchases",
+   "filing": "ADOBE_2016_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'ADBE' AND metric = 'share_repurchases' AND period_end_year = 2016",
+   "sql_answer": "1075000000"
+  },
+  {
+   "id": "r4e025",
+   "class": "either",
+   "subclass": "either",
+   "question": "What operating income did Lockheed Martin report for fiscal 2022?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Lockheed Martin",
+   "year": 2022,
+   "metric": "operating_income",
+   "filing": "LOCKHEEDMARTIN_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'LMT' AND metric = 'operating_income' AND period_end_year = 2022",
+   "sql_answer": "8348000000"
+  },
+  {
+   "id": "r4e026",
+   "class": "either",
+   "subclass": "either",
+   "question": "What current assets did Nike report for fiscal 2018?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Nike",
+   "year": 2018,
+   "metric": "current_assets",
+   "filing": "NIKE_2018_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'NKE' AND metric = 'current_assets' AND period_end_year = 2018",
+   "sql_answer": "15134000000"
+  },
+  {
+   "id": "r4e027",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much was Walmart's inventory in fiscal 2018?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Walmart",
+   "year": 2018,
+   "metric": "inventory",
+   "filing": "WALMART_2018_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'WMT' AND metric = 'inventory' AND period_end_year = 2018",
+   "sql_answer": "43783000000"
+  },
+  {
+   "id": "r4e028",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much was MGM Resorts's revenue in fiscal 2022?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "MGM Resorts",
+   "year": 2022,
+   "metric": "revenue",
+   "filing": "MGMRESORTS_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'MGM' AND metric = 'revenue' AND period_end_year = 2022",
+   "sql_answer": "13127485000"
+  },
+  {
+   "id": "r4e029",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much was Adobe's operating cash flow in fiscal 2017?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Adobe",
+   "year": 2017,
+   "metric": "operating_cash_flow",
+   "filing": "ADOBE_2017_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'ADBE' AND metric = 'operating_cash_flow' AND period_end_year = 2017",
+   "sql_answer": "2912853000"
+  },
+  {
+   "id": "r4e030",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much was Lockheed Martin's share repurchases in fiscal 2020?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "split": "r4",
+   "company": "Lockheed Martin",
+   "year": 2020,
+   "metric": "share_repurchases",
+   "filing": "LOCKHEEDMARTIN_2020_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'LMT' AND metric = 'share_repurchases' AND period_end_year = 2020",
+   "sql_answer": "1100000000"
+  }
+ ],
+ "conversations": []
+}
