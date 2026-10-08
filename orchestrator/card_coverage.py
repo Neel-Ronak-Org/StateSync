@@ -72,15 +72,15 @@ def order_entries(entries: list[tuple[str, list[str] | str]]) -> list[tuple[str,
 
 
 def format_coverage(entries: list[tuple[str, str]], max_chars: int) -> str:
-    """One block: the header, then "table.column: ..." items separated by "; ", cut at an item boundary to
-    max_chars; "" when there is nothing to say."""
+    """One block: the header, then "table.column: ..." items in order, each kept only if it still fits within
+    max_chars (an item never cut in the middle); "" when there is nothing to say."""
     if not entries:
         return ""
     out = HEADER
     for key, text in entries:
         item = f" {key}: {text};"
         if len(out) + len(item) > max_chars:
-            break
+            continue                        # too long for what is left; a shorter item after it may still fit
         out += item
     return "" if out == HEADER else out
 

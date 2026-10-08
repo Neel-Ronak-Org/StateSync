@@ -48,6 +48,8 @@ def test_format_cuts_at_item_boundary():
     assert full.startswith(cc.HEADER) and "t.a:" in full and "t.b:" in full
     cut = cc.format_coverage(entries, len(cc.HEADER) + 40)
     assert "t.a:" in cut and "t.b:" not in cut
+    skip = cc.format_coverage([("t.long", "z" * 80), ("t.short", "s")], len(cc.HEADER) + 40)
+    assert "t.long" not in skip and "t.short: s;" in skip
     assert cc.format_coverage([], 100) == ""
 
 
