@@ -143,6 +143,41 @@ the pipeline asked it, with BIRD's hint (primary), and without the hint (seconda
 **Expected.** N-column is much harder than the first gate's other-database negatives; the paper reports whatever
 it is.
 
+## R4. Telling the router what the database covers (added 2026-10-08, before its code, set or runs exist)
+
+**Why.** In R2, the LLM router and every Jev router sent all ten questions about companies absent from the database
+to SQL: the database card lists tables and columns, not which entities and periods the rows cover.
+
+**Change under test.** `[front_door] card_coverage = "on"` (default `"off"`, so every earlier result is unchanged):
+the database card gains a coverage line built without any model call, cached per (tenant, dataset). For each table in
+the card, every text column with at most `coverage_max_values` (40) distinct values is listed in full, and every date
+or timestamp column gets its minimum and maximum; the line is cut at `coverage_max_chars` (2,500). It reads through the
+same read-only gate as every other query. Nothing else in the router or its prompts changes.
+
+**Set** (`scripts/build_routing_set_r4.py`, seed 20261010, `docs/eval/routing_set_r4.json`), 90 single questions, labels
+by construction, none from FinanceBench or the R2 set:
+- *neither, unknown company* (30): a standard annual metric and a fiscal year 2016–2023 for a US public company in
+  neither source, drawn from a fixed list disjoint from R2's;
+- *neither, out-of-range year* (15): a standard metric for a company in the database, for a fiscal year 1998–2004
+  (before any period the database holds);
+- *either* (30): a metric the database holds for a company and fiscal year whose 10-K is in the library;
+- *sql* (15): a metric the database holds for a company and fiscal year whose 10-K is not in the library.
+Every either and sql item's reference query must return a value; templates use new phrasings.
+
+**Arms** (one run each, images rebuilt from the commit that adds the flag; the flag off reproduces the old card):
+LLM router with coverage off and on; Jev choice wording 2 with coverage off and on.
+
+**Hypotheses** (exact McNemar, two-sided, alpha 0.05):
+- **Primary R4-H1:** Jev choice wording 2, coverage on vs off, accuracy on the 45 *neither* questions.
+- **Secondary (Holm over three):** R4-H2 the LLM router, the same comparison; R4-H3 and R4-H4 Jev and the LLM router,
+  coverage on vs off, accuracy on the 45 in-coverage questions (the change must not cost them: reported with the
+  95% interval and the ±8-point comparability rule).
+- **Also reported, descriptive:** both routers with coverage on over R2's 180 questions, against their R2 runs. R2's
+  ten unknown-company questions motivated this change, so this is a no-harm check, not confirmation.
+
+**Human check.** The construction is mechanical (company lists, years, executed queries); both authors read the 90
+questions for wording only.
+
 ## Change log
 
 1. **2026-10-07, R3, before any Jev call (a note, nothing changed).** The pair builder resolved all 298 reference
