@@ -48,6 +48,7 @@ import jev_client
 from config_loader import cfg
 from language_gate import needs_language_model
 from llm.provider import get_agent_llm
+from card_coverage import build_coverage
 from mcp_client import (
     MCPSession, history_get_recent_turns, schema_describe_table, schema_list_tables,
     vector_semantic_search, workspaces_manage,
@@ -299,15 +300,27 @@ async def _schema_card(session: MCPSession, tenant_id: str, dataset: str) -> tup
     try:
         listing = await schema_list_tables(session, dataset)
         tables: list[tuple[str, list[str]]] = []
+        described_tables: list[tuple[str, list[dict[str, Any]]]] = []
         for table in listing.get("tables", []):
             described = await schema_describe_table(session, table["name"], dataset)
             tables.append((table["name"], [str(c["name"]) for c in described.get("columns", [])]))
+            described_tables.append((table["name"], list(described.get("columns", []))))
             if len(format_card(dataset, tables, cap + 1)) > cap:
                 break
     except Exception as exc:  # noqa: BLE001 -- the card is evidence; its absence is traced, not fatal
         logger.warning("front door: database card unavailable for dataset %s: %s", dataset, exc)
         return unavailable_card(dataset), "unavailable"
     card = format_card(dataset, tables, cap)
+    # What the rows cover (front_door.card_coverage, default off; card_coverage.py). Best-effort: no line on failure.
+    if str(getattr(cfg.front_door, "card_coverage", "off")) == "on":
+        try:
+            line = await build_coverage(session, dataset, described_tables,
+                                        int(cfg.front_door.coverage_max_values), int(cfg.front_door.coverage_max_chars))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("front door: coverage line skipped for dataset %s: %s", dataset, exc)
+            line = ""
+        if line:
+            card = f"{card}\n{line}"
     _cache_card(key, card)
     return card, "ok"
 
