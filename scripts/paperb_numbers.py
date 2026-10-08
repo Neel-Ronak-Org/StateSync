@@ -329,6 +329,52 @@ def main() -> int:
         w = sum(orders[q]["JB"][0] in qs[q]["gold"] and orders[q]["B"][0] not in qs[q]["gold"] for q in orders)
         l_ = sum(orders[q]["B"][0] in qs[q]["gold"] and orders[q]["JB"][0] not in qs[q]["gold"] for q in orders)
         N[f"dev{tag}N"], N[f"dev{tag}W"], N[f"dev{tag}L"], N[f"dev{tag}P"] = str(len(orders)), str(w), str(l_), pval(mcnemar(w, l_))
+    # ── rerun R4: the router's coverage line (only once its runs exist) ──
+    r4runs = E / "routing_runs_r4.json"
+    if r4runs.exists():
+        import random
+        it4 = {i["id"]: i for i in j("routing_set_r4.json")["items"]}
+        R4 = json.loads(r4runs.read_text())["runs"]
+
+        def p4(r: dict) -> str | None:
+            return None if r.get("http_status") != 200 else ("neither" if r.get("out_of_scope") else r.get("route"))
+        arms4 = {"LLMOff": "llm|r4|0", "LLMOn": "llm+cov|r4|0", "JevOff": "jev_choice+v2|r4|0", "JevOn": "jev_choice+v2cov|r4|0"}
+        ok4 = {nm: {i: p4(R4[k]["items"][i]) in it4[i]["acceptable"] for i in it4 if i in R4[k]["items"]}
+               for nm, k in arms4.items() if k in R4}
+        groups = {"Neither": [i for i in it4 if it4[i]["class"] == "neither"], "Cov": [i for i in it4 if it4[i]["class"] != "neither"],
+                  "Unknown": [i for i in it4 if it4[i]["subclass"] == "unknown_company"],
+                  "Years": [i for i in it4 if it4[i]["subclass"] == "out_of_range_year"]}
+        for nm, o in ok4.items():
+            for g, ids in groups.items():
+                N[f"rfour{nm}{g}"] = f"{sum(o[i] for i in ids if i in o)}/{len(ids)}"
+            N[f"rfour{nm}Acc"] = pct(sum(o.values()) / len(o))
+        rng = random.Random(20261010)
+        t4 = {}
+        for tag, on, off, g in (("Hone", "JevOn", "JevOff", "Neither"), ("Htwo", "LLMOn", "LLMOff", "Neither"),
+                                ("Hthree", "JevOn", "JevOff", "Cov"), ("Hfour", "LLMOn", "LLMOff", "Cov")):
+            if on in ok4 and off in ok4:
+                ids = [i for i in groups[g] if i in ok4[on] and i in ok4[off]]
+                x = [ok4[on][i] - ok4[off][i] for i in ids]
+                w, l_ = sum(v > 0 for v in x), sum(v < 0 for v in x)
+                boots = sorted(sum(rng.choice(x) for _ in x) / len(x) for _ in range(2000))
+                t4[tag] = {"w": w, "l": l_, "p": mcnemar(w, l_), "d": 100 * sum(x) / len(x), "ci": (100 * boots[50], 100 * boots[1949])}
+        sec4 = sorted((t for t in t4 if t != "Hone"), key=lambda t: t4[t]["p"])
+        run4 = 0.0
+        for k, t in enumerate(sec4):
+            run4 = max(run4, min(1.0, (len(sec4) - k) * t4[t]["p"]))
+            t4[t]["p"] = run4
+        for tag, t in t4.items():
+            N[f"rfour{tag}W"], N[f"rfour{tag}L"], N[f"rfour{tag}P"] = str(t["w"]), str(t["l"]), pval(t["p"])
+            N[f"rfour{tag}Diff"], N[f"rfour{tag}CI"] = f"{t['d']:+.1f}", f"[{t['ci'][0]:+.1f}, {t['ci'][1]:+.1f}]"
+        # R2 no-harm check (descriptive)
+        R2b = json.loads((E / "routing_runs_r2.json").read_text())["runs"]
+        items2 = {i["id"]: i for i in j("routing_set_r2.json")["items"]}
+        for nm, k in (("LLM", "llm+cov|r2|0"), ("JevTwo", "jev_choice+v2cov|r2|0")):
+            if k in R2b:
+                o = {i: p4(R2b[k]["items"][i]) in items2[i]["acceptable"] for i in items2 if i in R2b[k]["items"]}
+                N[f"rtwo{nm}CovAcc"] = pct(sum(o.values()) / len(o))
+                nei = [i for i in items2 if items2[i]["class"] == "neither"]
+                N[f"rtwo{nm}CovNeither"] = f"{sum(o[i] for i in nei if i in o)}/{len(nei)}"
     # ── rerun R1: page finding (only once its report exists) ──
     r1p = E / "jev_pages_r1.json"
     if r1p.exists() and "r1_summary" in json.loads(r1p.read_text()):
