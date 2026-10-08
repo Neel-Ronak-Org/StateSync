@@ -11,6 +11,8 @@
 
 interface RuntimeConfig {
   orchestratorUrl?: string
+  /** Optional sample questions for the chat's empty state (a deployment's own, e.g. a demo's). */
+  suggestions?: unknown
 }
 
 declare global {
@@ -24,3 +26,13 @@ const DEV_FALLBACK = 'http://localhost:8090'
 export const ORCHESTRATOR_URL: string = (
   window.__STATESYNC_CONFIG__?.orchestratorUrl || DEV_FALLBACK
 ).replace(/\/+$/, '')
+
+const MAX_SUGGESTIONS = 8
+
+/** The deployment's sample questions, when its config.js supplies a list of strings; otherwise null. */
+export const RUNTIME_SUGGESTIONS: string[] | null = (() => {
+  const raw = window.__STATESYNC_CONFIG__?.suggestions
+  if (!Array.isArray(raw)) return null
+  const list = raw.filter((q): q is string => typeof q === 'string' && q.trim().length > 0).slice(0, MAX_SUGGESTIONS)
+  return list.length ? list : null
+})()

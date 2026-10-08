@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button'
+import { RUNTIME_SUGGESTIONS } from '@/config'
 import { useDatasetLabel } from '@/features/library/useConnections'
 
 const SUGGESTIONS: Record<string, string[]> = {
@@ -22,7 +23,7 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ dataset, onSelectSuggestion }: EmptyStateProps) {
-  const suggestions = SUGGESTIONS[dataset] ?? SUGGESTIONS.public
+  const suggestions = RUNTIME_SUGGESTIONS ?? SUGGESTIONS[dataset] ?? SUGGESTIONS.public
   const label = useDatasetLabel([dataset])
 
   return (

@@ -37,6 +37,7 @@ import time
 from typing import Any
 
 import context_carry
+import passage_jev
 from config_loader import cfg
 from llm.provider import get_agent_llm
 from profiles import profile_for
@@ -224,6 +225,15 @@ async def _targeted_doc_search(
     return result["rows"]
 
 
+async def _maybe_jev_order(question: str, matches: list[dict]) -> tuple[list[dict], dict | None]:
+    """pipeline.passage_rerank = "jev": the passages in Jev's order (passage_jev.py); otherwise unchanged."""
+    if str(getattr(cfg.pipeline, "passage_rerank", "off")) != "jev" or not matches:
+        return matches, None
+    ordered, trace = await passage_jev.jev_order(question, matches)
+    logger.info("UKE passage_rerank jev: scored=%d failed=%d ms=%d", trace["scored"], trace["failed"], trace["ms"])
+    return ordered, trace
+
+
 def _to_retrievals(matches: list[dict]) -> list[dict]:
     return [
         {
@@ -234,6 +244,7 @@ def _to_retrievals(matches: list[dict]) -> list[dict]:
                 "title": m.get("title"), "section": m.get("section"),
                 # What pipeline.passage_order read, when the re-ranker scored the match.
                 **({"rerank_score": float(m["rerank_score"])} if m.get("rerank_score") is not None else {}),
+                **({"jev_score": float(m["jev_score"])} if m.get("jev_score") is not None else {}),
             },
         }
         for m in matches
@@ -427,6 +438,7 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
             doc_scope, abstain_on, rerank, passage_order, rerank_titles,
         )
         trajectory_steps += 1 if meta["abstained"] else 2  # the expanded call is a second round-trip
+        matches, jev_trace = await _maybe_jev_order(query_text, matches)
         elapsed_ms = int(time.monotonic() * 1000) - start_ms
         logger.info(
             "UKE docs route: query_id=%s matches=%d abstained=%s elapsed_ms=%d",
@@ -442,6 +454,8 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
         }
         if meta["abstained"]:
             update["doc_abstained"] = True
+        if jev_trace is not None:
+            update["passage_rerank"] = jev_trace
         return update
 
 
@@ -541,6 +555,7 @@ async def hybrid_docs_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             # Nothing relevant: the doc retrievals are dropped and the answer is built from the SQL
             # result alone, with no fixed message (the SQL half may well be the whole answer).
             trajectory_steps += 1 if meta["abstained"] else 2
+    matches, _ = await _maybe_jev_order(doc_query, matches)
     elapsed_ms = int(time.monotonic() * 1000) - start_ms
     logger.info("UKE hybrid docs: query_id=%s party_ids=%s sql_rows=%d doc_matches=%d elapsed_ms=%d",
                 state_dict.get("query_id", ""), party_ids, len(rows), len(matches), elapsed_ms)

@@ -378,6 +378,8 @@ browsing_session_s        = 240     # mean length of one that does not
 customers                 = 40000
 
 [retrieval]
+jev_rerank_concurrency    = 8       # passage_rerank = "jev": Jev requests at once (the API refuses 25 at once)
+jev_rerank_text_chars     = 3000    # passage characters Jev reads (Paper B R1)
 chunk_target_tokens       = 512
 chunk_overlap_tokens      = 64
 semantic_top_k            = 8
