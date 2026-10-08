@@ -47,6 +47,8 @@ def main() -> int:
         raise SystemExit(f"{OUT} exists; the pre-registered set is built once")
     rng = random.Random(SEED)
     assert not set(OUTSIDE) & set(r2.OUTSIDE), "must be disjoint from R2's list"
+    first = " ".join(i["question"] for i in json.loads(br.OUT.read_text())["items"])
+    assert not any(c in first for c in OUTSIDE), "must be absent from the first routing set too"
     ingest = json.loads(pd.INGEST.read_text())
     library = {d["doc_name"].upper() for d in ingest["documents"] if d.get("status") == "ready"}
     have = {(r[0], r[1], int(r[2])) for r in br.psql(f"SELECT ticker, metric, period_end_year FROM {br.AM} WHERE value IS NOT NULL")}

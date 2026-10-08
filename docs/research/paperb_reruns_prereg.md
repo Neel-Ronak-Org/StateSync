@@ -143,7 +143,7 @@ the pipeline asked it, with BIRD's hint (primary), and without the hint (seconda
 **Expected.** N-column is much harder than the first gate's other-database negatives; the paper reports whatever
 it is.
 
-## R4. Telling the router what the database covers (added 2026-10-08, before its code, set or runs exist)
+## R4. Telling the router what the database covers (added 2026-10-08, committed before its code, set and runs)
 
 **Why.** In R2, the LLM router and every Jev router sent all ten questions about companies absent from the database
 to SQL: the database card lists tables and columns, not which entities and periods the rows cover.
@@ -217,3 +217,12 @@ questions for wording only.
    shortest first, skips an item too long for the space left instead of ending the line, and drops an item whose
    text repeats one already kept (the same column in another table or view). Cap, value limit and everything else
    unchanged; images rebuilt from the fixing commit.
+9. **2026-10-08, R4, after the runs (corrections from an independent audit; no data changed).** (a) Change 8's fix was
+   made after the R4 set had been built and committed (09:01:59; fix 09:03-09:05), but before any router had run on it.
+   (b) "Before any period the database holds" was true of the curated view the questions were built from
+   (annual_metrics, from 2006) but not of the raw facts table (from 1989), and the coverage line showed both ranges; the
+   year subclass therefore does not test year comparison, and the paper says so. (c) Five of the fifteen year questions
+   ask about a company or payment that did not yet exist. (d) Jev routed all 45 covered questions to SQL in both arms,
+   so R4-H3 sits at its ceiling. (e) Each arm ran once, as pre-registered. The builder now also asserts that the
+   unknown companies are absent from the first routing set (they are).
+
