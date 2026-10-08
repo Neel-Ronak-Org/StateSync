@@ -25,3 +25,11 @@ orchestrators, keeps their images and flags.
 - Jev routing arm (T4b): waits for the OpenRouter key in `secrets/openrouter_api_key`.
 - Owner checks: `docs/eval/paperb_docs_owner_sheet_v3.md`, `docs/eval/hybrid_set_owner_check.md`,
   `docs/eval/routing_set_owner_check.md`.
+
+## 2026-10-08 pause: R4 (router coverage line)
+- Done: R4's four arms (docs/eval/routing_runs_r4.json); R2 no-harm `jev_choice+v2cov|r2|0` (180).
+- To resume: `research/paperb/partd_stack.sh up research/paperb/flags_partd_v3_route_llm.toml`, then start the
+  route container on 8093 with flags_partd_v3_route_llm.toml + statesync_coverage_on.toml (scratchpad route_arm.sh
+  pattern: docker compose run --no-deps, -v flags, -v statesync override, -v secrets/opencode_api_key), then
+  `python3 scripts/eval_routing.py --set r2 route --arm llm --port 8093 --split r2 --tag cov` (resumes at 79/180).
+- Then: `python3 scripts/paperb_numbers.py`, write R4 into the paper, rebuild, commit.
