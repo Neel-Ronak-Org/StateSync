@@ -218,6 +218,22 @@
    "missing": 0
   }
  },
+ "detection_gaps": {
+  "judge (Gemini, 0-100) - jev_zeroshot": {
+   "difference": 0.053,
+   "ci95": [
+    -0.0026,
+    0.1076
+   ]
+  },
+  "jev_zeroshot - modernbert_real": {
+   "difference": 0.0333,
+   "ci95": [
+    -0.0436,
+    0.1139
+   ]
+  }
+ },
  "verified_label": {
   "modernbert_real @ 5%": {
    "verified": 0,

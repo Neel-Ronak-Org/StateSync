@@ -307,6 +307,21 @@ def analyse(pool: list[dict], judge: dict[str, float], rot: dict[str, dict], zer
         det[name] = {"auroc": round(ab.auroc(risk, wrong), 4), "aurc": round(ab.aurc(risk, wrong), 4),
                      "missing": sum(v is None for v in s)}
     report["detection_first_answer"] = det
+    # Paired AUROC gaps (added 2026-10-08 for the paper; descriptive): same stratified bootstrap and seed.
+    risks = {n: [1 - v if v is not None else 0.5 for v in s] for n, s in gates.items()}
+    gaps = {}
+    for a_, b_ in (("judge (Gemini, 0-100)", "jev_zeroshot"), ("jev_zeroshot", "modernbert_real")):
+        if a_ in risks and b_ in risks:
+            def gap(idx, a_=a_, b_=b_):
+                w = [wrong[i] for i in idx]
+                if all(w) or not any(w):
+                    return 0.0
+                return ab.auroc([risks[a_][i] for i in idx], w) - ab.auroc([risks[b_][i] for i in idx], w)
+            boots = ab.stratified_bootstrap(strata, gap, RESAMPLES, SEED)
+            boots = sorted(boots)
+            gaps[f"{a_} - {b_}"] = {"difference": round(gap(list(range(len(pool)))), 4),
+                                    "ci95": [round(boots[int(0.025 * len(boots))], 4), round(boots[int(0.975 * len(boots)) - 1], 4)]}
+    report["detection_gaps"] = gaps
 
     # Verified label (QS4).
     ver: dict[str, Any] = {}

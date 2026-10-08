@@ -461,3 +461,8 @@ the other.
       - FinanceBench end to end (same judge, prompt and seed as the shipped run): 0.200 shipped, 0.527
         v3 dense (+51 / −2), 0.633 v3 bge (+68 / −3); bge vs dense +25 / −9, p = 0.009. Development-set
         numbers; the owner's 30-answer blind check (`paperb_docs_owner_sheet_v3.md`) is pending.
+11. **Recorded 2026-10-08 (operational, after the fact).** Jev was reached through OpenCode Zen
+    (`https://opencode.ai/zen/v1/systemone`, model `jev-1.13`, the version string returned on every call), not
+    the Vercel AI Gateway named in §5 and §9; the owner chose the OpenCode key. Same model, question and input.
+    For the paper, paired AUROC gaps (judge − Jev, Jev − ModernBERT) were added to `paperb_analyze.py` with the
+    pre-registered stratified bootstrap and seed; they are descriptive, like every Jev result here.

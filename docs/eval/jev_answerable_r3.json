@@ -40836,5 +40836,11 @@
    }
   },
   "input_tokens": 1166552
+ },
+ "lexical_baseline_exploratory": {
+  "hint: P vs N_column": 0.787,
+  "hint: P vs N_table": 0.9092,
+  "no_hint: P vs N_column": 0.6383,
+  "no_hint: P vs N_table": 0.7847
  }
 }

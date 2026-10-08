@@ -144,6 +144,10 @@ def main() -> int:
     N["sLayaZSMax"] = pct(P["pool Laya-max (zero-shot)"])
     N["sReVote"] = pct(P["P1 judge-triggered re-vote (GPT-5 mini's 6)"])
     N["sEscalate"] = pct(P["P2 judge-triggered escalation (gpt-oss answer)"])
+    for key, tag in (("judge (Gemini, 0-100) - jev_zeroshot", "JudgeJev"), ("jev_zeroshot - modernbert_real", "JevMB")):
+        g = a["detection_gaps"][key]
+        N[f"sGap{tag}"] = f"{g['difference']:+.3f}"
+        N[f"sGap{tag}CI"] = f"[{g['ci95'][0]:+.3f}, {g['ci95'][1]:+.3f}]"
     cpq = a["cost_per_question"]
     other = cpq["the other 20 candidates"]
     N["sCostFirstTok"] = f"{cpq['first answer (GPT-5 mini pipeline)']['tokens'] / 1000:.1f}k"
@@ -255,6 +259,11 @@ def main() -> int:
         N[f"rthreeCatchTab{tag}"] = cf["N_table"].split()[0]
     for tag, src in (("FrozenFalse", "P"), ("FrozenCol", "N_column"), ("FrozenTab", "N_table")):
         N[f"rthree{tag}"] = r3["hint"]["at_frozen_0.11"][src].split()[0]
+    lex = j("jev_answerable_r3.json").get("lexical_baseline_exploratory")
+    if lex:
+        for k, tag in (("hint: P vs N_column", "Col"), ("hint: P vs N_table", "Tab"), ("no_hint: P vs N_column", "ColNoHint"),
+                       ("no_hint: P vs N_table", "TabNoHint")):
+            N[f"rthreeLex{tag}"] = fx(lex[k])
     # ── rerun R2: fresh routing set (only once its runs exist) ──
     r2runs = E / "routing_runs_r2.json"
     if r2runs.exists():
@@ -274,6 +283,15 @@ def main() -> int:
                 N[f"rtwo{nm}Ms"] = f"{lat[len(lat) // 2] / 1000:.1f}"
         if sem:
             ok["Sem"] = {i: sem[i]["correct"] for i in items}
+        summ = json.loads(r2runs.read_text()).get("summary", {})
+        for nm, key in arms.items():
+            if key in summ:
+                N[f"rtwo{nm}Macro"] = pct(summ[key]["macro_class_accuracy"])
+                N[f"rtwo{nm}Covers"] = pct(summ[key]["covers_needed_source"])
+        yn = R2.get("jev|r2|0", {}).get("items", {})
+        N["rtwoYNHybToDocs"] = str(sum(items[i]["class"] == "hybrid" and pred2(r) == "docs" for i, r in yn.items()))
+        N["rtwoYNHybToSql"] = str(sum(items[i]["class"] == "hybrid" and pred2(r) == "sql" for i, r in yn.items()))
+        N["rtwoYNEitherToHyb"] = str(sum(items[i]["class"] == "either" and pred2(r) == "hybrid" for i, r in yn.items()))
         N["rtwoN"] = str(len(items))
         for nm, o in ok.items():
             N[f"rtwo{nm}Acc"] = pct(sum(o.values()) / len(o))

@@ -259,6 +259,37 @@ def cmd_report() -> int:
     return 0
 
 
+STOP = set("the a an of in on to for by with and or is are was were what which who how many much did does do from at as "
+           "that this these those their its it be has have had than more most less least per each all any name list give "
+           "show find number total average count".split())
+
+
+def cmd_lexical() -> int:
+    """EXPLORATORY baseline (added 2026-10-08 after the results, at an auditor's request; not pre-registered): score a
+    card by the share of the question's content words (with or without the hint) found among its table and column
+    names (split on non-letters). AUROC P vs N_column and P vs N_table, as for Jev."""
+    import re
+    items, _ = pairs()
+    words = lambda t: {w for w in re.split(r"[^a-z0-9]+", t.lower()) if len(w) > 2 and w not in STOP}
+    names = lambda card: words(" ".join(re.sub(r"\b(text|bigint|integer|real|date|numeric|double|precision|character|varying|"
+                                             r"timestamp|without|time|zone|boolean)\b", " ", line.split(":", 1)[-1] + " " + line.split(":", 1)[0])
+                                      for line in card.splitlines()))
+    score = {}
+    for i in items:
+        q = words(i["question"])
+        score[(i["qid"], i["form"], i["kind"])] = len(q & names(i["card"])) / max(1, len(q))
+    qids = sorted({i["qid"] for i in items}, key=int)
+    out = {}
+    for form in FORMS:
+        for neg in ("N_column", "N_table"):
+            out[f"{form}: P vs {neg}"] = round(auroc([score[(q, form, "P")] for q in qids], [score[(q, form, neg)] for q in qids]), 4)
+    record = json.loads(OUT.read_text())
+    record["lexical_baseline_exploratory"] = out
+    OUT.write_text(json.dumps(record, indent=1) + "\n")
+    print(json.dumps(out, indent=1))
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -266,7 +297,10 @@ def main() -> int:
     s.add_argument("--workers", type=int, default=4)
     sub.add_parser("report")
     sub.add_parser("dry")
+    sub.add_parser("lexical")
     args = ap.parse_args()
+    if args.cmd == "lexical":
+        return cmd_lexical()
     if args.cmd == "score":
         return cmd_score(args.workers)
     if args.cmd == "dry":
