@@ -6,6 +6,8 @@
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{url}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
 \usepackage[hidelinks]{hyperref}
 \input{numbers.tex}
 \makeatletter
@@ -18,9 +20,11 @@
 on Text-to-SQL, Routing, Page Finding and Answerability}
 
 \titlerunning{Typed Decision Models in a Database-and-Documents Assistant}
-\author{Author names (placeholder)}
-\authorrunning{Authors (placeholder)}
-\institute{Affiliation (placeholder) \\ \email{email (placeholder)}}
+\author{Neel Pradeep Jaiswal \and Ronak Daniel Ramanathan \and Hima Deepthi Vankayalapati \and Elizabeth Jish Joy}
+\authorrunning{N. P. Jaiswal et al.}
+\institute{Mukesh Patel School of Technology, Management and Engineering, NMIMS, India\\
+\email{neelpjaiswal@gmail.com, danielronak8105@gmail.com,}\\
+\email{himadeepthi.vankayalapati@nmims.edu, jish.joy@nmims.edu}}
 
 \maketitle
 
@@ -69,27 +73,21 @@ we compare it with the component it would replace. Three of the tests (answerabi
 data built for them, with hypotheses, measures and baselines committed before the data existed; the SQL results
 reuse candidates and labels from a companion study~\cite{companion2026warnings} and are descriptive.
 
-The results draw a consistent line. Jev does well when the decision can be read off the text in front of it: it
-flags SQL results that look wrong about as well as an LLM judge, tells whether a schema holds the columns a question
-needs far better than word overlap, routes questions with no significant difference from an LLM router when the
-routing is posed as one joint choice, and, re-ranking a cross-encoder's passages, puts the right page of a filing
-first more often than the cross-encoder does. It does poorly when the decision has to be derived or
-is split up: it is a weak chooser among plausible SQL queries, and routing posed as two independent yes/no questions
-confuses questions that need both sources with questions that either source can answer. Because all of this costs a fraction of a cent per question and
-no text generation, the practical result is a set of decision calls that can be moved off the LLM, and a set that
-should not be.
+The results draw a consistent line. Jev does well when the decision can be read off the text in front of it:
+spotting SQL results that look wrong, telling whether a schema holds the needed columns, routing when the decision
+is posed as one joint choice, and ranking a filing's passages. It does poorly when the decision must be derived or is
+split up: choosing among plausible SQL queries, or routing posed as two independent yes/no questions. At a fraction
+of a cent per question, this separates decision calls that can be moved off the LLM from those that should not.
 
 \section{Related Work}
 \paragraph{Typed decision models.} Since Jev's release, studies have measured it on general classification and
 routing benchmarks~\cite{deusser2026jev}, as an LLM judge with confidence-based escalation~\cite{li2026jevjudge},
 and at agent decision points such as tool choice and relevance gating, where it tied an open model on relevance
 gating and neither beat chance at choosing between models~\cite{fastslow2026}. Others report that its probabilities
-for related questions do not obey the probability axioms, with single-label statements over-endorsed~\cite{axioms2026},
-that decomposing a decision into coarse and fine steps changes its answers~\cite{coherence2026}, that it follows an
-option's name rather than the rubric bound to it~\cite{sun2026typesafe} (as do open-weight models with the same
-interface~\cite{labels2026}), that a single accuracy figure moves by about five points with the question's
-wording~\cite{fastslow2026}, and that it rarely rejects when no option is right, although a yes/no check
-works~\cite{missing2026}. We found no evaluation on text-to-SQL, on choosing between a database and documents, or
+for related questions violate the probability axioms, over-endorsing single statements~\cite{axioms2026}, that
+decomposing a decision changes its answers~\cite{coherence2026}, that it follows an option's name rather than the
+rubric bound to it~\cite{sun2026typesafe,labels2026}, that accuracy moves by about five points with
+wording~\cite{fastslow2026}, and that it rarely rejects when no option is right~\cite{missing2026}. We found no evaluation on text-to-SQL, on choosing between a database and documents, or
 on ranking passages of long documents.
 
 \paragraph{Verifying and selecting SQL.} LEVER~\cite{ni2023lever} re-ranks generated programs with a verifier that
@@ -108,13 +106,45 @@ established~\cite{nogueira2020monot5,zhuang2023yesno}; cross-encoders such as BG
 stage.
 
 \section{Setting and Method}\label{sec:method}
-\paragraph{Pipeline.} The assistant under test answers from a PostgreSQL database and a library of PDF filings. SQL
-questions go to an LLM agent that reads the schema, writes a query, runs it read-only and retries on errors. Document
-questions go through a two-round dense search (\texttt{mxbai-embed-large}) that returns up to 25 passages, optionally
-re-scored by a cross-encoder (\texttt{bge-reranker-v2-m3}, on a local GPU, reading each passage's filing title). A
-router chooses among four routes: \emph{sql}, \emph{docs}, \emph{hybrid} (both) and \emph{neither}. The LLM router
-receives the question, a card listing the database's tables and columns, and the five best-matching documents; Jev,
-when it routes, receives the same text.
+\paragraph{Pipeline.} The assistant under test answers from a PostgreSQL database and a library of PDF filings. An LLM SQL agent
+writes a query, runs it read-only and retries on errors; document questions go through a two-round dense search
+(\texttt{mxbai-embed-large}) returning up to 25 passages, optionally re-scored by a cross-encoder
+(\texttt{bge-reranker-v2-m3}, reading each passage's filing title). The router (LLM or Jev) sees the question, a card
+listing the database's tables and columns, and the five best-matching documents. Figure~\ref{fig:pipeline} shows where the four decisions sit.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[font=\scriptsize, x=1mm, y=1mm,
+  box/.style={draw, rounded corners=1pt, align=center, minimum height=8.5mm, inner sep=1.5pt, text width=#1},
+  box/.default=18mm,
+  dec/.style={box=#1, fill=black!12, thick},
+  dec/.default=18mm,
+  arr/.style={-{Latex[length=1.5mm]}}]
+\node[box=10mm] (q) at (0,0) {Question};
+\node[dec=18mm] (route) at (19,0) {\textbf{(iii) Route:} sql, docs, both or neither};
+\node[box=16mm] (card) at (2,-12) {Database card (+ coverage)};
+\node[dec] (ans) at (43,8) {\textbf{(ii) Can the database answer?}};
+\node[box] (sql) at (66,8) {SQL agent writes and runs a query};
+\node[dec=18mm] (chk) at (89,8) {\textbf{(i) Is the SQL wrong?} If so, fall back};
+\node[box] (dense) at (43,-8) {Two-round dense search, 25 passages};
+\node[box] (bge) at (66,-8) {Cross-encoder re-scores};
+\node[dec=18mm] (pg) at (89,-8) {\textbf{(iv) Which passage holds the answer?}};
+\node[box=15mm] (w) at (112,0) {LLM writes the answer};
+\draw[arr] (q) -- (route);
+\draw[arr, dashed] (card.east) -| (route.south);
+\draw[arr] (route.north) |- (ans.west);
+\draw[arr] (route.east) ++(0,-2) |- (dense.west);
+\draw[arr] (ans) -- (sql); \draw[arr] (sql) -- (chk);
+\draw[arr] (dense) -- (bge); \draw[arr] (bge) -- (pg);
+\draw[arr] (chk.east) -| (w.north);
+\draw[arr] (pg.east) -| (w.south);
+\end{tikzpicture}
+\caption{The assistant under test. Shaded boxes are the four decisions we hand to Jev, each compared with the
+component it would replace: (i) an LLM judge or trained verifier (Sect.~\ref{sec:sql}), (ii) word overlap
+(Sect.~\ref{sec:answerable}), (iii) an LLM router (Sect.~\ref{sec:routing}), (iv) the cross-encoder's own ranking
+(Sect.~\ref{sec:pages}). A two-source question takes both branches.}
+\label{fig:pipeline}
+\end{figure}
 
 \paragraph{Data.} SQL experiments use the BIRD Mini-Dev questions~\cite{li2023bird} held out from all development
 (\N{sN} questions), scored against corrected gold queries~\cite{jin2026annotation}. Routing and page finding use a
@@ -192,13 +222,12 @@ result looks implausible is easier than telling which of two plausible queries i
 (gain \N{sPsixCI} points). H1 and H2 point the expected way but are not significant after Holm correction (H2 was before it). The cascade falls
 back on \N{sPsixFall} of questions, so on average it generates \N{sPsixExtraTok} extra tokens per question instead of
 the \N{sCostOtherTok} needed to build the whole pool every time, and its accuracy is close to always choosing from the
-pool (\N{sPfive}). The best chooser we found, adding ModernBERT's scores within each cluster of agreeing candidates, reaches
-\N{sPfivev} when used on every question. Because Jev doubts well but chooses poorly, we also tried it as the trigger
-in front of that chooser. With Jev's untuned rule ``fall back when $P(\text{correct})<0.5$'', accuracy reaches
-\N{sJthree} (gain over the first answer \N{sJthreeCI} points) while falling back on only \N{sJthreeFall} of
-questions, about \N{sJthreeExtraTok} extra tokens per question; with a threshold fitted like H3's it reaches
-\N{sJtwo} but falls back on \N{sJtwoFall}, and with Jev itself as the chooser it gains almost nothing (\N{sJone}).
-These analyses were decided after the pre-registered ones and are exploratory.
+pool (\N{sPfive}). Because Jev doubts well but chooses poorly, we also tried it as the trigger in front of the best
+chooser we found (ModernBERT's scores summed within clusters of agreeing candidates, \N{sPfivev} when used on every
+question). With Jev's untuned rule ``fall back when $P(\text{correct})<0.5$'', accuracy reaches \N{sJthree} (gain
+\N{sJthreeCI} points) while falling back on only \N{sJthreeFall} of questions (about \N{sJthreeExtraTok} extra tokens
+per question); a threshold fitted like H3's gives \N{sJtwo} with \N{sJtwoFall} fallbacks, and Jev as the chooser
+gains almost nothing (\N{sJone}). These analyses were decided after the pre-registered ones and are exploratory.
 
 \section{Can the Database Answer This? Answerability with Hard Negatives}\label{sec:answerable}
 \paragraph{Setup.} A SQL assistant should decline when its database lacks the data, rather than write a query that
@@ -214,9 +243,7 @@ table-removed ones with \N{rthreeAucTab} and \N{rthreeAucTabNoHint}. A deployed 
 refuse an answerable question. With thresholds fitted on one half of the questions to refuse at most 1\% of
 answerable ones and applied to the other half, it refused \N{rthreeFalse} answerable questions while catching
 \N{rthreeCatchCol} column-removed and \N{rthreeCatchTab} table-removed ones (with the hint); without the hint, it
-caught \N{rthreeCatchColNoHint} and \N{rthreeCatchTabNoHint}. At the threshold fitted on the earlier, easier test
-(0.11), it refused \N{rthreeFrozenFalse} answerable questions and caught \N{rthreeFrozenCol} column-removed and
-\N{rthreeFrozenTab} table-removed ones. Ranking is strong, but at a strict false-refusal budget the gate catches about
+caught \N{rthreeCatchColNoHint} and \N{rthreeCatchTabNoHint}. Ranking is strong, but at a strict false-refusal budget the gate catches about
 half of the unanswerable cases with the hint and a third to a half without it. A simple baseline, the share of the
 question's words that appear among the card's table and column names (not pre-registered), reaches AUROC
 \N{rthreeLexCol} with the hint and \N{rthreeLexColNoHint} without it on the column-removed cards, so Jev's
@@ -274,16 +301,13 @@ reaches every source the question needs, the LLM router reaches \N{rtwoLLMCovers
 Posed as two independent yes/no questions, the same model routes \N{rtwoJevYNAcc} correctly, \N{rtwoHtwoDiff} points
 below the single choice (\N{rtwoHtwoCI}, \N{rtwoHtwoP}). Its errors go both ways between the two-source class and
 the rest: it sends \N{rtwoYNHybToDocs} two-source questions to the documents and \N{rtwoYNHybToSql} to the database,
-and \N{rtwoYNEitherToHyb} either-source questions to both. We had predicted, from an earlier set, that it would
-almost never choose both sources; on these questions it chose both too often as well as too rarely
-(\N{rtwoJevYNHybrid} two-source questions right). The semantic router, which takes its labels from an earlier set's
+and \N{rtwoYNEitherToHyb} either-source questions to both. The semantic router, which takes its labels from an earlier set's
 examples, reaches only \N{rtwoSemAcc} (\N{rtwoHfourDiff} points against the LLM router, \N{rtwoHfourP}).
 
 One failure is shared by the LLM router and all three Jev routers: each sent the ten questions about companies
 that appear in neither source to the database (\N{rtwoLLMNeither} ``neither'' questions right for each, all misses
 being these ten); the semantic router declined only \N{rtwoSemNeither}. The router sees the database's tables and columns, not which companies its rows cover, so a question about an
-unknown company looks like an ordinary database question. These four routers declined every question about live
-or future figures and every request outside data analysis.
+unknown company looks like an ordinary database question.
 
 \paragraph{Telling the router what the database covers.} We then tested the fix this suggests, with the hypotheses,
 question set and arms committed before the feature's code, the set and the runs existed. A switchable addition to the
@@ -295,21 +319,16 @@ uncovered questions that Jev declined from \N{rfourJevOffNeither} to \N{rfourJev
 \N{rfourHoneCI}, \N{rfourHoneP}) and for the LLM router from \N{rfourLLMOffNeither} to \N{rfourLLMOnNeither}
 (Holm-adjusted \N{rfourHtwoP}). Unknown companies were almost all caught (\N{rfourJevOnUnknown} and
 \N{rfourLLMOnUnknown}); early years mostly were not (\N{rfourJevOnYears} and \N{rfourLLMOnYears}). That subclass does
-not test whether a router compares years, however: the card listed the curated table's range (from 2006) next to the
-raw facts table's (from 1989), so a 1998--2004 question could look covered, and five of the fifteen ask about a
-company or a payment that did not yet exist, which a router could decline from general knowledge.
+not cleanly test year comparison: the card listed a curated table's range (from 2006) next to a raw table's (from
+1989), so a 1998--2004 question could look covered.
 
 On covered questions, Jev's routing could not get better or worse: it sent all 45 to the database in both arms, which
 is acceptable for every one of them, so this check sits at its ceiling. The LLM router improved (\N{rfourHfourDiff}
 points, \N{rfourHfourCI}, Holm-adjusted \N{rfourHfourP}): seeing that the database holds the company and the metric, it
 stopped sending most single-figure questions to both sources. Re-run on the \N{rtwoN} routing questions above,
-coverage raised Jev's accuracy from \N{rtwoJevTwoAcc} to \N{rtwoJevTwoCovAcc} (+\N{rtwoJevTwoCovW}/$-$\N{rtwoJevTwoCovL};
-documents-only questions \N{rtwoJevTwoDocs} to \N{rtwoJevTwoCovDocs}, neither \N{rtwoJevTwoNeither} to
-\N{rtwoJevTwoCovNeither}) and the LLM router's from \N{rtwoLLMAcc} to \N{rtwoLLMCovAcc}
-(+\N{rtwoLLMCovW}/$-$\N{rtwoLLMCovL}; it now sent three two-source questions to the database alone,
-\N{rtwoLLMCovHybrid}). Those questions' unknown-company errors motivated the change, and their baseline runs used
-images built before the feature was added (the only code difference), so this second result is descriptive only.
-Each arm was run once.
+coverage raised Jev's accuracy from \N{rtwoJevTwoAcc} to \N{rtwoJevTwoCovAcc} (+\N{rtwoJevTwoCovW}/$-$\N{rtwoJevTwoCovL})
+and the LLM router's from \N{rtwoLLMAcc} to \N{rtwoLLMCovAcc} (+\N{rtwoLLMCovW}/$-$\N{rtwoLLMCovL}); because those
+questions motivated the change, this result is descriptive only. Each arm was run once.
 
 \section{Finding the Right Page in Long Filings}\label{sec:pages}
 \paragraph{Setup.} We sampled pages at random from the 84 filings, at most four per filing (330 pages from 83
@@ -346,16 +365,13 @@ that falls just short of significance after correction (\N{roneHtwoCI}, \N{roneH
 list; whether the source page is anywhere among the eight passages the answer writer reads barely changes
 (\N{roneJBEight} against \N{roneBEight}), because that depends on which passages the search found, not on their order.
 
-On the development questions, FinanceBench's own analyst-written questions, the gap was larger: \N{devFbJBOne}
-against \N{devFbBOne} (+\N{devFbW}/$-$\N{devFbL}). On an earlier set of generated questions it was smaller and not
-significant (\N{devOldJBOne} against \N{devOldBOne}, \N{devOldP}). One possible reason is that questions written
-from a single page share its wording, which suits a cross-encoder, while analysts' questions are less literal; we did
-not test this.
+On FinanceBench's own analyst-written questions, used for development, the gap was larger (\N{devFbJBOne} against
+\N{devFbBOne}); on an earlier generated set it was smaller and not significant (\N{devOldJBOne} against
+\N{devOldBOne}).
 
-\paragraph{Cost and latency.} Scoring one question's 25 passages took Jev a median \N{roneJevMs}\,ms with eight
-requests at a time (the API refused 25 at once) and cost \N{roneCost} per question. On our machine the two-round search
-took \N{roneDenseMs}\,ms without re-ranking and \N{roneBgeMs}\,ms with the cross-encoder, measured while other jobs
-shared the GPU, so the cross-encoder figure is only indicative.
+\paragraph{Cost and latency.} Scoring one question's 25 passages took Jev a median \N{roneJevMs}\,ms, eight
+requests at a time, and cost \N{roneCost}. The two-round search took \N{roneDenseMs}\,ms without re-ranking and
+\N{roneBgeMs}\,ms with the cross-encoder (measured while other jobs shared the GPU).
 
 \section{Discussion}\label{sec:discussion}
 \paragraph{Reading off versus working out.} Li et al.\ found that Jev judges as well as a frontier model when a
@@ -396,7 +412,7 @@ shown the first wording's errors on documents-only questions; both were frozen b
 writer that reasons before answering failed to return a usable figure question for some pages, so the figure
 questions come from the pages where it did. BIRD's hints often name columns, which helps the answerability gate, so we
 report it with and without them.
-\paragraph{Labels and checks.} Routing labels are fixed by construction. Both authors labelled a stratified sample of
+\paragraph{Labels and checks.} Routing labels are fixed by construction. Two of the authors labelled a stratified sample of
 40 routing questions and checked 30 page questions themselves, independently: \textbf{[agreement, once returned]}.
 \paragraph{Wording.} Each Jev role used one fixed wording (two for routing). Accuracy of typed decision models
 moves by about five points with wording~\cite{fastslow2026}; our two routing wordings differed by
@@ -410,23 +426,18 @@ order rather than the cross-encoder's ranking, and an earlier routing test reuse
 replaced both with the pre-registered tests reported here; the earlier results are in the repository.
 
 \section{Conclusion}
-We asked whether a typed decision model can make the small decisions of an assistant that answers from a database and
-documents. Tested zero-shot on held-out data, Jev detected wrong SQL
-answers about as well as an LLM judge, judged whether a schema can answer a question with AUROC \N{rthreeAucCol},
-routed \N{rtwoJevTwoAcc} of new questions correctly without an LLM call (not significantly different from an LLM
-router), and, re-ranking a cross-encoder's passages, put the right filing page first more often than the
-cross-encoder alone (\N{roneJBOne} against \N{roneBOne}). It was a poor chooser among SQL candidates, and
-it failed when a single routing decision was split into independent questions. One limit was shared with the LLM router: neither could
-tell a question about an entity the database lacks from an ordinary database question, until the card listed what
-the rows cover, which made both decline most questions about unknown companies (\N{rfourJevOnUnknown} and
-\N{rfourLLMOnUnknown}); questions about years outside the data were not reliably caught. Decisions that can be read off the
-input can be moved to such a model; decisions that must be worked out, and decisions posed as separate questions,
-should stay where they are. Code, prompts, pre-registrations, the question sets and every result file are
-available from the authors on request.
+Tested zero-shot on held-out data, a typed decision model detected wrong SQL answers about as well as an LLM judge,
+judged whether a schema can answer a question with AUROC \N{rthreeAucCol}, routed \N{rtwoJevTwoAcc} of new questions
+correctly without an LLM call, and put the right filing page first more often than a cross-encoder alone
+(\N{roneJBOne} against \N{roneBOne}). It chose poorly among SQL candidates and failed when one routing decision was
+split into two questions. Like the LLM router, it could not tell a question about an entity the database lacks from
+an ordinary database question until the card listed what the rows cover. Decisions that can be read off the input
+can be moved to such a model; decisions that must be worked out should stay where they are. Code, prompts,
+pre-registrations, question sets and result files are available from the authors on request.
 
 \begin{credits}
 \subsubsection{\discintname}
-\textbf{[To be completed by the authors.]}
+The authors have no competing interests to declare that are relevant to the content of this article.
 \end{credits}
 
 \bibliographystyle{splncs04}
