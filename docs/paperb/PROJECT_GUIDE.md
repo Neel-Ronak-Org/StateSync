@@ -270,9 +270,9 @@ This is what makes the results believable. If the mentor asks "how do you know?"
    - "Comparable" only if the whole 95% interval of the difference lies within ±8 points.
 5. **Question generation.** Questions were built by code from templates or written by an LLM from a sampled
    page, then checked by a second model. Fixed random seeds and the builder scripts are in `scripts/`.
-6. **Human checks.** Two of the authors independently label a sample (40 routing questions, 30 page questions, and
-   a wording check on R4). These sheets are still with you; the agreement goes into the paper when returned.
-   Model-filled checks are never reported as human checks.
+6. **Checks.** Routing labels are fixed by how the questions were built, and a second model confirmed every page
+   question. No sample was labelled by hand; the paper says so in its limitations. Model checks are never
+   reported as human checks.
 7. **Logging.** Every model call records the model name the API actually served, so a silently swapped
    model would be caught.
 
@@ -314,7 +314,6 @@ question. The practical limit was the API's rate limit, not price.
 - **Authors:** Neel Pradeep Jaiswal, Ronak Daniel Ramanathan, Dr. Hima Deepthi Vankayalapati and Prof.
   Elizabeth Jish Joy (Mukesh Patel School of Technology, Management and Engineering, NMIMS).
 - **Figure 1** shows the assistant with the four decision points shaded.
-- **Still to fill in:** the human-check agreement figures.
 - **Limitations the paper admits (be ready to repeat them):**
   - Questions were generated, so they may be cleaner than real users' questions.
   - There is one benchmark per role, in English only.
@@ -557,8 +556,7 @@ hard.
 **"Who checked the generated questions?"**
 
 - A second model checked every question when the sets were built.
-- Two of the authors independently check a stratified sample (routing labels, page questions, R4 wording). The
-  agreement goes into the paper.
+- Nobody labelled a sample by hand; the paper states this as a limitation.
 
 **"What would you do next?"**
 
