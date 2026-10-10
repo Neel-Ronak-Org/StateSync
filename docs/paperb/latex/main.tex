@@ -115,7 +115,7 @@ listing the database's tables and columns, and the five best-matching documents.
 
 \begin{figure}[t]
 \centering
-\begin{tikzpicture}[font=\scriptsize, x=1mm, y=1mm,
+\resizebox{0.99\textwidth}{!}{\begin{tikzpicture}[font=\scriptsize, x=1mm, y=1mm,
   box/.style={draw, rounded corners=1pt, align=center, minimum height=8.5mm, inner sep=1.5pt, text width=#1},
   box/.default=18mm,
   dec/.style={box=#1, fill=black!12, thick},
@@ -139,7 +139,7 @@ listing the database's tables and columns, and the five best-matching documents.
 \draw[arr] (dense) -- (bge); \draw[arr] (bge) -- (pg);
 \draw[arr] (chk.east) -| (w.north);
 \draw[arr] (pg.east) -| (w.south);
-\end{tikzpicture}
+\end{tikzpicture}}
 \caption{The assistant under test. Shaded boxes are the four decisions we hand to Jev, each compared with the
 component it would replace: (i) an LLM judge or trained verifier (Sect.~\ref{sec:sql}), (ii) word overlap
 (Sect.~\ref{sec:answerable}), (iii) an LLM router (Sect.~\ref{sec:routing}), (iv) the cross-encoder's own ranking
@@ -184,24 +184,25 @@ first answer unless ModernBERT doubts it, and otherwise choosing from the pool, 
 
 \begin{table}[t]
 \centering
-\caption{SQL on \N{sN} held-out BIRD questions. Left: detecting a wrong first answer. Right: accuracy of answer
-policies; pre-registered comparisons are one-sided with Holm-adjusted p values (ties among candidates give fractional
-win counts).}
+\caption{SQL on \N{sN} held-out BIRD questions. Left: detecting a wrong first answer (AUROC). Right: accuracy of
+answer policies (MB = ModernBERT; $\dagger$ = exploratory). Pre-registered comparisons give wins/losses and one-sided
+Holm-adjusted $p$ values; ties among candidates give fractional counts.}
 \label{tab:sql}
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}lc@{\hspace{10pt}}lrl@{}}
+\footnotesize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{@{}lc@{\hspace{8pt}}lrl@{}}
 \toprule
 Checker & AUROC & Policy & Acc. & Comparison \\
 \midrule
 LLM judge & \N{sAurocJudge} & First answer & \N{sFirst} & -- \\
 Jev, zero-shot & \N{sAurocJev} & Majority vote (pool) & \N{sVote} & -- \\
-ModernBERT, real & \N{sAurocMB} & ModernBERT-max (H1) & \N{sPfive} & +\N{sH1W}/$-$\N{sH1L}, \N{sH1P} \\
-Laya, fine-tuned & \N{sAurocLayaFT} & ModernBERT-max, mutants (H2) & \N{sPfivem} & \N{sH2P} \\
-ModernBERT, mutants & \N{sAurocMBmut} & \textbf{ModernBERT cascade (H3)} & \textbf{\N{sPsix}} & +\N{sH3W}/$-$\N{sH3L}, \N{sH3P} \\
-Laya, zero-shot & \N{sAurocLayaZS} & ModernBERT score + vote (expl.) & \N{sPfivev} & -- \\
- & & Jev cascade, $P<0.5$ (expl.) & \N{sJthree} & \N{sJthreeCI} pts \\
- & & Jev cascade, fitted $\tau$ (expl.) & \N{sJtwo} & -- \\
- & & Jev cascade, Jev-max chooser (expl.) & \N{sJone} & -- \\
+MB, real & \N{sAurocMB} & MB-max (H1) & \N{sPfive} & +\N{sH1W}/$-$\N{sH1L}, \N{sH1Pt} \\
+Laya, fine-tuned & \N{sAurocLayaFT} & MB-max, mutants (H2) & \N{sPfivem} & \N{sH2Pt} \\
+MB, mutants & \N{sAurocMBmut} & \textbf{MB cascade (H3)} & \textbf{\N{sPsix}} & +\N{sH3W}/$-$\N{sH3L}, \N{sH3Pt} \\
+Laya, zero-shot & \N{sAurocLayaZS} & MB score + vote$^\dagger$ & \N{sPfivev} & -- \\
+ & & Jev cascade, $P<0.5$$^\dagger$ & \N{sJthree} & \N{sJthreeCI} pts \\
+ & & Jev cascade, fitted $\tau$$^\dagger$ & \N{sJtwo} & -- \\
+ & & Jev cascade, Jev chooses$^\dagger$ & \N{sJone} & -- \\
  & & Jev-max (pool) & \N{sJevMax} & -- \\
  & & Judge-max (pool) & \N{sJudgeMax} & -- \\
  & & Any candidate right & \N{sOracle} & ceiling \\

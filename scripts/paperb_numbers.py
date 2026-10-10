@@ -109,6 +109,7 @@ def main() -> int:
     cnt = lambda x: f"{x:.0f}" if float(x).is_integer() else f"{x:.1f}"   # ties score fractional wins
     for h in ("H1", "H2", "H3"):
         N[f"s{h}P"] = f"$p_{{\\mathrm{{Holm}}}}={adj[h]:.4f}$"
+        N[f"s{h}Pt"] = f"$p={adj[h]:.3f}$"          # the table's short form (its caption says Holm-adjusted)
         N[f"s{h}W"], N[f"s{h}L"] = cnt(t[h]["a_better"]), cnt(t[h]["b_better"])
     D = a["detection_first_answer"]
     for key, name in (("judge (Gemini, 0-100)", "Judge"), ("modernbert_real", "MB"), ("modernbert_mutation", "MBmut"),
