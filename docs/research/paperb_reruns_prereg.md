@@ -225,4 +225,11 @@ questions for wording only.
    ask about a company or payment that did not yet exist. (d) Jev routed all 45 covered questions to SQL in both arms,
    so R4-H3 sits at its ceiling. (e) Each arm ran once, as pre-registered. The builder now also asserts that the
    unknown companies are absent from the first routing set (they are).
-
+10. **2026-10-10, R1 and R2, after the runs (post hoc additions asked for in review; no pre-registered result
+    changed).** (a) R1: the share of questions whose source page is anywhere among the 25 passages (dense 210/300,
+    cross-encoder list 217/300), and the R1-H1 interval resampling the 80 filings instead of the questions
+    ([+5.1, +14.3] by question, [+5.1, +14.4] by filing); `eval_jev_pages.py --set pages_r1 posthoc-r1`. (b) A blind
+    check by a model not used in the study (GPT-6.1 Sol, one pass per sheet, run by the owner): 37/40 routing labels
+    agree with construction (kappa 0.90; the three disagreements are unknown-company items, which the sheet does
+    not list), 30/30 page questions accepted; `docs/eval/paperb_model_blind_check.json`. This is a model check; the
+    authors' sheets planned in R1 and R2 were not filled in, and the paper says no sample was labelled by hand.

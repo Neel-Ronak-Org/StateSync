@@ -9602,5 +9602,15 @@
   "jev_cost_per_question_usd": 0.00087,
   "concurrency": 8,
   "rate_limited_retries": 0
+ },
+ "r1_posthoc": {
+  "n": 300,
+  "D_page@25": 210,
+  "B_page@25": 217,
+  "filings": 80,
+  "H1_ci95_by_filing": [
+   5.1,
+   14.4
+  ]
  }
 }

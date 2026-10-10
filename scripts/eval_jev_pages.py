@@ -335,6 +335,35 @@ def cmd_latency_r1() -> int:
     return 0
 
 
+def cmd_posthoc_r1() -> int:
+    """Post hoc (not pre-registered; asked for in review, 2026-10-10): how often the source page is anywhere among
+    the 25 passages of each list (the ceiling of any re-ordering), and the R1-H1 interval resampling filings
+    instead of questions (questions from one filing are not independent)."""
+    import collections
+    import random
+    orders, _ = r1_orders()
+    qs = questions()
+    ids = sorted(orders)
+
+    def hit(qid, arm, k):
+        return any(g in qs[qid]["gold"] for g in orders[qid][arm][:k])
+
+    by = collections.defaultdict(list)
+    for q in ids:
+        by[qs[q]["doc_name"]].append(hit(q, "JB", 1) - hit(q, "B", 1))
+    docs, rng, diffs = sorted(by), random.Random(20261010), []
+    for _ in range(2000):
+        s = [x for d in (rng.choice(docs) for _ in docs) for x in by[d]]
+        diffs.append(100 * sum(s) / len(s))
+    diffs.sort()
+    rec = load()
+    rec["r1_posthoc"] = {"n": len(ids), "D_page@25": sum(hit(q, "D", 25) for q in ids), "B_page@25": sum(hit(q, "B", 25) for q in ids),
+                         "filings": len(docs), "H1_ci95_by_filing": [round(diffs[49], 1), round(diffs[1949], 1)]}
+    out_path().write_text(json.dumps(rec, indent=1) + "\n")
+    print(rec["r1_posthoc"])
+    return 0
+
+
 def main() -> int:
     global SET_NAME
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
@@ -345,10 +374,13 @@ def main() -> int:
     sub.add_parser("report")
     sub.add_parser("report-r1")
     sub.add_parser("latency-r1")
+    sub.add_parser("posthoc-r1")
     args = ap.parse_args()
     SET_NAME = args.set
     if args.cmd == "report-r1":
         return cmd_report_r1()
+    if args.cmd == "posthoc-r1":
+        return cmd_posthoc_r1()
     if args.cmd == "latency-r1":
         return cmd_latency_r1()
     return cmd_score(args.workers) if args.cmd == "score" else cmd_report()

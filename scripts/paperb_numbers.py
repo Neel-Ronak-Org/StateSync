@@ -389,6 +389,11 @@ def main() -> int:
         rec = json.loads(r1p.read_text())
         s1 = rec["r1_summary"]
         N["roneN"] = str(s1["n"])
+        if "r1_posthoc" in rec:                      # post hoc (review): ceiling within the 25, interval by filing
+            ph = rec["r1_posthoc"]
+            N["roneBInList"] = pct(ph["B_page@25"] / ph["n"])
+            N["roneHoneCIFiling"] = f"[{ph['H1_ci95_by_filing'][0]:+.1f}, {ph['H1_ci95_by_filing'][1]:+.1f}]"
+            N["roneFilings"] = str(ph["filings"])
         for arm in ("D", "B", "JD", "JB", "D_display", "B_display"):
             nm = arm.replace("_display", "Disp")
             for m, mm in (("page@1", "One"), ("page@3", "Three"), ("page@8", "Eight")):

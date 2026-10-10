@@ -30,20 +30,18 @@ on Text-to-SQL, Routing, Page Finding and Answerability}
 \maketitle
 
 \begin{abstract}
-Assistants that answer questions from a SQL database and a document collection make several small decisions per
-question: which source to use, which passage holds the answer, whether the database can answer at all, and whether a
-generated query is wrong. These decisions are usually extra LLM calls. Typed decision models such as Jev instead
-return probabilities for declared yes/no or multiple-choice questions, at a small fraction of the cost. We test
-whether one can make these four decisions, on held-out data with baselines fixed in advance. On \N{sN} BIRD questions
-with corrected labels, zero-shot Jev detects wrong SQL answers about as well as an LLM judge and a fine-tuned verifier
-(AUROC \N{sAurocJev} against \N{sAurocJudge} and \N{sAurocMB}; neither gap is significant), but it is a poor
-selector among candidate queries. Asked whether a schema holds the data a question needs, it
-separates intact schemas from ones missing the needed columns with AUROC \N{rthreeAucCol}. On \N{rtwoN} new routing
-questions over SEC financial data and filings, a single four-way choice routes \N{rtwoJevTwoAcc} correctly against
-\N{rtwoLLMAcc} for an LLM router, a difference that is not significant, while the same decision posed as two independent yes/no questions routes
-\N{rtwoJevYNAcc} correctly. On \N{roneN} new page-finding questions, re-ranking a cross-encoder's top 25 passages
-with Jev puts the right filing page first \N{roneJBOne} of the time, against \N{roneBOne} for the cross-encoder's
-own ranking.
+Assistants that answer from a SQL database and a document collection make several small decisions per question:
+which source to use, which passage holds the answer, whether the database can answer at all, and whether a generated
+query is wrong. These are usually extra LLM calls. Typed decision models such as Jev instead return probabilities for
+declared yes/no or multiple-choice questions at a small fraction of the cost. We test one on these four decisions,
+on held-out data with baselines fixed in advance. On \N{sN} BIRD questions, zero-shot Jev detects wrong SQL answers with AUROC \N{sAurocJev}, between an LLM judge
+(\N{sAurocJudge}) and a fine-tuned verifier (\N{sAurocMB}); neither gap is significant, but the intervals are too
+wide to show equivalence, and Jev selects poorly among candidate queries. It separates intact schemas from ones missing the columns a question needs with AUROC \N{rthreeAucCol}, yet at
+a 1\% false-refusal budget it catches only about half of them. On \N{rtwoN} new routing questions, a single four-way choice routes \N{rtwoJevTwoAcc} exactly right against \N{rtwoLLMAcc} for an LLM
+router (not significant), but the LLM router more often reaches every source a question needs (\N{rtwoLLMCovers}
+against \N{rtwoJevTwoCovers}); posed as two yes/no questions, Jev routes \N{rtwoJevYNAcc} correctly. On \N{roneN} new
+page-finding questions, re-ranking a cross-encoder's top 25 passages with Jev puts the right filing page first
+\N{roneJBOne} of the time, against \N{roneBOne} for the cross-encoder's own ranking.
 
 \keywords{Text-to-SQL \and Retrieval-augmented generation \and Query routing \and Answer verification \and
 Typed decision models \and Pre-registration}
@@ -59,11 +57,8 @@ large language model (LLM), which costs time and money and fails in its own ways
 
 Typed decision models offer a cheaper path. Jev~\cite{typesafe2026jev}, released in September 2026, takes a piece of
 text and one or more declared questions, either yes/no or a choice among named options, and returns a probability
-for each answer without generating any text. Early evaluations report strong zero-shot accuracy and well-calibrated
-choice probabilities on classification benchmarks~\cite{deusser2026jev}, competitive performance as a fast judge that
-escalates uncertain cases to a stronger model~\cite{li2026jevjudge}, and clear failure modes: probabilities for logically related questions that do not fit
-together~\cite{axioms2026,coherence2026}, and option names that outweigh the definitions attached to
-them~\cite{sun2026typesafe,labels2026}. What has not been tested, as far as we found, is whether such a
+for each answer without generating any text. Early evaluations report strong zero-shot accuracy on classification benchmarks~\cite{deusser2026jev} and as a fast
+judge~\cite{li2026jevjudge}, along with clear failure modes (Sect.~2). What has not been tested, as far as we found, is whether such a
 model can make the decisions of a database-and-documents assistant, where the input is long (a schema, a page of a
 filing) and some verdicts, such as whether a SQL query is right, have to be worked out rather than read off.
 
@@ -210,9 +205,10 @@ Laya, zero-shot & \N{sAurocLayaZS} & MB score + vote$^\dagger$ & \N{sPfivev} & -
 \end{tabular}
 \end{table}
 
-\paragraph{Detection.} Zero-shot Jev ranks wrong first answers about as well as the LLM judge and as ModernBERT
-fine-tuned on thousands of labelled candidates (Table~\ref{tab:sql}): the judge's lead is \N{sGapJudgeJev}
-(\N{sGapJudgeJevCI}) and Jev's lead over ModernBERT \N{sGapJevMB} (\N{sGapJevMBCI}), neither significant. Its scores are stable: rescoring 200 candidates gave a rank correlation of
+\paragraph{Detection.} Zero-shot Jev's AUROC for wrong first answers lies between the LLM judge's and that of
+ModernBERT fine-tuned on thousands of labelled candidates (Table~\ref{tab:sql}): the judge's lead is \N{sGapJudgeJev}
+(\N{sGapJudgeJevCI}) and Jev's lead over ModernBERT \N{sGapJevMB} (\N{sGapJevMBCI}). Neither difference is
+significant, but both intervals are wide: the data do not rule out a judge advantage of about 0.1. Its scores are stable: rescoring 200 candidates gave a rank correlation of
 \N{sJevRetest}, and scoring all 6,056 distinct candidates cost \N{sJevCost}.
 
 \paragraph{Choosing.} Jev is a much weaker chooser. Taking the candidate it scores highest gives \N{sJevMax}, barely
@@ -250,7 +246,8 @@ half of the unanswerable cases with the hint and a third to a half without it. A
 question's words that appear among the card's table and column names (not pre-registered), reaches AUROC
 \N{rthreeLexCol} with the hint and \N{rthreeLexColNoHint} without it on the column-removed cards, so Jev's
 judgement is far from word matching, especially when the hint does not name the columns. Because BIRD repeats some data across tables, a few
-column-removed cards may still be answerable another way, so these figures are lower bounds.
+column-removed cards may still be answerable another way; such cards are mislabelled as unanswerable, and we did not
+measure how many there are.
 
 \section{Routing Between a Database and Documents}\label{sec:routing}
 \paragraph{Setup.} We built \N{rtwoN} new questions over the SEC database and the filing library, none from
@@ -364,8 +361,10 @@ questions, against \N{roneBOne} for the cross-encoder's own ranking (Table~\ref{
 points, \N{roneHfourP}). Without the GPU, over the dense list alone, Jev reached \N{roneJDOne}: \N{roneHthreeDiff}
 points above dense similarity (\N{roneHthreeP}) and \N{roneHtwoDiff} points above the GPU cross-encoder, a difference
 that falls just short of significance after correction (\N{roneHtwoCI}, \N{roneHtwoP}). The gain is at the top of the
-list; whether the source page is anywhere among the eight passages the answer writer reads barely changes
-(\N{roneJBEight} against \N{roneBEight}), because that depends on which passages the search found, not on their order.
+list: the share with the source page among the eight passages the answer writer reads rises only from \N{roneBEight}
+to \N{roneJBEight}. No re-ordering can exceed \N{roneBInList}, the share of questions whose source page is anywhere
+among the 25 passages. Resampling the \N{roneFilings} filings instead of the questions leaves the main interval
+almost unchanged (\N{roneHoneCIFiling}; both of these figures are post hoc).
 
 On FinanceBench's own analyst-written questions, used for development, the gap was larger (\N{devFbJBOne} against
 \N{devFbBOne}); on an earlier generated set it was smaller and not significant (\N{devOldJBOne} against
@@ -377,23 +376,19 @@ requests at a time, and cost \N{roneCost}. The two-round search took \N{roneDens
 
 \section{Discussion}\label{sec:discussion}
 \paragraph{Reading off versus working out.} Li et al.\ found that Jev judges as well as a frontier model when a
-verdict can be read off the text and falls behind when it must be derived~\cite{li2026jevjudge}. Our four roles
-extend that distinction to a database-and-documents assistant. Where the answer is visible in the input, whether a passage states a figure, whether a schema has the needed
-columns, whether a query's result looks plausible, it is not significantly worse than the component it would
-replace, and on page ranking it improves on it. Where the answer has to be
-worked out, which of two plausible SQL queries is right, it falls behind. SQL shows both sides of the line: a
-wrong query often returns a result that looks wrong, which Jev can see, whereas choosing between two plausible
-queries requires tracing what each computes. For a system designer this suggests using a decision model to \emph{trigger} work (fall
-back, re-rank, decline) and leaving the \emph{choice} among generated answers to execution, voting or a trained
-verifier.
+verdict can be read off the text and falls behind when it must be derived~\cite{li2026jevjudge}. Our results fit
+that pattern: Jev did best where the answer is visible in the input (whether a passage states a figure, whether a
+schema has the needed columns, whether a result looks plausible) and worst where it must be worked out (which of two
+plausible queries is right). This is an interpretation, not something we isolated: the tasks also differ in input
+format, in how similar the candidates are, and in wording. If it holds, a decision model is better used to
+\emph{trigger} work (fall back, re-rank, decline) than to \emph{choose} among generated answers.
 
 \paragraph{Ask one question, not two.} The clearest design lesson is about how a decision is posed. Routing between a
 database and documents is one decision with four outcomes; split into ``needs the database?'' and ``needs the
 documents?'', each probability is reasonable on its own, but the pair does not separate questions that need both
 sources from questions either source can answer. This fits the over-endorsement of single statements reported by Li
-et al.~\cite{axioms2026}: both needs score high whenever either source is plausible. Posed as two questions, the
-decision cost \N{rtwoHtwoDiff} points here. Posing the
-whole decision as one choice removed it.
+et al.~\cite{axioms2026}, though our wording may also contribute: when either source suffices, neither is strictly
+``needed''. Posed as two questions, the decision cost \N{rtwoHtwoDiff} points; one choice removed it.
 
 \paragraph{What the router cannot see.} A router shown only a database's columns cannot tell a question about an
 entity the database holds from one about an entity it does not. Listing what the rows cover, which costs a few
@@ -401,9 +396,6 @@ read-only queries per database and no model call, fixed most unknown-entity erro
 needs more care: our card showed both a curated table's range and a raw table's wider one, and a coverage line should
 state the range of the data a question would actually be answered from.
 
-\paragraph{Cost.} Every Jev decision in this paper cost well under a cent: \N{sJevCost} to score all 6,056 SQL
-candidates, \N{roneCost} per question to re-rank 25 passages, and no LLM call to route. The constraint we met in
-practice was the API's rate limit, not price.
 
 \section{Threats to Validity}\label{sec:threats}
 \paragraph{Generated questions.} The routing and page-finding questions were generated, from templates and by an
@@ -421,6 +413,9 @@ which its sheet did not list) and accepted all 30 sampled page questions. No sam
 \paragraph{Wording.} Each Jev role used one fixed wording (two for routing). Accuracy of typed decision models
 moves by about five points with wording~\cite{fastslow2026}; our two routing wordings differed by
 \N{rtwoJevTwoAcc} against \N{rtwoJevOneAcc}, and single figures should be read with that band in mind.
+\paragraph{Components, not answers.} We measured each decision, not the final answers. A better first page or a
+more exact route need not give a better answer, and Jev's routing leaves a needed source unreached more often than the
+LLM router's does.
 \paragraph{One benchmark per role.} BIRD for SQL, one financial database and one filing library for the rest; English
 only. Jev is a commercial model whose training data we do not know, and the models may have seen BIRD.
 \paragraph{Hosts.} Models were reached through third-party APIs, some of which do not name their upstream provider;
@@ -430,13 +425,14 @@ order rather than the cross-encoder's ranking, and an earlier routing test reuse
 replaced both with the pre-registered tests reported here; the earlier results are in the repository.
 
 \section{Conclusion}
-Tested zero-shot on held-out data, a typed decision model detected wrong SQL answers about as well as an LLM judge,
-judged whether a schema can answer a question with AUROC \N{rthreeAucCol}, routed \N{rtwoJevTwoAcc} of new questions
-correctly without an LLM call, and put the right filing page first more often than a cross-encoder alone
-(\N{roneJBOne} against \N{roneBOne}). It chose poorly among SQL candidates and failed when one routing decision was
-split into two questions. Like the LLM router, it could not tell a question about an entity the database lacks from
-an ordinary database question until the card listed what the rows cover. Decisions that can be read off the input
-can be moved to such a model; decisions that must be worked out should stay where they are. Code, prompts,
+Tested zero-shot on held-out data, a typed decision model detected wrong SQL answers with an AUROC not
+significantly different from an LLM judge's, ranked schemas by answerability with AUROC \N{rthreeAucCol}, routed
+\N{rtwoJevTwoAcc} of new questions exactly right without an LLM call (while reaching all needed sources less often
+than an LLM router), and put the right filing page first more often than a cross-encoder alone (\N{roneJBOne}
+against \N{roneBOne}). It chose poorly among SQL candidates and failed when one routing decision was split into two
+questions. Neither router could tell a question about an entity the database lacks from an ordinary database
+question until the card listed what the rows cover. Whether these gains carry through to final answers remains to
+be tested. Code, prompts,
 pre-registrations, question sets and result files are available from the authors on request.
 
 \begin{credits}

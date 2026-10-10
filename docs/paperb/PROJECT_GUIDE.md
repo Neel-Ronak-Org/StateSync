@@ -325,6 +325,22 @@ question. The practical limit was the API's rate limit, not price.
 
 ---
 
+### What we built, what we reused
+
+If asked "what is your own work here?":
+
+- **Built by us:** the whole assistant (pipeline, SQL gate, router, documents engine, web app); the Jev
+  integration (router, passage re-ranking, coverage line, follow-ups without a model call); the SEC figures
+  database; every question set for R1-R4 and the scripts that build them; the experiment designs,
+  pre-registrations and analyses.
+- **Reused as they are:** the models (Jev, the LLMs, the bge re-ranker, the embedding model, ModernBERT as a base
+  to fine-tune); the libraries (LangGraph, FastAPI, Postgres/pgvector, pglast); the public data (BIRD and its
+  corrected labels, FinanceBench's 84 filings, SEC XBRL figures).
+- **Not measured, and the paper says so:** whether the better decisions give better final answers; no sample of
+  the generated questions was labelled by hand.
+
+---
+
 ## 9. How to demonstrate it
 
 ### A. The live system (about 10 minutes)
