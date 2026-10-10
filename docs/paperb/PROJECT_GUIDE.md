@@ -556,7 +556,8 @@ hard.
 **"Who checked the generated questions?"**
 
 - A second model checked every question when the sets were built.
-- Nobody labelled a sample by hand; the paper states this as a limitation.
+- A model not used elsewhere in the study (GPT-6.1 Sol) labelled a sample blind: it agreed with 37 of 40 routing
+  labels and accepted all 30 page questions. Nobody labelled a sample by hand; the paper says so.
 
 **"What would you do next?"**
 

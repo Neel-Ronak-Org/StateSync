@@ -415,8 +415,9 @@ writer that reasons before answering failed to return a usable figure question f
 questions come from the pages where it did. BIRD's hints often name columns, which helps the answerability gate, so we
 report it with and without them.
 \paragraph{Labels and checks.} Routing labels are fixed by construction, and a page question was kept only when
-a second model confirmed that its page answers it. No sample was labelled independently by hand, so errors in the
-generated questions or their labels are not ruled out.
+a second model confirmed that its page answers it. As a further blind check, a model not otherwise used here (GPT-6.1 Sol, setting ``Max'') agreed with 37 of 40
+sampled routing labels ($\kappa=0.90$; the three disagreements were questions about companies in neither source,
+which its sheet did not list) and accepted all 30 sampled page questions. No sample was labelled by hand.
 \paragraph{Wording.} Each Jev role used one fixed wording (two for routing). Accuracy of typed decision models
 moves by about five points with wording~\cite{fastslow2026}; our two routing wordings differed by
 \N{rtwoJevTwoAcc} against \N{rtwoJevOneAcc}, and single figures should be read with that band in mind.
