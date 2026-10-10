@@ -302,7 +302,7 @@ question. The practical limit was the API's rate limit, not price.
 
 ## 8. The paper itself
 
-- **Title:** *Can a Typed Decision Model Make the Decisions of a Database-and-Documents Assistant?*
+- **Title:** *Evaluating a Typed Decision Model on the Decisions of a Database-and-Documents Assistant*
 - **Venue:** ICDEC 2026, special session SS02 (Springer LNNS). 8–12 pages; ours is 12. Deadline
   **10 October**, submitted through CMT.
 - **Where:** `docs/paperb/latex/main.tex`, which builds `main.pdf`. Every number in the text is a macro
@@ -310,8 +310,8 @@ question. The practical limit was the API's rate limit, not price.
   typed by hand.
 - **Companion paper (Paper A):** a pre-registered study of warning signals for wrong text-to-SQL answers
   (`docs/paper/`). Paper B reuses its 393 BIRD questions and cites it as under review.
-- **Authors:** Neel Pradeep Jaiswal, Ronak Daniel Ramanathan, Dr. Hima Deepthi Vankayalapati and Prof.
-  Elizabeth Jish Joy (Mukesh Patel School of Technology, Management and Engineering, NMIMS).
+- **Authors:** Neel Pradeep Jaiswal, Ronak Daniel Ramanathan, Prof. Elizabeth Jish Joy and Dr. Hima
+  Deepthi Vankayalapati (Mukesh Patel School of Technology, Management and Engineering, NMIMS).
 - **Figure 1** shows the assistant with the four decision points shaded.
 - **Limitations the paper admits (be ready to repeat them):**
   - Questions were generated, so they may be cleaner than real users' questions.

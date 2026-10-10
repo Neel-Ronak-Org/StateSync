@@ -17,14 +17,14 @@
 
 \begin{document}
 
-\title{Can a Typed Decision Model Make the Decisions of a Database-and-Documents Assistant?}
+\title{Evaluating a Typed Decision Model on the Decisions of a Database-and-Documents Assistant}
 
 \titlerunning{Typed Decision Models in a Database-and-Documents Assistant}
-\author{Neel Pradeep Jaiswal~(\ding{41}) \and Ronak Daniel Ramanathan \and Hima Deepthi Vankayalapati \and Elizabeth Jish Joy}
+\author{Neel Pradeep Jaiswal~(\ding{41}) \and Ronak Daniel Ramanathan \and Elizabeth Jish Joy \and Hima Deepthi Vankayalapati}
 \authorrunning{N. P. Jaiswal et al.}
 \institute{Mukesh Patel School of Technology, Management and Engineering, NMIMS, Mumbai, India\\
 \email{neelpjaiswal@gmail.com, danielronak8105@gmail.com,}\\
-\email{himadeepthi.vankayalapati@nmims.edu, jish.joy@nmims.edu}}
+\email{jish.joy@nmims.edu, himadeepthi.vankayalapati@nmims.edu}}
 
 \maketitle
 
@@ -100,14 +100,14 @@ that chooses document search, SQL or a refusal, with a confidence threshold but 
 established~\cite{nogueira2020monot5,zhuang2023yesno}; cross-encoders such as BGE~\cite{chen2024bgem3} remain the standard second
 stage.
 
-\section{Setting and Method}\label{sec:method}
+\section{Methodology}\label{sec:method}
 \paragraph{Pipeline.} The assistant under test answers from a PostgreSQL database and a library of PDF filings. An LLM SQL agent
 writes a query, runs it read-only and retries on errors; document questions go through a two-round dense search
 (\texttt{mxbai-embed-large}) returning up to 25 passages, optionally re-scored by a cross-encoder
 (\texttt{bge-reranker-v2-m3}, reading each passage's filing title). The router (LLM or Jev) sees the question, a card
 listing the database's tables and columns, and the five best-matching documents. Figure~\ref{fig:pipeline} shows where the four decisions sit.
 
-\begin{figure}[t]
+\begin{figure}[!htb]
 \centering
 \resizebox{0.99\textwidth}{!}{\begin{tikzpicture}[font=\scriptsize, x=1mm, y=1mm,
   box/.style={draw, rounded corners=1pt, align=center, minimum height=8.5mm, inner sep=1.5pt, text width=#1},
@@ -240,7 +240,7 @@ question). With Jev's untuned rule ``fall back when $P(\text{correct})<0.5$'', a
 per question); a threshold fitted like H3's gives \N{sJtwo} with \N{sJtwoFall} fallbacks, and Jev as the chooser
 gains almost nothing (\N{sJone}). These analyses were decided after the pre-registered ones and are exploratory.
 
-\section{Can the Database Answer This? Answerability with Hard Negatives}\label{sec:answerable}
+\section{Judging Answerability Against Hard Negatives}\label{sec:answerable}
 \paragraph{Setup.} A SQL assistant should decline when its database lacks the data, rather than write a query that
 returns something misleading. We took the \N{rthreeN} held-out BIRD questions whose reference query is correct and,
 from each query's parse tree, the tables and columns it reads. Each question was paired with three schema cards: its
