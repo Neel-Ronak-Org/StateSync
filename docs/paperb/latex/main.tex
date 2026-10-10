@@ -172,11 +172,7 @@ open decision model, each fine-tuned on execution-labelled candidates from other
 tested on rotating folds stratified by database, so every question is scored by a model that never saw it. The 393
 questions, their labels and the first answers are those of the companion study~\cite{companion2026warnings}.
 
-\paragraph{Pre-registered hypotheses.} H1: choosing the candidate with the highest ModernBERT score beats a majority
-vote. H2: training on real candidates beats training on rule-based mutants of the reference query. H3: keeping the
-first answer unless ModernBERT doubts it, and otherwise choosing from the pool, beats the first answer.
-
-\begin{table}[t]
+\begin{table}[!htb]
 \centering
 \caption{Detecting a wrong first answer on \N{sN} held-out BIRD questions (AUROC).}
 \label{tab:sqldet}
@@ -192,9 +188,14 @@ ModernBERT, real & \N{sAurocMB} & Laya, zero-shot & \N{sAurocLayaZS} \\
 \end{tabular}
 \end{table}
 
+\paragraph{Pre-registered hypotheses.} H1: choosing the candidate with the highest ModernBERT score beats a majority
+vote. H2: training on real candidates beats training on rule-based mutants of the reference query. H3: keeping the
+first answer unless ModernBERT doubts it, and otherwise choosing from the pool, beats the first answer.
+
+
 \begin{table}[t]
 \centering
-\caption{Accuracy of answer policies on the same questions. Pre-registered comparisons (H1--H3) give wins/losses
+\caption{Accuracy of answer policies on \N{sN} held-out BIRD questions. Pre-registered comparisons (H1--H3) give wins/losses
 and one-sided Holm-adjusted $p$ values; ties among candidates give fractional counts. $\dagger$ = exploratory.}
 \label{tab:sql}
 \small
@@ -225,9 +226,7 @@ significant, but both intervals are wide: the data do not rule out a judge advan
 \N{sJevRetest}, and scoring all 6,056 distinct candidates cost \N{sJevCost}.
 
 \paragraph{Choosing.} Jev is a much weaker chooser. Taking the candidate it scores highest gives \N{sJevMax} (Table~\ref{tab:sql}), barely
-above the first answer and below a plain majority vote. This fits the observation that decision models do well
-when a verdict can be read off the text and poorly when it must be derived~\cite{li2026jevjudge}: noticing that a
-result looks implausible is easier than telling which of two plausible queries is right.
+above the first answer and below a plain majority vote (Sect.~\ref{sec:discussion} returns to this).
 
 \paragraph{Falling back.} H3 holds: the ModernBERT-triggered cascade raises accuracy from \N{sFirst} to \N{sPsix}
 (gain \N{sPsixCI} points). H1 and H2 point the expected way but are not significant after Holm correction (H2 was before it). The cascade falls
