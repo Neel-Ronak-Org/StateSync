@@ -302,7 +302,7 @@ question. The practical limit was the API's rate limit, not price.
 
 ## 8. The paper itself
 
-- **Title:** *Evaluating a Typed Decision Model on the Decisions of a Database-and-Documents Assistant*
+- **Title:** *Evaluating a Typed Decision Model on the Decisions of a Database-and-Documents AI Assistant*
 - **Venue:** ICDEC 2026, special session SS02 (Springer LNNS). 8–12 pages; ours is 12. Deadline
   **10 October**, submitted through CMT.
 - **Where:** `docs/paperb/latex/main.tex`, which builds `main.pdf`. Every number in the text is a macro
