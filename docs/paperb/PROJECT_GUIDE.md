@@ -302,9 +302,8 @@ question. The practical limit was the API's rate limit, not price.
 
 ## 8. The paper itself
 
-- **Title:** *Can a Typed Decision Model Make the Decisions of a Database-and-Documents Assistant? An
-  Evaluation on Text-to-SQL, Routing, Page Finding and Answerability*
-- **Venue:** ICDEC 2026, special session SS02 (Springer LNNS). At least 10 pages; ours is 12–13. Deadline
+- **Title:** *Can a Typed Decision Model Make the Decisions of a Database-and-Documents Assistant?*
+- **Venue:** ICDEC 2026, special session SS02 (Springer LNNS). 8–12 pages; ours is 12. Deadline
   **10 October**, submitted through CMT.
 - **Where:** `docs/paperb/latex/main.tex`, which builds `main.pdf`. Every number in the text is a macro
   generated from the result files by `scripts/paperb_numbers.py` into `numbers.tex`, so no number is

@@ -17,8 +17,7 @@
 
 \begin{document}
 
-\title{Can a Typed Decision Model Make the Decisions of a Database-and-Documents Assistant? An Evaluation
-on Text-to-SQL, Routing, Page Finding and Answerability}
+\title{Can a Typed Decision Model Make the Decisions of a Database-and-Documents Assistant?}
 
 \titlerunning{Typed Decision Models in a Database-and-Documents Assistant}
 \author{Neel Pradeep Jaiswal~(\ding{41}) \and Ronak Daniel Ramanathan \and Hima Deepthi Vankayalapati \and Elizabeth Jish Joy}
@@ -179,39 +178,53 @@ first answer unless ModernBERT doubts it, and otherwise choosing from the pool, 
 
 \begin{table}[t]
 \centering
-\caption{SQL on \N{sN} held-out BIRD questions. Left: detecting a wrong first answer (AUROC). Right: accuracy of
-answer policies (MB = ModernBERT; $\dagger$ = exploratory). Pre-registered comparisons give wins/losses and one-sided
-Holm-adjusted $p$ values; ties among candidates give fractional counts.}
-\label{tab:sql}
-\footnotesize
-\setlength{\tabcolsep}{2pt}
-\begin{tabular}{@{}lc@{\hspace{8pt}}lrl@{}}
+\caption{Detecting a wrong first answer on \N{sN} held-out BIRD questions (AUROC).}
+\label{tab:sqldet}
+\small
+\begin{tabular}{@{}lc@{\hspace{14pt}}lc@{}}
 \toprule
-Checker & AUROC & Policy & Acc. & Comparison \\
+Checker & AUROC & Checker & AUROC \\
 \midrule
-LLM judge & \N{sAurocJudge} & First answer & \N{sFirst} & -- \\
-Jev, zero-shot & \N{sAurocJev} & Majority vote (pool) & \N{sVote} & -- \\
-MB, real & \N{sAurocMB} & MB-max (H1) & \N{sPfive} & +\N{sH1W}/$-$\N{sH1L}, \N{sH1Pt} \\
-Laya, fine-tuned & \N{sAurocLayaFT} & MB-max, mutants (H2) & \N{sPfivem} & \N{sH2Pt} \\
-MB, mutants & \N{sAurocMBmut} & \textbf{MB cascade (H3)} & \textbf{\N{sPsix}} & +\N{sH3W}/$-$\N{sH3L}, \N{sH3Pt} \\
-Laya, zero-shot & \N{sAurocLayaZS} & MB score + vote$^\dagger$ & \N{sPfivev} & -- \\
- & & Jev cascade, $P<0.5$$^\dagger$ & \N{sJthree} & \N{sJthreeCI} pts \\
- & & Jev cascade, fitted $\tau$$^\dagger$ & \N{sJtwo} & -- \\
- & & Jev cascade, Jev chooses$^\dagger$ & \N{sJone} & -- \\
- & & Jev-max (pool) & \N{sJevMax} & -- \\
- & & Judge-max (pool) & \N{sJudgeMax} & -- \\
- & & Any candidate right & \N{sOracle} & ceiling \\
+LLM judge & \N{sAurocJudge} & Laya, fine-tuned & \N{sAurocLayaFT} \\
+Jev, zero-shot & \N{sAurocJev} & ModernBERT, mutants & \N{sAurocMBmut} \\
+ModernBERT, real & \N{sAurocMB} & Laya, zero-shot & \N{sAurocLayaZS} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Accuracy of answer policies on the same questions. Pre-registered comparisons (H1--H3) give wins/losses
+and one-sided Holm-adjusted $p$ values; ties among candidates give fractional counts. $\dagger$ = exploratory.}
+\label{tab:sql}
+\small
+\begin{tabular}{@{}l@{\hspace{12pt}}r@{\hspace{12pt}}l@{}}
+\toprule
+Policy & Acc. & Comparison \\
+\midrule
+First answer & \N{sFirst} & -- \\
+Majority vote (pool) & \N{sVote} & -- \\
+ModernBERT-max (H1) & \N{sPfive} & +\N{sH1W}/$-$\N{sH1L}, \N{sH1Pt} \\
+ModernBERT-max, mutants (H2) & \N{sPfivem} & \N{sH2Pt} \\
+\textbf{ModernBERT cascade (H3)} & \textbf{\N{sPsix}} & +\N{sH3W}/$-$\N{sH3L}, \N{sH3Pt} \\
+ModernBERT score + vote$^\dagger$ & \N{sPfivev} & -- \\
+Jev cascade, $P<0.5^\dagger$ & \N{sJthree} & \N{sJthreeCI} pts \\
+Jev cascade, fitted $\tau^\dagger$ & \N{sJtwo} & -- \\
+Jev cascade, Jev chooses$^\dagger$ & \N{sJone} & -- \\
+Jev-max (pool) & \N{sJevMax} & -- \\
+Judge-max (pool) & \N{sJudgeMax} & -- \\
+Any candidate right & \N{sOracle} & ceiling \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \paragraph{Detection.} Zero-shot Jev's AUROC for wrong first answers lies between the LLM judge's and that of
-ModernBERT fine-tuned on thousands of labelled candidates (Table~\ref{tab:sql}): the judge's lead is \N{sGapJudgeJev}
+ModernBERT fine-tuned on thousands of labelled candidates (Table~\ref{tab:sqldet}): the judge's lead is \N{sGapJudgeJev}
 (\N{sGapJudgeJevCI}) and Jev's lead over ModernBERT \N{sGapJevMB} (\N{sGapJevMBCI}). Neither difference is
 significant, but both intervals are wide: the data do not rule out a judge advantage of about 0.1. Its scores are stable: rescoring 200 candidates gave a rank correlation of
 \N{sJevRetest}, and scoring all 6,056 distinct candidates cost \N{sJevCost}.
 
-\paragraph{Choosing.} Jev is a much weaker chooser. Taking the candidate it scores highest gives \N{sJevMax}, barely
+\paragraph{Choosing.} Jev is a much weaker chooser. Taking the candidate it scores highest gives \N{sJevMax} (Table~\ref{tab:sql}), barely
 above the first answer and below a plain majority vote. This fits the observation that decision models do well
 when a verdict can be read off the text and poorly when it must be derived~\cite{li2026jevjudge}: noticing that a
 result looks implausible is easier than telling which of two plausible queries is right.
