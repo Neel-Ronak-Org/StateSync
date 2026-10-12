@@ -109,3 +109,17 @@ protocol for correctness warnings (matched flag rate, corrected labels, matched 
 null as its worked example. Reason: novelty was the main expected criticism (item 5); the protocol
 findings are what a reader can reuse. The old title was "Do Data Checks Tell You When to Trust a
 Text-to-SQL Answer? A Pre-registered Study on Corrected BIRD Labels".
+
+## IEEE version for MoSICom 2026 (2026-10-12)
+
+- `docs/paper/ieee/` is the submission draft: 6 pages, IEEE conference format, deadline 15 Oct (owner).
+  `docs/paper/latex/` stays the measured source of truth for the numbers.
+- Added over the 4-page conversion, with no new experiment: pipeline figure, the matched-flag-rate
+  measure as equations, tables for cost-matched self-consistency, both SQL models and the hypotheses,
+  the second model's error counts, cost and protocol paragraphs, a Conclusion, and 14 references
+  (11 checked against the arXiv API; Holm, Efron and Cohen are the standard citations).
+- One rounding correction: self-consistency at 3 samples minus judge has upper bound 0.076 (raw
+  0.07649), not 0.077; the report is corrected too.
+- The acknowledgment states the AI assistance (owner's wording decision, 2026-10-12).
+- Open: the partner's 18 raw annotation lines; whether review is blind (author block); a check against
+  the template MoSICom links to (the conference site is blocked on the campus network).

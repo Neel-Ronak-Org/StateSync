@@ -75,19 +75,33 @@ rarely double count (0 and 5 of 60), the annotations, and all run records, avail
 
 \section{Related Work}
 
-\textbf{Correctness prediction.} Richardson~\cite{richardson2026predicts} compares black-box, white-box and
-verification signals on BIRD and Spider; Somov and Tutubalina~\cite{somov2025confidence} study entropy-based selective
-classifiers; Chen et al.~\cite{chen2025abstention} add abstention via conformal prediction on hidden states. All
-of these signals come from a model. \textbf{Database feedback.} SQLens~\cite{gong2025sqlens} is the
-closest work: it combines database signals (abnormal results, empty predicates, join-tree issues) with
-LLM signals in a learned classifier. We instead evaluate data checks as warnings in their own right,
-at a matched flag rate, on corrected labels, with pre-registered hypotheses and an error annotation
-that explains what the checks can and cannot see. \textbf{Benchmark quality.}
-Wretblad et al.~\cite{wretblad2024noise} document noise in BIRD; Jin et al.~\cite{jin2026annotation} report annotation errors
-in 52.8\% of Mini-Dev and release corrections, which we score against. Execution match has false
-negatives~\cite{pourreza2023evaluating,kim2025flex}; we quantify them after correction.
-\textbf{Self-consistency}~\cite{wang2023selfconsistency} is applied here as agreement between the
-execution results of resampled queries.
+\textbf{Selective prediction and correctness signals.} A selective predictor withholds the answers
+it trusts least~\cite{geifman2017selective}; the risk--coverage curve and its area summarise how well a
+signal ranks them~\cite{geifman2019bias}. For generated text, agreement among resampled outputs is the
+standard black-box signal~\cite{wang2023selfconsistency,kuhn2023semantic,manakul2023selfcheckgpt}, and
+LLM judges are widely used as scalable evaluators~\cite{zheng2023judging}. For text-to-SQL,
+Richardson~\cite{richardson2026predicts} compares black-box, white-box and verification signals on BIRD
+and Spider; Somov and Tutubalina~\cite{somov2025confidence} study entropy-based selective classifiers;
+Chen et al.~\cite{chen2025abstention} add abstention via conformal prediction on hidden states. All of
+these signals come from a model. We apply self-consistency as agreement between the execution results
+of resampled queries.
+
+\textbf{Using the database.} Execution results already guide generation: LEVER~\cite{ni2023lever}
+trains a verifier on the program, its result and the question to rerank candidates, and
+DIN-SQL~\cite{pourreza2023dinsql} adds a self-correction step. SQLens~\cite{gong2025sqlens} is the
+closest work to ours: it combines database signals (abnormal results, empty predicates, join-tree
+issues) with LLM signals in a learned classifier. We instead evaluate data checks as warnings in their
+own right, at a matched flag rate, on corrected labels, with pre-registered hypotheses and an error
+annotation that explains what the checks can and cannot see.
+
+\textbf{Benchmarks and their labels.} Spider~\cite{yu2018spider} and BIRD~\cite{li2023bird} are the
+standard benchmarks. Wretblad et al.~\cite{wretblad2024noise} document noise in BIRD, and Jin et
+al.~\cite{jin2026annotation} report annotation errors in 52.8\% of Mini-Dev and release corrections,
+which we score against. Execution match has false positives, which distilled test suites
+reduce~\cite{zhong2020semantic}, and false negatives~\cite{pourreza2023evaluating,kim2025flex}; we
+quantify the false negatives that remain after correction. \textbf{Pre-registration} has been
+proposed for NLP research~\cite{vanmiltenburg2021preregistering} but is rare in text-to-SQL
+evaluation; we fix hypotheses, measures and stopping rules in advance and log every amendment.
 
 \section{System and Signals}
 
@@ -177,15 +191,15 @@ so ties are broken at random in expectation, exactly, with no sampling. A yes/no
 flags are better spent than the judge's. We also report precision, recall, AUROC and the area under the
 risk--coverage curve (AURC: the mean error rate of the answers kept as the most suspect are withheld
 one by one). For cost matching, self-consistency's risk is recomputed from $m$ of its five samples and
-its AUROC averaged over all $\binom{5}{m}$ choices of samples. Statistics use a paired bootstrap
-stratified by database (2,000 resamples) and Holm correction over four confirmatory tests: \textbf{H1}
+its AUROC averaged over all $\binom{5}{m}$ choices of samples. Statistics use a paired bootstrap~\cite{efron1979bootstrap}
+stratified by database (2,000 resamples) and Holm correction~\cite{holm1979simple} over four confirmatory tests: \textbf{H1}
 the fan-out check beats the judge at its flag rate on the fan-out set; \textbf{H2} ordering by any
 data check, then judge risk, lowers the judge's AURC; \textbf{H3} grounding flags fewer than 5\% of
 correct answers; \textbf{H4} one evidence-guided repair fixes more than it breaks and adds 2 points.
 H1 and H4 require at least 10 double-counting errors or repairs, else they are untestable; if the main
 model fails H1's precondition, the set is rerun with a second model (gpt-oss-120b). Every wrong answer
 was annotated blind to the signals into ten types; a second annotator (another model, on a reshuffled
-blank copy) labelled all 90 ($\kappa=0.74$; 0.87 for system error vs.\ benchmark artefact).
+blank copy) labelled all 90 (Cohen's $\kappa=0.74$~\cite{cohen1960coefficient}; 0.87 for system error vs.\ benchmark artefact).
 
 \section{Results}
 
@@ -249,7 +263,7 @@ $m$ & AUROC & $-$ judge (95\% CI) & AUROC & $-$ judge (95\% CI) \\
 \midrule
 1 & .645 & $-.052$ ($-.111$, $.004$) & .614 & $-.069$ ($-.132$, $-.009$) \\
 2 & .687 & $-.010$ ($-.074$, $.052$) & .659 & $-.024$ ($-.095$, $.043$) \\
-3 & .710 & $+.013$ ($-.053$, $.077$) & .684 & $+.001$ ($-.073$, $.074$) \\
+3 & .710 & $+.013$ ($-.053$, $.076$) & .684 & $+.001$ ($-.073$, $.074$) \\
 4 & .726 & $+.029$ ($-.040$, $.093$) & .701 & $+.018$ ($-.060$, $.095$) \\
 5 & .739 & $+.042$ ($-.028$, $.107$) & .715 & $+.032$ ($-.048$, $.112$) \\
 \bottomrule
@@ -259,7 +273,24 @@ difference from one judge call (AUROC .697 and .683).}
 \label{tab:cost}
 \end{table}
 
-\textbf{Hypotheses.} \textbf{H2 is not supported}: AURC gain 0.001 (95\% CI $-0.005$ to $0.009$,
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lp{36mm}p{38mm}@{}}
+\toprule
+ & hypothesis & outcome \\
+\midrule
+H1 & fan-out check beats the judge on the fan-out set & untestable: 0 and 5 double counts (10 needed) \\
+H2 & checks, then judge risk, lower the judge's AURC & not supported: gain .001 ($-.005$, $.009$) \\
+H3 & grounding flags under 5\% of correct answers & supported: 2 of 242, upper bound 2.6\% \\
+H4 & one repair fixes more than it breaks & untestable: 2 repairs (10 needed) \\
+\bottomrule
+\end{tabular}
+\caption{The four pre-registered hypotheses and their outcomes on the confirmatory model.}
+\label{tab:hyp}
+\end{table}
+
+\textbf{Hypotheses} (Table~\ref{tab:hyp}). \textbf{H2 is not supported}: AURC gain 0.001 (95\% CI $-0.005$ to $0.009$,
 $p=0.42$). \textbf{H3 is supported} (2 of 242 correct answers flagged; upper bound 2.6\%,
 $p=0.0004$), but grounding fired on only 5 answers, and 3 of its 4 hits are failed queries whose text
 quotes an error code. \textbf{H4 is untestable}: 2 repairs were triggered. \textbf{H1}: see below.
@@ -408,9 +439,23 @@ gpt-oss-120b runs to a reseller that does not disclose its upstream; we checked 
 every call and that the reasoning-effort setting was honoured, and the secondary judge's verdicts
 agree with the original host's on 93\% of 260 shared answers (AUROC 0.62 vs.\ 0.63). Its normaliser made the same language decisions as the original host's on 17 of 17 dev questions but passed two
 fewer name hints. The same host returned an empty answer text on 6 of the 93 robustness answers and 39 of the 393 replication answers; their SQL labels are unaffected, and
-we report the judge comparison with and without them. English questions, one benchmark, the SQL path
+we report the judge comparison with and without them. English questions and one benchmark (enterprise-scale workloads such as Spider~2.0~\cite{lei2025spider2} are untested), the SQL path
 only.
 
+
+\section{Conclusion}
+
+Model-free data checks are attractive warnings for text-to-SQL: they cost nothing and explain
+themselves. On corrected BIRD Mini-Dev labels, however, they apply to about one answer in twenty, and
+where they apply they catch no more errors than an LLM judge given the same number of warnings. This
+held for two SQL models. The errors show why: about half are semantic and a third are benchmark or
+scorer artefacts, and a check that sees only the query and its own result can see neither kind. Among
+the free signals an agent retry was the most useful; among the model-based ones, a judge and
+self-consistency did not differ significantly, and the judge was ahead at equal cost. Each of these
+conclusions depended on how the comparison was made: at a matched flag rate, on corrected labels, and
+at a matched cost. Future work should repeat the protocol on a second benchmark and with an
+independent human annotation, and should measure what a system gains by acting on a
+warning~\cite{companion2026decisions}.
 
 \section*{Data Availability}
 BIRD Mini-Dev and the corrected annotations are CC BY-SA 4.0. The protocol, frozen samples (with hashes), run
@@ -422,6 +467,8 @@ pipeline and analysis code and helped draft and edit this text, and LLMs served 
 blind error annotators described in Sections~III and~IV. The authors designed the study, made its decisions,
 reviewed and checked the outputs, and take full responsibility for the content.
 
+% balance the last page's columns (IEEEtran: column break before this reference)
+\IEEEtriggeratref{18}
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
 
