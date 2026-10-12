@@ -6,6 +6,8 @@
 \usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit}
 \usepackage{url}
 \usepackage[hidelinks]{hyperref}
 
@@ -93,7 +95,37 @@ The system routes each question; for database questions an LLM writes SQL, a rea
 it, and it runs with a row cap. The model retries with a classified error message when a query fails
 or returns nothing; a second call writes the answer from the first rows of the result. SQL and answers
 are written by GPT-5 mini at its provider's default sampling (it accepts no temperature), reached through a third-party hosted-model service; Qwen3.8-27B (temperature 0) normalises
-the question. The served model is recorded on every call.
+the question. The served model is recorded on every call. Fig.~\ref{fig:pipeline} shows the pipeline
+and where each signal is read. A held-out question costs 9.0 model calls on average, of which 5 are
+self-consistency samples.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[font=\footnotesize, node distance=5.6mm,
+  stp/.style={draw, rounded corners=1.5pt, minimum width=29mm, minimum height=4.6mm, inner sep=1.5pt},
+  sig/.style={draw, dashed, rounded corners=1.5pt, text width=34mm, align=left, inner sep=2pt, font=\scriptsize},
+  flow/.style={-{Stealth[length=1.6mm]}}, tap/.style={dashed, -{Stealth[length=1.4mm]}}]
+\node[stp] (q) {question (with hint)};
+\node[stp, below=of q] (norm) {normalise the question};
+\node[stp, below=of norm] (sql) {LLM writes SQL};
+\node[stp, below=of sql] (gate) {read-only gate};
+\node[stp, below=of gate] (run) {run with a row cap};
+\node[stp, below=of run] (ans) {LLM writes the answer};
+\node[stp, below=of ans] (out) {answer and warnings};
+\draw[flow] (q)--(norm); \draw[flow] (norm)--(sql); \draw[flow] (sql)--(gate);
+\draw[flow] (gate)--(run); \draw[flow] (run)--(ans); \draw[flow] (ans)--(out);
+\draw[flow] (run.west) -- ++(-3.5mm,0) |- (sql.west);
+\node[font=\scriptsize, align=right, left=4.2mm of gate, inner sep=0pt] {retry on\\error or\\empty};
+\node[sig, right=4.5mm of sql]  (sc) {\textbf{self-consistency}: five more samples of this call, each run};
+\node[sig, right=4.5mm of run]  (dc) {\textbf{data checks}: fan-out probe, truncation, NULL-heavy};
+\node[sig, right=4.5mm of ans]  (pr) {\textbf{grounding} of figures; \textbf{process}: failed, empty, retried, refused};
+\node[sig, right=4.5mm of out]  (jd) {\textbf{LLM judge}: question, schema, SQL, first rows, answer};
+\draw[tap] (sql)--(sc); \draw[tap] (run)--(dc); \draw[tap] (ans)--(pr); \draw[tap] (out)--(jd);
+\end{tikzpicture}
+\caption{The pipeline (left) and where each warning signal is read (right). Data checks and process
+signals need no model call.}
+\label{fig:pipeline}
+\end{figure}
 
 \textbf{Data checks} (no model call): a \emph{fan-out probe} compares \texttt{COUNT(key)} with
 \texttt{COUNT(DISTINCT key)} per joined table for aggregates over joins; \emph{truncation} (the result
@@ -104,8 +136,11 @@ failed, the result was empty, the agent needed a retry, the answer refuses. \tex
 an LLM judge (Gemini 3.8 Flash through the same service, primary; gpt-oss-120b, secondary; their mean as
 an ensemble), each
 from a different family than the SQL model and shown the question, schema, SQL, first rows and answer;
-and self-consistency (five resamples of the SQL call, each executed; risk is the share whose result
-differs from the answer's).
+it is asked whether the result correctly answers the question and returns a probability with a
+one-sentence reason. Self-consistency draws five more samples of the SQL call and runs each; its risk
+is the share whose result differs from the answer's. The fan-out probe is the only check that explains
+itself in the data's terms (``this join repeats each patient 46 times''); the others report a state of
+the result.
 
 \section{Study Design}
 
@@ -128,8 +163,21 @@ from rules fixed in advance and frozen after one author reviewed a random 20\%.
 \textbf{Measures.} The SQL label is execution match (relaxed: column order and extra columns ignored;
 BIRD's strict rule also reported). The \emph{primary measure} is wrong answers caught at a matched
 flag rate: when a signal flags $k$ answers, we compare its wrong answers with the expected number among
-the judge's $k$ most suspect (ties broken at random, computed exactly). We also report precision,
-recall, AUROC and the area under the risk--coverage curve (AURC). Statistics use a paired bootstrap
+the judge's $k$ most suspect. Let $W$ be the wrong answers and $F_s$ the $k$ answers that signal $s$
+flags. Order the answers by decreasing judge risk into tie groups $G_1, G_2, \dots$, and let $j$ be the
+first group that does not fit entirely within the top $k$. Then
+\begin{equation}
+E_J(k)=\sum_{i<j}|G_i\cap W| \;+\; \frac{k-\sum_{i<j}|G_i|}{|G_j|}\,|G_j\cap W|,
+\end{equation}
+\begin{equation}
+\Delta_s = |F_s\cap W| - E_J(k),
+\end{equation}
+so ties are broken at random in expectation, exactly, with no sampling. A yes/no check that fires on
+4\% of answers has an AUROC near 0.5 whatever its precision; $\Delta_s$ asks instead whether its few
+flags are better spent than the judge's. We also report precision, recall, AUROC and the area under the
+risk--coverage curve (AURC: the mean error rate of the answers kept as the most suspect are withheld
+one by one). For cost matching, self-consistency's risk is recomputed from $m$ of its five samples and
+its AUROC averaged over all $\binom{5}{m}$ choices of samples. Statistics use a paired bootstrap
 stratified by database (2,000 resamples) and Holm correction over four confirmatory tests: \textbf{H1}
 the fan-out check beats the judge at its flag rate on the fan-out set; \textbf{H2} ordering by any
 data check, then judge risk, lowers the judge's AURC; \textbf{H3} grounding flags fewer than 5\% of
@@ -187,9 +235,29 @@ equivalence), and the gap disappears when the 20 format-only errors count as cor
 queries vary in format and so flag answers the scorer wrongly marks wrong. At matched cost the judge
 is ahead (exploratory): from one sample instead of five, self-consistency reaches 0.645 ($-0.05$ against
 the judge, CI $-0.11$ to $0.004$), and it needs three to draw level; a sample also uses about three times
-the judge's tokens. The judge ensemble reaches
+the judge's tokens (Table~\ref{tab:cost}). The judge ensemble reaches
 0.701 and the gpt-oss judge 0.606 (Figure~\ref{fig:rc}). The judge is tie-heavy ($p=1$ for 328 of 393
 answers); ties are broken at random in expectation.
+
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{crlrl}
+\toprule
+ & \multicolumn{2}{c}{GPT-5 mini} & \multicolumn{2}{c}{gpt-oss-120b} \\
+$m$ & AUROC & $-$ judge (95\% CI) & AUROC & $-$ judge (95\% CI) \\
+\midrule
+1 & .645 & $-.052$ ($-.111$, $.004$) & .614 & $-.069$ ($-.132$, $-.009$) \\
+2 & .687 & $-.010$ ($-.074$, $.052$) & .659 & $-.024$ ($-.095$, $.043$) \\
+3 & .710 & $+.013$ ($-.053$, $.077$) & .684 & $+.001$ ($-.073$, $.074$) \\
+4 & .726 & $+.029$ ($-.040$, $.093$) & .701 & $+.018$ ($-.060$, $.095$) \\
+5 & .739 & $+.042$ ($-.028$, $.107$) & .715 & $+.032$ ($-.048$, $.112$) \\
+\bottomrule
+\end{tabular}
+\caption{Self-consistency at matched cost (exploratory): AUROC from $m$ of the five samples, and its
+difference from one judge call (AUROC .697 and .683).}
+\label{tab:cost}
+\end{table}
 
 \textbf{Hypotheses.} \textbf{H2 is not supported}: AURC gain 0.001 (95\% CI $-0.005$ to $0.009$,
 $p=0.42$). \textbf{H3 is supported} (2 of 242 correct answers flagged; upper bound 2.6\%,
@@ -200,23 +268,24 @@ After Holm correction over the testable hypotheses (H2, H3), only H3 is supporte
 \begin{table}[t]
 \centering\small
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{lrrrrr}
+\begin{tabular}{lrrrrrr}
 \toprule
-error type & $n$ & checks & empty & retry & judge \\
+error type & $n$ & checks & empty & retry & judge & $n_2$ \\
 \midrule
-filter value & 22 & 3 & 3 & 5 & 6 \\
-output format only & 20 & 1 & 0 & 3 & 1 \\
-column meaning & 15 & 1 & 2 & 5 & 2 \\
-aggregation & 8 & 1 & 0 & 1 & 0 \\
-hint contradicts data & 8 & 0 & 0 & 0 & 0 \\
-ordering / top-$k$ & 6 & 0 & 0 & 0 & 1 \\
-other (4 failed SQL) & 6 & 3 & 1 & 5 & 1 \\
-double counting & 4 & 0 & 0 & 0 & 1 \\
-gold error & 1 & 0 & 0 & 0 & 0 \\
+filter value & 22 & 3 & 3 & 5 & 6 & 21 \\
+output format only & 20 & 1 & 0 & 3 & 1 & 19 \\
+column meaning & 15 & 1 & 2 & 5 & 2 & 21 \\
+aggregation & 8 & 1 & 0 & 1 & 0 & 5 \\
+hint contradicts data & 8 & 0 & 0 & 0 & 0 & 10 \\
+ordering / top-$k$ & 6 & 0 & 0 & 0 & 1 & 9 \\
+other & 6 & 3 & 1 & 5 & 1 & 7 \\
+double counting & 4 & 0 & 0 & 0 & 1 & 2 \\
+gold error & 1 & 0 & 0 & 0 & 0 & 1 \\
 \bottomrule
 \end{tabular}
-\caption{The 90 wrong answers by type, and how many each signal flags (judge: its 17 most suspect,
-the data checks' flag rate).}
+\caption{The 90 wrong answers of GPT-5 mini by type, and how many each signal flags (judge: its 17 most
+suspect, the data checks' flag rate). $n_2$: the same annotation of gpt-oss-120b's 95 wrong answers
+(one annotator). ``Other'' includes 4 failed queries for GPT-5 mini.}
 \label{tab:errors}
 \end{table}
 
@@ -249,7 +318,33 @@ self-consistency alone gives 0.790, and the free signals alone 0.578. Acting on 
 replacing a doubtful answer) is studied in a companion paper~\cite{companion2026decisions}, which reuses these
 questions, labels and first answers.
 
-\textbf{Exploratory: a second SQL model.} Decided after the confirmatory results. We repeated the
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{lrr}
+\toprule
+ & GPT-5 mini & gpt-oss-120b \\
+\midrule
+accuracy (relaxed) & 77.1\% & 75.8\% \\
+data checks: flags / precision & 17 / .53 & 22 / .41 \\
+\quad vs.\ judge at $k$ & $-1.8$ ($-6.3$, $2.2$) & $-3.3$ ($-9.0$, $1.7$) \\
+\quad AURC gain, checks first & .001 ($-.005$, $.009$) & .002 ($-.007$, $.014$) \\
+retry: flags / precision & 24 / .79 & 26 / .69 \\
+\quad vs.\ judge at $k$ & $+3.7$ ($-1.7$, $8.6$) & $+3.4$ ($-1.5$, $8.3$) \\
+judge AUROC & .697 & .683 \\
+self-consistency AUROC & .739 & .715 \\
+\quad minus judge & $+.04$ ($-.03$, $.11$) & $+.03$ ($-.05$, $.11$) \\
+combined: with / without checks & .785 / .801 & .774 / .792 \\
+grounding false alarms & 2 of 242 & 3 of 207 \\
+errors, five samples agree & 36 of 90 & 38 of 95 \\
+\bottomrule
+\end{tabular}
+\caption{The main results for both SQL models (95\% CIs in parentheses). The second model's run is
+exploratory.}
+\label{tab:models}
+\end{table}
+
+\textbf{Exploratory: a second SQL model} (Table~\ref{tab:models}). Decided after the confirmatory results. We repeated the
 held-out run with gpt-oss-120b at its provider's default sampling, as for GPT-5 mini (a first run sent
 temperature 0, which made its self-consistency samples near-copies; it is superseded). Accuracy is
 75.8\%. The data checks flag 22 answers (6\%) and catch 9 errors, against 12.3 for the judge at the same
@@ -277,7 +372,9 @@ questions), and when one does, a strong judge notices too.
 
 \textbf{What works cheaply.} An agent retry costs nothing and catches a fifth of the errors at 79\%
 precision. We found no significant difference between self-consistency and an LLM judge as rankers; self-consistency costs five extra
-calls (two thirds of the SQL model's cost) and partly flags scorer false negatives. A second SQL model
+calls and partly flags scorer false negatives. On the held-out run the SQL model used 5.55M input and
+1.14M output tokens (about \$3.66 at list price), two thirds of it for self-consistency; the judge used
+0.31M and 0.03M. A second SQL model
 gives the same ordering. In a product we would show the retry signal and a judge, and keep data checks as explanations
 attached to a flagged answer rather than as detectors.
 
@@ -286,9 +383,17 @@ points (part of this comes from the 81 questions the correction file rewords); e
 correction a fifth of the remaining errors are formatting, and 8 involve a hint that contradicts the
 data or the gold. Running a SQLite benchmark on its PostgreSQL copy adds artefacts (7 of 498 golds
 disagree; PostgreSQL sorts NULLs first in descending order, which turned 2 answers wrong), and the
-released correction file rewords 81 questions and 68 hints. Studies of warning signals on BIRD should
-use corrected labels, compare rarely-firing checks at a matched flag rate and sampling signals at a
-matched cost, and, ideally, use an answer-level label.
+released correction file rewords 81 questions and 68 hints. 
+
+\textbf{A protocol for testing warnings.} We recommend five practices, each of which changed a
+conclusion here. (1) Compare a rarely-firing check with a ranker at the check's own flag rate, with
+ties resolved in expectation. (2) Score against corrected labels, and report how many remaining errors
+are format-only, since resampling signals flag them. (3) Compare sampling signals at a matched number
+of calls. (4) Say which signals are wrong by construction on the benchmark (here, failed and empty
+queries). (5) Give every model the same sampling setting: our first second-model run at temperature 0
+made that model appear to repeat its errors (63 of 87 wrong answers had five agreeing samples), which
+default sampling did not reproduce (38 of 95). Ideally the label should also judge the written answer,
+not only the SQL.
 
 \section{Limitations}
 
@@ -312,8 +417,10 @@ BIRD Mini-Dev and the corrected annotations are CC BY-SA 4.0. The protocol, froz
 records (served model per call), scorer and analysis are available from the authors on request.
 
 \section*{Acknowledgment}
-An AI assistant helped write code and draft this text, and LLMs annotated the errors blind to the signals, as
-described above; the authors reviewed all outputs and take responsibility for them.
+AI assistants supported parts of this work under the authors' direction: they helped write the
+pipeline and analysis code and helped draft and edit this text, and LLMs served as the judges and as the
+blind error annotators described in Sections~III and~IV. The authors designed the study, made its decisions,
+reviewed and checked the outputs, and take full responsibility for the content.
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
