@@ -143,6 +143,7 @@ async def _semantic_search_expanded(
         "best_dense_score": first.get("best_dense_score"),
         "best_keyword_score": first.get("best_keyword_score"),
         "abstained": False,
+        "round1": [_stage_row(m) for m in matches],     # for the Inspector's trace (retrieval_trace)
     }
     if abstain and should_abstain(
         meta["best_dense_score"], meta["best_keyword_score"],
@@ -232,6 +233,42 @@ async def _maybe_jev_order(question: str, matches: list[dict], mode: str) -> tup
     ordered, trace = await passage_jev.jev_order(question, matches)
     logger.info("UKE passage_rerank jev: scored=%d failed=%d ms=%d", trace["scored"], trace["failed"], trace["ms"])
     return ordered, trace
+
+
+def _stage_row(m: dict) -> dict[str, Any]:
+    """One passage as the Inspector shows it: where it is from and every score it has (no text)."""
+    return {"chunk_id": m["chunk_id"], "document_id": m["document_id"], "title": m.get("title"), "page": m.get("page"),
+            "score": float(m.get("score") or 0.0),
+            "rerank_score": None if m.get("rerank_score") is None else float(m["rerank_score"]),
+            "jev_score": None if m.get("jev_score") is None else float(m["jev_score"])}
+
+
+def retrieval_trace(search_text: str, round1: list[dict], searched: list[dict], final: list[dict],
+                    settings: dict[str, Any], timings: dict[str, int], jev: dict | None = None,
+                    narrowed_to: list[str] | None = None) -> dict[str, Any]:
+    """The documents search, stage by stage (pipeline.inspect = "on"; shown by the web app's Pipeline Inspector).
+    `searched` is the list the search returned (the writer's order before Jev), `final` the list the writer gets.
+    Each candidate carries its place in both, so the page can show how each stage moved it. Pure."""
+    searched_rank = {m["chunk_id"]: i + 1 for i, m in enumerate(searched)}
+    return {
+        "search_text": search_text,
+        "settings": settings,
+        "round1": round1,
+        "narrowed_to": narrowed_to or [],
+        "passages": [{**_stage_row(m), "rank_searched": searched_rank.get(m["chunk_id"]), "rank_final": i + 1}
+                     for i, m in enumerate(final)],
+        "jev": jev,
+        "ms": timings,
+    }
+
+
+def _inspect_on(flags_snapshot: dict[str, Any] | None) -> bool:
+    return str((flags_snapshot or {}).get("pipeline.inspect", "off")) == "on"
+
+
+def _trace_settings(mode: str, rerank: str, rerank_titles: bool, passage_order: str, passage_rerank: str) -> dict[str, Any]:
+    return {"mode": mode, "rerank": rerank, "rerank_titles": rerank_titles, "passage_order": passage_order,
+            "passage_rerank": passage_rerank, "window": int(cfg.retrieval.semantic_top_k)}
 
 
 def _to_retrievals(matches: list[dict]) -> list[dict]:
@@ -433,12 +470,16 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
             tokens_out_total += usage["tokens_out"]
             llm_calls_total += usage["llm_calls"]
         search_text += context_carry.search_suffix(state_dict, query_text)   # pipeline.context_carry: the carried company and year
+        search_start = int(time.monotonic() * 1000)
         matches, meta = await _semantic_search_expanded(
             session, search_text, cfg.retrieval.semantic_top_k, retrieval_mode, dataset,
             doc_scope, abstain_on, rerank, passage_order, rerank_titles,
         )
+        search_ms = int(time.monotonic() * 1000) - search_start
         trajectory_steps += 1 if meta["abstained"] else 2  # the expanded call is a second round-trip
-        matches, jev_trace = await _maybe_jev_order(query_text, matches, flags_snapshot.get("pipeline.passage_rerank", "off"))
+        searched = matches
+        passage_rerank: str = flags_snapshot.get("pipeline.passage_rerank", "off")
+        matches, jev_trace = await _maybe_jev_order(query_text, matches, passage_rerank)
         elapsed_ms = int(time.monotonic() * 1000) - start_ms
         logger.info(
             "UKE docs route: query_id=%s matches=%d abstained=%s elapsed_ms=%d",
@@ -456,6 +497,11 @@ async def unstructured_knowledge_node(state_dict: dict[str, Any]) -> dict[str, A
             update["doc_abstained"] = True
         if jev_trace is not None:
             update["passage_rerank"] = jev_trace
+        if _inspect_on(flags_snapshot):
+            update["retrieval_trace"] = retrieval_trace(
+                search_text, meta.get("round1", []), searched, matches,
+                _trace_settings(retrieval_mode, rerank, rerank_titles, passage_order, passage_rerank),
+                {"search": search_ms, "jev": (jev_trace or {}).get("ms", 0)}, jev_trace)
         return update
 
 
@@ -529,6 +575,7 @@ async def hybrid_docs_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                           dataset=state_dict.get("target_schema")) as session:
         party_ids = _extract_party_ids(rows, columns, dataset)
         narrowed_to: list[dict] = []
+        round1: list[dict] = []
         if narrowing_wanted(hybrid_entities, bool(state_dict.get("docs_depend_on_sql")), party_ids):
             entities = extract_entities(rows, columns, int(cfg.hybrid.entity_rows), int(cfg.hybrid.max_entities))
             workspace_id = state_dict.get("workspace_id")
@@ -555,8 +602,12 @@ async def hybrid_docs_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             # Nothing relevant: the doc retrievals are dropped and the answer is built from the SQL
             # result alone, with no fixed message (the SQL half may well be the whole answer).
             trajectory_steps += 1 if meta["abstained"] else 2
-    matches, _ = await _maybe_jev_order(doc_query, matches,
-                                        (state_dict.get("flags_snapshot") or {}).get("pipeline.passage_rerank", "off"))
+            round1 = meta.get("round1", [])
+    search_ms = int(time.monotonic() * 1000) - start_ms
+    searched = matches
+    snapshot: dict[str, Any] = state_dict.get("flags_snapshot") or {}
+    passage_rerank: str = snapshot.get("pipeline.passage_rerank", "off")
+    matches, jev_trace = await _maybe_jev_order(doc_query, matches, passage_rerank)
     elapsed_ms = int(time.monotonic() * 1000) - start_ms
     logger.info("UKE hybrid docs: query_id=%s party_ids=%s sql_rows=%d doc_matches=%d elapsed_ms=%d",
                 state_dict.get("query_id", ""), party_ids, len(rows), len(matches), elapsed_ms)
@@ -567,4 +618,10 @@ async def hybrid_docs_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     }
     if entity_trace is not None:
         update["hybrid_entities"] = entity_trace
+    if _inspect_on(snapshot):
+        update["retrieval_trace"] = retrieval_trace(
+            doc_query, round1, searched, matches,
+            _trace_settings(retrieval_mode, rerank, rerank_titles, passage_order, passage_rerank),
+            {"search": search_ms, "jev": (jev_trace or {}).get("ms", 0)}, jev_trace,
+            narrowed_to=[d["title"] for d in narrowed_to])
     return update

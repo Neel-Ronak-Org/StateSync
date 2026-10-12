@@ -878,7 +878,10 @@ async def front_door_node(state_dict: dict[str, Any], mode: str | None = None) -
         "rewrite_applied": p.standalone_question != question,
         "out_of_scope": out_of_scope,
         "docs_depend_on_sql": p.documents_depend_on_database,
-        "front_door": build_trace(decision, evidence),
+        "front_door": {**build_trace(decision, evidence),
+                       # pipeline.inspect: what the router read, for the web app's Pipeline Inspector
+                       **({"card": evidence.card, "latency_ms": elapsed_ms}
+                          if str((state_dict.get("flags_snapshot") or {}).get("pipeline.inspect", "off")) == "on" else {})},
         "metrics": {
             "tokens_in": decision.tokens_in, "tokens_out": decision.tokens_out,
             "llm_calls": decision.llm_calls, "trajectory_steps": 1, "latency_ms": elapsed_ms,

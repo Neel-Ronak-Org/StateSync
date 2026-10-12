@@ -321,6 +321,7 @@ passage_titles                  = "off"      # "off" | "on": the writer's passag
 rerank_titles                   = "off"      # "off" | "on": the re-ranker also reads each passage's document title (F-T; needs rerank on)
 hybrid_entities                 = "off"      # "off" | "on": the hybrid documents half searches only the workspace documents whose titles name entities from the SQL half's result, when the front door says the documents depend on the database (docs/specs/partd_tasks/T5_hybrid_split.md; needs front_door on)
 context_carry                   = "off"      # "off" | "on": a follow-up question (an anaphor, or no company named when the previous turn named one) gets one context line for the SQL and documents writers and the carried company and year in the documents search text, with no extra model call (docs/specs/partd_tasks/T4d_context_carry.md; needs front_door on)
+inspect                         = "off"      # "off" | "on": the answer's trace also carries the documents search stage by stage (first round, every candidate's dense, re-ranker and Jev scores, the writer's order, timings) and the database card the router read, for the web app's Pipeline Inspector; no behaviour changes
 passage_rerank                  = "off"      # "off" | "jev": the answer writer reads the passages in Jev's order of P(passage contains what the question needs) (orchestrator/passage_jev.py; Paper B rerun R1)
 
 [tenancy]

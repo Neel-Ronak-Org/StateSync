@@ -49,6 +49,7 @@ from builder_api import register_build_routes
 from dashboards_api import register_dashboard_routes
 from library_api import call_library, is_connection_dataset, register_library_routes
 from workspaces_api import call_workspaces, register_workspace_routes
+from inspect_api import register_inspect_routes
 from session_api import register_session_routes
 from example_timer import run_forever as run_example_timer
 
@@ -587,6 +588,9 @@ async def answer_question(
         # Only when pipeline.front_door ran: the shipped trace has neither key.
         state_trace["front_door"] = final_state.front_door
         state_trace["out_of_scope"] = final_state.out_of_scope
+    if final_state.retrieval_trace is not None:
+        # Only with pipeline.inspect = "on": the documents search stage by stage (the Pipeline Inspector).
+        state_trace["retrieval_trace"] = final_state.retrieval_trace
     if final_state.hybrid_entities is not None:
         # Only when pipeline.hybrid_entities ran the entity step in the hybrid documents half.
         state_trace["hybrid_entities"] = final_state.hybrid_entities
@@ -822,6 +826,7 @@ register_workspace_routes(app, require_principal=require_principal, audit=_audit
                           require_principal_for_model=require_principal_for_model,
                           answer_question=answer_question)
 register_library_routes(app, require_principal=require_principal, audit=_audit)
+register_inspect_routes(app, require_principal=require_principal, audit=_audit)
 register_build_routes(app, require_principal=require_principal,
                       require_principal_for_model=require_principal_for_model,
                       audit=_audit, answer_question=answer_question)

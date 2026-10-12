@@ -54,6 +54,8 @@ class Provenance(BaseModel):
     section:      str | None = None
     # The re-ranker's score, when it scored this passage (pipeline.passage_order reads it).
     rerank_score: float | None = None
+    # Jev's P(the passage contains what the question needs), when pipeline.passage_rerank scored it.
+    jev_score:    float | None = None
 
 
 class RetrievalResult(BaseModel):
@@ -249,6 +251,10 @@ class StateSyncState(BaseModel):
     # gave it (None unless the step ran).
     conversation_context: str | None = None
     carried: dict | None = None
+    # The documents search, stage by stage, for the Pipeline Inspector (pipeline.inspect = "on"; None otherwise):
+    # the first round's passages, every candidate with its dense, re-ranker and Jev scores and its place in the
+    # writer's order, the settings and the time each stage took (nodes/unstructured_knowledge.py: retrieval_trace).
+    retrieval_trace: dict | None = None
 
     # --- output (Part E2) ---
     answer_text: str | None = None
