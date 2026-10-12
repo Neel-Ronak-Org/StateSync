@@ -366,7 +366,7 @@ a flagged answer, not as detectors.
 **What the benchmark measures.** These problems are known (Section 2); our numbers show they persist
 after correction:
 - **Correction.** Scoring against the corrected gold moves accuracy by 10.7 points. Part of this comes
-  from the 81 questions the correction file rewords.
+  from rewording: the correction file changes the question or hint of 96 of the 393.
 - **Formatting.** A fifth of the remaining "errors" are formatting differences: a fraction for a
   percentage, a timestamp for a date, a name in one column instead of two.
 - **Hints.** Eight more involve a hint that contradicts the data or the gold. The corrections fix SQL

@@ -286,7 +286,8 @@ gives the same ordering. In a product we would show the retry signal and a judge
 attached to a flagged answer rather than as detectors.
 
 \textbf{What the benchmark measures.} Scoring against the corrected gold moves accuracy by 10.7
-points (part of this comes from the 81 questions the correction file rewords); even after
+points (part of this comes from rewording: the correction file changes the question or hint of 96 of
+the 393); even after
 correction a fifth of the remaining errors are formatting, and 8 involve a hint that contradicts the
 data or the gold. Running a SQLite benchmark on its PostgreSQL copy adds artefacts (7 of 498 golds
 disagree; PostgreSQL sorts NULLs first in descending order, which turned 2 answers wrong), and the

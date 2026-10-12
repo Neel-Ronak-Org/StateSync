@@ -27,8 +27,8 @@ checks with no model call, process signals, LLM judges, self-consistency. Compar
 harder than it looks. In a pre-registered study on 393 held-out BIRD Mini-Dev questions we show three
 choices that change the conclusions. Rarely-firing yes/no checks look useless under AUROC, so we
 compare every signal with a judge at the same flag rate. Labels matter: corrected gold annotations
-move accuracy by 10.7 points, and counting the remaining format-only errors as correct removes
-self-consistency's lead over the judge. Cost matters: at one extra call each, the judge ranks answers
+move accuracy by 10.7 points, and counting the remaining format-only errors as correct closes the
+gap between self-consistency and the judge. Cost matters: at one extra call each, the judge ranks answers
 better than self-consistency (significantly for one of two models), which needs three samples to
 draw level. Applied to data checks (row-multiplying
 joins, truncated results, all-NULL aggregates, ungrounded figures), the result is negative: they apply
@@ -63,11 +63,12 @@ skip, and that care changes the conclusions. Our contributions:
 to rarely-firing yes/no checks, scoring against corrected annotations~\cite{jin2026annotation},
 cost-matched comparison of sampling-based signals, and pre-registered hypotheses with Holm correction.
 \item Evidence on BIRD Mini-Dev~\cite{li2023bird} that these choices matter: correction moves accuracy
-by 10.7 points; a fifth of the remaining errors are format-only, and counting them as correct removes
-self-consistency's lead over the judge; at equal cost the judge leads.
+by 10.7 points; a fifth of the remaining errors are format-only, and counting them as correct closes
+the gap between self-consistency and the judge; at equal cost the judge leads (significantly for one
+of two models).
 \item A negative result with its reason: data checks rarely apply (4--6\% of answers for two models) and
-do not beat a judge; a blind annotation of every wrong answer (two annotators, $\kappa=0.74$; repeated
-for the second model) shows most errors are semantic, and structural double-counting checks miss
+do not beat a judge; a blind annotation of every wrong answer (two LLM annotators, $\kappa=0.74$;
+repeated for the second model) shows most errors are semantic, and structural double-counting checks miss
 double counting through legitimate joins.
 \item Resources: a frozen fan-out set (60 risky, 33 control questions) on which current models
 rarely double count (0 and 5 of 60), the annotations, and all run records, available on request.
@@ -152,17 +153,24 @@ an ensemble), each
 from a different family than the SQL model and shown the question, schema, SQL, first rows and answer;
 it is asked whether the result correctly answers the question and returns a probability with a
 one-sentence reason. Self-consistency draws five more samples of the SQL call and runs each; its risk
-is the share whose result differs from the answer's. The fan-out probe is the only check that explains
+is the share whose result differs from the answer's (an answer whose query failed draws no samples and
+gets risk 1: 4 of 393 for GPT-5 mini). The fan-out probe is the only check that explains
 itself in the data's terms (``this join repeats each patient 46 times''); the others report a state of
-the result.
+the result. Two checks also act. On the held-out set a confirmed fan-out triggers one rewrite of the
+query, and the flag records that it fired; on the fan-out set the probe only warns, so that its
+detections can be counted. When grounding flags a figure, one repair call rewrites the answer (H4);
+judges and grounding are scored on the answer as first written.
 
 \section{Study Design}
 
-\textbf{Pre-registration.} The protocol was written before measuring. A 100-question pilot exposed
+\textbf{Pre-registration.} The protocol was written before measuring, in a version-controlled
+document whose commits predate the runs they govern; it was not deposited in a public registry. A 100-question pilot exposed
 harness faults (a prompt rule that turned \texttt{LIMIT 1} into \texttt{LIMIT 1000}; grounding false
 alarms from the pipeline's own wording; noisy original labels), and the protocol was revised before
 any held-out question was asked. Pilot questions are development data, excluded from all results;
-every amendment is logged with whether the pilot informed it.
+every amendment is logged with whether the pilot informed it. Three amendments followed the
+confirmatory results (a change of host, the exploratory analyses, and a corrected sampling setting
+for the second model); everything they produced is marked exploratory below.
 
 \textbf{Data.} Mini-Dev has 498 unique questions; the 398 outside the pilot, minus 5 whose SQLite and
 PostgreSQL copies disagree on the original gold, form the held-out set of 393. Labels are the
@@ -175,7 +183,9 @@ the naive join, which must differ from gold (risky) or equal it (control). It wa
 from rules fixed in advance and frozen after one author reviewed a random 20\%.
 
 \textbf{Measures.} The SQL label is execution match (relaxed: column order and extra columns ignored;
-BIRD's strict rule also reported). The \emph{primary measure} is wrong answers caught at a matched
+BIRD's strict rule also reported). A second, answer-level label marks a written answer correct when it
+states every cell of the gold result; it is defined only for the 298 questions whose gold result is
+small, and H3 and H4 use it. The \emph{primary measure} is wrong answers caught at a matched
 flag rate: when a signal flags $k$ answers, we compare its wrong answers with the expected number among
 the judge's $k$ most suspect. Let $W$ be the wrong answers and $F_s$ the $k$ answers that signal $s$
 flags. Order the answers by decreasing judge risk into tie groups $G_1, G_2, \dots$, and let $j$ be the
@@ -198,8 +208,8 @@ data check, then judge risk, lowers the judge's AURC; \textbf{H3} grounding flag
 correct answers; \textbf{H4} one evidence-guided repair fixes more than it breaks and adds 2 points.
 H1 and H4 require at least 10 double-counting errors or repairs, else they are untestable; if the main
 model fails H1's precondition, the set is rerun with a second model (gpt-oss-120b). Every wrong answer
-was annotated blind to the signals into ten types; a second annotator (another model, on a reshuffled
-blank copy) labelled all 90 (Cohen's $\kappa=0.74$~\cite{cohen1960coefficient}; 0.87 for system error vs.\ benchmark artefact).
+was annotated by an LLM, blind to the signals, into ten types; a second LLM from another family, on a
+reshuffled blank copy, labelled all 90 (Cohen's $\kappa=0.74$~\cite{cohen1960coefficient}; 0.87 for system error vs.\ benchmark artefact).
 
 \section{Results}
 
@@ -247,8 +257,9 @@ in deployment an empty result can be right). Self-consistency (AUROC 0.739) and 
 (0.697) do not differ significantly as rankers (95\% CI of the difference $-0.03$ to $0.11$, too wide to show
 equivalence), and the gap disappears when the 20 format-only errors count as correct (0.761 vs.\ 0.757), because resampled
 queries vary in format and so flag answers the scorer wrongly marks wrong. At matched cost the judge
-is ahead (exploratory): from one sample instead of five, self-consistency reaches 0.645 ($-0.05$ against
-the judge, CI $-0.11$ to $0.004$), and it needs three to draw level; a sample also uses about three times
+ranks better (exploratory), though not significantly for this model: from one sample instead of five,
+self-consistency reaches 0.645 ($-0.05$ against the judge, CI $-0.11$ to $0.004$), and it needs three
+to draw level; a sample also uses about three times
 the judge's tokens (Table~\ref{tab:cost}). The judge ensemble reaches
 0.701 and the gpt-oss judge 0.606 (Figure~\ref{fig:rc}). The judge is tie-heavy ($p=1$ for 328 of 393
 answers); ties are broken at random in expectation.
@@ -282,7 +293,7 @@ difference from one judge call (AUROC .697 and .683).}
 \midrule
 H1 & fan-out check beats the judge on the fan-out set & untestable: 0 and 5 double counts (10 needed) \\
 H2 & checks, then judge risk, lower the judge's AURC & not supported: gain .001 ($-.005$, $.009$) \\
-H3 & grounding flags under 5\% of correct answers & supported: 2 of 242, upper bound 2.6\% \\
+H3 & grounding flags under 5\% of correct answers & supported: 2 of 242 (answer-level label), upper bound 2.6\% \\
 H4 & one repair fixes more than it breaks & untestable: 2 repairs (10 needed) \\
 \bottomrule
 \end{tabular}
@@ -291,7 +302,7 @@ H4 & one repair fixes more than it breaks & untestable: 2 repairs (10 needed) \\
 \end{table}
 
 \textbf{Hypotheses} (Table~\ref{tab:hyp}). \textbf{H2 is not supported}: AURC gain 0.001 (95\% CI $-0.005$ to $0.009$,
-$p=0.42$). \textbf{H3 is supported} (2 of 242 correct answers flagged; upper bound 2.6\%,
+$p=0.42$). \textbf{H3 is supported} (2 of the 242 answers correct under the answer-level label were flagged; upper bound 2.6\%,
 $p=0.0004$), but grounding fired on only 5 answers, and 3 of its 4 hits are failed queries whose text
 quotes an error code. \textbf{H4 is untestable}: 2 repairs were triggered. \textbf{H1}: see below.
 After Holm correction over the testable hypotheses (H2, H3), only H3 is supported.
@@ -340,7 +351,8 @@ check (4 vs.\ 4).
 (10\%; 95\% CI 3--22\%): four became correct, one became wrong; signals changed on at most 2. All five
 flipped questions had first-run self-consistency risk of at least 0.4 (mean 0.76, vs.\ 0.09 for the
 45 stable ones; exploratory). This is close to expected by construction: a second run is one more
-sample from the same distribution, so answers flip where samples disagree.
+sample from the same distribution, so answers flip where samples disagree. Our intervals reflect the
+sampling of questions, not this run-to-run variation.
 
 \textbf{Exploratory: combining signals.} Decided after the confirmatory results and labelled as such.
 A logistic regression over all signals, scored out-of-fold, reaches AUROC 0.785 (AURC 0.122); without
@@ -410,11 +422,12 @@ gives the same ordering. In a product we would show the retry signal and a judge
 attached to a flagged answer rather than as detectors.
 
 \textbf{What the benchmark measures.} Scoring against the corrected gold moves accuracy by 10.7
-points (part of this comes from the 81 questions the correction file rewords); even after
+points (part of this comes from rewording: the correction file changes the question or hint of 96 of
+the 393); even after
 correction a fifth of the remaining errors are formatting, and 8 involve a hint that contradicts the
 data or the gold. Running a SQLite benchmark on its PostgreSQL copy adds artefacts (7 of 498 golds
-disagree; PostgreSQL sorts NULLs first in descending order, which turned 2 answers wrong), and the
-released correction file rewords 81 questions and 68 hints. 
+disagree; PostgreSQL sorts NULLs first in descending order, which turned 2 answers wrong); over all
+498 questions the correction file rewords 81 questions and 68 hints. 
 
 \textbf{A protocol for testing warnings.} We recommend five practices, each of which changed a
 conclusion here. (1) Compare a rarely-firing check with a ranker at the check's own flag rate, with
@@ -451,7 +464,8 @@ where they apply they catch no more errors than an LLM judge given the same numb
 held for two SQL models. The errors show why: about half are semantic and a third are benchmark or
 scorer artefacts, and a check that sees only the query and its own result can see neither kind. Among
 the free signals an agent retry was the most useful; among the model-based ones, a judge and
-self-consistency did not differ significantly, and the judge was ahead at equal cost. Each of these
+self-consistency did not differ significantly, and at equal cost the judge ranked better (significantly
+for one of the two models). Each of these
 conclusions depended on how the comparison was made: at a matched flag rate, on corrected labels, and
 at a matched cost. Future work should repeat the protocol on a second benchmark and with an
 independent human annotation, and should measure what a system gains by acting on a
@@ -468,7 +482,7 @@ blind error annotators described in Sections~III and~IV. The authors designed th
 reviewed and checked the outputs, and take full responsibility for the content.
 
 % balance the last page's columns (IEEEtran: column break before this reference)
-\IEEEtriggeratref{18}
+\IEEEtriggeratref{14}
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
 
