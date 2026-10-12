@@ -302,14 +302,14 @@ export function InspectorDialog({ turn, open, onOpenChange }: InspectorDialogPro
                   <p className="text-xs"><span className="text-muted-foreground">Searched for:</span> {rt.search_text}</p>
                   {hybrid?.narrowed && (
                     <p className="rounded-md border border-primary/40 bg-primary/5 p-2 text-xs">
-                      The database result named <span className="font-medium">{(hybrid.entities ?? []).join(', ')}</span>, so the search was limited to {(hybrid.matched_documents ?? []).length} of that company's filings and round 1 was skipped.
+                      The database result named <span className="font-medium">{(hybrid.entities ?? []).join(', ')}</span>, so the search was limited to the {(hybrid.matched_documents ?? []).length} filings whose titles name them, and round 1 was skipped.
                     </p>
                   )}
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <Label>Round 1: best {rt.round1.length} passages across the whole library</Label>
+                      <Label>{rt.round1.length === 0 ? 'Round 1: which filings?' : `Round 1: best ${rt.round1.length} passages across the whole library`}</Label>
                       {rt.round1.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">Skipped.</p>
+                        <p className="text-xs text-muted-foreground">Skipped: the filings were already known.</p>
                       ) : (
                         <ol data-testid="round1" className="space-y-1 text-xs">
                           {rt.round1.map((p, i) => (
@@ -346,8 +346,8 @@ export function InspectorDialog({ turn, open, onOpenChange }: InspectorDialogPro
           {steps.includes('rerank') && rt && (
             <StepCard id="rerank" number={(n += 1)} title="Re-ranking: which passages does the writer read?" time={times.rerank} anchor={anchor}>
               <p className="text-xs text-muted-foreground">
-                Each candidate's rank at every stage. The answer writer reads the top {window}
-                {hasJevOrder && <> ; Jev's scoring moved <span className="font-medium text-foreground">{changes.movedIn}</span> {changes.movedIn === 1 ? 'passage' : 'passages'} into that top {window}</>}.
+                Each candidate's rank at every stage. The answer writer reads the top {window}.{' '}
+                {hasJevOrder && <>Jev's scoring moved <span className="font-medium text-foreground">{changes.movedIn}</span> {changes.movedIn === 1 ? 'passage' : 'passages'} into that top {window}. </>}
                 Click a row to read the passage.
               </p>
               <div className="overflow-auto rounded-md border">
@@ -359,7 +359,7 @@ export function InspectorDialog({ turn, open, onOpenChange }: InspectorDialogPro
                       <th className="w-24 p-2 text-right font-medium">Dense search</th>
                       {hasReranker && <th className="w-24 p-2 text-right font-medium">Re-ranker ({rt.settings.rerank})</th>}
                       {hasJevOrder && <th className="w-24 p-2 text-right font-medium">Jev P(answer)</th>}
-                      {hasJevOrder && <th className="w-16 p-2 text-right font-medium">Moved</th>}
+                      {hasJevOrder && <th className="w-16 p-2 text-right font-medium" title="Places gained or lost against the order the search returned">Moved</th>}
                     </tr>
                   </thead>
                   <tbody>

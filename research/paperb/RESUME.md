@@ -39,3 +39,13 @@ orchestrators, keeps their images and flags.
 API 127.0.0.1:8091; workspace "partd-routing-sec-filings" (SEC database + 84 filings). Jev choice routing + coverage line,
 relevance order, bge reading titles, Jev passage re-ranking, entity narrowing, context carry. `down` removes it.
 The shared app (localhost:3000) is unchanged.
+
+## Pipeline Inspector (2026-10-12)
+In the demo (`research/paperb/demo/demo_stack.sh build`, `up`; http://127.0.0.1:3090): every answer has an Inspect button
+(the workflow icon under it) that opens the pipeline step by step: router (Jev's probabilities, the database card), the
+two search rounds, each passage's rank through dense search, bge and Jev with the writer's cut line, the query on a schema
+diagram, the writer's inputs and citations, every model step. Each workspace also has a Schema tab.
+Backend: `pipeline.inspect` (off when shipped, on in `research/paperb/demo/flags_demo.toml`) adds `retrieval_trace` and the
+router's card to the answer's trace; `GET /workspaces/{id}/schema-graph` (orchestrator/inspect_api.py). Web: `web/src/features/inspect/`.
+The shared app (localhost:3000) runs older images: it has no Inspect button until its frontend and orchestrator are rebuilt.
+

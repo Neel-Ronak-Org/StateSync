@@ -203,7 +203,7 @@ export function WorkspaceDetail({
       {/* Main setup tabs */}
       <main className="flex-1 p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList aria-label="Setup steps" className="grid w-full max-w-lg grid-cols-4">
+          <TabsList aria-label="Setup steps" className="grid w-full max-w-xl grid-cols-5">
             <TabsTrigger value="business">Business</TabsTrigger>
             <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
             <TabsTrigger value="test">Test</TabsTrigger>

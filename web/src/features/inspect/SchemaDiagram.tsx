@@ -18,6 +18,7 @@ const TABLE_WIDTH = 250
 const ROW_HEIGHT = 22
 const HEADER_HEIGHT = 34
 const GAP = 44
+const EDGE_ROOM = 36
 
 /** The database as a diagram: one box per table with its columns, and a line per foreign key. */
 export function SchemaDiagram({ graph, highlighted = [], columns = 3 }: SchemaDiagramProps) {
@@ -38,8 +39,9 @@ export function SchemaDiagram({ graph, highlighted = [], columns = 3 }: SchemaDi
 
   return (
     <div data-testid="schema-diagram" className="overflow-auto rounded-lg border bg-muted/20 p-4">
-      <div className="relative" style={{ width: layout.width, height: layout.height }}>
-        <svg className="pointer-events-none absolute inset-0" width={layout.width} height={layout.height} aria-hidden="true">
+      {/* Extra room on the right: a link between two tables of the last column bends out past them. */}
+      <div className="relative" style={{ width: layout.width + EDGE_ROOM, height: layout.height }}>
+        <svg className="pointer-events-none absolute inset-0" width={layout.width + EDGE_ROOM} height={layout.height} aria-hidden="true">
           {graph.edges.map((e, i) => {
             const from = layout.positions.get(e.from_table)
             const to = layout.positions.get(e.to_table)
@@ -85,7 +87,7 @@ export function SchemaDiagram({ graph, highlighted = [], columns = 3 }: SchemaDi
                 style={{ height: HEADER_HEIGHT }}
               >
                 <span className="truncate font-mono" title={t.name}>{t.name}</span>
-                {t.row_estimate != null && t.row_estimate >= 0 && (
+                {t.row_estimate != null && t.row_estimate > 0 && (
                   <span className="shrink-0 text-[10px] font-normal text-muted-foreground">~{formatNumber(t.row_estimate)} rows</span>
                 )}
               </div>
