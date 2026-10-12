@@ -1,6 +1,6 @@
 import { useId, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Download, MoreHorizontal, PanelRight, Pin, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { AlertTriangle, Download, MoreHorizontal, PanelRight, Pin, ThumbsDown, ThumbsUp, Workflow } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { api, ApiError } from '@/api/client'
@@ -33,6 +33,7 @@ interface TurnItemProps {
   turn: ChatTurn
   devMode: boolean
   onOpenDetails: (turn: ChatTurn) => void
+  onOpenInspector: (turn: ChatTurn) => void
   onRetry: (turn: ChatTurn) => void
   onUpdateTurn: (turnId: string, updates: Partial<ChatTurn>) => void
   sessionId: string
@@ -100,6 +101,7 @@ export function TurnItem({
   turn,
   devMode,
   onOpenDetails,
+  onOpenInspector,
   onRetry,
   onUpdateTurn,
   sessionId,
@@ -526,6 +528,22 @@ export function TurnItem({
                 </TooltipTrigger>
                 <TooltipContent>Details</TooltipContent>
               </Tooltip>
+
+              {turn.stateTrace && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Inspect pipeline"
+                      onClick={() => onOpenInspector(turn)}
+                    >
+                      <Workflow className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Inspect: how this answer was produced</TooltipContent>
+                </Tooltip>
+              )}
 
               {turn.rows && turn.rows.length > 0 && (
                 <Tooltip>

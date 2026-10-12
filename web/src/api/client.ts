@@ -28,6 +28,7 @@ import type {
   PinTileRequest,
   QueryRequest,
   QueryResponse,
+  SchemaGraph,
   SessionDetail,
   SessionList,
   SetupJob,
@@ -202,6 +203,8 @@ export const api = {
 
   workspaceCatalog: (workspaceId: string) =>
     apiFetch<{ columns: CatalogEntry[] }>(`/workspaces/${enc(workspaceId)}/catalog`),
+  workspaceSchemaGraph: (workspaceId: string) =>
+    apiFetch<SchemaGraph>(`/workspaces/${enc(workspaceId)}/schema-graph`),
   updateDescriptions: (
     workspaceId: string,
     items: { table_name: string; column_name: string; description: string | null }[],

@@ -24,6 +24,7 @@ import { DocumentsTab } from '@/features/library/DocumentsTab'
 import { BusinessTab } from '@/features/workspaces/BusinessTab'
 import { KnowledgeTab } from '@/features/workspaces/KnowledgeTab'
 import { TestTab } from '@/features/workspaces/TestTab'
+import { SchemaTab } from '@/features/inspect/SchemaTab'
 import {
   useApproveWorkspace,
   useCatalog,
@@ -207,6 +208,7 @@ export function WorkspaceDetail({
             <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
             <TabsTrigger value="test">Test</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="schema">Schema</TabsTrigger>
           </TabsList>
 
           <TabsContent value="business" className="outline-none">
@@ -246,6 +248,10 @@ export function WorkspaceDetail({
 
           <TabsContent value="documents" className="outline-none">
             <DocumentsTab workspaceId={workspace.workspace_id} />
+          </TabsContent>
+
+          <TabsContent value="schema" className="outline-none">
+            <SchemaTab workspaceId={workspace.workspace_id} />
           </TabsContent>
         </Tabs>
       </main>

@@ -487,3 +487,90 @@ export interface ConnectionCheck {
   schemas: string[]
   warnings: string[]
 }
+
+// ── Pipeline Inspector (pipeline.inspect = "on") ─────────────────────────────
+
+/** One candidate passage of the documents search, with every score it has (no text). */
+export interface InspectPassage {
+  chunk_id: string
+  document_id: string
+  title: string | null
+  page: number | null
+  score: number
+  rerank_score: number | null
+  jev_score: number | null
+  /** Its place in the list the search returned (before Jev re-ordered it), from 1. */
+  rank_searched?: number | null
+  /** Its place in the list the answer writer was given, from 1. */
+  rank_final?: number
+}
+
+/** state_trace.retrieval_trace: the documents search stage by stage. */
+export interface RetrievalTrace {
+  search_text: string
+  settings: {
+    mode?: string
+    rerank?: string
+    rerank_titles?: boolean
+    passage_order?: string
+    passage_rerank?: string
+    window: number
+  }
+  round1: InspectPassage[]
+  narrowed_to: string[]
+  passages: InspectPassage[]
+  jev: { scored: number; failed: number; ms: number } | null
+  ms: { search: number; jev: number }
+}
+
+/** state_trace.front_door: what the router read and decided. */
+export interface FrontDoorTrace {
+  arm: string
+  route: string
+  standalone_question?: string
+  database_question?: string | null
+  documents_question?: string | null
+  documents?: { title: string; score: number }[]
+  card?: string
+  card_status?: string
+  latency_ms?: number
+  history_turns?: number
+  jev?: {
+    probabilities?: Record<string, number>
+    choice?: string
+    model?: string
+    ms?: number
+    fallback?: string
+    jev_error?: string
+    [key: string]: unknown
+  } | null
+  [key: string]: unknown
+}
+
+export interface SchemaColumn {
+  name: string
+  type: string | null
+  nullable: boolean
+  foreign_key: boolean
+}
+
+export interface SchemaTable {
+  name: string
+  row_estimate: number | null
+  columns: SchemaColumn[]
+}
+
+export interface SchemaEdge {
+  from_table: string
+  from_column: string
+  to_table: string
+  to_column: string | null
+}
+
+/** GET /workspaces/{id}/schema-graph */
+export interface SchemaGraph {
+  dataset: string
+  tables: SchemaTable[]
+  edges: SchemaEdge[]
+  tables_total: number
+}
