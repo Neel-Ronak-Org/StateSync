@@ -1,0 +1,453 @@
+# StateSync review walkthrough
+
+For the review on 15 October 2026. Read it top to bottom once tonight. Tomorrow, keep it open next to the
+demo and follow it in order.
+
+The guide is in eight parts:
+
+1. The two-minute pitch (memorise it).
+2. The checklist for the morning.
+3. The demo, step by step, with what to click, what to say, and the question you will probably get.
+4. Follow one question through the code: which file does what, with line numbers.
+5. The concepts, explained from zero.
+6. "Why this number?": every setting a teacher might ask about.
+7. What we tried that did not work, and what is switched off.
+8. Hard questions and short answers.
+
+Background reading, if you want more: [docs/paperb/PROJECT_GUIDE.md](paperb/PROJECT_GUIDE.md) (project
+history, the paper, the experiments).
+
+---
+
+## 1. The two-minute pitch
+
+> StateSync is an assistant that answers business questions in plain English from two kinds of source: a
+> **database** (numbers, answered by writing SQL) and a **library of documents** (PDF reports, answered by
+> searching and reading the right pages). Our test data is real: an SEC database of 23 standard yearly
+> figures for 31 US companies, and 84 of those companies' annual and quarterly reports (about 45,000 passages).
+>
+> Every question goes through a pipeline:
+> 1. A **router** decides which source can answer it.
+> 2. For the database, an **SQL agent** writes a query, checks it, runs it read-only and fixes it if it fails.
+> 3. For documents, a **two-round search** finds the right reports and then the right passages. A
+>    **re-ranker** puts the best passages first.
+> 4. An **answer writer** writes the answer and cites its sources.
+>
+> Our research question was whether a cheap new kind of model, a *typed decision model* called **Jev**, can
+> make the small decisions in this pipeline instead of a large language model. It routes about as well as
+> the LLM router, and it finds the right page more often than the re-ranker alone (53.3% against 43.7% on
+> 300 new questions). That is the paper we submitted.
+>
+> We built a **Pipeline Inspector** so you can see every step of any answer.
+
+---
+
+## 2. Morning checklist (15 minutes before)
+
+Run these in a terminal, in order.
+
+1. **Docker Desktop is open**, and the containers are up:
+
+   ```bash
+   docker ps --format '{{.Names}} {{.Status}}'
+   ```
+
+   You need `statesync-sec-db`, `postgres`, `statesync-ollama-1` and `statesync-mcp-1`. If
+   `statesync-sec-db` is missing:
+
+   ```bash
+   docker start statesync-sec-db
+   ```
+
+2. **Nothing heavy is running.** On 12 October the demo failed because evaluation scripts were using every
+   CPU core.
+
+   ```bash
+   uptime
+   ```
+
+   The load average should be under about 10. If it isn't, find the heavy processes with:
+
+   ```bash
+   ps -axo pid,pcpu,etime,command | sort -k2 -nr | head -8
+   ```
+
+   Close the jobs you recognise. Don't close Docker.
+
+3. **The re-ranker is running** (it runs on the Mac's GPU, outside Docker):
+
+   ```bash
+   curl -s 127.0.0.1:8096/health
+   ```
+
+   It should answer `{"ok": true, ...}`.
+
+4. **Start the demo copy:**
+
+   ```bash
+   research/paperb/demo/demo_stack.sh up
+   ```
+
+5. **Warm it up.** Ask one throwaway question first, such as "What was Netflix's revenue in fiscal 2021?". The
+   first question after a pause loads the models and can take a minute.
+
+6. **Copy the sign-in token** (it is never printed):
+
+   ```bash
+   tr -d '\n' < /Users/neeljaiswal/StateSync/secrets/api_token_dev | pbcopy
+   ```
+
+7. Open **http://127.0.0.1:3090**, paste the token and sign in. Open the workspace
+   **partd-routing-sec-filings**.
+
+**Plan B.** If the live demo fails, open `docs/paperb/demo/index.html` in a browser (the Decision Lab). It
+needs no server and shows the real experiment data.
+
+After the review, stop the demo with:
+
+```bash
+research/paperb/demo/demo_stack.sh down
+```
+
+---
+
+## 3. The demo, step by step (about 15 minutes)
+
+The plan for each question is the same: ask it, read the answer, then click the **workflow icon** under the
+answer ("Inspect: how this answer was produced") and walk through the cards.
+
+### Step 0: the workspace and the database (2 min)
+
+**Click:** workspace → **Schema** tab.
+
+**Say:**
+- "This is the database the assistant can use: 6 tables, read straight from the database's own catalog."
+- "`annual_metrics` has one row per company, metric and year. `companies` lists the 31 companies. `facts` is
+  the raw SEC data, 880,000 rows."
+- "The key icon marks a column that points to another table."
+
+**Then click:** the **Documents** tab.
+
+**Say:** "These are the 84 annual and quarterly reports. Each was cut into passages of about 1,400
+characters and turned into vectors for search."
+
+**Likely question:** *How does the assistant know what is in the database?*
+It reads the table and column names through the MCP service, and the router also gets a short "database
+card": the tables and columns, plus a coverage line listing which companies and years the rows cover.
+
+### Step 1: a database question (3 min)
+
+**Ask:** "What was Netflix's revenue in fiscal 2021?" (expected about $29.7 billion)
+
+**Open the Inspector and walk the cards:**
+
+1. **Router card:** "Jev was asked one multiple-choice question: database only, documents only, both, or
+   neither. It gives a probability for each; the highest one wins. No language model was called to route."
+   Open the **database card** to show what it read.
+2. **Database card:**
+   - The schema diagram lights up the table the query read.
+   - "The model first looked at a few sample rows of that table, so it writes the query against the real
+     data."
+   - "Every query passes three safety checks: it must parse as a single SELECT, it runs in a read-only
+     transaction that is always rolled back, and the database login can only read."
+   - Show **In plain words**: a reading of the SQL produced by code, not by a model.
+3. **Answer writer card:** what the writer was given, what it cited, and whether every figure in the answer
+   traces back to the result.
+4. **Model steps card:** every model call, its tokens and its time.
+
+**Likely question:** *What if the SQL is wrong?*
+If the database returns an error, the agent gets the error, classified into a category such as an unknown
+column or a type mismatch, plus a hint. It tries again, up to 3 more times. These attempts would appear as
+red boxes in the database card.
+
+### Step 2: a documents question (4 min). This is the main RAG demo.
+
+**Ask:** "What does Boeing's 2022 10-K say about the main risks it faces?"
+
+**Open the Inspector and walk the cards:**
+
+1. **Router:** "Documents only" wins. Point at the best-matching documents it was shown.
+2. **Documents search card:**
+   - "**Round 1** searches the whole library and returns the best 8 passages. Their only job is to tell us
+     *which reports* are relevant. Here, all of them are from Boeing's 2022 10-K."
+   - "**Round 2** searches again *inside only those reports* and keeps up to 25 passages. That way, tables
+     and figures that don't sound like the question are still found."
+3. **Re-ranking card (the most important one):**
+   - "Each row is one candidate passage, with its rank at each stage."
+   - "**Dense search** compares meanings as vectors. It is fast but rough."
+   - "The **re-ranker (bge)** reads the question and the passage together, with the report's title. It is
+     slower but more accurate."
+   - "**Jev** answers, for each passage: does it contain the information needed? We order by that
+     probability."
+   - "The **dashed line** is the cut. The answer writer only reads the top 8."
+   - "The **Moved** column shows how far Jev moved each passage. Here it moved 3 passages into the top 8."
+   - Click a row to show the passage text.
+4. **Answer writer:** the passages it read, and the pages it cited.
+
+**Likely question:** *Why not just give all 25 passages to the model?*
+It costs about three times as many tokens, it is slower, and it adds noise. A model answers better from
+8 good passages than from 25 mixed ones. What matters most is that the right page is in the top 8, which is
+what the re-ranking does.
+
+### Step 3: a question that needs both sources (3 min)
+
+**Ask:** "Among Coca-Cola, PepsiCo and Kraft Heinz, which paid the most in dividends in fiscal 2022, and what
+does that company's 2022 10-K say about its dividend policy?"
+
+**Open the Inspector:**
+- **Router:** "Both sources" wins.
+- **Database card:** two tables light up, `annual_metrics_restated` and `companies`. The query finds PepsiCo,
+  about $6.17 billion.
+- **Documents search card:** "The database result named the companies, so the search went straight to their
+  filings and skipped round 1. We call this *entity narrowing*."
+- **Answer writer:** one answer with both kinds of citation, the query and the pages.
+
+**Be honest if asked:** the database result also named Coca-Cola, so a few Coca-Cola passages appear among
+the 8 the writer read.
+
+### Step 4: a question nobody can answer (1 min)
+
+**Ask:** "What was Tesla's revenue in fiscal 2022?"
+
+**Say:**
+- "Tesla is in neither source. The database card lists which companies the rows cover, so the router chose
+  *neither*, and the assistant says so instead of inventing an answer."
+- "Before we added that coverage line, every router, Jev and the LLM alike, sent such questions to the
+  database. That was one of our findings."
+
+### Step 5: a follow-up (1 min, optional)
+
+**Ask:** "What was Netflix's revenue in fiscal 2021?", then "And in 2022?"
+
+**Say:** "The second question has no company in it. Simple rules carry 'Netflix' over from the previous
+turn. There is no extra model call for this."
+
+---
+
+## 4. Follow one question through the code
+
+Read this as a map: question in at the top, answer out at the bottom. Line numbers are as of 14 October.
+
+```
+Browser (web/)                              React app: chat, Inspector, Schema tab
+  │  POST /query
+  ▼
+orchestrator/main.py                        the HTTP API: sign-in check, runs the graph, builds the response
+  │
+orchestrator/graph.py:340   build_graph     the pipeline as a graph (LangGraph): nodes and the edges between them
+  │
+  ├─ orchestrator/front_door.py             ROUTER
+  │     :376  gather_evidence               database card + best-matching documents + recent turns (no model)
+  │     :264  format_card                   writes the database card
+  │     orchestrator/card_coverage.py:86    the coverage line (which companies and years the rows hold)
+  │     :723  decide_jev_choice             one Jev choice question → sql / docs / both / neither
+  │     :455  decide_llm                    the LLM router (used if Jev fails)
+  │     orchestrator/jev_client.py          the one HTTP call to Jev
+  │     orchestrator/context_carry.py       follow-up questions without a model call
+  │
+  ├─ orchestrator/nodes/sql_agent.py:626    DATABASE route: the SQL agent
+  │     reads the schema → drafts SQL → samples rows from the tables the draft uses → writes the final SQL
+  │     → runs it → on failure classifies the error and loops back (graph.py:141 decides retry or stop)
+  │     orchestrator/classifiers/error_classifier.py:72   error categories and hints
+  │     mcp/tools/data_tools.py:393 run_select            runs the SQL; :128 _check_layer1 = the SELECT-only gate
+  │
+  ├─ orchestrator/nodes/unstructured_knowledge.py   DOCUMENTS route
+  │     :118  _semantic_search_expanded     round 1 (which reports) + round 2 (passages inside them)
+  │     :82   order_passages                which 8 the writer reads (by relevance)
+  │     orchestrator/passage_jev.py:42      Jev scores each passage and re-orders them
+  │     mcp/tools/vector_tools.py:256       the vector search itself (pgvector) + calls the re-ranker
+  │     mcp/embeddings.py:46                turns text into a vector (Ollama, mxbai-embed-large)
+  │     reranker/server.py                  the bge cross-encoder (runs on the Mac GPU)
+  │
+  ├─ unstructured_knowledge.py:518 / :546   BOTH: split the question; SQL half first; documents half narrowed
+  │
+  └─ orchestrator/nodes/synthesizer.py:561  ANSWER WRITER: one LLM call; citations built in code
+        orchestrator/number_grounding.py:176   checks every figure in the answer against the data
+        orchestrator/evidence.py:24             how much to trust the answer (verified / checked / unchecked)
+```
+
+**Where the documents come in** (once, at upload time):
+- `parser/`: an isolated service turns the PDF into text, page by page.
+- `orchestrator/library_ingest.py:149` `chunk_pages`: cuts the text into passages.
+- `mcp/embeddings.py`: makes one vector per passage, stored in Postgres with pgvector.
+
+**Where the switches are:**
+- `config/flags.toml`: on/off for every feature.
+- `config/statesync.toml`: numbers and limits.
+- The demo uses its own copies in `research/paperb/demo/`, so the shared app is untouched.
+
+**The Inspector:** `web/src/features/inspect/` for the page, `orchestrator/inspect_api.py` for the schema
+endpoint.
+
+---
+
+## 5. The concepts, from zero
+
+**RAG (retrieval-augmented generation).** A language model does not know your documents. RAG means:
+1. *Find* the passages that matter.
+2. *Give* them to the model.
+3. Let it *write* the answer from them.
+
+The answer is then based on your documents, and you can cite the pages.
+
+**Embedding.** A model turns a piece of text into a list of numbers (for us, 1,024 numbers) so that texts with
+similar meaning get similar lists. "Revenue fell" and "sales declined" end up close together even though they
+share no words.
+
+**Vector search (dense search).** Embed the question, then find the passages whose vectors are closest to it.
+"Closest" is measured by **cosine similarity**, the angle between two vectors: 1 means the same direction, 0
+means unrelated. It is fast, because every passage was embedded in advance.
+
+**Chunking.** A 300-page report is too long to embed or to give to a model, so we cut it into passages
+("chunks") of about 1,400 characters. Each chunk overlaps the next by 200 characters, so a sentence on the
+boundary appears whole in at least one of them. A chunk never crosses a page, so every chunk has a page
+number to cite.
+
+**Top-k.** How many results to keep: the "top 8", the "top 25".
+
+**Two-round search.** One search over 45,000 passages often brings back the right *report* but not the right
+*page*. This is especially true for tables, which don't read like a question. So:
+- Round 1 finds the reports.
+- Round 2 searches again inside only those reports.
+
+**Bi-encoder vs cross-encoder (why re-rank at all).**
+- An embedding model is a *bi-encoder*: it encodes the question and the passage *separately* and compares the
+  results. It is fast, because passages are embedded once, but it never sees them side by side.
+- A *cross-encoder* (our re-ranker, bge-reranker-v2-m3) reads the question and the passage *together* and
+  scores how well they match. It is much more accurate, but too slow to run on 45,000 passages.
+
+So: search fast with the bi-encoder, then re-score the top 30 with the cross-encoder. On FinanceBench this
+raised the share of questions with the right page in the top 5 from 43.3% to 59.3%.
+
+**Jev (typed decision model).** A model that does not write text. You give it some text (the "state") and a
+declared question (yes/no, or a choice among named options), and it returns probabilities. We use it twice:
+- **Routing:** "which sources are needed: database, documents, both, neither?"
+- **Re-ranking:** "does this passage contain the information needed to answer the question?"
+
+It costs about $0.0009 to score 25 passages, and it takes 1–3 seconds.
+
+**Text-to-SQL.** Turning a question into an SQL query. Our agent does it in steps:
+1. Read the schema.
+2. Draft a query.
+3. Look at a few real rows of the tables the draft uses. This is called *interrogation*, an idea from the
+   APEX-SQL paper; it catches wrong value formats like "PepsiCo" vs "PEP".
+4. Write the final query.
+5. Run it.
+6. If it fails: classify the error, add a hint, and try again (from the SQL-of-Thought paper's idea of
+   guided correction).
+
+**The three-layer safety gate.** A model writes our SQL, so we never trust it:
+1. A real PostgreSQL parser (pglast) rejects anything that is not a single SELECT.
+2. The query runs in a read-only transaction that is always rolled back, with a 15-second timeout.
+3. The database login itself can only SELECT, so even a write that slipped through would fail.
+
+The service that writes SQL (the orchestrator) has no database password at all. Only the MCP service does.
+
+**Router.** Decides the route before any expensive work, so a document question doesn't waste an SQL attempt
+and vice versa. "Neither" lets the assistant decline instead of making something up.
+
+**LangGraph.** A library for building the pipeline as a graph: steps are nodes, arrows are edges, and some
+arrows depend on the result (for example "SQL failed → go back and retry"). All steps share one typed record
+of the question (the "state").
+
+**MCP (Model Context Protocol) pattern.** One service, `mcp/`, holds the database access and offers fixed
+"tools" (run_select, semantic_search, describe_table and so on). The AI side can only call those tools.
+
+**Number grounding.** After the answer is written, code checks every number in the text against the query
+result or a cited passage. Any number it can't trace is flagged.
+
+**Evidence tiers.** A label on each answer:
+- *Verified:* an approved query was run as is.
+- *Checked:* the query ran and passed the checks.
+- *Unchecked:* anything else.
+
+---
+
+## 6. "Why this number?"
+
+All values are in `config/statesync.toml` unless marked otherwise.
+
+| Setting | Value | Why (and how honest to be) |
+|---|---|---|
+| Embedding model | `mxbai-embed-large`, 1,024 dimensions | Runs locally in Ollama: free, and documents never leave the machine. Strong for its size. We tested adding a query instruction; it made results worse (hit@1 93% → 80%), so we don't use one. |
+| Chunk size | 1,400 characters, 200 overlap | About 300–350 tokens, comfortably under the embedding model's ~512-token limit, so nothing is cut off when it is embedded. Big enough for a paragraph or a small table. The overlap keeps boundary sentences whole. Never across pages, so every chunk has a page to cite. |
+| Round 1 top-k | 8 | Enough passages to identify the right reports. Round 1's only job is "which reports". |
+| Round 2 top-k | up to 25 | Enough candidates for the re-ranker to choose from. 25 is the search tool's upper bound. |
+| Re-ranker candidates | 30 | The cross-encoder takes about 2–6 seconds for 30 on the Mac GPU. Fixed before measuring, not tuned. |
+| Passages the writer reads | 8 | A context budget: about 3,000 tokens of passages. Set in the original design, not tuned. Our tests showed that *which* 8 matters more than how many: the right page is among the 25 for about 72% of questions, and in our best ordering among the top 8 for about 70%. |
+| Exact search instead of an index | `exact_vector_search = true` | The fast approximate index (HNSW) silently missed the best match in a test. An exact scan over all passages still takes well under a second at our size, so we chose correct over fast. |
+| SQL retries | 3 (4 attempts total) | Enough to fix typical errors (wrong column name, type mismatch); more rarely helps and costs calls. |
+| Statement timeout | 15 seconds | Stops a runaway query; our queries normally take milliseconds. |
+| Row cap | 1,000 rows (hard limit 5,000) | The writer only needs a summary; large results are slow and cost tokens. |
+| Sample rows before writing SQL | up to 4 tables, 5 rows each | Enough to see real values and formats without a big prompt. |
+| Database card | up to 4,000 characters | Room for the tables, columns and coverage line without a huge prompt. |
+| Model temperature | 0.0 | Same question → same SQL, which makes results reproducible. |
+| Jev requests at once | 8 | The API refused 25 at once (HTTP 429, "too many requests"). |
+| Jev passage text | first 3,000 characters | Long enough for a full passage; the same setting as our experiment. |
+
+---
+
+## 7. What we tried that did not work, and what is switched off
+
+Saying these out loud shows you know the project. The switches are in `config/flags.toml`.
+
+| Idea | Status | Why |
+|---|---|---|
+| Keyword search (BM25) fused with vector search | Built, **off** | It helped on ID-style questions in our small test set, but hurt paraphrased questions (hit@1 60% → 40%), and the decision was made on the same set we tuned on. It needs a fresh test before turning on. |
+| Layout-aware chunking (headings, whole tables) | Built, **off** | A small gain on our own set; not tested on the real filings yet. |
+| "Abstain if nothing relevant found" | Built, **off** | It caught only 1 of 10 unanswerable questions. |
+| Memory of past queries | Built, **off** | It saved tokens but lowered accuracy (10/10 → 7/10). |
+| A bigger local model (14B instead of 7B) | Rejected | No accuracy gain, three times slower. |
+| Jev choosing between SQL queries | Tested, **not used** | Jev is good at spotting a wrong-looking result but poor at choosing between two plausible queries. |
+| Routing as two yes/no questions to Jev | Tested, **not used** | 75.6% correct against 88.3% for one multiple-choice question. |
+
+---
+
+## 8. Hard questions and short answers
+
+**"What exactly did *you* build, and what did you reuse?"**
+- **Built:** the whole pipeline and its code, the safety gate, the router logic, the two-round search, entity
+  narrowing, follow-up handling, the coverage line, the Jev integration, the web app and the Inspector, the
+  SEC database, every test set and experiment.
+- **Reused:** the models (embedding, re-ranker, LLMs, Jev), the libraries (LangGraph, FastAPI, Postgres,
+  pgvector), and the public data (SEC filings, FinanceBench, BIRD).
+
+**"Why two rounds of search instead of one?"** One round over 45,000 passages tends to find the right report
+but the wrong page, especially for tables. Round 2 searches inside the right reports.
+
+**"Why re-rank if you already have vector search?"** Vector search never reads the question and passage
+together. The cross-encoder does, which is more accurate. Measured: right page in the top 5 went from 43% to
+59%.
+
+**"Why add Jev on top of the re-ranker?"** In our test on 300 new questions it put the right page first 53.3%
+of the time against 43.7% for the re-ranker alone, a significant difference. It is cheap and fast.
+
+**"How do you know those numbers are real?"** The test questions were built after the system was frozen, and
+the hypotheses and pass/fail rules were written down in git before the data existed (pre-registration). The
+statistics test whether a difference could be chance (McNemar test, confidence intervals).
+
+**"Is Jev better than the LLM router?"** 88.3% against 84.4%, but the difference is not statistically
+significant, so we say comparable. And the LLM router more often reaches every source a question needs
+(94.4% against 88.9%), so it's a trade-off.
+
+**"What stops the model from deleting data?"** Three layers: the parser allows only a single SELECT, the
+transaction is read-only and rolled back, and the database login can only read. The AI side has no database
+password.
+
+**"What happens if a service is down?"**
+- If the re-ranker is down, search keeps the plain order.
+- If Jev fails, the LLM router decides.
+- If a Jev passage score fails, that passage keeps its place.
+- If the embedding service is too slow, the question fails with "service unavailable". That is what happened
+  on 12 October, when the Mac was overloaded.
+
+**"Why is it slow?"** The re-ranker and the models run on a laptop. A documents answer takes about 20–60
+seconds, mostly re-ranking and the answer writer. The Inspector shows the time of each step.
+
+**"What would you improve next?"**
+- Test whether better passage order gives better final answers (not measured yet).
+- Re-test keyword search on fresh questions.
+- State the coverage line's year range from the table actually used.
+- Have a person check a sample of the generated test questions.
+
+**"Where is X in the code?"** Use the map in part 4.
