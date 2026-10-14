@@ -14,6 +14,7 @@ The guide is in eight parts:
 7. What we tried that did not work, and what is switched off.
 8. Hard questions and short answers.
 9. Everything else in the system: the parts outside the question pipeline.
+10. Where the models are called, the scripts folder, and what is (and is not) new in the architecture.
 
 Background reading, if you want more: [docs/paperb/PROJECT_GUIDE.md](paperb/PROJECT_GUIDE.md) (project
 history, the paper, the experiments).
@@ -580,4 +581,122 @@ These are not part of the app a user sees:
 About 1,280 Python tests (`tests/`) and 74 web tests (`web/src/**/*.test.ts`) run on every change. There
 are also security tests (`scripts/verify_security.sh`) that try to break the SQL gate, for example with a
 hidden write inside a query or a statement that reads another account's data.
+
+---
+
+## 10. Where the models are called, the scripts folder, and what is new
+
+### How Jev and the re-ranker work together
+
+Jev does not need the re-ranker; they are two separate switches in `config/flags.toml`:
+
+- `pipeline.rerank = "bge"` turns the cross-encoder on.
+- `pipeline.passage_rerank = "jev"` turns Jev's ordering on.
+
+**In the demo both are on, in this order:**
+1. Round 2 fetches 30 candidates by dense search.
+2. bge re-scores them and keeps the top 25.
+3. Jev scores each of those 25 on its own and re-sorts them by its probability.
+
+So bge decides *which* 25 passages Jev sees, and breaks ties; Jev decides the final order. Jev never sees
+bge's scores.
+
+**With bge off,** Jev re-orders the plain dense list instead. In our test this alone put the right page first
+for 49.3% of questions, against 20.3% for dense search and 43.7% for bge, and 53.3% with both. The gap
+between Jev alone and bge alone was not significant after correction (p = 0.053). We used both because
+together they did best.
+
+### Every place a model is called
+
+The LLMs are always reached through one function, `get_agent_llm(role)` in `orchestrator/llm/provider.py:62`.
+It picks the model for that role from the settings; `orchestrator/llm/adapters/` has one adapter per
+provider; `orchestrator/llm/recording.py` records every call (tokens, time, served model).
+
+| Where | Role | What it asks |
+|---|---|---|
+| `orchestrator/front_door.py:457` | supervisor | The LLM router (when Jev is off or fails) |
+| `orchestrator/nodes/sql_agent.py:770` | sql | The draft query |
+| `orchestrator/nodes/sql_agent.py:918` | sql | The final query, and each fix after an error |
+| `orchestrator/nodes/sql_agent.py:604` | decomposer | Fill an approved query template (switch `templates`, off) |
+| `orchestrator/nodes/sql_agent.py:1108` | sql | Self-consistency re-samples (research only, off) |
+| `orchestrator/nodes/sql_agent.py:1207` | memory_summarizer | Memory (off) |
+| `orchestrator/nodes/unstructured_knowledge.py:415` | decomposer | Split a two-source question |
+| `orchestrator/nodes/synthesizer.py:699` | synthesizer | Write the answer |
+| `orchestrator/nodes/supervisor.py:152` | supervisor | The old router (used only when the front door is off) |
+| `orchestrator/nodes/rewrite.py:227` | rewriter | The old follow-up rewriter (front door off) |
+| `orchestrator/language_normalizer.py:129` | normalizer | Translate a non-English question |
+| `orchestrator/query_rewrite.py:43` | normalizer | Rewrite the search query (switch `query_rewrite`, off) |
+| `orchestrator/workspaces_api.py:289` | decomposer | Draft table and column descriptions (Knowledge tab) |
+| `orchestrator/builder_api.py:124` | decomposer | Plan a dashboard (Build with AI) |
+
+**Jev** is called only through `orchestrator/jev_client.py`:
+- `orchestrator/front_door.py:731`: routing in the demo (one choice question).
+- `orchestrator/front_door.py:545`, `:569`, `:662`: the other Jev router variants we tested.
+- `orchestrator/passage_jev.py:51`: passage scoring.
+
+**The embedding model** is called in `mcp/embeddings.py:46`, from the search in `mcp/tools/vector_tools.py:330`
+and at upload time.
+
+**The re-ranker** is called in `mcp/tools/vector_tools.py:307` (an HTTP call to `reranker/server.py`).
+
+**In the demo, one documents question makes:**
+- 1 Jev routing call;
+- 2 embedding calls (the question, once per round);
+- 2 re-ranker calls;
+- 25 Jev passage calls;
+- 1 LLM call for the answer.
+
+### The `scripts/` folder (116 files)
+
+None of these run inside the app. They are tools we run by hand.
+
+| Prefix | What they are | Examples |
+|---|---|---|
+| `eval_` | Run an evaluation against the running system and save the results | `eval_routing.py`, `eval_jev_pages.py`, `eval_bird.py`, `eval_financebench.py` |
+| `build_` | Build a test question set, once, before the evaluation runs | `build_routing_set_r2.py`, `build_page_set.py` |
+| `paperb_` | The paper's analysis: candidates, checkers, statistics, and `paperb_numbers.py`, which writes every number in the paper | `paperb_analyze.py`, `paperb_numbers.py` |
+| `verify_` | Check that a running deployment behaves (security, tenancy, workspaces) | `verify_security.sh`, `verify_workspaces.py` |
+| `bench_`, `check_` | Older benchmarks and checks from the product phases | `bench_multiturn.py` |
+| `gen_`, `fetch_` | Generate fixtures or download public data | `fetch_external_eval.sh` |
+| Others | Utilities | `run_reranker_host.sh` (starts the GPU re-ranker), `shipped_flags.py` (checks the switches are at their shipped values), `migrate.sh` (database migrations), `gen_api_principal.py` (creates a sign-in token) |
+
+### Is the architecture standard, or new?
+
+**Mostly standard, by design.** Each building block is a well-known pattern, and saying so honestly is
+stronger than overclaiming:
+- RAG with dense search plus a cross-encoder re-ranker;
+- a text-to-SQL agent that samples data and corrects itself;
+- an LLM router in front of specialised routes;
+- a graph-based pipeline (LangGraph).
+
+**Two-round search** is a known idea too: find the document first, then the passages inside it
+(hierarchical, or "parent-document", retrieval).
+
+**What we did differently**, described as engineering choices and small findings rather than new
+inventions:
+
+1. **The model never touches the database directly.** The model-facing service holds no database password.
+   Every query goes through one tool service with three independent read-only layers, on separate
+   networks. Standard security thinking, applied more strictly than most LLM demos.
+2. **Checks done by code, not by another model:**
+   - "How I got this" is generated from the parsed SQL.
+   - Every figure in the answer is traced to a result cell.
+   - Definitions are kept only if their quote is really in the document.
+   - Evidence tiers label how much to trust each answer.
+3. **Entity narrowing between the two sources.** In a two-source question, the database result decides
+   which documents are searched (the company names in the result are matched to report titles). Related to
+   Text2VectorSQL's idea of using SQL to narrow a vector search, applied across a database and a document
+   library.
+4. **The coverage line.** The router is told not only the tables and columns but which companies and years
+   the rows hold, built with read-only queries and no model call. It fixed unknown-company routing for both
+   the LLM and Jev routers; this is one of the paper's findings.
+5. **Follow-ups without a model call:** simple rules carry the company and year from the previous turn.
+6. **Dashboards store SQL, not questions:** a tile refreshes with no model call, so it is cheap and always
+   gives the same kind of answer.
+7. **Every feature is a switch,** measured before it was turned on. Several were measured, found not to
+   help, and left off (part 7).
+
+**The honest one-line answer:** "The architecture uses standard components. Our contribution is how we
+combined them safely, a few code-based checks and links between the sources, and above all that we measured
+each decision on fresh data. The research part is the typed decision model."
 
