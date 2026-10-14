@@ -13,6 +13,7 @@ The guide is in eight parts:
 6. "Why this number?": every setting a teacher might ask about.
 7. What we tried that did not work, and what is switched off.
 8. Hard questions and short answers.
+9. Everything else in the system: the parts outside the question pipeline.
 
 Background reading, if you want more: [docs/paperb/PROJECT_GUIDE.md](paperb/PROJECT_GUIDE.md) (project
 history, the paper, the experiments).
@@ -451,3 +452,132 @@ seconds, mostly re-ranking and the answer writer. The Inspector shows the time o
 - Have a person check a sample of the generated test questions.
 
 **"Where is X in the code?"** Use the map in part 4.
+
+---
+
+## 9. Everything else in the system
+
+Parts 3–8 follow one question. These are the other parts, which a teacher may see in the app or ask about.
+
+### Which model does what
+
+The roles are set in `config/flags.toml` under `[llm.models.openai_compat]`. The demo reaches the models
+through an OpenAI-compatible API provider.
+
+| Role | Model | Used for |
+|---|---|---|
+| Router | Jev (`jev-1.13`) | The route, one multiple-choice question. The LLM router (Qwen 3.8 27B) is used only if Jev fails. |
+| SQL writer | gpt-oss-120b | Drafting and writing the SQL, and fixing it after an error |
+| Question split | Qwen 3.8 27B | Splitting a two-source question into a database part and a documents part |
+| Answer writer | gpt-oss-120b | The final answer, and a suggested chart |
+| Passage scoring | Jev | "Does this passage contain what is needed?" |
+| Embeddings | mxbai-embed-large (local, Ollama) | Vectors for search |
+| Re-ranker | bge-reranker-v2-m3 (local, Mac GPU) | Re-scoring the top 30 passages |
+
+**Why two LLM sizes:** the parts the user reads (SQL, answer) get the strongest model; short classification
+jobs get a smaller, faster one.
+
+**Why the provider is swappable:** `orchestrator/llm/` is a "provider seam". Groq, OpenRouter, Gemini, Azure,
+Anthropic or a local Ollama model can be switched in the settings without changing code. Every call records
+which model actually answered, and a different one is refused.
+
+### The services (Docker containers)
+
+| Container | Job |
+|---|---|
+| `frontend` | The React web app, served by nginx with strict security headers |
+| `orchestrator` | The pipeline and the API (FastAPI + LangGraph). Holds the AI keys, **no** database password. |
+| `mcp` | The only service with database access: the SQL gate, vector search, schema reading, history |
+| `postgres` | The database, with **pgvector** (vectors) and **PostGIS** (maps) |
+| `ollama` | Runs the embedding model locally |
+| `reranker` | The cross-encoder. The demo uses the copy running natively on the Mac GPU, because Docker on a Mac can't use the GPU. |
+| `parser` | Turns uploaded PDFs into text. It has no network and no passwords, and each file is parsed in its own limited process, so a hostile PDF can only crash itself. |
+| `simulator` | Keeps the `live` sample dataset changing (new orders every few seconds) for the live dashboards |
+| `qdrant` | A vector store for the "memory" feature, which is switched off |
+| `evaluator` | Re-runs a test set every hour. Kept off, because it spends model quota. |
+
+The containers sit on separate internal networks, so the orchestrator cannot reach the database directly even
+if someone tried.
+
+### Workspaces (the setup a business owner does)
+
+Code: `web/src/features/workspaces/`, `orchestrator/workspaces_api.py`, `mcp/tools/workspace_tools.py`.
+
+- **Business tab:** the owner describes the business in a few lines. The SQL writer reads it as background,
+  marked as the owner's words, never as instructions.
+- **Knowledge tab:**
+  - An AI drafts a description of each table and column. The owner edits and approves it, and only approved
+    text is used.
+  - **Definitions** ("active seller", "late order") can be proposed from uploaded documents. A definition is
+    kept only if its quoted sentence really is in the document; invented ones are dropped.
+- **Approved examples:** a thumbs-up turns an answer into an approved example. Asking the same question
+  again runs the approved SQL directly, and the answer is marked **Verified**.
+- **Test tab:** runs a set of questions and lets the owner mark each answer right or wrong. Approved examples
+  are re-checked against the database regularly, so a change in the data is noticed.
+- **Documents tab:** which library folders this workspace searches.
+- **Schema tab:** the database diagram (new).
+
+### The library and your own database
+
+Code: `web/src/features/library/`, `orchestrator/library_api.py`, `mcp/connections.py`.
+
+- **Documents:** folders of PDFs. Uploads are limited to 20 MiB and 600 pages, checked in the orchestrator
+  and again in the parser. A document goes "processing", then "ready".
+- **Connect your own Postgres:** StateSync only saves a login it has proved is **read-only**; a superuser
+  login is refused. The password is encrypted (Fernet) and only the MCP service can decrypt it.
+
+### Dashboards
+
+Code: `web/src/features/dashboard/`, `orchestrator/dashboard_builder.py`, `orchestrator/tiles_api.py`.
+
+- **Pin** any answer as a dashboard card ("tile"). A tile stores the **SQL**, not the question, so refreshing
+  it re-runs one SELECT with **no model call**. Tiles on the `live` dataset refresh every 30 seconds; others
+  hourly by default.
+- **Build with AI** plans a whole dashboard: it picks 4–8 insights, asks each through the same checked
+  pipeline, and pins them.
+- **Charts** are Vega-Lite specifications (a declarative chart format). The model only *proposes* the chart
+  shape; the real rows are attached in code, and the result is checked against a fixed schema before it
+  is shown. No model-written code ever runs in the browser.
+
+### Trust features on every SQL answer
+
+- **"How I got this":** a plain-English reading of the SQL, generated by code from the parsed query (not by a
+  model).
+- **Figure grounding:** hover a number in the answer to see which row and column it came from.
+- **Evidence tier:** Verified, Checked or Unchecked (see part 5).
+- **Plain failures:** a failed query or an empty result is explained in plain words instead of an error code.
+- **Route recovery:** if the database can't answer and the workspace has documents, the documents route runs
+  once instead.
+
+### Security, in one list
+
+- Sign-in uses a token. The server stores only a hash of it, and the browser keeps an HttpOnly session cookie.
+- A rate limit of 30 model requests per minute per user.
+- An audit log of every request, including refusals.
+- Row-level security: each account sees only its own workspaces, conversations and documents.
+- Strict browser security headers (CSP): only the app's own scripts run.
+- The three-layer SQL gate, and no database password on the AI side.
+
+### Other built-in features
+
+- **Multilingual questions:** a language check step can translate a non-English question first, keeping
+  names exactly as written. In the demo the router handles English directly.
+- **Built-in sample datasets:** `live` (a simulated online shop), `olist` (real Brazilian e-commerce data,
+  1.5 million rows) and `public` (a small synthetic one). They come from the earlier product phase; the
+  review demo uses the SEC workspace.
+- **Conversation history:** past conversations are listed on the Ask page and can be resumed.
+
+### What only exists for the research
+
+These are not part of the app a user sees:
+- The ModernBERT and Laya checkers and the LLM judge.
+- Self-consistency (re-asking the SQL writer 5 times and comparing results).
+- The question-set builders and experiment scripts in `scripts/`.
+- The Decision Lab page in `docs/paperb/demo/`.
+
+### Tests
+
+About 1,280 Python tests (`tests/`) and 74 web tests (`web/src/**/*.test.ts`) run on every change. There
+are also security tests (`scripts/verify_security.sh`) that try to break the SQL gate, for example with a
+hidden write inside a query or a statement that reads another account's data.
+
