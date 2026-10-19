@@ -193,19 +193,25 @@ what the re-ranking does.
 
 ### Step 3: a question that needs both sources (3 min)
 
-**Ask:** "Among Coca-Cola, PepsiCo and Kraft Heinz, which paid the most in dividends in fiscal 2022, and what
-does that company's 2022 10-K say about its dividend policy?"
+**Ask:** "Which company had the highest revenue in fiscal 2022, and how does that company describe its
+e-commerce strategy in its 10-K?"
 
 **Open the Inspector:**
 - **Router:** "Both sources" wins.
-- **Database card:** two tables light up, `annual_metrics_restated` and `companies`. The query finds PepsiCo,
-  about $6.17 billion.
-- **Documents search card:** "The database result named the companies, so the search went straight to their
+- **Database card:** the query finds Walmart ($572.8 billion). The tables it read light up on the diagram.
+- **Documents search card:** "The database result named Walmart, so the search went straight to Walmart's
   filings and skipped round 1. We call this *entity narrowing*."
 - **Answer writer:** one answer with both kinds of citation, the query and the pages.
 
-**Be honest if asked:** the database result also named Coca-Cola, so a few Coca-Cola passages appear among
-the 8 the writer read.
+**Be honest if asked:** the library holds Walmart's 10-Ks for 2018–2020 only, so the strategy part is cited
+from those, not from a 2022 filing.
+
+**Avoid the dividends question** ("Among Coca-Cola, PepsiCo and Kraft Heinz…"). The database part is right:
+Coca-Cola paid the most, $7.62 billion, against $6.17 billion for PepsiCo. But the result names all three
+companies, so the search is narrowed to all three, and 7 of the 8 passages the writer read were PepsiCo's.
+The answer then talks about Coca-Cola while citing PepsiCo pages. If a teacher asks about it, that is the
+honest explanation: narrowing uses every company in the result, not only the top one. (An earlier note in
+our guides said PepsiCo paid the most; that was wrong.)
 
 ### Step 4: a question nobody can answer (1 min)
 

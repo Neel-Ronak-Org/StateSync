@@ -202,13 +202,14 @@ risks it faces?"*
   answers before the rebuild.
 
 ### Hybrid questions (database + documents)
-*Example:* "Among Coca-Cola, PepsiCo and Kraft Heinz, which paid the most in dividends in 2022, and what does
-that company's 10-K say about its dividend policy?"
+*Example:* "Which company had the highest revenue in fiscal 2022, and how does that company describe its
+e-commerce strategy in its 10-K?"
 
 1. Jev says **both**. The LLM splits the question into a SQL half and a documents half.
-2. The SQL half runs through the normal SQL agent, which finds that PepsiCo paid the most, $6.17B.
-3. **Entity narrowing:** the documents half then searches **only PepsiCo's filings**, because the SQL
-   result named PepsiCo (`pipeline.hybrid_entities`).
+2. The SQL half runs through the normal SQL agent, which finds Walmart, $572.8B.
+3. **Entity narrowing:** the documents half then searches **only Walmart's filings**, because the SQL
+   result named Walmart (`pipeline.hybrid_entities`). When the result names several companies, the search
+   covers all of them.
 4. One answer comes back with both a SQL citation and page citations.
 
 ### Follow-up questions with no extra model call
@@ -370,7 +371,7 @@ tr -d '\n' < secrets/api_token_dev | pbcopy
 | 2 | "Which company had the highest revenue in fiscal 2022?" | sql | Walmart, $572.8B. Comparison across companies. |
 | 3 | "What does Boeing's 2022 10-K say about the main risks it faces?" | docs | **The new RAG engine.** Citations show the filing title and page. Explain steps 2–5: two-round search → bge → Jev order → the writer reads the top 8. |
 | 4 | "How did Walmart describe its e-commerce strategy in its 2020 10-K?" | docs | The right *year's* filing is chosen (titles help the re-ranker). |
-| 5 | "Among Coca-Cola, PepsiCo and Kraft Heinz, which paid the most …" | hybrid | SQL finds PepsiCo ($6.17B), then the documents search only PepsiCo's filings. Both citation kinds appear. |
+| 5 | "Which company had the highest revenue in fiscal 2022, and how does that company describe its e-commerce strategy in its 10-K?" | hybrid | SQL finds Walmart ($572.8B), then the documents search only Walmart's filings. Both citation kinds appear. |
 | 6 | "What was Tesla's revenue in fiscal 2022?" | neither | Tesla isn't in our sources. The coverage line lets the router decline in about 2 seconds instead of making something up. |
 
 **Also try a follow-up** after question 1: "And in 2022?" It works with no extra model call.
