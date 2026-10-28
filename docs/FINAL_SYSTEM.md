@@ -56,16 +56,16 @@ The reasons:
 | ① **Follow-up check** | "And in 2022?" or "Does it mention lawsuits?" carries the company and year from the previous turn. Plain code, no model. | The old system spent a model call rewriting every question. | Nothing to fail: it adds a line or doesn't. |
 | ② **Router** | Jev reads the question, a *database card* (tables, columns, the owner's approved notes, and a **coverage line** listing which companies and years the rows hold) and the titles of the closest documents. It then answers one four-way question: SQL, documents, both or neither. | Paper B, routing (180 new questions): one four-way Jev question 88.3% vs. an LLM router 84.4% (not significant); two yes/no questions only 75.6%. With the coverage line: 98.9% vs. 95.6%. On questions about companies the database doesn't hold, the coverage line raised correct "neither" answers from 0/45 to 28/45 (Jev). | The LLM router takes over. |
 | ③ **SQL agent** | Reads the schema and the owner's notes, drafts SQL, looks at sample rows of the tables it used, writes the final SQL, then runs it through **three independent read-only layers** (parser check: one SELECT only; read-only transaction with a 15 s limit; a database login that can only read). On an error it classifies the error and retries, up to 3 times. | Paper A (393 BIRD questions): extra answer checks applied to only 4% of answers and caught no more errors than an LLM judge. The agent's own retry was the best free warning (79% precision). So we kept the retry loop and dropped the check layer. | Plain-language failure message. If the database lacks the data and the workspace has documents, the documents route runs instead. |
-| ④ **Document search** | Two-round dense search: find the right files first, then the passages inside them. A local cross-encoder (bge) re-scores 30 candidates and keeps 25; Jev orders those 25 by "does this passage contain what the question needs?". The writer reads the top 8. | FinanceBench end to end (150 questions, exploratory): old engine 20.0% correct → rebuilt 52.7% → with the cross-encoder 63.3%. Paper B, page finding (300 new questions): Jev's order puts the right page first 53.3% of the time vs. 43.7% for the cross-encoder alone (+9.7 points, p < 0.0001). | Jev down: the cross-encoder's order. Cross-encoder down: the dense order. |
+| ④ **Document search** | Two-round dense search: find the right files first, then the 25 closest passages inside them. Jev re-ranks those 25 by "does this passage contain what the question needs?". The writer reads the top 8. | FinanceBench end to end (150 questions, exploratory): old engine 20.0% correct → rebuilt 52.7%; re-ranking raised it further (63.3% with a cross-encoder). Paper B, page finding (300 new questions): Jev re-ranking the dense list puts the right page first 49.3% of the time vs. 20.3% for dense order (+29.0 points, p < 10⁻¹⁵), and also beat the GPU cross-encoder (43.7%). | Jev down: the dense order. |
 | ⑤ **Answer writer** | Writes the answer. Citations (file, page, rows) are attached by code, not by the model. Every number in the answer must appear in the rows or passages, otherwise it is flagged. Includes "How I got this" in plain words. | The safety and trust design from Phase 3; it costs no extra model call. | — |
 | ⑥ **Pipeline Inspector** | One click per answer: router probabilities, the database card, the schema diagram with the tables used, the SQL and its safety checks, the search rounds, the re-ranking table with the cut line, cost and timings. | Built for explainability: every claim above can be shown live. | — |
 
 **Models:** two hosted models through one OpenAI-compatible endpoint. A small one (qwen-3-8-27b) handles quick
 text jobs; a large one (gpt-oss-120b) writes SQL and answers. Jev makes the typed decisions. The embedding model
-(mxbai-embed-large, run by Ollama) and the cross-encoder (bge-reranker-v2-m3, on the Mac's GPU) run locally.
+(mxbai-embed-large, run by Ollama) runs locally.
 
-**Services (7):** web app, orchestrator (the pipeline; holds model keys, no database password), MCP tool server
-(the only service with a database password), Postgres with pgvector, Ollama, the re-ranker, and the isolated PDF
+**Services (6):** web app, orchestrator (the pipeline; holds model keys, no database password), MCP tool server
+(the only service with a database password), Postgres with pgvector, Ollama, and the isolated PDF
 parser.
 
 ---
@@ -87,8 +87,11 @@ owner has told StateSync about it. The demo workspace (`partd-routing-sec-filing
 **Approved examples (thumbs-up → "Verified"):** kept. It is small, easy to explain, and the only evidence label
 that means something once the check layer is gone.
 
-**Removed:** the Test tab and the timer that re-checks approved examples. They were built for the BIRD
-workspaces, aren't used by the demo, and add a background job.
+**Removed:**
+- the Test tab and the timer that re-checks approved examples. They were built for the BIRD workspaces, aren't
+  used by the demo, and add a background job;
+- definitions proposed by AI from uploaded documents. The demo's 6 definitions were written in the Knowledge
+  tab, so nothing the demo uses depends on it.
 
 ### What happens when you add something new
 
@@ -128,7 +131,8 @@ workspaces, aren't used by the demo, and add a background job.
 | Keyword (BM25) hybrid search, layout chunker, dataset scope, abstention | Measured in the earlier retrieval work on e-commerce documents, never part of the pipeline we evaluated end to end |
 | ONDC profile, DIGIPIN map codes, the `public`, `olist` and `live` datasets | From the earlier e-commerce product |
 | Multilingual questions | Only existed in the old router |
-| Dashboards: AI dashboard builder, live shop simulator | Secondary; see decision 1 |
+| Dashboards: the AI dashboard builder ("Build with AI"), the live shop simulator and its data | Secondary. Pinning an answer to a dashboard stays (section 9) |
+| The bge cross-encoder re-ranker service | Jev alone re-ranks the dense list (section 9) |
 | Unused model adapters (Anthropic, Azure, Gemini, Groq, local) | One endpoint is used |
 | About 100 experiment and old phase scripts, 330 old documents | Research moves to `research/`; old documents leave the tree |
 
@@ -142,9 +146,9 @@ Everything removed stays in git history and in the tag.
 |---|---|---|---|---|
 | 1 | Aug | Does remembering past answers (AgentSM memory) help? | Accuracy fell from 10/10 to 7/10 | Removed memory |
 | 2 | Oct, Paper A | Do automatic answer checks catch wrong SQL? (393 BIRD questions, pre-registered) | They fire on 4% of answers and catch no more than an LLM judge; the agent's own retry is the best free warning (79% precision) | No check layer; keep the retry loop |
-| 3 | 5–6 Oct | Where does the documents engine lose answers? (FinanceBench, 150 questions, end to end) | Old 20.0% → rebuilt 52.7% → with cross-encoder 63.3% | Two-round search, relevance order, titles, cross-encoder |
+| 3 | 5–6 Oct | Where does the documents engine lose answers? (FinanceBench, 150 questions, end to end) | Old 20.0% → rebuilt 52.7% → with a re-ranker 63.3% | Two-round search, relevance order, titles, a re-ranking step |
 | 4 | Oct, Paper B | Can one Jev question route better than an LLM? (180 new questions) | 88.3% vs. 84.4% (n.s.); with the coverage line 98.9% vs. 95.6%; two yes/no questions 75.6% | Jev choice router with coverage line; LLM as fallback |
-| 5 | Oct, Paper B | Does Jev find the right page better? (300 new questions) | Right page first 53.3% vs. 43.7% (+9.7, p < 0.0001) | Jev orders the passages |
+| 5 | Oct, Paper B | Does Jev find the right page better? (300 new questions) | Over the dense list: right page first 49.3% vs. 20.3% (+29.0, p < 10⁻¹⁵), and above the GPU cross-encoder's 43.7% (+5.7, p = 0.053). Over the cross-encoder's list: 53.3% | Jev re-ranks the dense list; the cross-encoder is dropped |
 | 6 | Oct, Paper B | Can Jev judge SQL or spot unanswerable questions? (393 and 298 questions) | SQL: AUROC 0.760, between an LLM judge (0.813) and a fine-tuned verifier (0.727), poor at choosing between queries. Unanswerable: AUROC 0.969, but only about half caught at a 1% false-refusal budget | Not adopted: the router's "neither" and the coverage line handle missing data |
 
 Experiment 6 is as important as 4 and 5: it shows we kept only what helped and dropped what didn't.
@@ -155,7 +159,7 @@ Experiment 6 is as important as 4 and 5: it shows we kept only what helped and d
 
 1. **One pipeline:** the demo settings become the app's defaults. The separate demo copy disappears, and
    `localhost:3000` *is* the demo.
-2. **One start command** that starts the containers, the re-ranker on the GPU, keeps the embedding model loaded,
+2. **One start command** that starts the containers, keeps the embedding model loaded,
    and checks every service before saying "ready". This fixes the "service unavailable" error we hit when the Mac
    was busy.
 3. **Two-source narrowing:** for a "which company…" question, narrow the document search to the *answer's* company,
@@ -181,9 +185,15 @@ Experiment 6 is as important as 4 and 5: it shows we kept only what helped and d
 
 ## 9. Decisions (answered by the owner)
 
-- **Dashboards:** _pending_
-- **Workspace extras:** _pending_
-- **Re-ranking:** _pending_
+- **Dashboards:** keep simple pinning. An answer can be pinned to a dashboard and refreshed. Build with AI, the
+  live simulator and the `live` data go.
+- **Workspace extras:** the Test tab, the re-check timer and document-proposed definitions go (section 4).
+- **Re-ranking: Jev only.** One re-ranker to explain and no GPU process to start. The paper measured this
+  order: right page first 49.3%, against 53.3% with the cross-encoder in front, and 67.0% vs. 69.7% for the right
+  page among the 8 passages the writer reads. **The end-to-end answer test was not run this way.** After the
+  clean-up, re-run FinanceBench's 150 questions on the final system, so the report has one end-to-end number
+  for exactly what we demo (exploratory, as before; it needs the owner's go-ahead because it spends API
+  credits).
 
 Decided by default, following the audit's recommendations: remove `olist`, remove multilingual, research in a
 `research/` folder in this repository, submit `main` after the clean-up with the paper tags, and use the one
