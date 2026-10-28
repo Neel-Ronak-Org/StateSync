@@ -427,7 +427,7 @@ test.describe('the pipeline inspector', () => {
     await page.getByRole('button', { name: 'Inspect pipeline' }).last().click()
     const inspector = page.getByTestId('inspector')
     await expect(inspector).toContainText('Route taken: Database + documents')
-    await expect(inspector).toContainText('one Jev choice, then a split')
+    await expect(inspector).toContainText('one Jev choice + split')
     await expect(inspector).toContainText('Both sources')
     const split = inspector.getByTestId('split')
     await expect(split).toContainText('The question was split (one small-model call, 2.5 s)')

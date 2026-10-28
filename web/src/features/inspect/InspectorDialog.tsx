@@ -100,7 +100,7 @@ export function InspectorDialog({ turn, open, onOpenChange }: InspectorDialogPro
   // after the route is chosen; that time belongs to deciding the route.
   const splitMs = callsMs(trace, ['decomposer'])
   const split = route === 'hybrid' && trace.subtasks?.length === 2 ? trace.subtasks : null
-  const routerLabel = (fd?.jev && !fd.jev.fallback ? 'one Jev choice' : 'LLM router') + (split ? ', then a split' : '')
+  const routerLabel = (fd?.jev && !fd.jev.fallback ? 'one Jev choice' : 'LLM router') + (split ? ' + split' : '')
   const times: Partial<Record<StepId, number>> = {
     router: (fd?.latency_ms ?? (fd?.jev?.ms as number | undefined) ?? callsMs(trace, ['supervisor'])) + splitMs,
     sql: callsMs(trace, ['sql']),
