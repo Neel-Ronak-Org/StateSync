@@ -35,10 +35,17 @@ async function tileMenu(page: Page, tileIndex: number, submenu: string, item: st
 }
 
 test.describe('home and navigation', () => {
-  test('the app opens on the dashboards page', async ({ page }) => {
+  test('the app opens on Ask; the sidebar names every page and groups setting up apart', async ({ page }) => {
     await openApp(page)
-    await expect(page.getByRole('button', { name: 'Dashboards', exact: true })).toHaveAttribute('aria-current', 'page')
-    await expect(page.getByRole('heading', { name: 'No dashboards for public yet' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Ask', exact: true })).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByLabel('Ask a question')).toBeVisible()
+    const nav = page.getByRole('navigation', { name: 'Main' })
+    await expect(nav).toContainText('Set up')
+    for (const label of ['Ask', 'Dashboards', 'Workspaces', 'Data sources']) {
+      await expect(nav.getByRole('button', { name: label, exact: true })).toContainText(label)
+    }
+    await nav.getByRole('button', { name: 'Dashboards', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'No dashboards in Demo yet' })).toBeVisible()
   })
 
   test('old links still land in the right place', async ({ page }) => {
@@ -59,7 +66,7 @@ test.describe('home and navigation', () => {
 
 test.describe('dashboards', () => {
   test('a new dashboard can be created, renamed and deleted', async ({ page }) => {
-    const api = await openApp(page)
+    const api = await openApp(page, { hash: '#/dashboards' })
     await page.getByRole('button', { name: 'Create a dashboard' }).click()
     await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
 
@@ -85,7 +92,7 @@ test.describe('dashboards', () => {
   })
 
   test('the open dashboard is remembered across a reload', async ({ page }) => {
-    await openApp(page)
+    await openApp(page, { hash: '#/dashboards' })
     await page.getByRole('button', { name: 'Create a dashboard' }).click()
     await page.getByRole('button', { name: 'New dashboard' }).click()
     const create = page.getByRole('dialog', { name: 'New dashboard' })

@@ -281,7 +281,7 @@ export function KnowledgeTab({
                               data-testid="source-badge"
                               className="text-[11px] font-normal"
                             >
-                              {entry.description_source === 'ai' ? 'AI draft' : 'Yours'}
+                              {entry.approved ? 'Approved' : entry.description_source === 'ai' ? 'AI draft' : 'Yours'}
                             </Badge>
                           )}
                         </div>
@@ -343,7 +343,7 @@ export function KnowledgeTab({
                       data-testid="source-badge"
                       className="text-[10px] font-normal"
                     >
-                      {SOURCE_LABEL[def.source] ?? 'Yours'}
+                      {def.approved ? 'Approved' : (SOURCE_LABEL[def.source] ?? 'Yours')}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground break-words">{def.definition}</p>

@@ -15,7 +15,7 @@ Steps (each through the public API, as the web app does it):
      until it is parsed, cut into passages and embedded ("ready").
   3. Workspaces: create a workspace on that database and give it the folder.
   4. Ask a database question and a documents question; check the routes and that answers came back.
-Without --keep, the workspace, folder and connection are deleted at the end. The sign-in token is read
+Without --keep, the workspace, folder, connection and its conversations are deleted at the end. The sign-in token is read
 from secrets/api_token_dev and never printed.
 """
 
@@ -67,6 +67,7 @@ def main() -> int:
     args = parser.parse_args()
     api = Api(args.api, api_token())
     created: dict[str, str] = {}
+    sessions: list[str] = []
     failures = 0
     try:
         conn = api.call("POST", "/library/connections", SHOP)
@@ -96,14 +97,17 @@ def main() -> int:
         print(f"3. workspace {created['workspace']} on the shop database, searching the folder")
 
         for question, route in QUESTIONS:
+            sessions.append(str(uuid.uuid4()))
             res = api.call("POST", "/query", {"query": question, "workspace_id": created["workspace"],
-                                              "session_id": str(uuid.uuid4())})
+                                              "session_id": sessions[-1]})
             got = (res.get("state_trace") or {}).get("route")
             ok = got == route and bool((res.get("answer_text") or "").strip())
             failures += not ok
             print(f"4. {'PASS' if ok else 'FAIL'} {question}\n   route {got} (expected {route}): {res.get('answer_text', '')[:200]!r}")
     finally:
         if not args.keep:
+            for session_id in sessions:
+                api.call("DELETE", f"/sessions/{session_id}")
             for kind, path in (("workspace", "/workspaces/{}"), ("folder", "/library/folders/{}"),
                                ("connection", "/library/connections/{}")):
                 if kind in created:

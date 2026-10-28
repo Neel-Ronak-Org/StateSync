@@ -12,8 +12,8 @@ import type { MockApi } from './mock-api'
 const PDF = { name: 'Returns policy.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 fake') }
 
 async function openLibrary(page: Page) {
-  await page.getByRole('button', { name: 'Library', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Library', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Data sources', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Data sources', exact: true })).toBeVisible()
 }
 
 function seedFolder(name = 'Policies', docs: string[] = []) {
@@ -28,9 +28,9 @@ test.describe('the library page', () => {
     await openApp(page)
     await openLibrary(page)
     await expect(page).toHaveURL(/#\/library$/)
-    await expect(page.getByRole('button', { name: 'Library', exact: true })).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByRole('button', { name: 'Data sources', exact: true })).toHaveAttribute('aria-current', 'page')
     await expect(page.getByRole('button', { name: 'Dashboards', exact: true })).not.toHaveAttribute('aria-current', 'page')
-    await expect(page.getByText('Documents you upload once and use in any workspace.')).toBeVisible()
+    await expect(page.getByText(/^Databases and documents, added once\./)).toBeVisible()
     await expect(page.getByRole('heading', { name: 'No folders yet' })).toBeVisible()
   })
 
@@ -268,12 +268,13 @@ test.describe('a workspace and its documents', () => {
     await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeEnabled()
   })
 
-  test('with an empty library it points to the library', async ({ page }) => {
+  test('with no documents uploaded it links to the upload page', async ({ page }) => {
     await openApp(page, { hash: '#/workspaces/ws-1', seed: (api) => void api.workspaces.createReady('Shop', 'olist') })
     await page.getByRole('tab', { name: 'Documents' }).click()
     await expect(page.getByText('Your library is empty.')).toBeVisible()
-    await page.getByRole('link', { name: 'Open library' }).click()
-    await expect(page).toHaveURL(/#\/library$/)
-    await expect(page.getByRole('button', { name: 'Library', exact: true })).toHaveAttribute('aria-current', 'page')
+    await page.getByRole('link', { name: 'Upload documents' }).click()
+    await expect(page).toHaveURL(/#\/library\/documents$/)
+    await expect(page.getByRole('button', { name: 'Data sources', exact: true })).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByRole('tab', { name: 'Documents' })).toHaveAttribute('aria-selected', 'true')
   })
 })

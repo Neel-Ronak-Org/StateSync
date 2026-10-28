@@ -26,7 +26,7 @@ const seedOne = (api: MockApi) => void api.connections.add('Shop replica')
 test.describe('the library tabs', () => {
   test('open on Documents; Databases is a second tab and hides the folder button', async ({ page }) => {
     await openApp(page, { hash: '#/library' })
-    const tabs = page.getByRole('tablist', { name: 'Library sections' })
+    const tabs = page.getByRole('tablist', { name: 'Data source sections' })
     await expect(tabs.getByRole('tab', { name: 'Documents' })).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByRole('heading', { name: 'No folders yet' })).toBeVisible()
     await tabs.getByRole('tab', { name: 'Databases' }).click()
@@ -369,7 +369,7 @@ test.describe('using a connected database in a workspace', () => {
     expect(api.workspaces.workspaces.get('ws-1')?.target_schema).toBe(id)
 
     // The connection now says it is in use.
-    await page.getByRole('button', { name: 'Library', exact: true }).click()
+    await page.getByRole('button', { name: 'Data sources', exact: true }).click()
     await page.getByRole('tab', { name: 'Databases' }).click()
     await expect(page.getByTestId('connection-item').first()).toContainText('Used by 1 workspace')
   })

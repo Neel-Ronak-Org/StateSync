@@ -24,6 +24,7 @@ import { DocumentsTab } from '@/features/library/DocumentsTab'
 import { BusinessTab } from '@/features/workspaces/BusinessTab'
 import { KnowledgeTab } from '@/features/workspaces/KnowledgeTab'
 import { ApprovedAnswersTab } from '@/features/workspaces/ApprovedAnswersTab'
+import { OverviewTab } from '@/features/workspaces/OverviewTab'
 import { SchemaTab } from '@/features/inspect/SchemaTab'
 import {
   useApproveWorkspace,
@@ -40,8 +41,8 @@ interface WorkspaceDetailProps {
   onDeleteWorkspace: (workspaceId: string) => Promise<unknown>
 }
 
-/** One workspace: its business description, table notes and definitions, approved answers, document folders
- * and database diagram. */
+/** One workspace: an overview of its setup, then its business description, table notes and definitions,
+ * approved answers, document folders and database diagram. */
 export function WorkspaceDetail({
   workspaceId,
   onAskInWorkspace,
@@ -54,7 +55,7 @@ export function WorkspaceDetail({
   const { approve } = useApproveWorkspace(workspaceId)
   const { examples, removeExample } = useExamples(workspaceId)
 
-  const [activeTab, setActiveTab] = useState<string>('knowledge')
+  const [activeTab, setActiveTab] = useState<string>('overview')
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -149,13 +150,18 @@ export function WorkspaceDetail({
       {/* Main setup tabs */}
       <main className="flex-1 p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList aria-label="Setup steps" className="grid w-full max-w-xl grid-cols-5">
+          <TabsList aria-label="Setup steps" className="grid h-auto w-full max-w-2xl grid-cols-3 md:grid-cols-6">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="business">Business</TabsTrigger>
             <TabsTrigger value="knowledge">Knowledge</TabsTrigger>
             <TabsTrigger value="answers">Approved</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="schema">Schema</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="overview" className="outline-none">
+            <OverviewTab workspace={workspace} catalog={catalog} onOpenTab={setActiveTab} />
+          </TabsContent>
 
           <TabsContent value="business" className="outline-none">
             <BusinessTab workspace={workspace} onUpdateWorkspace={updateWorkspace} />

@@ -262,9 +262,10 @@ def with_business_context(card: str, business_context: str | None) -> str:
     return f"Workspace description: {text}\n{card}" if text else card
 
 
-# The card per (tenant, dataset), for the life of the process; the oldest goes past front_door.card_cache_max.
-# A failed read is never cached.
-_CARD_CACHE: "OrderedDict[tuple[str, str], str]" = OrderedDict()
+# The card per (tenant, dataset) with the time it was built. It is rebuilt after front_door.card_cache_ttl_s, so
+# rows or tables added to the owner's database reach the router (its coverage line) without a restart; the
+# oldest goes past front_door.card_cache_max. A failed read is never cached.
+_CARD_CACHE: "OrderedDict[tuple[str, str], tuple[str, float]]" = OrderedDict()
 
 
 async def _schema_card(session: MCPSession, tenant_id: str, dataset: str) -> tuple[str, str]:
@@ -272,8 +273,11 @@ async def _schema_card(session: MCPSession, tenant_id: str, dataset: str) -> tup
     only until the card reaches its cap, so a very wide database does not cost one call per table."""
     key = (tenant_id, dataset)
     if key in _CARD_CACHE:
-        _CARD_CACHE.move_to_end(key)
-        return _CARD_CACHE[key], "cached"
+        cached, built = _CARD_CACHE[key]
+        if time.monotonic() - built < float(cfg.front_door.card_cache_ttl_s):
+            _CARD_CACHE.move_to_end(key)
+            return cached, "cached"
+        del _CARD_CACHE[key]
     cap = int(cfg.front_door.card_max_chars)
     try:
         listing = await schema_list_tables(session, dataset)
@@ -297,7 +301,7 @@ async def _schema_card(session: MCPSession, tenant_id: str, dataset: str) -> tup
         line = ""
     if line:
         card = f"{card}\n{line}"
-    _CARD_CACHE[key] = card
+    _CARD_CACHE[key] = (card, time.monotonic())
     _CARD_CACHE.move_to_end(key)
     while len(_CARD_CACHE) > int(cfg.front_door.card_cache_max):
         _CARD_CACHE.popitem(last=False)

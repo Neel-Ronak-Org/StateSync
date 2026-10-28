@@ -19,8 +19,8 @@ export function DocumentsTab({ workspaceId }: { workspaceId: string }) {
   const changed = edited !== null && saved !== null && (edited.length !== saved.length || edited.some((id) => !saved.includes(id)))
 
   const openLibrary = (
-    <a href="#/library" className="text-sm font-medium text-primary underline-offset-4 hover:underline">
-      Open library
+    <a href="#/library/documents" className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+      Upload documents
     </a>
   )
 

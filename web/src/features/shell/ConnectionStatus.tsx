@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 
 type Status = 'ok' | 'degraded' | 'down' | 'unknown'
 
-/** The rail's status light (web/DESIGN.md §4): server reachable, and model ready. */
+/** The sidebar's status light (web/DESIGN.md §4): server reachable, and model ready. */
 export function ConnectionStatus() {
   const { data, isError } = useHealth()
   const status: Status = isError ? 'down' : !data ? 'unknown' : data.llm_ready ? 'ok' : 'degraded'
@@ -25,7 +25,7 @@ export function ConnectionStatus() {
           data-status={status}
           role="status"
           tabIndex={0}
-          className="grid size-10 place-items-center rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-9 items-center gap-3 rounded-lg px-3 text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span
             className={cn(
@@ -36,7 +36,7 @@ export function ConnectionStatus() {
               status === 'unknown' && 'bg-muted-foreground ring-muted-foreground/15',
             )}
           />
-          <span className="sr-only">{text}</span>
+          <span className="sr-only md:not-sr-only md:truncate">{text}</span>
         </div>
       </TooltipTrigger>
       <TooltipContent side="right">{text}</TooltipContent>

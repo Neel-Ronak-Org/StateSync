@@ -1,5 +1,3 @@
-import { Database } from 'lucide-react'
-
 import type { Workspace } from '@/api/types'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
@@ -17,7 +15,7 @@ export function WorkspacePicker({ workspaces, activeWorkspaceId, onSelectWorkspa
   return (
     <Select value={activeWorkspaceId ?? undefined} onValueChange={onSelectWorkspace}>
       <SelectTrigger aria-label="Workspace" className="h-8 min-w-36 gap-2 text-xs">
-        <Database className="size-3.5 text-muted-foreground" />
+        <span className="text-muted-foreground">Workspace:</span>
         <SelectValue placeholder={workspaces.length ? 'Choose a workspace' : 'No workspace yet'} />
       </SelectTrigger>
       <SelectContent align="end">

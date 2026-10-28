@@ -106,3 +106,27 @@ def test_the_card_gains_the_coverage_line(monkeypatch):
     assert card == ('Database "cn_x": annual_metrics(company, value)\n'
                     "Coverage (every value the rows hold): annual_metrics.company: 3M;")
     fd._CARD_CACHE.clear()
+
+
+def test_card_is_rebuilt_after_its_ttl_so_new_rows_reach_the_router():
+    listing = {"tables": [{"name": "annual_metrics"}]}
+    describe = {"annual_metrics": {"columns": _cols(("company", "text"))}}
+    lt, dt = _fake_schema(listing, describe)
+    lines = iter(["Coverage: annual_metrics.company: 3M;", "Coverage: annual_metrics.company: 3M, TESLA;"])
+
+    async def fake_cov(session, schema, tables, max_values, max_chars):
+        return next(lines)
+
+    fd._CARD_CACHE.clear()
+    clock = [1000.0]
+    with patch.object(fd, "schema_list_tables", lt), patch.object(fd, "schema_describe_table", dt), \
+            patch.object(fd, "build_coverage", fake_cov), patch.object(fd.time, "monotonic", lambda: clock[0]):
+        first, s1 = asyncio.run(fd._schema_card(SimpleNamespace(), "t", "cn_x"))
+        clock[0] += 10
+        again, s2 = asyncio.run(fd._schema_card(SimpleNamespace(), "t", "cn_x"))
+        clock[0] += float(fd.cfg.front_door.card_cache_ttl_s)
+        later, s3 = asyncio.run(fd._schema_card(SimpleNamespace(), "t", "cn_x"))
+    fd._CARD_CACHE.clear()
+    assert (s1, s2, s3) == ("ok", "cached", "ok")
+    assert again == first and "TESLA" not in first
+    assert "TESLA" in later

@@ -30,7 +30,6 @@ import {
 import { TileCard } from '@/features/dashboard/TileCard'
 import { useDashboards } from '@/features/dashboard/useDashboards'
 import { useTiles } from '@/features/dashboard/useTiles'
-import { useDatasetLabel } from '@/features/library/useConnections'
 import { useNow } from '@/hooks/useNow'
 import { formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -39,6 +38,8 @@ import { resolveKind, shapeOf } from '@/viz/infer'
 interface DashboardsViewProps {
   /** The active workspace's database: dashboards belong to it. */
   dataset: string
+  /** Its name, for the empty state. */
+  workspaceName: string
   picker: ReactNode
   devMode: boolean
   onAsk: () => void
@@ -69,9 +70,8 @@ function RefreshIndicator({ updatedAt }: { updatedAt: number }) {
   )
 }
 
-export function DashboardsView({ dataset, picker, devMode, onAsk }: DashboardsViewProps) {
+export function DashboardsView({ dataset, workspaceName, picker, devMode, onAsk }: DashboardsViewProps) {
   const boards = useDashboards(dataset)
-  const datasetLabel = useDatasetLabel([dataset])
   const active = boards.active
   const tiles = useTiles(active?.dashboard_id ?? null)
 
@@ -209,7 +209,7 @@ export function DashboardsView({ dataset, picker, devMode, onAsk }: DashboardsVi
           </div>
         ) : noDashboards ? (
           <EmptyState
-            title={<>No dashboards for <span className="text-primary">{datasetLabel(dataset)}</span> yet</>}
+            title={<>No dashboards in <span className="text-primary">{workspaceName}</span> yet</>}
             text="Create one, then pin answers to it from Ask. A pinned answer re-runs its query on a schedule."
             primary={{ label: 'Create a dashboard', onClick: () => void boards.create('Overview'), icon: Plus }}
           />

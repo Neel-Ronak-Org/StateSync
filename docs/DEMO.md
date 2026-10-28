@@ -11,23 +11,28 @@ docker compose up -d && docker start statesync-sec-db     # the six services + t
 docker compose ps                                          # all (healthy)
 ./demo/local_shop_db.sh                                    # the small shop database, for step 7
 python3 scripts/check_demo.py                              # every demo question end to end; expect "All checks passed."
+                                                           # (it deletes its own conversations afterwards)
 pbcopy < secrets/api_token_dev                             # the sign-in token, copied (never shown)
 ```
 
 Open **http://localhost:3000** (not 127.0.0.1), paste the token, sign in. Close other heavy programs: the
 search needs the embedding model and the laptop's CPU.
 
-**The data:** the workspace `partd-routing-sec-filings` sits on a Postgres database of the figures 32 US public
-companies reported to the SEC (3 tables, including 883,340 reported facts, and 3 views that give one value per
-company, metric and year), and searches 87 filings
-(FinanceBench's 84 10-Ks and others, plus 3 more): 44,922 passages.
+**The data:** the workspace **SEC filings** sits on a Postgres database of the figures 32 US public companies
+reported to the SEC (3 tables, including 883,340 reported facts, and 3 views that give one value per company,
+metric and year), and searches FinanceBench's 84 filings (10-Ks and others): 44,918 passages.
 
 ## The script
 
 ### 1. The workspace (2 minutes)
 
-**Click:** Workspaces → `partd-routing-sec-filings`.
+**Click:** Workspaces → **SEC filings**. It opens on the **Overview**.
 
+- **Sidebar:** "Two groups. *Use*: Ask and Dashboards. *Set up*: Workspaces, and Data sources, where databases
+  and documents are added once."
+- **Overview** tab: "A workspace is one business. These five steps are everything it answers from: this
+  database, these documents, the owner's description, the approved table notes, and approved answers. Each has
+  a button to change it."
 - **Schema** tab: "This is the database: three tables and three views; the lines are foreign keys."
 - **Knowledge** tab: "An AI drafted one sentence for each table and column (65 notes); we approved them. Only
   approved text ever reaches a prompt."
@@ -57,7 +62,7 @@ no model), and the label **New query**: the model wrote this SQL for this questi
 
 **Inspector:**
 
-- **Documents search, round 1:** "The best 8 passages across all 87 filings, to find the right *files*."
+- **Documents search, round 1:** "The best 8 passages across all 84 filings, to find the right *files*."
 - **Round 2:** "Up to 25 passages inside only those files."
 - **Re-ranking:** "Jev answered, for each passage, *does it contain what the question needs?* This column is
   its probability, this one shows how far each passage moved, and this line is the cut: the writer reads the
@@ -95,13 +100,13 @@ gate refuses anything but one SELECT, the transaction is read-only, and the logi
 
 "Nothing above is tuned to this data. Let me add data it has never seen."
 
-1. **Library → Databases → Add database:** host `host.docker.internal`, port `5433`, database `shop`, user
+1. **Data sources → Databases → Add database:** host `host.docker.internal`, port `5433`, database `shop`, user
    `statesync_reader`, password from `demo/local_shop_db.sh`, SSL `disable`. "It checks the login cannot
    write." Choose the schema `sales`.
-2. **Library → Documents:** new folder, upload `demo/documents/Returns and refunds policy.pdf`. Wait for
+2. **Data sources → Documents:** new folder, upload `demo/documents/Returns and refunds policy.pdf`. Wait for
    *ready*: "parsed in an isolated container, cut into page-bound passages, embedded."
-3. **Workspaces → New workspace** on *the shop*; press **Draft with AI**, then **Approve**; in **Documents**,
-   tick the folder.
+3. **Workspaces → New workspace** on *the shop*. The Overview shows what is still *To do*: press **Draft with
+   AI** in Knowledge, then **Approve**; in **Documents**, tick the folder. The Overview now says *Done*.
 4. **Ask:** *How many orders were placed through the app?* (database) and *How many days does a customer have
    to return an item?* (documents).
 

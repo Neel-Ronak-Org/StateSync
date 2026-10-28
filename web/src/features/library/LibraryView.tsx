@@ -149,9 +149,16 @@ function UploadZone({ folderId, onUploaded, compact }: { folderId: string; onUpl
 
 type LibraryTab = 'documents' | 'databases'
 
-/** The Library page (web/DESIGN.md §6b): a Documents tab (folders on the left, the selected folder's documents on the right) and a Databases tab. */
+/** The tab a link asks for: #/library/databases or #/library/documents (the default). */
+function tabFromHash(hash: string): LibraryTab {
+  return hash.replace(/^#\/?/, '').split('/')[1] === 'databases' ? 'databases' : 'documents'
+}
+
+/** The Data sources page (web/DESIGN.md §6b): the databases and document folders, added once and chosen per
+ * workspace. A Databases tab and a Documents tab (folders on the left, the selected folder's documents on the
+ * right). */
 export function LibraryView() {
-  const [tab, setTab] = useState<LibraryTab>('documents')
+  const [tab, setTab] = useState<LibraryTab>(() => tabFromHash(window.location.hash))
   const { folders, isLoading, isError, error, refetch, createFolder, renameFolder, deleteFolder } = useFolders()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [newOpen, setNewOpen] = useState(false)
@@ -166,8 +173,10 @@ export function LibraryView() {
     <div className="flex h-full flex-1 flex-col overflow-y-auto">
       <header className="flex min-h-14 shrink-0 items-center justify-between gap-4 border-b px-6 py-2">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Library</h1>
-          <p className="text-xs text-muted-foreground">Documents you upload once and use in any workspace.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Data sources</h1>
+          <p className="text-xs text-muted-foreground">
+            Databases and documents, added once. Each workspace then chooses one database and any of these folders.
+          </p>
         </div>
         {tab === 'documents' && (
           <Button onClick={() => setNewOpen(true)} className="gap-2">
@@ -179,9 +188,9 @@ export function LibraryView() {
 
       <main className="flex-1 p-6">
         <Tabs value={tab} onValueChange={(v) => setTab(v as LibraryTab)} className="gap-6">
-          <TabsList aria-label="Library sections">
-            <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsList aria-label="Data source sections">
             <TabsTrigger value="databases">Databases</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
           </TabsList>
           <TabsContent value="documents" className="outline-none">
             {isLoading ? (

@@ -102,7 +102,7 @@ export function NewWorkspaceDialog({ open, onOpenChange, onCreateWorkspace, onCr
             <Label htmlFor="ws-dataset">Database</Label>
             {yourDatabases.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Connect a database first: Library, then Databases, then Add database.
+                Connect a database first: Data sources, then Databases, then Add database.
               </p>
             ) : (
               <Select value={dataset} onValueChange={setDataset}>

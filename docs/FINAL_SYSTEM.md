@@ -74,7 +74,7 @@ The cross-encoder service and the evaluator are gone.
 ## 4. Workspaces: yes, still a thing, and they are how the flexibility works
 
 A **workspace** is "one business": one connected database, the document folders it may search, and what the
-owner has told StateSync about it. The demo workspace (`partd-routing-sec-filings`) uses all of these:
+owner has told StateSync about it. The demo workspace (**SEC filings**) uses all of these:
 
 - **Business description:** a few lines in the owner's words. The router and the SQL writer read them as
   background, never as instructions.
@@ -98,8 +98,8 @@ that means something once the check layer is gone.
 
 | You do | StateSync does | Ready when |
 |---|---|---|
-| **Upload a document** (Library → folder → upload) | The isolated parser extracts text page by page; the text is cut into page-bound passages, embedded and stored in pgvector; the folder is attached to the workspace | Seconds to a few minutes (status changes from `processing` to `ready`). No retraining, no per-dataset tuning. |
-| **Connect a database** (Library → Databases) | Checks the login can only read (no superuser or admin role, no write privilege on any table), stores the password encrypted, scans the tables, drafts notes for approval, and builds the coverage line from the data | After the scan; the notes improve answers but are optional |
+| **Upload a document** (Data sources → Documents → folder → upload) | The isolated parser extracts text page by page; the text is cut into page-bound passages, embedded and stored in pgvector; the folder is attached to the workspace | Seconds to a few minutes (status changes from `processing` to `ready`). No retraining, no per-dataset tuning. |
+| **Connect a database** (Data sources → Databases) | Checks the login can only read (no superuser or admin role, no write privilege on any table), stores the password encrypted, scans the tables, drafts notes for approval, and builds the coverage line from the data | After the scan; the notes improve answers but are optional |
 
 **Where it is general, and where it is tuned to filings:**
 
@@ -114,7 +114,7 @@ that means something once the check layer is gone.
   - Postgres only.
   - The router's card is capped at 4,000 characters and the scan at 60 tables, so a very large database is
     summarised.
-  - Vector search is an exact scan, fine for tens of thousands of passages (the demo has 44,922) but not millions.
+  - Vector search is an exact scan, fine for tens of thousands of passages (the demo has 44,918) but not millions.
 
 **To prove it in the demo:** create a fresh workspace live, upload one new PDF and connect one small database
 (section 8).
@@ -174,7 +174,7 @@ Experiment 6 is as important as 4 and 5: it shows we kept only what helped and d
 
 ## 8. The demo (in full, click by click: [DEMO.md](DEMO.md))
 
-1. **Workspace and data** (Schema tab): the SEC database, the 87 filings, the approved notes.
+1. **Workspace and data** (Schema tab): the SEC database, the 84 filings, the approved notes.
 2. **Database question** → Inspector: router, card, SQL, safety layers, rows.
 3. **Documents question** → Inspector: the two search rounds, the re-ranking table, the cut at 8.
 4. **Two-source question** (Walmart revenue + e-commerce strategy) → Inspector: both lanes.

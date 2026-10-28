@@ -46,6 +46,6 @@ export async function ask(page: Page, question: string): Promise<void> {
 export async function openDashboards(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Dashboards', exact: true }).click()
   const tablist = page.getByRole('tablist', { name: 'Dashboards' })
-  const emptyHeading = page.getByRole('heading', { name: /No dashboards for|This dashboard is empty/ })
+  const emptyHeading = page.getByRole('heading', { name: /No dashboards in|This dashboard is empty/ })
   await expect(tablist.or(emptyHeading)).toBeVisible()
 }

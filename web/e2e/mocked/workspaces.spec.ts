@@ -76,7 +76,7 @@ test.describe('the workspaces page', () => {
 })
 
 test.describe('creating a workspace', () => {
-  test('needs a connected database and a name, and opens on the knowledge step', async ({ page }) => {
+  test('needs a connected database and a name, and opens on the overview', async ({ page }) => {
     let id = ''
     const api = await openApp(page, { hash: '#/workspaces', noWorkspace: true, seed: (a) => void (id = withDatabase(a)) })
     await page.getByRole('button', { name: 'New workspace' }).click()
@@ -86,7 +86,7 @@ test.describe('creating a workspace', () => {
 
     await createWorkspace(page, 'Furniture shop', 'Shop replica', 'We sell furniture across Brazil.')
     await expect(page).toHaveURL(/#\/workspaces\/ws-1$/)
-    await expect(page.getByRole('tab', { name: 'Knowledge' })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
     const created = api.workspaces.workspaces.get('ws-1')
     expect(created?.target_schema).toBe(id)
     expect(created?.business_context).toBe('We sell furniture across Brazil.')
@@ -118,6 +118,7 @@ test.describe('the knowledge step', () => {
   async function newShop(page: Page) {
     const api = await openApp(page, { hash: '#/workspaces', noWorkspace: true, seed: (a) => void withDatabase(a) })
     await createWorkspace(page, 'Shop', 'Shop replica')
+    await page.getByRole('tab', { name: 'Knowledge' }).click()
     return api
   }
 
@@ -385,5 +386,26 @@ test.describe('evidence and thumbs', () => {
     await expect(turn.getByTestId('answer-text')).toBeVisible()
     await expect(turn.getByTestId('evidence-chip')).toHaveCount(0)
     await expect(turn.getByRole('button', { name: 'Mark answer correct' })).toHaveCount(0)
+  })
+})
+
+test.describe('the overview', () => {
+  test('shows each part of the setup with its state, and every Edit opens the step that changes it', async ({ page }) => {
+    await openApp(page, { hash: '#/workspaces/ws-1', seed: (a) => void a.workspaces.createReady('Furniture shop', 'olist') })
+    await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
+    const steps = page.getByTestId('setup-step')
+    await expect(steps).toHaveCount(5)
+    await expect(steps.nth(0)).toContainText('1. Database')
+    await expect(steps.nth(1)).toContainText('2. Documents')
+    await expect(steps.nth(1)).toHaveAttribute('data-done', 'false')
+    await steps.nth(2).getByRole('button', { name: 'Edit' }).click()
+    await expect(page.getByRole('tab', { name: 'Business' })).toHaveAttribute('aria-selected', 'true')
+    await page.getByRole('tab', { name: 'Overview' }).click()
+    await steps.nth(1).getByRole('button', { name: 'Choose folders' }).click()
+    await expect(page.getByRole('tab', { name: 'Documents' })).toHaveAttribute('aria-selected', 'true')
+    await page.getByRole('tab', { name: 'Overview' }).click()
+    await steps.nth(0).getByRole('link', { name: 'Manage' }).click()
+    await expect(page).toHaveURL(/#\/library\/databases$/)
+    await expect(page.getByRole('tab', { name: 'Databases' })).toHaveAttribute('aria-selected', 'true')
   })
 })

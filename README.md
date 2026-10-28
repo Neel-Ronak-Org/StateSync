@@ -17,6 +17,7 @@ in its 10-K?" and StateSync:
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How it works, step by step, why each part exists, and where it is in the code |
 | [docs/EVALUATION.md](docs/EVALUATION.md) | The experiments that shaped it, with their numbers |
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Using the app: where everything is, setting up a business, changing things later |
 | [docs/DEMO.md](docs/DEMO.md) | The demo, click by click, with what to say |
 | [docs/FINAL_SYSTEM.md](docs/FINAL_SYSTEM.md) | What was kept, what was removed, and why (the clean-up decision) |
 | [research/README.md](research/README.md) | The two papers and the studies behind them (separate from the product) |
@@ -67,10 +68,10 @@ model: `docker compose exec ollama ollama pull mxbai-embed-large`.
 
 ## Use it with your own data
 
-1. **Library → Databases → Add database**: a Postgres host, database and a **read-only** login. StateSync
+1. **Data sources → Databases → Add database**: a Postgres host, database and a **read-only** login. StateSync
    checks the login cannot write (no admin role, no write privilege on any table) and stores the password
    encrypted. Choose the schema to use.
-2. **Library → Documents**: create a folder and upload PDFs, text or Markdown. Each file is parsed, cut into
+2. **Data sources → Documents**: create a folder and upload PDFs, text or Markdown. Each file is parsed, cut into
    page-bound passages and embedded; it is searchable when its status says `ready`.
 3. **Workspaces → New workspace** on that database. Optionally describe the business in a few lines, press
    **Draft with AI** for table and column notes, edit, **Approve**, and pick the document folders.
@@ -107,7 +108,7 @@ python3 scripts/check_new_workspace.py            # live: a new database and doc
 - Postgres databases only; PDF, plain text and Markdown documents only (no OCR for scanned PDFs).
 - The router's database card is capped at 4,000 characters and a scan reads at most 60 tables, so a very wide
   database is summarised. Vector search is an exact scan: fine for tens of thousands of passages (the demo has
-  44,922), not millions.
+  44,918), not millions.
 - Two helpers assume documents titled `<COMPANY> <YEAR> ...` (as the demo's filings are): narrowing a
   two-source question to the companies in the SQL result, and carrying a company into a follow-up. With other
   titles they simply do not fire. The Jev routing wording was tuned on financial filings.

@@ -237,6 +237,7 @@ export default function App() {
         {route === 'dashboards' && (
           <DashboardsView
             dataset={dataset}
+            workspaceName={activeWorkspace?.name ?? ''}
             picker={picker}
             devMode={devMode}
             onAsk={() => navigate('ask')}

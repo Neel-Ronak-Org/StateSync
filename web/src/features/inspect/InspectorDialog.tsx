@@ -306,7 +306,7 @@ export function InspectorDialog({ turn, open, onOpenChange }: InspectorDialogPro
                   )}
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <Label>{rt.round1.length === 0 ? 'Round 1: which filings?' : `Round 1: best ${rt.round1.length} passages across the whole library`}</Label>
+                      <Label>{rt.round1.length === 0 ? 'Round 1: which filings?' : `Round 1: best ${rt.round1.length} passages across all the workspace's documents`}</Label>
                       {rt.round1.length === 0 ? (
                         <p className="text-xs text-muted-foreground">Skipped: the filings were already known.</p>
                       ) : (
