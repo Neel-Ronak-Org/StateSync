@@ -226,6 +226,8 @@ export class MockApi {
   nextEvidence: 'verified' | 'unchecked' | null = null
   /** When set, the next /query answer text is this instead of the canned one. */
   nextAnswer: string | null = null
+  /** Fields merged over the next /query's state_trace (route, front_door, calls, subtasks…); cleared after use. */
+  nextTrace: Json | null = null
   readonly tileCalls: string[] = []
   private clock = Date.parse('2026-09-27T10:00:00Z')
   private tileSeq = 0
@@ -519,6 +521,8 @@ export class MockApi {
     // The default tier: an approved example ran as is, else new SQL nobody checked; no SQL, no tier.
     const evidence = this.nextEvidence ?? (canned.sql ? (verifiedExample ? 'verified' : 'unchecked') : null)
     this.nextEvidence = null
+    const traceOverride = (this.nextTrace ?? {}) as Record<string, unknown>
+    this.nextTrace = null
     const turnIndex = turns.length + 1
     const at = this.now()
     turns.push({
@@ -578,6 +582,7 @@ export class MockApi {
           { role: 'sql', model: 'openai/gpt-oss-120b', tokens_in: 1290, tokens_out: 71, cached_tokens: 0, retries: 1, waited_ms: 2000, ms: 3410, rate_remaining_tokens: 3500 },
           { role: 'synthesizer', model: 'openai/gpt-oss-120b', tokens_in: 703, tokens_out: 71, cached_tokens: 0, retries: 0, waited_ms: 0, ms: 840, rate_remaining_tokens: 2700 },
         ],
+        ...traceOverride,
       },
     })
   }

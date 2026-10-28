@@ -108,7 +108,7 @@ def test_the_card_gains_the_coverage_line(monkeypatch):
     fd._CARD_CACHE.clear()
 
 
-def test_card_is_rebuilt_after_its_ttl_so_new_rows_reach_the_router():
+def test_an_old_card_is_served_at_once_and_rebuilt_in_the_background():
     listing = {"tables": [{"name": "annual_metrics"}]}
     describe = {"annual_metrics": {"columns": _cols(("company", "text"))}}
     lt, dt = _fake_schema(listing, describe)
@@ -117,16 +117,35 @@ def test_card_is_rebuilt_after_its_ttl_so_new_rows_reach_the_router():
     async def fake_cov(session, schema, tables, max_values, max_chars):
         return next(lines)
 
-    fd._CARD_CACHE.clear()
+    class FakeSession:
+        def __init__(self, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return None
+
     clock = [1000.0]
-    with patch.object(fd, "schema_list_tables", lt), patch.object(fd, "schema_describe_table", dt), \
-            patch.object(fd, "build_coverage", fake_cov), patch.object(fd.time, "monotonic", lambda: clock[0]):
-        first, s1 = asyncio.run(fd._schema_card(SimpleNamespace(), "t", "cn_x"))
+
+    async def scenario():
+        first, s1 = await fd._schema_card(SimpleNamespace(), "t", "cn_x")
         clock[0] += 10
-        again, s2 = asyncio.run(fd._schema_card(SimpleNamespace(), "t", "cn_x"))
+        again, s2 = await fd._schema_card(SimpleNamespace(), "t", "cn_x")
         clock[0] += float(fd.cfg.front_door.card_cache_ttl_s)
-        later, s3 = asyncio.run(fd._schema_card(SimpleNamespace(), "t", "cn_x"))
+        stale, s3 = await fd._schema_card(SimpleNamespace(), "t", "cn_x")   # old card now, rebuild started
+        await asyncio.gather(*list(fd._REFRESH_TASKS))
+        fresh, s4 = await fd._schema_card(SimpleNamespace(), "t", "cn_x")
+        return (first, again, stale, fresh), (s1, s2, s3, s4)
+
     fd._CARD_CACHE.clear()
-    assert (s1, s2, s3) == ("ok", "cached", "ok")
-    assert again == first and "TESLA" not in first
-    assert "TESLA" in later
+    with patch.object(fd, "schema_list_tables", lt), patch.object(fd, "schema_describe_table", dt), \
+            patch.object(fd, "build_coverage", fake_cov), patch.object(fd, "MCPSession", FakeSession), \
+            patch.object(fd.time, "monotonic", lambda: clock[0]):
+        (first, again, stale, fresh), statuses = asyncio.run(scenario())
+    fd._CARD_CACHE.clear()
+    assert statuses == ("ok", "cached", "cached", "cached")
+    assert again == stale == first and "TESLA" not in first
+    assert "TESLA" in fresh
+    assert not fd._REFRESHING

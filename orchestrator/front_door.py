@@ -262,22 +262,44 @@ def with_business_context(card: str, business_context: str | None) -> str:
     return f"Workspace description: {text}\n{card}" if text else card
 
 
-# The card per (tenant, dataset) with the time it was built. It is rebuilt after front_door.card_cache_ttl_s, so
-# rows or tables added to the owner's database reach the router (its coverage line) without a restart; the
-# oldest goes past front_door.card_cache_max. A failed read is never cached.
+# The card per (tenant, dataset) with the time it was built; the oldest goes past front_door.card_cache_max. A
+# failed read is never cached. Once a card is older than front_door.card_cache_ttl_s it is still used, and a new
+# one is built in the background (the coverage line reads every row, which takes seconds on a large database),
+# so rows added to the owner's database reach the router without a restart and without a slow question.
 _CARD_CACHE: "OrderedDict[tuple[str, str], tuple[str, float]]" = OrderedDict()
+_REFRESHING: set[tuple[str, str]] = set()
+_REFRESH_TASKS: set["asyncio.Task[None]"] = set()
+
+
+async def _refresh_card(tenant_id: str, dataset: str, workspace_id: str | None) -> None:
+    """Rebuild one card on a session of its own (the question's session closes when the question ends)."""
+    try:
+        async with MCPSession(tenant_id=tenant_id, workspace_id=workspace_id, dataset=dataset) as session:
+            await _build_card(session, tenant_id, dataset)
+    except Exception as exc:  # noqa: BLE001 -- the old card stays; the next question tries again
+        logger.warning("router: background card refresh failed for dataset %s: %s", dataset, exc)
+    finally:
+        _REFRESHING.discard((tenant_id, dataset))
 
 
 async def _schema_card(session: MCPSession, tenant_id: str, dataset: str) -> tuple[str, str]:
-    """(the dataset's card with its coverage line, "cached" | "ok" | "unavailable"). Tables are described
-    only until the card reaches its cap, so a very wide database does not cost one call per table."""
+    """(the dataset's card with its coverage line, "cached" | "ok" | "unavailable")."""
     key = (tenant_id, dataset)
     if key in _CARD_CACHE:
         cached, built = _CARD_CACHE[key]
-        if time.monotonic() - built < float(cfg.front_door.card_cache_ttl_s):
-            _CARD_CACHE.move_to_end(key)
-            return cached, "cached"
-        del _CARD_CACHE[key]
+        _CARD_CACHE.move_to_end(key)
+        if time.monotonic() - built >= float(cfg.front_door.card_cache_ttl_s) and key not in _REFRESHING:
+            _REFRESHING.add(key)
+            task = asyncio.create_task(_refresh_card(tenant_id, dataset, getattr(session, "workspace_id", None)))
+            _REFRESH_TASKS.add(task)
+            task.add_done_callback(_REFRESH_TASKS.discard)
+        return cached, "cached"
+    return await _build_card(session, tenant_id, dataset)
+
+
+async def _build_card(session: MCPSession, tenant_id: str, dataset: str) -> tuple[str, str]:
+    """Read the tables, columns and coverage line and cache the card. Tables are described only until the card
+    reaches its cap, so a very wide database does not cost one call per table."""
     cap = int(cfg.front_door.card_max_chars)
     try:
         listing = await schema_list_tables(session, dataset)
@@ -301,6 +323,7 @@ async def _schema_card(session: MCPSession, tenant_id: str, dataset: str) -> tup
         line = ""
     if line:
         card = f"{card}\n{line}"
+    key = (tenant_id, dataset)
     _CARD_CACHE[key] = (card, time.monotonic())
     _CARD_CACHE.move_to_end(key)
     while len(_CARD_CACHE) > int(cfg.front_door.card_cache_max):

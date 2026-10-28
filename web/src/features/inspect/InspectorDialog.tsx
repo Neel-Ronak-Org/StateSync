@@ -96,9 +96,13 @@ export function InspectorDialog({ turn, open, onOpenChange }: InspectorDialogPro
   const steps = stepsFor(route, Boolean(rt) && hasJevOrder)
   const rerankLabel = hasJevOrder ? 'Jev' : 'none'
   const probabilities = routeProbabilities(fd)
-  const routerLabel = fd?.jev && !fd.jev.fallback ? 'one Jev choice' : fd ? 'LLM router' : 'LLM router'
+  // A two-source question is split into its database part and its documents part by one small-model call
+  // after the route is chosen; that time belongs to deciding the route.
+  const splitMs = callsMs(trace, ['decomposer'])
+  const split = route === 'hybrid' && trace.subtasks?.length === 2 ? trace.subtasks : null
+  const routerLabel = (fd?.jev && !fd.jev.fallback ? 'one Jev choice' : 'LLM router') + (split ? ', then a split' : '')
   const times: Partial<Record<StepId, number>> = {
-    router: fd?.latency_ms ?? (fd?.jev?.ms as number | undefined) ?? callsMs(trace, ['supervisor']),
+    router: (fd?.latency_ms ?? (fd?.jev?.ms as number | undefined) ?? callsMs(trace, ['supervisor'])) + splitMs,
     sql: callsMs(trace, ['sql']),
     search: rt?.ms.search,
     rerank: rt?.ms.jev,
@@ -173,11 +177,14 @@ export function InspectorDialog({ turn, open, onOpenChange }: InspectorDialogPro
                         <span className="font-medium text-foreground">{fd.route}</span>
                       </p>
                     )}
-                    {fd.database_question && fd.documents_question && (
-                      <div className="mt-3 space-y-1 text-xs">
-                        <Label>The question was split</Label>
-                        <p><span className="text-muted-foreground">Database part:</span> {fd.database_question}</p>
-                        <p><span className="text-muted-foreground">Documents part:</span> {fd.documents_question}</p>
+                    {(split || (fd.database_question && fd.documents_question)) && (
+                      <div className="mt-3 space-y-1 text-xs" data-testid="split">
+                        <Label>
+                          The question was split
+                          {splitMs > 0 ? ` (one small-model call, ${formatMs(splitMs)})` : ''}
+                        </Label>
+                        <p><span className="text-muted-foreground">Database part:</span> {split?.[0] ?? fd.database_question}</p>
+                        <p><span className="text-muted-foreground">Documents part:</span> {split?.[1] ?? fd.documents_question}</p>
                       </div>
                     )}
                     {fd.standalone_question && fd.standalone_question !== turn.question && (

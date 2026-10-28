@@ -406,3 +406,32 @@ test.describe('appearance', () => {
     await expect(table.getByText('0.84 s')).toBeVisible()
   })
 })
+
+test.describe('the pipeline inspector', () => {
+  test('shows the route, and for a two-source question the split and its time inside the router step', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask' })
+    api.nextTrace = {
+      route: 'hybrid',
+      subtasks: ['Which company had the highest revenue in 2022?', 'How does that company describe its strategy?'],
+      front_door: {
+        route: 'hybrid',
+        latency_ms: 1500,
+        jev: { model: 'jev-1.13', ms: 1400, probabilities: { both: 0.94, docs: 0.03, sql: 0.02, neither: 0.01 } },
+      },
+      calls: [
+        { role: 'decomposer', model: 'qwen', tokens_in: 300, tokens_out: 60, cached_tokens: 0, retries: 0, waited_ms: 0, ms: 2500, rate_remaining_tokens: 0 },
+        { role: 'synthesizer', model: 'gpt-oss-120b', tokens_in: 700, tokens_out: 70, cached_tokens: 0, retries: 0, waited_ms: 0, ms: 800, rate_remaining_tokens: 0 },
+      ],
+    }
+    await ask(page, 'Which company had the highest revenue in 2022, and how does it describe its strategy?')
+    await page.getByRole('button', { name: 'Inspect pipeline' }).last().click()
+    const inspector = page.getByTestId('inspector')
+    await expect(inspector).toContainText('Route taken: Database + documents')
+    await expect(inspector).toContainText('one Jev choice, then a split')
+    await expect(inspector).toContainText('Both sources')
+    const split = inspector.getByTestId('split')
+    await expect(split).toContainText('The question was split (one small-model call, 2.5 s)')
+    await expect(split).toContainText('Database part: Which company had the highest revenue in 2022?')
+    await expect(split).toContainText('Documents part: How does that company describe its strategy?')
+  })
+})
