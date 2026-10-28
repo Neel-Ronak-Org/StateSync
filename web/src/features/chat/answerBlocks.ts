@@ -43,7 +43,14 @@ export function answerBlocks(text: string): AnswerBlock[] {
         result.push({ kind: 'p', text: pLines.join('\n') })
         pLines = []
       } else if ((currentKind === 'ul' || currentKind === 'ol') && listItems.length > 0) {
-        result.push({ kind: currentKind, items: listItems })
+        // Models often leave a blank line between list items; items split that way stay one list
+        // (otherwise every numbered item would read "1.").
+        const last = result[result.length - 1]
+        if (last && last.kind === currentKind) {
+          last.items.push(...listItems)
+        } else {
+          result.push({ kind: currentKind, items: listItems })
+        }
         listItems = []
       }
       currentKind = null

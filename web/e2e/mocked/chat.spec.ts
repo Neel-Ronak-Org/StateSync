@@ -155,6 +155,23 @@ test.describe('asking', () => {
     await expect(turn.getByTestId('figures-check')).toHaveCount(0)
   })
 
+  test('the model\'s **bold** shows as bold, figures inside it still marked; an unpaired marker shows as written', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask' })
+    api.nextAnswer = 'Two risks:\n- **Supply chain** delays\n- **96,478** orders late\n\nA lone ** stays.'
+    api.nextGrounding = {
+      figures: [{ text: '96,478', start: 47, end: 53, matched: true, source: { kind: 'cell', row: 0, column: 'n' } }],
+      matched: 1,
+      unmatched: [],
+    }
+    await ask(page, 'What are the risks?')
+    const turn = page.getByTestId('turn').last()
+    const text = turn.getByTestId('answer-text')
+    await expect(text.locator('strong')).toHaveText(['Supply chain', '96,478'])
+    await expect(text.locator('strong [data-testid="figure"]')).toHaveText('96,478')
+    await expect(text).toContainText('A lone ** stays.')
+    await expect(text).not.toContainText('**Supply')
+  })
+
   test('when every figure matches, the answer says so', async ({ page }) => {
     const api = await openApp(page, { hash: '#/ask' })
     api.nextAnswer = 'Delivered orders dominate: 96,478 of 98,210.'

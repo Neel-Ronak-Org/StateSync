@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, Download, MoreHorizontal, PanelRight, Pin, ThumbsDown, ThumbsUp, Workflow } from 'lucide-react'
 import { toast } from 'sonner'
@@ -62,27 +62,39 @@ const EVIDENCE_CHIPS: Record<Evidence, { label: string; className: string; hint:
   },
 }
 
-/** A chunk of answer text with each figure marked: dotted when it matches its source, amber when it does not. */
+/** A chunk of answer text with each figure marked: dotted when it matches its source, amber when it does not.
+ * The model's **bold** is shown as bold; with an unpaired marker the text is shown as written. */
 function renderFigures(segments: (chunk: string) => Segment[], chunk: string) {
-  return segments(chunk).map((seg, i) =>
-    seg.figure ? (
-      <span
-        key={i}
-        data-testid="figure"
-        data-matched={seg.figure.matched ? 'true' : 'false'}
-        title={figureSource(seg.figure)}
-        className={
-          seg.figure.matched
-            ? 'underline decoration-dotted decoration-muted-foreground/60 underline-offset-2'
-            : 'rounded-sm bg-destructive/10 px-0.5 text-destructive underline decoration-dotted underline-offset-2'
-        }
-      >
-        {seg.text}
-      </span>
-    ) : (
-      <span key={i}>{seg.text}</span>
-    ),
-  )
+  const parseBold = (chunk.split('**').length - 1) % 2 === 0
+  let bold = false
+  const out: ReactNode[] = []
+  segments(chunk).forEach((seg, i) => {
+    const parts = parseBold ? seg.text.split('**') : [seg.text]
+    parts.forEach((part, j) => {
+      if (j > 0) bold = !bold
+      if (!part) return
+      const key = `${i}-${j}`
+      const node = seg.figure ? (
+        <span
+          key={key}
+          data-testid="figure"
+          data-matched={seg.figure.matched ? 'true' : 'false'}
+          title={figureSource(seg.figure)}
+          className={
+            seg.figure.matched
+              ? 'underline decoration-dotted decoration-muted-foreground/60 underline-offset-2'
+              : 'rounded-sm bg-destructive/10 px-0.5 text-destructive underline decoration-dotted underline-offset-2'
+          }
+        >
+          {part}
+        </span>
+      ) : (
+        <span key={key}>{part}</span>
+      )
+      out.push(bold ? <strong key={key} className="font-semibold">{node}</strong> : node)
+    })
+  })
+  return out
 }
 
 export function TurnItem({
