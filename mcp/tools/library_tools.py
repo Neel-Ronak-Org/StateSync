@@ -23,7 +23,7 @@ says `ready` or `failed`; retrieval reads READY documents only.
 
 THE RULES, enforced here rather than trusted from a caller:
 
-1. Every statement filters on tenant_id (bound server-side, A0.6). A folder is
+1. Every statement filters on tenant_id (bound server-side from the session). A folder is
    owned when its owner_principal_id is the caller; a document is owned through
    its folder; a workspace through session_state.workspaces. Anything not owned
    is `not_found`, so existence is never revealed. Row-level security

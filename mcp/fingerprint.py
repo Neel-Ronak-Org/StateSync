@@ -1,6 +1,6 @@
 """
 mcp/fingerprint.py
-Schema fingerprint computation per the A5 specification.
+A fingerprint (a hash) of StateSync's own database schema, checked when the MCP starts.
 
 fingerprint = sha256(
     canonical_json(
@@ -18,7 +18,7 @@ Includes: table names, column names, column types, nullability, foreign keys.
 Computed:
   1. By the migration job (scripts/migrate.sh) before inserting into schema_versions.
   2. By this module at MCP startup.
-A mismatch between the two is a startup failure (A5 spec requirement).
+A mismatch between the two is a startup failure.
 """
 
 from __future__ import annotations
@@ -32,16 +32,16 @@ import psycopg
 
 logger = logging.getLogger(__name__)
 
-# Tables excluded from fingerprint computation (A5 spec)
+# Tables excluded from fingerprint computation
 _EXCLUDED_TABLES = frozenset({"schema_versions"})
 
 
 async def compute_fingerprint(conn: psycopg.AsyncConnection) -> str:
     """
-    Compute the schema fingerprint using the A5 formula.
+    Compute the schema fingerprint.
 
     Called with the ordinary statesync_reader pool connection (db.get_connection()).
-    A1 requires migrator credentials to never enter a long-running service, and
+    The migration login must never enter a long-running service, and
     mcp is one, so this must not need a migrator connection — and it doesn't:
     information_schema and pg_constraint-derived views are visible to any role
     with SELECT on the underlying tables, which statesync_reader holds on every
@@ -90,7 +90,7 @@ async def compute_fingerprint(conn: psycopg.AsyncConnection) -> str:
         # what statesync_reader is by design). pg_constraint has no such
         # restriction, so this produces the same result under reader or
         # migrator -- required for the fingerprint to be a pure function of
-        # schema shape (A5), not of which role computed it.
+        # schema shape, not of which role computed it.
         fk_query = """
             SELECT
                 att2.attname AS fk_column,
@@ -138,7 +138,7 @@ async def verify_fingerprint_at_startup(
 ) -> str:
     """
     Compute the current fingerprint and compare against schema_versions.
-    Raises RuntimeError on mismatch (startup failure per A5).
+    Raises RuntimeError on a mismatch: the MCP refuses to start on a database its migrations do not describe.
 
     Called by mcp/main.py's lifespan with a connection from the ordinary
     statesync_reader pool (db.get_connection()) — see compute_fingerprint's

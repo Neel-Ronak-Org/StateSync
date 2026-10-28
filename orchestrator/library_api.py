@@ -1,7 +1,6 @@
 """
 orchestrator/library_api.py
-FastAPI routes for the account document library (docs/V3_PLAN.md Phase 3c
-slice 5, decision D-v3-17): folders of uploaded documents, the upload itself,
+FastAPI routes for the account document library: folders of uploaded documents, the upload itself,
 and which folders a workspace searches.
 
 WHY THIS EXISTS. Ownership, quotas and storage are enforced in the MCP's

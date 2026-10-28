@@ -16,10 +16,10 @@ One JSON-RPC method takes an `action`:
 
 THE RULES, enforced here rather than trusted from a caller:
 
-1. Every statement filters on tenant_id (bound server-side, A0.6) AND the
+1. Every statement filters on tenant_id (bound server-side from the session) AND the
    owner principal. Row-level security (migration 021) repeats the tenant
    check in the database as a backstop.
-2. Only APPROVED knowledge leaves through `context` (V3_PLAN §5.1): drafts
+2. Only APPROVED knowledge leaves through `context`: drafts
    never reach a prompt.
 3. An example's SQL must pass the same Layer 1 gate every query passes before
    it is stored; approved examples can run directly (the fast path).

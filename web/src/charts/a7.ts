@@ -1,18 +1,17 @@
 /**
- * A7: the chart spec allowlist, validator 2 of 2.
+ * The chart allowlist ("A7", the name of the answer's output contract), check 2 of 2.
  *
- * The orchestrator validates every chart spec before it leaves the server
- * (validator 1). This one runs again in the browser, independently, before
+ * The orchestrator checks every chart spec before it leaves the server
+ * (orchestrator/schemas/synthesizer_output.py, check 1). This one runs again in the browser, independently, before
  * anything reaches Vega, so either validator alone blocks a hostile spec.
  * There is no repair path: a spec that fails is withheld, and the prose answer
  * stays.
  *
- * Ported rule-for-rule from the previous frontend (frontend/app.js,
- * validateA7Chart). What it blocks and why:
+ * What it blocks and why:
  * - any property outside the allowlist, at the top level or in an encoding
  *   channel (object-form marks are where mark properties smuggle expressions);
  * - data other than inline `values` (no url, name or format: no network fetch);
- * - expression-bearing keys anywhere in transforms (BD7): Vega expressions
+ * - expression-bearing keys anywhere in transforms: Vega expressions
  *   are code, and even the CSP-safe interpreter should not be handed them;
  * - out-of-range sizes and oversized data.
  */
@@ -51,9 +50,9 @@ function auditExpressions(node: unknown, path: string, out: string[]): void {
   } else if (isPlainObject(node)) {
     for (const [k, v] of Object.entries(node)) {
       if (includes(A7.EXPRESSION_KEYS, k)) {
-        out.push(`${path}/${k}: expression-bearing property is not permitted (BD7)`)
+        out.push(`${path}/${k}: expression-bearing property is not permitted`)
       } else if (includes(A7.DUAL_FORM_EXPRESSION_KEYS, k) && typeof v === 'string') {
-        out.push(`${path}/${k}: string form is an expression; use the predicate-object form instead (BD7)`)
+        out.push(`${path}/${k}: string form is an expression; use the predicate-object form instead`)
       }
       auditExpressions(v, `${path}/${k}`, out)
     }

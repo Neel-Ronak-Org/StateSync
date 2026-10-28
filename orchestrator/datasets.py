@@ -1,6 +1,6 @@
 """
 orchestrator/datasets.py
-What kind of dataset a question is about (docs/V3_PLAN.md Phase 3c slice 6).
+What kind of dataset a question is about.
 
 Three kinds exist: the built-in sample datasets (public, olist, live), and the
 owner's own databases, named cn_<16 hex> (mcp/connections.py, migration 026).

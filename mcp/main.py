@@ -34,9 +34,7 @@ from db import init_pool, close_pool, get_connection, init_history_pool, close_h
 from embeddings import close_embeddings_client
 from fingerprint import verify_fingerprint_at_startup
 from service_auth import ServiceTokenMissing, authorized, load_token
-from session import (set_session, enforce_tenancy_policy,
-                     TenancyPolicyNotImplemented, TenantNotAllowed,
-                     TenancyAcknowledgementMissing)
+from session import set_session, enforce_tenancy_policy, TenantNotAllowed
 from tools.schema_tools import list_tables, describe_table
 from tools.data_tools import sample_rows, run_select
 from tools.vector_tools import semantic_search
@@ -67,7 +65,7 @@ async def lifespan(app: FastAPI):
     await init_pool()
     await init_history_pool()
 
-    # A5: recomputed at mcp startup; mismatch is a startup failure, not a
+    # The schema fingerprint is recomputed at startup; a mismatch is a startup failure, not a
     # warning. Uses the ordinary statesync_reader pool (see fingerprint.py).
     async with get_connection() as conn:
         await verify_fingerprint_at_startup(conn)
@@ -92,7 +90,7 @@ app = FastAPI(
 
 # ── JSON-RPC dispatch ─────────────────────────────────────────────────────────
 # mcp.tool_ceiling is the single source of truth; the env var remains an
-# explicit override. Raised 15 -> 20 for tiles (docs/V3_PLAN.md decision log).
+# explicit override. Raised 15 -> 20 for tiles.
 TOOL_CEILING = int(os.environ.get("TOOL_CEILING", cfg.mcp.tool_ceiling))
 
 _REGISTERED_TOOLS: dict[str, Any] = {
@@ -116,7 +114,7 @@ _REGISTERED_TOOLS: dict[str, Any] = {
 
 assert len(_REGISTERED_TOOLS) <= TOOL_CEILING, (
     f"Tool count {len(_REGISTERED_TOOLS)} exceeds ceiling {TOOL_CEILING}. "
-    "A BD entry is required before adding more tools (A4 spec)."
+    "A BD entry is required before adding more tools."
 )
 
 
@@ -151,7 +149,7 @@ async def rpc_handler(request: Request) -> JSONResponse:
     """
     JSON-RPC 2.0 dispatch endpoint.
 
-    Per A0.6: tenant_id is extracted from X-Tenant-ID header and bound
+    tenant_id is taken from the X-Tenant-ID header and bound
     into the session context before any tool runs. Agents cannot forge it
     because it comes from the session context, not from params.
     """
@@ -162,7 +160,7 @@ async def rpc_handler(request: Request) -> JSONResponse:
                        request.client.host if request.client else "unknown")
         return JSONResponse(_jsonrpc_error(None, RPC_UNAUTHORIZED, "Unauthorized."), status_code=401)
 
-    # Establish session context from headers (A0.6)
+    # Establish session context from headers
     tenant_id = request.headers.get("X-Tenant-ID", "")
     session_id = request.headers.get("X-Session-ID", "")
 
@@ -175,30 +173,14 @@ async def rpc_handler(request: Request) -> JSONResponse:
     set_session(tenant_id=tenant_id, session_id=session_id,
                 workspace_id=request.headers.get("X-Workspace-ID", "") or None)
 
-    # Appendix 4 seam: MCP session policy layer for tenancy.enforced (A0.5).
-    # No-op while the flag is false (the shipped default, D6); real dispatch
-    # point regardless -- see session.enforce_tenancy_policy's docstring.
+    # Admission control for a multi-tenant deployment ([tenancy] enforced; off for one owner).
     try:
         enforce_tenancy_policy(tenant_id)
     except TenantNotAllowed as exc:
-        # 403, not 501: the policy IS implemented and it is refusing this
-        # tenant. Distinguishing the two matters -- "not built" and "not
-        # permitted" are different operational facts.
         logger.warning("Tenancy admission refused: %s", exc)
         return JSONResponse(
             _jsonrpc_error(None, -32602, str(exc)),
             status_code=403,
-        )
-    except TenancyAcknowledgementMissing as exc:
-        logger.error("Tenancy misconfiguration: %s", exc)
-        return JSONResponse(
-            _jsonrpc_error(None, -32603, str(exc)),
-            status_code=501,
-        )
-    except TenancyPolicyNotImplemented as exc:
-        return JSONResponse(
-            _jsonrpc_error(None, -32603, str(exc)),
-            status_code=501,
         )
 
     # Parse JSON-RPC body

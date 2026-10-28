@@ -4,7 +4,7 @@ Service-to-service authentication for the MCP's /rpc endpoint: a shared secret t
 sends as "Authorization: Bearer <token>" on every call.
 
 WHY THIS EXISTS. The MCP trusts its callers for identity: tenant_id comes from the X-Tenant-ID
-header (A0.6) and principal_id from the params, both supplied by the orchestrator after it has
+header and principal_id from the params, both supplied by the orchestrator after it has
 authenticated the person. Until 2026-10-02 nothing checked that the caller WAS the orchestrator,
 so any container on app_net (the frontend's nginx, ollama) could reach mcp:8080
 and act as any tenant and any principal: read their conversations, pin from them, run their

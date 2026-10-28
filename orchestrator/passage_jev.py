@@ -1,15 +1,14 @@
 """
 orchestrator/passage_jev.py
-Re-order retrieved passages by Jev's probability that each contains what the question needs
-(pipeline.passage_rerank = "jev"; default "off").
+Re-orders the documents engine's passages by Jev's probability that each contains what the question needs.
 
-WHY THIS EXISTS: in Paper B's pre-registered page-finding test (rerun R1, docs/research/paperb_reruns_prereg.md),
-re-ordering the cross-encoder's 25 passages by this probability put the source page first for 53.3% of
-questions against 43.7% for the cross-encoder's own order. That test scored the passages offline; this module
-runs the same question over the same state text inside the documents route, so the answer writer reads the
-passages in Jev's order. One Jev request per passage, at most retrieval.jev_rerank_concurrency at once (the API
-refuses 25 at once). A passage whose request fails keeps a score of None and stays after the scored ones in
-its original order, so a Jev outage leaves the search's own order.
+WHY: in Paper B's pre-registered page-finding test (300 new questions; research/paper_b/protocols/
+paperb_reruns_prereg.md, rerun R1), ordering the dense search's 25 passages by this probability put the
+source page first for 49.3% of questions against 20.3% for the dense order. This module asks the same
+question, over the same state text, inside the documents route, so the answer writer reads the passages in
+Jev's order. One Jev request per passage, at most [retrieval] jev_rerank_concurrency at once (the API refuses
+25 at once). A passage whose request fails keeps no score and stays after the scored ones in its original
+order, so a Jev outage leaves the search's own order.
 """
 
 from __future__ import annotations

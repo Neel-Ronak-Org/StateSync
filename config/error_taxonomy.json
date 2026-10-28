@@ -2,57 +2,86 @@
   "version": 1,
   "rules": [
     {
-      "match": { "sqlstate": "42601" },
+      "match": {
+        "message_regex": "(?i)^\\[Layer 1 Gate\\] Rejected: statement reads no table"
+      },
+      "category": "no_data_source",
+      "hint": "TERMINAL. The query read no table: the question asks for something this database does not hold. Do not retry with a constant or another formulation; say the database does not contain it."
+    },
+    {
+      "match": {
+        "sqlstate": "42601"
+      },
       "category": "syntax",
       "hint": "Statement failed to parse. Re-emit valid PostgreSQL; do not change the query's intent."
     },
     {
-      "match": { "sqlstate": "42703" },
+      "match": {
+        "sqlstate": "42703"
+      },
       "category": "unknown_column",
       "hint": "Referenced column does not exist. Call schema.describe_table for the tables in FROM before re-emitting."
     },
     {
-      "match": { "sqlstate": "42P01" },
+      "match": {
+        "sqlstate": "42P01"
+      },
       "category": "unknown_table",
       "hint": "Referenced table does not exist. Call schema.list_tables and re-select the target table."
     },
     {
-      "match": { "sqlstate": "42702" },
+      "match": {
+        "sqlstate": "42702"
+      },
       "category": "ambiguous_column",
       "hint": "Column is ambiguous across joined tables. Qualify every column with its table alias."
     },
     {
-      "match": { "sqlstate": "42883" },
+      "match": {
+        "sqlstate": "42883"
+      },
       "category": "type_mismatch",
       "hint": "Operator/function does not exist for these operand types. Call data.sample_rows to confirm the stored representation before casting."
     },
     {
-      "match": { "sqlstate": "22P02" },
+      "match": {
+        "sqlstate": "22P02"
+      },
       "category": "type_mismatch",
       "hint": "Invalid input syntax for type. Confirm the literal format against sampled rows."
     },
     {
-      "match": { "sqlstate": "42501" },
+      "match": {
+        "sqlstate": "42501"
+      },
       "category": "permission_denied",
       "hint": "TERMINAL. The connection is SELECT-only by design (D15). Do not retry; do not attempt an alternative write formulation."
     },
     {
-      "match": { "message_regex": "(?i)^\\[Layer 1 Gate\\] SQL parse error" },
+      "match": {
+        "message_regex": "(?i)^\\[Layer 1 Gate\\] SQL parse error"
+      },
       "category": "syntax",
       "hint": "Statement failed to parse before reaching the engine (A4.5 Layer 1). Re-emit valid PostgreSQL; do not change the query's intent."
     },
     {
-      "match": { "message_regex": "(?i)^\\[Layer 1 Gate\\] Rejected" },
+      "match": {
+        "message_regex": "(?i)^\\[Layer 1 Gate\\] Rejected"
+      },
       "category": "permission_denied",
       "hint": "TERMINAL. Rejected before reaching the engine: not a single plain SELECT statement (A4.5 Layer 1). Do not retry; do not attempt an alternative write or multi-statement formulation."
     },
     {
-      "match": { "sqlstate": "42803" },
+      "match": {
+        "sqlstate": "42803"
+      },
       "category": "aggregation_misuse",
       "hint": "Column appears in the SELECT list or HAVING clause without being grouped or aggregated. Wrap it in SUM/AVG/COUNT/MIN/MAX or add it to GROUP BY."
     },
     {
-      "match": { "sqlstate": "57014" },
+      "match": {
+        "sqlstate": "57014"
+      },
       "category": "timeout",
       "hint": "Query exceeded the statement timeout. Reduce scanned rows by adding a selective predicate or a LIMIT."
     },
@@ -65,12 +94,16 @@
       "hint": "Spatial predicate invalid. Confirm SRID 4326 and that the geography cast is applied to both operands."
     },
     {
-      "match": { "message_regex": "(?i)expected \\d+ dimensions" },
+      "match": {
+        "message_regex": "(?i)expected \\d+ dimensions"
+      },
       "category": "vector_dim_mismatch",
       "hint": "Embedding dimensionality mismatch. Use the configured embedding model; do not re-embed with a different one."
     },
     {
-      "match": { "empty_result": true },
+      "match": {
+        "empty_result": true
+      },
       "category": "empty_result",
       "hint": "Query was valid but returned zero rows. Verify filter literals against sampled values before concluding the answer is empty."
     }

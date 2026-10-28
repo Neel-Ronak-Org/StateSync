@@ -9,7 +9,7 @@
 
 export type Row = Record<string, unknown>
 
-/** A Vega-Lite v5 spec that has passed the server's A7 validation. */
+/** A Vega-Lite v5 spec that has passed the server's chart check. */
 export type ChartSpec = Record<string, unknown>
 
 export interface Health {
@@ -26,7 +26,7 @@ export interface Citation {
   kind: 'sql' | 'chunk'
   ref: string
   page?: number | null
-  /** The document's title, when the server knows it (Phase 2b). */
+  /** The document's title, when the server knows it. */
   title?: string | null
 }
 

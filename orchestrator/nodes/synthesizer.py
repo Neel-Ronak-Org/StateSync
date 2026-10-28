@@ -72,7 +72,7 @@ Rules:
    JavaScript, shell commands, or any other runnable program text, and no
    fenced code blocks. If the user asks for code, or asks you to run
    something, explain in prose that this system answers with data and
-   declarative charts only, and does not produce or execute code (D8).
+   declarative charts only, and does not produce or execute code.
 10. Emit the raw JSON object only. Do not wrap it in markdown code fences."""
 
 
@@ -88,11 +88,8 @@ _VEGA_LITE_SCHEMA = "https://vega.github.io/schema/vega-lite/v5.json"
 
 
 def is_chartable(sql_rows: list[dict], sql_columns: list[str]) -> bool:
-    """
-    Deterministic gate for E2 Deliverable 1's "where a chart is appropriate".
-    A single scalar result is an answer, not a chart. Thresholds are config
-    (A0.2), not literals.
-    """
+    """Whether a result deserves a chart: at least [sql] chart_min_rows rows and chart_min_columns columns.
+    A single figure is an answer, not a chart."""
     return (
         len(sql_rows) >= cfg.sql.chart_min_rows
         and len(sql_columns) >= cfg.sql.chart_min_columns
@@ -105,30 +102,13 @@ def build_chart(
     sql_columns: list[str],
     query_id: str,
 ) -> dict | None:
-    """
-    Assembles the final A7 chart from the model's proposed SHAPE plus the
-    real result rows.
+    """The final chart: the model's proposed SHAPE (mark and encoding) plus the real result rows, attached here.
 
-    The split is deliberate and load-bearing: the model chooses the mark and
-    the encoding (what kind of chart, which column on which channel), and
-    THIS CODE supplies `data.values` from the actual SQL result. The model is
-    never asked for, and never trusted with, the data itself.
-
-    Two reasons, both from the spec:
-      - E2 Notes: "`data.values` is the actual result rows, capped at 5000."
-      - Strategy §1: answers are "grounded in real rows". A model that emits
-        its own data.values can fabricate a plausible-looking chart that
-        contradicts the prose above it, and A7's schema would happily
-        validate it — every value is a well-formed number. Generating the
-        data in code makes that class of error impossible rather than
-        unlikely.
-
-    Every `field` referenced by an encoding must exist in `sql_columns`; a
-    reference to a column that is not in the result is dropped, because
-    Vega-Lite renders a missing field as a silently empty channel.
-    Returns None whenever a conformant chart cannot be built — never a
-    partial or repaired one (A7: "It never returns a repaired chart").
-    """
+    The model chooses what kind of chart and which column goes on which axis; this code supplies the data
+    (data.values, at most [sql] chart_max_data_rows rows). The model never writes the data, because a model
+    that does can draw a plausible chart that contradicts its own answer, and every value would still look
+    valid. A channel naming a column that is not in the result is dropped (Vega-Lite would draw it empty).
+    Returns None when no valid chart can be built: never a partial or repaired one."""
     if not isinstance(proposed, dict):
         return None
 
@@ -136,7 +116,7 @@ def build_chart(
     if mark not in _A7_MARKS:
         if mark is not None:
             logger.info(
-                "Synthesizer proposed mark %r for query_id=%s, which is not in the A7 enum; chart dropped.",
+                "Synthesizer proposed mark %r for query_id=%s, which is not an allowed mark; chart dropped.",
                 mark, query_id,
             )
         return None
@@ -228,15 +208,8 @@ def _extract_json_object(text: str) -> dict | None:
 
 
 def _strip_json_fences(text: str) -> str:
-    """
-    Strip markdown code fences the model sometimes wraps its JSON response in.
-
-    Without this, a fenced response fails json.loads(), falls into the
-    plain-text branch, and the ENTIRE raw JSON blob (braces, field names and
-    all) is handed to the user as answer_text. Observed directly during F-V1
-    Class 4. Same fence-stripping the SQL Agent already does for its own
-    output (sql_agent._strip_sql_fences).
-    """
+    """Strip the Markdown code fences a model sometimes wraps its JSON in; otherwise the whole raw JSON
+    would reach the user as the answer text."""
     stripped = text.strip()
     if not stripped.startswith("```"):
         return text
@@ -255,32 +228,16 @@ _CODE_LINE_RE = re.compile(
 )
 _CODE_REFUSAL = (
     "This system answers with data and declarative charts only. It does not "
-    "produce or execute code (see the declarative-output contract, D8/A7), so "
+    "produce or execute code, so "
     "the code that was requested has been withheld."
 )
 
 
 def _strip_executable_content(answer_text: str, query_id: str) -> str:
-    """
-    F-V1 Class 4 / M8: "no response contains executable content."
-
-    A7's schema constrains `chart` but says nothing about `answer_text`
-    beyond its length, so nothing structurally stopped the Synthesizer from
-    putting a runnable matplotlib program in the prose field -- and on
-    adversarial payload adv_18 ("give me matplotlib code ... then run it")
-    it did exactly that, verbatim and copy-pasteable. Rule 9 of the system
-    prompt now tells the model not to, but M8 is binary and deterministic,
-    and this repo's own experience is that small local models follow
-    negative instructions unreliably (same reasoning as
-    _ensure_category_mentioned right below). So the guarantee is enforced
-    here, in code, rather than trusted to the prompt.
-
-    Note this is defense in depth, not the RCE boundary: nothing downstream
-    ever executes answer_text, and D8's actual security property is the
-    absence of any execution path at all. This closes the gap between that
-    property and F-V1's written pass condition, which is about what the
-    response CONTAINS.
-    """
+    """Remove program code from the answer text. The system answers with data and charts, never with code
+    a reader could copy and run: an adversarial question once got a runnable matplotlib program back. The
+    prompt forbids it, and this enforces it in code. (Nothing ever executes the answer text; this is about
+    what the reader is handed.)"""
     cleaned = _FENCED_BLOCK_RE.sub("", answer_text)
     if _CODE_LINE_RE.search(cleaned):
         # Bare (unfenced) program lines survived fence removal -- drop them.
@@ -290,7 +247,7 @@ def _strip_executable_content(answer_text: str, query_id: str) -> str:
     if cleaned != answer_text:
         logger.warning(
             "Synthesizer emitted executable content for query_id=%s; stripped "
-            "before response (F-V1 Class 4 / M8).", query_id,
+            "before response.", query_id,
         )
         cleaned = cleaned.strip()
         cleaned = f"{cleaned}\n\n{_CODE_REFUSAL}" if cleaned else _CODE_REFUSAL
@@ -300,36 +257,12 @@ def _strip_executable_content(answer_text: str, query_id: str) -> str:
 def build_citations(
     executed_sql: str | None, sql_error: dict | None, retrievals: list[dict],
 ) -> list[dict]:
-    """
-    Deterministic citation construction (E1-V4; see module docstring).
-    kind:"sql" only when a statement actually reached the database (success
-    or engine failure). A citation asserts provenance, so it may only point
-    at a statement the database actually saw; a statement refused before
-    execution has no provenance to assert, and citing it puts unvalidated
-    model output on screen as evidence. Engine failures retain their citation
-    because citing what reached the engine explains engine rejections.
-    kind:"chunk" for the first citation_max_chunks retrievals, IN THE ORDER
-    GIVEN -- deliberately not re-sorted by raw score here. The caller
-    (unstructured_knowledge.py's _semantic_search_expanded) already orders
-    retrievals document-major (best-matching document first, that
-    document's own chunks together in reading order), specifically so a
-    relevant document's table chunk stays adjacent to its narrative chunk
-    instead of being outranked by an unrelated document's narrative chunk
-    (table Markdown embeds further from a natural-language question than
-    prose does -- verified empirically, see docs/phase_e1_log.md).
-    Re-sorting by score here would undo that ordering.
-
-    Public (not module-private): main.py imports this directly and
-    recomputes the same citations from final_state's typed fields, rather
-    than this node smuggling its own computed value out through a scratch
-    key. Verified empirically that graph.ainvoke()'s return value is
-    reconstructed against StateSyncState's schema regardless of whether the
-    last hop was a direct or conditional edge -- scratch keys do not survive
-    to the graph's own boundary, only between internal node-to-node hops
-    (the same lesson C2's scratch-key-through-conditional-edge finding
-    already established for sql_error; this is that principle applied one
-    level further out).
-    """
+    """The answer's citations, built by code from what actually ran, never by the model:
+      - kind "sql": the statement, only if it reached the database (it ran, or the database rejected it); a
+        statement refused before running proves nothing and is not cited;
+      - kind "chunk": the first [retrieval] citation_max_chunks passages in the order the writer read them,
+        with the document title and page.
+    main.py calls this again on the final state, so the response carries exactly what was validated."""
     citations: list[dict] = []
     reached_engine = bool((sql_error or {}).get("engine_code"))
     sql_ref = executed_sql or ((sql_error or {}).get("offending_sql") if reached_engine else None)
@@ -340,7 +273,7 @@ def build_citations(
         prov = r["provenance"]
         citation = {"kind": "chunk", "ref": prov["chunk_id"], "page": prov.get("page")}
         if prov.get("title"):
-            # A7 caps a citation title at title_max_chars; "{title} › {section}" can run longer.
+            # The output schema caps a citation title at title_max_chars; "{title} › {section}" can run longer.
             citation["title"] = _SECTION_SEP.join(filter(None, (prov["title"], prov.get("section"))))[:cfg.library.title_max_chars]
         citations.append(citation)
 
@@ -494,30 +427,15 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         # would otherwise fall through to the plain-text branch below and put
         # the whole raw JSON blob into answer_text).
         try:
-            # strict=False allows raw control characters inside string values.
-            # The model routinely writes a multi-line answer_text with LITERAL
-            # newlines rather than the \n escape JSON requires. That is invalid
-            # JSON by the letter of the spec, and rejecting it threw away an
-            # otherwise perfectly good structured response -- including its
-            # chart. Diagnosed from E2-V1: it accounted for 7 of the 8
-            # chart:null results, every one of them on a result set that had
-            # passed the chartability gate. Nothing else is relaxed; a genuinely
-            # malformed object still raises and still falls through below.
+            # strict=False accepts literal newlines inside the answer text, which models often write;
+            # rejecting them once threw away most charts. A truly malformed object still fails.
             parsed = json.loads(_strip_json_fences(result.text), strict=False)
         except json.JSONDecodeError:
-            # Second chance before giving up: a model that prefaces its JSON
-            # with a sentence of prose ("Here is the response:") produces text
-            # that is not itself JSON but CONTAINS the object. Falling straight
-            # to plain text there discards a perfectly good structured
-            # response -- and with it the chart, which is how E2-V1 lost 7 of
-            # its 8 chart:null results on the local model.
+            # Second chance: a reply that puts a sentence before its JSON ("Here is the response:")
+            # still contains the object.
             parsed = _extract_json_object(result.text)
             if parsed is None:
                 logger.warning(
-                    # Log the evidence, not just the fact. The earlier version
-                    # recorded that parsing failed and threw away WHAT failed,
-                    # which is the same defect as the evaluator's empty-string
-                    # error strings -- a log that cannot diagnose its own event.
                     "Synthesizer returned non-JSON for query_id=%s; treating as "
                     "plain text. Response began: %r",
                     query_id, result.text[:200],  # noqa: literals — log truncation width
@@ -532,26 +450,20 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                     "object recovered.", query_id,
                 )
 
-        # E2 Deliverable 1. The model proposed only the chart SHAPE; the real
-        # rows are attached here, in code (see build_chart's docstring for why
-        # the model is never trusted with data.values). Gated on the same
-        # deterministic chartability test the prompt was told about, so a
-        # model that proposes a chart for a single scalar still gets null.
+        # The model proposed only the chart's shape; the rows are attached in code (build_chart), and only
+        # when the result deserves a chart at all.
         parsed["chart"] = (
             build_chart(parsed.get("chart"), sql_rows, sql_columns, query_id)
             if is_chartable(sql_rows, sql_columns) else None
         )
         parsed["citations"] = citations
 
-        # Validate against A7
+        # Check against the output schema
         safe_out = safe_synthesizer_output(parsed)
         answer_text = _strip_executable_content(safe_out["answer_text"], query_id)
 
-        # safe_out["chart"] is the A7-VALIDATED chart: safe_synthesizer_output
-        # nullifies it (never repairs it) if it failed the schema or the BD7
-        # expression audit. main.py validates the assembled payload a second
-        # time at the response boundary, and the frontend a third time before
-        # rendering (A7's two-independent-validations rule, E2-V6).
+        # A chart that fails the schema (or contains an expression) is dropped, never repaired. main.py checks
+        # the assembled response again, and the web app once more before drawing.
         final_chart = safe_out["chart"]
         logger.info(
             "Synthesizer completed for query_id=%s (tokens_in=%d tokens_out=%d "
@@ -573,10 +485,11 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         }
 
     except Exception as exc:
-        logger.error("Synthesizer error for query_id=%s: %s", query_id, exc)
+        logger.error("Synthesizer error for query_id=%s: %s", query_id, exc, exc_info=True)
         elapsed_ms = int(time.monotonic() * 1000) - start_ms
+        # The reader gets a plain message; the error itself is in the log, never in the answer.
         fallback = {
-            "answer_text": f"An error occurred while generating the answer: {exc}",
+            "answer_text": "The answer could not be written this time. Please try again.",
             "chart": None,
             "citations": citations,
         }

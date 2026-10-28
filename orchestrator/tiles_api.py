@@ -50,7 +50,7 @@ class PinTileRequest(BaseModel):
     turn_index: int
     title: str | None = None
     refresh_interval_s: int | None = None
-    # Phase 2b: which dashboard (default: the dataset's first), how to show it,
+    # Which dashboard (default: the dataset's first), how to show it,
     # and where. The MCP validates all three.
     dashboard_id: str | None = None
     viz: str | None = None

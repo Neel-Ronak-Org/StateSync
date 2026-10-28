@@ -86,9 +86,9 @@ app.add_middleware(
     # because the origins are an explicit list, never a wildcard.
     allow_credentials=True,
     # PATCH and DELETE for the /tiles routes (rename, unpin); PUT for the
-    # /workspaces knowledge routes (Phase 3). Without them the browser
+    # /workspaces knowledge routes. Without them the browser
     # preflight refuses those calls from the web UI's origin, which no
-    # server-side test can see (found auditing Phase 1).
+    # server-side test can see.
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type", "X-Filename", CSRF_HEADER],
     # Browsers hide every non-safelisted response header from cross-origin
@@ -238,15 +238,9 @@ async def health() -> dict:
 
 
 # ── Session browser ───────────────────────────────────────────────────────────
-# Formerly gated for local development only: history was scoped by tenant_id +
-# session_id alone, so any user of a shared tenant could enumerate every other
-# user's questions and answers (and stored answers contain real rows). C1 added
-# authentication and migration 014 added a NOT NULL principal_id to
-# conversation_turns. Both routes now filter on the authenticated principal, so
-# a caller can only enumerate and read their own conversations. Turns written
-# before auth carry the sentinel principal 'p_preauth_legacy', which no real
-# principal holds, so pre-auth history is deliberately invisible rather than
-# shown to an arbitrary caller.
+# Every route filters on the authenticated person (principal), so a caller can only list and read their own
+# conversations, even inside a shared tenant. Turns written before sign-in existed carry the principal
+# 'p_preauth_legacy', which nobody holds, so they are invisible rather than shown to anyone.
 
 
 @app.get("/sessions", tags=["history"])
@@ -307,7 +301,7 @@ async def delete_session_route(
     request: Request,
     principal: Principal = Depends(require_principal),
 ) -> dict:
-    """Erase one of my conversations (Phase 2b). Someone else's is a 404, like a missing one."""
+    """Erase one of my conversations. Someone else's is a 404, like a missing one."""
     try:
         async with MCPSession(
             tenant_id=principal.tenant_id,
@@ -594,8 +588,7 @@ async def run_query(
     tenant_id = principal.tenant_id
     client_ip = request.client.host if request.client else None
 
-    # A session belongs to the principal who wrote its first turn (docs/V3_PLAN.md
-    # 0.2). The web client generates session ids, so one owned by someone else is
+    # A session belongs to the principal who wrote its first turn. The web client generates session ids, so one owned by someone else is
     # refused here, before any model call -- rather than answered and then not
     # recorded. history.append_turn enforces the same rule at the write.
     if body.session_id:

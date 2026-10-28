@@ -1,34 +1,27 @@
 """
 mcp/tools/data_tools.py
-MCP data tools: data.sample_rows (A4.3) and data.run_select (A4.4).
+data.run_select and data.sample_rows: the only way a model-written query reaches a database.
 
-SELECT-only enforcement — three independent layers (A4.5):
+A model's SQL is untrusted, so it passes three independent layers; any one of them alone stops a write:
 
-  Layer 1 — statement gate (this file):
-    Parse with pglast (real PostgreSQL parser, not regex).
-    Reject unless single SELECT statement at the top of the parse tree.
-    Reject data-modifying CTEs (WITH ... AS (INSERT ...)).
-    Reject the full list of non-SELECT statement types.
+  Layer 1, the statement gate (this file): the SQL is parsed with pglast, the real PostgreSQL parser (not a
+    regex). It must be exactly one SELECT at the top of the parse tree: no second statement, no data-
+    modifying CTE (WITH ... AS (INSERT ...)), no dangerous function (file access, sleeping, server
+    administration), no StateSync internal schema, and it must read a table (a query that reads none
+    usually means the database does not hold the answer).
+  Layer 2, the session (db.py): a READ ONLY transaction with a statement time limit
+    ([mcp] statement_timeout_ms), always rolled back.
+  Layer 3, the login (migrations): the role the query runs as may only SELECT. A write that somehow reached
+    the database would fail with SQLSTATE 42501.
 
-  Layer 2 — session guards (db.py):
-    Every connection: SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY
-    statement_timeout, idle_in_transaction_session_timeout.
-    Every request runs inside an explicit READ ONLY transaction, always rollback.
-
-  Layer 3 — role grants (migrations/002_schema.sql):
-    statesync_reader has CONNECT + USAGE + SELECT only.
-    A write reaching the engine fails with SQLSTATE 42501.
-    This is the layer the security claim rests on (B-V5).
-
-A failed query returns ok: false with a populated error field.
-It does NOT raise a transport-level fault (A4.4 contract).
+For a workspace's connected database (cn_...) the query runs on the owner's database through
+mcp/connections.py, whose login was checked to be read-only when it was connected.
+A failed query returns ok: false with the error; it never raises a protocol-level fault.
 """
 
 from __future__ import annotations
 
 import logging
-import os
-import re
 from typing import Any
 
 import psycopg
@@ -39,20 +32,11 @@ from config_loader import cfg as _cfg
 
 logger = logging.getLogger(__name__)
 
-# ── Layer 1: pglast parser gate ───────────────────────────────────────────────
-try:
-    import pglast
-    from pglast import parse_sql
-    from pglast.enums import NodeTag
-    from pglast.visitors import Visitor
-    _PGLAST_AVAILABLE = True
-except ImportError:
-    logger.warning(
-        "pglast not available — Layer 1 parser gate is DISABLED. "
-        "Install pglast to enable the parser gate."
-    )
-    _PGLAST_AVAILABLE = False
-    Visitor = object  # type: ignore[assignment,misc]
+# ── Layer 1: the pglast parser gate ──────────────────────────────────────────
+# A hard dependency: without the parser the server does not start, so layer 1 can never be silently skipped.
+import pglast  # noqa: E402
+from pglast import parse_sql  # noqa: E402
+from pglast.visitors import Visitor  # noqa: E402
 
 # Statement types that must never appear in submitted SQL
 _REJECTED_STATEMENT_TYPES = {
@@ -89,7 +73,7 @@ DENIED_FUNCTIONS = frozenset({
 })
 
 
-class _TableReferenceCollector(Visitor if _PGLAST_AVAILABLE else object):
+class _TableReferenceCollector(Visitor):
     """
     Collects relation references (RangeVar.relname) and CTE definitions
     (CommonTableExpr.ctename) across the parsed query AST.
@@ -135,15 +119,6 @@ def _check_layer1(sql: str) -> str | None:
     """
     if len(sql) > _MAX_SQL_LENGTH:
         return f"SQL exceeds maximum length of {_MAX_SQL_LENGTH} characters."
-
-    if not _PGLAST_AVAILABLE:
-        # If pglast is not installed, fall through to Layer 2/3.
-        # Log a strong warning — this should never happen in production.
-        logger.error(
-            "SECURITY: pglast is not installed. Layer 1 parser gate is bypassed. "
-            "Install pglast immediately."
-        )
-        return None
 
     try:
         parsed = pglast.parse_sql(sql)
@@ -226,8 +201,6 @@ def check_internal_schemas(sql: str) -> str | None:
     Not applied to an owner's own database (connections.py), whose schemas may
     legitimately be called anything.
     """
-    if not _PGLAST_AVAILABLE:
-        return None
     try:
         parsed = parse_sql(sql)
     except Exception:  # noqa: BLE001 - Layer 1 reports parse errors itself
@@ -242,47 +215,7 @@ def check_internal_schemas(sql: str) -> str | None:
     return None
 
 
-def _classify_error(sqlstate: str | None, message: str, rows: list | None) -> dict:
-    """
-    Load the error taxonomy from config and classify the error.
-    Kept inline here to avoid a circular import; the taxonomy file path
-    is read from CONFIG_DIR env var.
-    """
-    import json
-    config_dir = os.environ.get("CONFIG_DIR", "/app/config")
-    taxonomy_path = os.path.join(config_dir, "error_taxonomy.json")
-    try:
-        with open(taxonomy_path) as f:
-            taxonomy = json.load(f)
-    except OSError:
-        return {"category": "unclassified", "hint": "Error taxonomy not available."}
-
-    # Check empty_result (classified success at engine level)
-    if rows is not None and len(rows) == 0 and sqlstate is None:
-        for rule in taxonomy.get("rules", []):
-            if rule.get("match", {}).get("empty_result"):
-                return {"category": rule["category"], "hint": rule["hint"]}
-
-    for rule in taxonomy.get("rules", []):
-        match = rule.get("match", {})
-        if "sqlstate" in match and match["sqlstate"] == sqlstate:
-            if "message_regex" in match:
-                if re.search(match["message_regex"], message or "", re.IGNORECASE):
-                    return {"category": rule["category"], "hint": rule["hint"]}
-            else:
-                return {"category": rule["category"], "hint": rule["hint"]}
-        elif "message_regex" in match and "sqlstate" not in match:
-            if re.search(match["message_regex"], message or "", re.IGNORECASE):
-                return {"category": rule["category"], "hint": rule["hint"]}
-
-    fallback = taxonomy.get("fallback", {})
-    return {
-        "category": fallback.get("category", "unclassified"),
-        "hint": fallback.get("hint", "Unrecognized failure."),
-    }
-
-
-# ── A4.3 data.sample_rows ────────────────────────────────────────────────────
+# ── data.sample_rows ─────────────────────────────────────────────────────────
 async def sample_rows(
     table: str,
     columns: list[str] | None = None,
@@ -290,19 +223,15 @@ async def sample_rows(
     schema: str | None = None,
 ) -> dict[str, Any]:
     """
-    A4.3 data.sample_rows
-    Hard-capped at SAMPLE_ROWS_HARD_CAP rows server-side (A4.3 spec).
+    data.sample_rows: a few rows of one table, so the SQL writer sees how values are stored.
+    At most [mcp] sample_rows_hard_cap rows, whatever is asked.
     limit defaults to cfg.mcp.sample_rows_default_limit when not provided.
     """
     from tools.schema_tools import IDENTIFIER
     if not IDENTIFIER.match(table):
         raise ValueError(f"Invalid table name: {table!r}")
-    # Schema qualification. `orders` exists in BOTH public (A5 synthetic) and
-    # olist (real), with DIFFERENT columns -- so an unqualified sample silently
-    # hits public and fails with "column customer_id does not exist" while the
-    # agent believes it is inspecting the real corpus. Validated against the
-    # same allowlist the discovery tools use, so this cannot become a way to
-    # reach pg_catalog.
+    # The schema is always named explicitly and checked against the same allowlist the schema tools use,
+    # so a sample can never land in another schema or reach pg_catalog.
     from tools.schema_tools import ALLOWED_SCHEMAS, DEFAULT_SCHEMA, source
     schema = schema or DEFAULT_SCHEMA
     if schema not in ALLOWED_SCHEMAS and not connections.is_token(schema):
@@ -350,7 +279,7 @@ async def sample_rows(
         return {"rows": result_rows, "truncated": truncated}
 
 
-# ── A4.4 data.run_select ─────────────────────────────────────────────────────
+# ── data.run_select ──────────────────────────────────────────────────────────
 def _rows_result(cur: Any, rows: list, effective_max: int) -> dict[str, Any]:
     col_names = [desc.name for desc in cur.description] if cur.description else []
     return {"ok": True, "columns": col_names, "rows": [dict(zip(col_names, row)) for row in rows[:effective_max]],
@@ -396,11 +325,8 @@ async def run_select(
     dataset: str | None = None,
 ) -> dict[str, Any]:
     """
-    A4.4 data.run_select — the only relational execution path.
-
-    Returns ok: false with error on query failure — never raises a
-    transport-level fault for query failures (A4.4 contract).
-    JSON-RPC errors are reserved for protocol failures only.
+    data.run_select: the only way a model's SQL runs (see the module docstring for the three layers).
+    Returns ok: false with the error on a query failure; protocol errors are kept for protocol failures.
     """
     # Enforce max_rows bounds
     effective_max = min(max(1, max_rows), _MAX_ROWS_HARD_CAP)
@@ -450,9 +376,7 @@ async def run_select(
             truncated = len(rows) > effective_max
             result_rows = [dict(zip(col_names, row)) for row in rows[:effective_max]]
 
-            # Empty result is classified (A3: "empty_result is a classified success")
-            # We do NOT raise an error for empty; we return ok: true with empty rows.
-            # The caller (correction loop in C2) handles empty_result classification.
+            # An empty result is ok: true with no rows; the SQL agent decides whether to retry.
             logger.info(
                 "data.run_select: ok=True rows=%d truncated=%s",
                 len(result_rows), truncated,
@@ -467,7 +391,7 @@ async def run_select(
             }
 
         except psycopg.errors.InsufficientPrivilege as exc:
-            # SQLSTATE 42501 — Layer 3 enforcement visible (B-V5)
+            # SQLSTATE 42501: layer 3 (the read-only login) refused it
             logger.warning("data.run_select: permission denied (42501): %s", exc)
             return {
                 "ok": False,

@@ -1,13 +1,13 @@
 """
 orchestrator/card_coverage.py
-What the rows of a database cover, as one line of the front door's database card (front_door.card_coverage).
+What the rows of a database cover, as one line of the router's database card (front_door.py).
 
 WHY THIS EXISTS: the card lists tables and columns, so a router cannot tell a question about an entity the
-database holds from one about an entity it does not; both look like database questions (Paper B rerun R2:
-every model-based router sent all ten questions about absent companies to SQL). The coverage line lists, for
+database holds from one about an entity it does not; both look like database questions (in Paper B's
+routing test, every model-based router sent all ten questions about absent companies to SQL). The coverage line lists, for
 each table in the card, every value of each text column with few distinct values (company names, tickers,
 metric names, units) and the range of each date, timestamp or year column. It is built with read-only
-queries through data.run_select (the Layer 1 gate, a read-only transaction, the statement timeout), with no
+queries through data.run_select (the safety gate, a read-only transaction, the statement time limit), with no
 model call, and cached with the card. A column whose query fails or has too many values is left out.
 """
 

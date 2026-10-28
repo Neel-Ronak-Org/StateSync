@@ -184,7 +184,6 @@ tile_max_h                = 40
 default_tenant            = "t_capstone_default"
 enforced                  = false   # one owner's deployment; true turns on the per-tenant allowlist (mcp/session.py)
 allowed_tenants           = ["t_capstone_default"]
-relational_plane_shared_ack = false
 
 [api]
 rate_limit_max_requests   = 30      # questions per person per window (they spend model tokens)

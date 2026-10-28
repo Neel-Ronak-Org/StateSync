@@ -2,22 +2,20 @@
 mcp/db.py
 Database connection pool for the MCP service.
 
-Connects exclusively as statesync_reader (A1 / A4.5 Layer 3).
+Model-written SQL runs only as statesync_reader, the login that may only SELECT (layer 3 of the safety gate).
 Every connection has session guards applied at checkout (Layer 2):
   - SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY
   - statement_timeout
   - idle_in_transaction_session_timeout
 
-Password is read from a Docker secret file (never from an env var directly
-in production — B-V4 pass condition requires zero credential material in
-environment or logs).
+Passwords are read from Docker secret files, never from environment variables or config, and never logged.
 
-Cycle 007 adds a SECOND, fully independent pool below (get_history_connection)
+A SECOND, fully independent pool below (get_history_connection)
 for statesync_history — the one role in this codebase with a write grant, and
 it is granted on exactly one table (migrations/011). This is not an extension
 of the reader pool: different role, different DSN, different secret, no
 shared connections, and NOT wrapped in "BEGIN READ ONLY" -- deliberately, since
-its entire purpose is to write. The A4.5 SELECT-only guarantee this file's
+its entire purpose is to write. The SELECT-only guarantee this file's
 first half implements is about statesync_reader and the agent's SQL-execution
 path (data.run_select); it is completely unchanged by the second half below.
 What makes the second half safe is not a role grant alone -- it is that
@@ -136,7 +134,7 @@ async def _bind_tenant(conn: psycopg.AsyncConnection) -> None:
 async def get_connection() -> AsyncIterator[psycopg.AsyncConnection]:
     """
     Yield a connection from the pool inside a READ ONLY transaction
-    that is always rolled back (Layer 2, A4.5).
+    that is always rolled back (layer 2 of the safety gate).
 
     Usage:
         async with get_connection() as conn:
@@ -152,11 +150,11 @@ async def get_connection() -> AsyncIterator[psycopg.AsyncConnection]:
             await _bind_tenant(conn)
             yield conn
         finally:
-            # Always rollback — Layer 2 guarantee (A4.5).
+            # Always rollback — Layer 2 guarantee.
             await conn.execute("ROLLBACK")
 
 
-# ── statesync_history pool (cycle 007) ─────────────────────────────────────────
+# ── statesync_history pool ─────────────────────────────────────────
 # Independent of everything above: own pool object, own role, own secret file,
 # own DSN. Nothing here is reachable from get_connection() or vice versa.
 _history_pool: AsyncConnectionPool | None = None

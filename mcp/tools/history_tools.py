@@ -14,8 +14,8 @@ All queries below are fixed-shape and parameterized. Neither function
 accepts, builds, or executes a SQL string from a caller -- there is no path
 from an LLM's output to a statement run on this connection. That is the
 actual guarantee here, the same way memory.put_trajectory's guarantee is
-that `insight` never becomes a query, just a payload value (A4.8's
-_SQL_REJECT_RE backstop). tenant_id comes from the session context (A0.6),
+that a stored value never becomes a query, just a payload value (the
+_SQL_REJECT_RE backstop). tenant_id comes from the session context,
 never a parameter, same as every other tool in this file's sibling modules.
 principal_id is supplied by the authenticating orchestrator and scopes all
 conversation turns and sessions per identity within the tenant.
@@ -42,13 +42,13 @@ logger = logging.getLogger(__name__)
 BUILD_SESSION_PREFIX = "build-"
 SETUP_SESSION_PREFIX = "setup-"
 
-# Algorithmic convergence parameters for byte-budget fitting (not configuration constants under A0.2).
+# Algorithmic convergence parameters for byte-budget fitting (not settings).
 _BYTE_FIT_DROP_FRACTION: float = 0.10  # noqa: literals - algorithmic convergence step, not configuration
 
 
 # NOTE on principal_id parameter passing:
 # Unlike tenant_id, principal_id IS a caller-supplied parameter rather than being
-# bound server-side from the session. That is deliberate and does not weaken A0.6:
+# bound server-side from the session. That is deliberate and does not weaken tenant isolation:
 # the MCP service has no notion of identity, it is an internal service on the
 # compose network that already trusts the X-Tenant-ID header, and the ORCHESTRATOR
 # is the component that authenticates and is therefore the authority on which
@@ -76,7 +76,7 @@ async def append_turn(
     """
     Insert one completed turn scoped by tenant and principal. Called once per
     query, after the response that will actually reach the user has been
-    validated (A7) -- so answer_text here is always the text the user saw,
+    validated -- so answer_text here is always the text the user saw,
     never a pre-repair draft. tenant_id is bound server-side; principal_id is
     forwarded by the authenticating orchestrator. A caller cannot write into
     another tenant's history by any parameter it controls.
@@ -93,7 +93,7 @@ async def append_turn(
     (history_full_rows_max) and byte size (history_full_rows_max_bytes), followed
     by bounded retention pruning (history_full_rows_retention_days).
 
-    THE TURN NUMBER IS ASSIGNED HERE, NOT BY THE CALLER (docs/V3_PLAN.md 0.1).
+    THE TURN NUMBER IS ASSIGNED HERE, NOT BY THE CALLER.
     The orchestrator used to send len(recent_turns) + 1, but recent turns are a
     3-turn window, so from the 5th question on it sent 4 again, hit the unique
     key, and ON CONFLICT DO NOTHING dropped the turn without an error. Now the
@@ -308,7 +308,7 @@ async def check_session(session_id: str, principal_id: str) -> dict[str, Any]:
     """
     May this principal use this session_id? Called by the orchestrator before a
     query runs, so a session owned by someone else is refused up front rather
-    than answered and then silently not recorded (docs/V3_PLAN.md 0.2).
+    than answered and then silently not recorded.
 
     A session_id with no turns is usable: the web client generates the id, and
     its first write claims it. Also reports the dataset the conversation was
@@ -387,7 +387,7 @@ async def get_turn_rows(session_id: str, principal_id: str, turn_index: int) -> 
     """
     Fetch the full result-set rows for a specific conversation turn (migration 015).
 
-    Scoped by tenant_id bound server-side from session context (A0.6) and
+    Scoped by tenant_id bound server-side from session context and
     principal_id from the authenticating orchestrator. Joins turn_rows to
     conversation_turns to enforce tenant and principal ownership; without this
     join filter, any caller could read arbitrary turn rows by guessing a turn_id.
@@ -426,8 +426,7 @@ async def get_turn_rows(session_id: str, principal_id: str, turn_index: int) -> 
 
 async def delete_session(session_id: str, principal_id: str) -> dict[str, Any]:
     """
-    Erase a conversation its owner no longer wants (docs/V3_PLAN.md Phase 2b,
-    migration 019 granted the DELETE).
+    Erase a conversation its owner no longer wants.
 
     Deletes every turn of the session and, by ON DELETE CASCADE, its stored
     result rows (turn_rows). Scoped by tenant AND principal: a session someone
@@ -473,7 +472,7 @@ async def list_sessions(principal_id: str, limit: int | None = None) -> dict[str
     unanswerable without identity, and this tool is where that becomes
     concrete rather than theoretical.
 
-    The tool is scoped by tenant server-side (A0.6) and principal_id from the
+    The tool is scoped by tenant server-side and principal_id from the
     authenticating orchestrator, preventing cross-principal exposure within a
     shared tenant. Its HTTP surface (GET /sessions) is open to any authenticated
     principal and returns only that principal's conversations; the developer
@@ -543,7 +542,7 @@ async def record_audit(
     """
     Record an identity-scoped audit event in session_state.audit_log.
 
-    tenant_id is bound server-side from session context (A0.6), never accepted
+    tenant_id is bound server-side from session context, never accepted
     as a caller parameter. outcome is validated against the allowed set matching
     the database CHECK constraint. detail is clamped to cfg.mcp.audit_detail_max_chars to
     prevent storage amplification vectors. Uses a single parameterized INSERT

@@ -1,20 +1,20 @@
 """
 orchestrator/jev_client.py
-Client for Jev, TypeSafe's decision model, through OpenCode Zen's "systemone" endpoint
-(docs/specs/partd_tasks/T4b_jev_front_door.md; routing_docs_fixes.md section 2b, variant b).
+The one HTTP call to Jev, TypeSafe's typed decision model, through OpenCode Zen's "systemone" endpoint.
 
-WHY THIS EXISTS. pipeline.front_door = "jev" lets Jev make every routing decision: it answers typed
-yes/no ("noul") questions about an application state with a probability, and writes no text. This module
-is the one HTTP call. It is pure apart from that call, and it never raises to the caller: a failure is
-a JevAnswer with `error` set, so the front door can fall back to the LLM arm and record why.
+Jev reads an application state (a JSON text) and answers typed questions with probabilities; it writes no
+text. Two kinds of question are used:
+  - a yes/no ("noul") question, sent as {"type": "noul", "instructions": text}; the answer is P(yes) in
+    [0, 1] (the router's "does the documents part depend on the database?", and passage_jev.py's "does
+    this passage contain the information needed?");
+  - a choice question, {"type": "choice", "instructions": text, "criteria": {option: description}}; the
+    answer is the chosen option, a confidence and a probability per option (the router's sql / docs /
+    both / neither).
 
-The request is {"model", "state", "questions": {name: question}}. A question is either a noul
-instruction string (sent as {"type": "noul", "instructions": text}; the reply's answers.<name>.noul is P(yes)
-in [0, 1]) or a choice dict {"type": "choice", "instructions": text, "criteria": {option: description}}
-(T4c, docs/specs/partd_tasks/T4c_jev_choice_and_context.md; the reply's answers.<name> is {"type": "choice",
-"choice": option, "confidence": float, "probabilities": {option: float}}). `model` and `usage`
-(input_tokens, output_tokens) describe the call. Answers are rounded to two decimals by the server and are not deterministic; nothing
-here caches them. The bearer key is read from a file at call time and is never logged.
+It never raises to the caller: a failure is a JevAnswer with `error` set, so the router falls back to the
+LLM router and the passages keep the search's order, and the trace records why. Answers are rounded to two
+decimals by the server and are not deterministic; nothing here caches them. The key is read from a file at
+call time and never logged. One retry after a rate limit or a server error ([front_door] jev_retry_wait_s).
 """
 
 from __future__ import annotations
