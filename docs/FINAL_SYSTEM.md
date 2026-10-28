@@ -2,7 +2,8 @@
 
 *Decision document, 28 October 2026. This defines the one system we clean up, demo, report and present.
 Everything not listed under "The final system" is removed from the working tree. It stays recoverable from the
-tag `pre-cleanup-2026-10-26`.*
+tag `pre-cleanup-2026-10-26`. The clean-up is done; the system is described in [ARCHITECTURE.md](ARCHITECTURE.md),
+its measurements in [EVALUATION.md](EVALUATION.md) and the demo in [DEMO.md](DEMO.md).*
 
 ---
 
@@ -56,7 +57,7 @@ The reasons:
 | ① **Follow-up check** | "And in 2022?" or "Does it mention lawsuits?" carries the company and year from the previous turn. Plain code, no model. | The old system spent a model call rewriting every question. | Nothing to fail: it adds a line or doesn't. |
 | ② **Router** | Jev reads the question, a *database card* (tables, columns, the owner's approved notes, and a **coverage line** listing which companies and years the rows hold) and the titles of the closest documents. It then answers one four-way question: SQL, documents, both or neither. | Paper B, routing (180 new questions): one four-way Jev question 88.3% vs. an LLM router 84.4% (not significant); two yes/no questions only 75.6%. With the coverage line: 98.9% vs. 95.6%. On questions about companies the database doesn't hold, the coverage line raised correct "neither" answers from 0/45 to 28/45 (Jev). | The LLM router takes over. |
 | ③ **SQL agent** | Reads the schema and the owner's notes, drafts SQL, looks at sample rows of the tables it used, writes the final SQL, then runs it through **three independent read-only layers** (parser check: one SELECT only; read-only transaction with a 15 s limit; a database login that can only read). On an error it classifies the error and retries, up to 3 times. | Paper A (393 BIRD questions): extra answer checks applied to only 4% of answers and caught no more errors than an LLM judge. The agent's own retry was the best free warning (79% precision). So we kept the retry loop and dropped the check layer. | Plain-language failure message. If the database lacks the data and the workspace has documents, the documents route runs instead. |
-| ④ **Document search** | Two-round dense search: find the right files first, then the 25 closest passages inside them. Jev re-ranks those 25 by "does this passage contain what the question needs?". The writer reads the top 8. | FinanceBench end to end (150 questions, exploratory): old engine 20.0% correct → rebuilt 52.7%; re-ranking raised it further (63.3% with a cross-encoder). Paper B, page finding (300 new questions): Jev re-ranking the dense list puts the right page first 49.3% of the time vs. 20.3% for dense order (+29.0 points, p < 10⁻¹⁵), and also beat the GPU cross-encoder (43.7%). | Jev down: the dense order. |
+| ④ **Document search** | Two-round dense search: find the right files first, then the 25 closest passages inside them. Jev re-ranks those 25 by "does this passage contain what the question needs?". The writer reads the top 8. | FinanceBench end to end (150 questions, exploratory): old engine 20.0% correct → rebuilt 52.7%; re-ranking raised it further (63.3% with a cross-encoder). Paper B, page finding (300 new questions): Jev re-ranking the dense list puts the right page first 49.3% of the time vs. 20.3% for dense order (+29.0 points, p < 10⁻¹⁵), and above the GPU cross-encoder's 43.7% (+5.7, p = 0.053). | Jev down: the dense order. |
 | ⑤ **Answer writer** | Writes the answer. Citations (file, page, rows) are attached by code, not by the model. Every number in the answer must appear in the rows or passages, otherwise it is flagged. Includes "How I got this" in plain words. | The safety and trust design from Phase 3; it costs no extra model call. | — |
 | ⑥ **Pipeline Inspector** | One click per answer: router probabilities, the database card, the schema diagram with the tables used, the SQL and its safety checks, the search rounds, the re-ranking table with the cut line, cost and timings. | Built for explainability: every claim above can be shown live. | — |
 
@@ -65,8 +66,8 @@ text jobs; a large one (gpt-oss-120b) writes SQL and answers. Jev makes the type
 (mxbai-embed-large, run by Ollama) runs locally.
 
 **Services (6):** web app, orchestrator (the pipeline; holds model keys, no database password), MCP tool server
-(the only service with a database password), Postgres with pgvector, Ollama, and the isolated PDF
-parser.
+(the only service with a database password), Postgres with pgvector, Ollama, and the isolated file parser.
+The cross-encoder service and the evaluator are gone.
 
 ---
 
@@ -81,8 +82,8 @@ owner has told StateSync about it. The demo workspace (`partd-routing-sec-filing
   text reaches the model.
 - **6 definitions.**
 
-**Kept (four tabs):** Business, Knowledge (table notes and definitions), Documents (which folders), Schema
-(the diagram).
+**Kept (five tabs):** Business, Knowledge (table notes and definitions), Approved (the approved examples),
+Documents (which folders), Schema (the diagram).
 
 **Approved examples (thumbs-up → "Verified"):** kept. It is small, easy to explain, and the only evidence label
 that means something once the check layer is gone.
@@ -155,13 +156,13 @@ Experiment 6 is as important as 4 and 5: it shows we kept only what helped and d
 
 ---
 
-## 7. Small fixes in the clean-up
+## 7. Small fixes in the clean-up (all done)
 
 1. **One pipeline:** the demo settings become the app's defaults. The separate demo copy disappears, and
    `localhost:3000` *is* the demo.
-2. **One start command** that starts the containers, keeps the embedding model loaded,
-   and checks every service before saying "ready". This fixes the "service unavailable" error we hit when the Mac
-   was busy.
+2. **Ready means ready:** `docker compose up -d` starts the six services, each with a health check; Ollama keeps
+   the embedding model loaded (`OLLAMA_KEEP_ALIVE=-1`); `scripts/check_demo.py` asks every demo question end to
+   end before the demo. This fixes the "service unavailable" error we hit when the Mac was busy.
 3. **Two-source narrowing:** for a "which company…" question, narrow the document search to the *answer's* company,
    not every company in the result (the dividends defect).
 4. **Evidence label:** with the check layer gone, show "Verified" (approved example) or "New query", plus a caution
@@ -171,7 +172,7 @@ Experiment 6 is as important as 4 and 5: it shows we kept only what helped and d
 
 ---
 
-## 8. The demo (to be written in full as `docs/DEMO.md`)
+## 8. The demo (in full, click by click: [DEMO.md](DEMO.md))
 
 1. **Workspace and data** (Schema tab): the SEC database, the 87 filings, the approved notes.
 2. **Database question** → Inspector: router, card, SQL, safety layers, rows.
