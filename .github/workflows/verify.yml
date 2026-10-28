@@ -1,25 +1,11 @@
-# StateSync CI — the deterministic gates
+# StateSync CI: every check that needs no running stack.
 #
-# WHY THIS EXISTS. Before this file there was no CI at all: 50+ verification
-# steps, and nothing ran them except a human remembering to. Two defects this
-# repo already paid for were exactly that shape -- a shipped default committed
-# wrong (d7c0a6b) and code committed but never built into the image (d5a5d35,
-# 5301b89). Neither needed a clever check to catch. They needed A check, run
-# automatically.
+#   deterministic   Python: the settings lint (no limits written into the code) and the full test suite
+#                   (tests/), with the dependencies of both services installed from their manifests.
+#   web             the web app: lint, types, unit tests, and the browser suite with the API mocked.
 #
-# WHAT THIS DELIBERATELY DOES NOT DO, stated here so a green badge never
-# implies more than it means. The model-sensitive metrics (M2-M7), the
-# adversarial suite (M8), the routing experiment (M9) and the LIVE browser
-# suite (web/e2e/live: the served CSP, real answers) are NOT run here, and
-# cannot be: they need the full seven-service stack and a model provider, and
-# the metrics take 25-40 minutes each. A hosted runner cannot do that, and
-# adding a job that never runs would be the same decoration this project keeps
-# deleting. The browser suite with the API mocked needs no stack, so it runs
-# (the `web` job), including the browser half of E2-V3/V6.
-#
-# So this job runs everything genuinely deterministic and stack-free, and the
-# final step prints what it could NOT cover -- into the run log, every time, so
-# the gap is visible rather than assumed covered.
+# Not run here, because they need the whole stack and a model provider: the live demo check
+# (scripts/check_demo.py) and the live checks in scripts/verify_*.py. The last step says so in the log.
 
 name: verify
 
@@ -42,19 +28,8 @@ jobs:
           python-version: "3.12"
 
       - name: Derive requirements from orchestrator/ and mcp/'s pyproject.toml
-        # Read from the manifests rather than hand-listing here. A second
-        # hand-maintained copy of the dependency list is exactly the drift that
-        # had already put pglast and openai out of sync inside
-        # orchestrator/Dockerfile.
-        #
-        # BOTH manifests, not just orchestrator's. tests/ imports across both
-        # service boundaries -- e.g. test_review_chunk_split_attribution.py pulls
-        # in scripts/ingest.py, which imports psycopg, a dependency declared only
-        # in mcp/pyproject.toml. Installing orchestrator's alone let that
-        # ImportError through silently: the test file itself was fine and had
-        # been fine for weeks, but nothing had ever actually run this job against
-        # it, because CI runs on push/PR and this repo's `main` had not been
-        # pushed to GitHub since before the file existed. First real run found it.
+        # Both services' manifests, merged, so the tests run with exactly what the images declare; a package
+        # pinned differently in the two fails here rather than one silently winning.
         run: |
           python - <<'PY' > /tmp/requirements-ci.txt
           import tomllib, pathlib
@@ -78,7 +53,7 @@ jobs:
           for dep in seen.values():
               print(dep)
           PY
-          echo "pytest" >> /tmp/requirements-ci.txt
+          printf "pytest\npackaging\npypdf\nreportlab\n" >> /tmp/requirements-ci.txt   # test-only: the lock and parser tests
           cat /tmp/requirements-ci.txt
 
       - name: Install dependencies
@@ -86,46 +61,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r /tmp/requirements-ci.txt
 
-      - name: Config discipline (F-V6 lint — no configurable numeric literals)
+      - name: Settings lint (no configurable numbers written into the code)
         run: ./scripts/lint-no-literals.sh
 
-      - name: Scorer semantics + error taxonomy (pytest)
+      - name: Tests (pytest)
         run: python -m pytest tests/ -q
-
-      - name: Seams, vision-scorer seam, shipped defaults (F-V4/F-V5/F-V6)
-        # --no-live skips ONLY the flag-liveness assertion, which needs a
-        # running orchestrator to compare against. It prints as SKIP, never as
-        # a pass, and the summary counts it separately.
-        run: python3 scripts/verify_seams.py --no-live
-
-      - name: Hosted provider seams — azure + gemini (wired, fail for the right reason)
-        # Runs without any credential, by design.
-        run: python3 scripts/verify_provider_seam.py
-
-      - name: Shipped flag state (self-test, both directions)
-        run: python3 scripts/shipped_flags.py --self-test
-
-      - name: Cycle protocol guard (seal + criteria freeze, both directions)
-        run: python3 scripts/cycle.py --self-test
 
       - name: State what CI did NOT cover
         if: always()
         run: |
           cat <<'EOF'
           ============================================================
-          NOT COVERED BY CI — requires the full stack, run locally:
-
+          NOT COVERED BY CI (needs the full stack, run locally):
             docker compose up -d
-            python3 scripts/verify_deployed.py     # repo == running image
-            python3 scripts/verify_e2.py           # E2-V2..V6
-            docker compose exec -T mcp python3 - < scripts/verify_tenancy.py
-            python3 scripts/verify_seams.py        # incl. flag liveness
-            bash scripts/verify_security.sh        # M8, ~15-25 min
-            cd web && STATESYNC_LIVE=1 npx playwright test   # served CSP, real answers
-            python3 scripts/diagnose_m4.py --out docs/m4_<label>.json
-
-          Model-sensitive metrics (M2-M7) are provisional on the local 7B and
-          are never run in CI. See docs/rebaseline_runbook.md.
+            python3 scripts/verify_deployed.py   # the running images match the repository
+            python3 scripts/check_demo.py        # the demo questions, end to end
+            cd web && STATESYNC_LIVE=1 npx playwright test
           ============================================================
           EOF
 

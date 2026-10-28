@@ -56,30 +56,11 @@ _ACTIONS = frozenset({
 })
 _NO_WORKSPACE = frozenset({"list", "create"})
 _DESCRIPTION_SOURCES = frozenset({"ai", "owner"})
-# A definition may also come from an uploaded document (migration 025); it then
-# carries a citation, and like an AI draft it never replaces the owner's words.
-_DEFINITION_SOURCES = frozenset({"ai", "owner", "document"})
-_CITATION_FIELDS = ("document_id", "chunk_id", "page", "title", "quote")
+_DEFINITION_SOURCES = frozenset({"ai", "owner"})
 
 
-def clean_citation(value: Any) -> dict[str, Any] | None:
-    """A document citation {document_id, chunk_id, page, title, quote}, or None if malformed."""
-    if not isinstance(value, dict):
-        return None
-    chunk_id = clean_text(value.get("chunk_id"), int(cfg.library.title_max_chars))
-    document_id = clean_text(value.get("document_id"), int(cfg.library.title_max_chars))
-    quote = clean_text(value.get("quote"), int(cfg.workspaces.mine_quote_max_chars))
-    title = clean_text(value.get("title"), int(cfg.library.title_max_chars)) or ""
-    page = value.get("page")
-    if chunk_id is None or document_id is None or quote is None:
-        return None
-    if page is not None and (not isinstance(page, int) or isinstance(page, bool) or page < 0):
-        return None
-    return {"document_id": document_id, "chunk_id": chunk_id, "page": page, "title": title, "quote": quote}
-_EXAMPLE_SOURCES = frozenset({"setup_test", "tile", "owner"})
+_EXAMPLE_SOURCES = frozenset({"tile", "owner"})
 _SAMPLE_VALUE_MAX_CHARS = 80  # noqa: literals - a sample value is a hint for the drafter, not data
-_CHECK_DETAIL_MAX_CHARS = 300  # noqa: literals - a stored error message is truncated for display
-_CHECK_SEVERITY = {"failed": 0, "changed": 1, "ok": 2}
 _STOPWORDS = frozenset(
     "the a an of in on for to and or is are was were by with what which how many much per "
     "from at as that this these those be do does did show me list give total all each".split()
@@ -161,17 +142,7 @@ _VIEW = """
            (SELECT count(*) FROM session_state.kb_columns c WHERE c.workspace_id = w.workspace_id AND c.column_name = ''),
            (SELECT count(*) FROM session_state.kb_columns c WHERE c.workspace_id = w.workspace_id AND c.approved),
            (SELECT count(*) FROM session_state.kb_definitions d WHERE d.workspace_id = w.workspace_id),
-           (SELECT count(*) FROM session_state.kb_examples e WHERE e.workspace_id = w.workspace_id),
-           (SELECT count(*) FROM session_state.kb_examples e
-             WHERE e.workspace_id = w.workspace_id AND e.approved AND e.check_state = 'ok'),
-           (SELECT count(*) FROM session_state.kb_examples e
-             WHERE e.workspace_id = w.workspace_id AND e.approved AND e.check_state = 'changed'),
-           (SELECT count(*) FROM session_state.kb_examples e
-             WHERE e.workspace_id = w.workspace_id AND e.approved AND e.check_state = 'failed'),
-           (SELECT count(*) FROM session_state.kb_examples e
-             WHERE e.workspace_id = w.workspace_id AND e.approved AND e.check_state IS NULL),
-           (SELECT max(e.checked_at) FROM session_state.kb_examples e
-             WHERE e.workspace_id = w.workspace_id AND e.approved)
+           (SELECT count(*) FROM session_state.kb_examples e WHERE e.workspace_id = w.workspace_id)
     FROM session_state.workspaces w
     WHERE w.tenant_id = %s AND w.owner_principal_id = %s
 """
@@ -179,17 +150,13 @@ _VIEW = """
 
 def _to_view(row: tuple) -> dict[str, Any]:
     (workspace_id, name, schema, context, version, state, score, total, created, updated,
-     tables, approved, definitions, examples, h_ok, h_changed, h_failed, h_unchecked, h_checked_at) = row
+     tables, approved, definitions, examples) = row
     return {
         "workspace_id": workspace_id, "name": name, "target_schema": schema,
         "business_context": context, "context_version": version, "setup_state": state,
         "setup_score": score, "setup_total": total,
         "created_at": created.isoformat(), "updated_at": updated.isoformat(),
         "counts": {"tables": tables, "approved": approved, "definitions": definitions, "examples": examples},
-        "health": {"ok": h_ok, "changed": h_changed, "failed": h_failed, "unchecked": h_unchecked,
-                   "checked_at": h_checked_at.isoformat() if h_checked_at else None},
-        # Lets the page decide, from config, when opening a workspace should re-check it.
-        "example_check_stale_after_s": int(cfg.example_checks.stale_after_s),
     }
 
 
@@ -435,13 +402,10 @@ async def _definitions(tenant_id, principal_id, workspace_id=None, **_):
         if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
             return _fail("not_found", "No such workspace.")
         rows = await (await conn.execute(
-            "SELECT definition_id, term, definition, source, approved, cite_document_id, cite_chunk_id, cite_page, "
-            "cite_title, cite_quote FROM session_state.kb_definitions "
+            "SELECT definition_id, term, definition, source, approved FROM session_state.kb_definitions "
             "WHERE workspace_id = %s ORDER BY lower(term)", (workspace_id,))).fetchall()
-    return {"ok": True, "definitions": [
-        {"definition_id": i, "term": t, "definition": d, "source": s, "approved": a,
-         "citation": dict(zip(_CITATION_FIELDS, cite)) if cite[1] else None}
-        for i, t, d, s, a, *cite in rows]}
+    return {"ok": True, "definitions": [{"definition_id": i, "term": t, "definition": d, "source": s, "approved": a}
+                                        for i, t, d, s, a in rows]}
 
 
 async def _save_definitions(tenant_id, principal_id, workspace_id=None, items=None, **_):
@@ -460,11 +424,7 @@ async def _save_definitions(tenant_id, principal_id, workspace_id=None, items=No
                 source = item.get("source", "owner") if isinstance(item, dict) else None
                 if term is None or text is None or source not in _DEFINITION_SOURCES:
                     raise _Abort(_fail("invalid", "Every definition needs a term, a definition and a source of "
-                                                  "ai, owner or document."))
-                citation = clean_citation(item.get("citation")) if source == "document" else None
-                if source == "document" and citation is None:
-                    raise _Abort(_fail("invalid", "A definition from a document needs its citation "
-                                                  "(document_id, chunk_id, quote)."))
+                                                  "ai or owner."))
                 exists = (await (await conn.execute(
                     "SELECT 1 FROM session_state.kb_definitions WHERE workspace_id = %s AND lower(term) = lower(%s)",
                     (workspace_id, term))).fetchone()) is not None
@@ -475,23 +435,15 @@ async def _save_definitions(tenant_id, principal_id, workspace_id=None, items=No
                 await conn.execute(
                     """
                     INSERT INTO session_state.kb_definitions (definition_id, workspace_id, tenant_id, term, definition,
-                        source, cite_document_id, cite_chunk_id, cite_page, cite_title, cite_quote)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        source)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                     ON CONFLICT (workspace_id, lower(term)) DO UPDATE SET
                         term = EXCLUDED.term, definition = EXCLUDED.definition, source = EXCLUDED.source,
-                        -- an owner edit keeps the citation, so the origin stays visible
-                        cite_document_id = COALESCE(EXCLUDED.cite_document_id, session_state.kb_definitions.cite_document_id),
-                        cite_chunk_id = COALESCE(EXCLUDED.cite_chunk_id, session_state.kb_definitions.cite_chunk_id),
-                        cite_page = CASE WHEN EXCLUDED.cite_chunk_id IS NOT NULL THEN EXCLUDED.cite_page
-                                         ELSE session_state.kb_definitions.cite_page END,
-                        cite_title = COALESCE(EXCLUDED.cite_title, session_state.kb_definitions.cite_title),
-                        cite_quote = COALESCE(EXCLUDED.cite_quote, session_state.kb_definitions.cite_quote),
                         approved = FALSE, updated_at = now()
-                    -- a draft (AI or document) never replaces the owner's definition
-                    WHERE EXCLUDED.source = 'owner' OR session_state.kb_definitions.source IN ('ai', 'document')
+                    -- an AI draft never replaces the owner's definition
+                    WHERE EXCLUDED.source = 'owner' OR session_state.kb_definitions.source <> 'owner'
                     """,
-                    (str(uuid.uuid4()), workspace_id, tenant_id, term, text, source,
-                     *((citation[k] for k in _CITATION_FIELDS) if citation else (None,) * len(_CITATION_FIELDS))))
+                    (str(uuid.uuid4()), workspace_id, tenant_id, term, text, source))
     except _Abort as abort:
         return abort.failure
     return await _definitions(tenant_id, principal_id, workspace_id=workspace_id)
@@ -636,18 +588,11 @@ async def _examples(tenant_id, principal_id, workspace_id=None, **_):
         if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
             return _fail("not_found", "No such workspace.")
         rows = await (await conn.execute(
-            "SELECT example_id, question, sql_text, source, check_state, checked_at, check_detail "
-            "FROM session_state.kb_examples WHERE tenant_id = %s AND workspace_id = %s AND approved",
+            "SELECT example_id, question, sql_text, source FROM session_state.kb_examples "
+            "WHERE tenant_id = %s AND workspace_id = %s AND approved ORDER BY lower(question)",
             (tenant_id, workspace_id))).fetchall()
-    def severity(row: tuple) -> tuple[int, str]:
-        _id, question, _sql, _source, state, *_rest = row
-        return _CHECK_SEVERITY.get(state, len(_CHECK_SEVERITY)), question.lower()
-
-    rows = sorted(rows, key=severity)
-    return {"ok": True, "examples": [
-        {"example_id": i, "question": q, "sql_text": s, "source": src, "check_state": st,
-         "checked_at": at.isoformat() if at else None, "check_detail": d}
-        for i, q, s, src, st, at, d in rows]}
+    return {"ok": True, "examples": [{"example_id": i, "question": q, "sql_text": s, "source": src}
+                                     for i, q, s, src in rows]}
 
 
 _HANDLERS = {

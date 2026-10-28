@@ -1,7 +1,7 @@
 [project]
 name = "statesync-mcp"
 version = "0.1.0"
-description = "StateSync MCP Tool Server"
+description = "StateSync tool server: the only service with database passwords"
 requires-python = ">=3.12"
 # Compatible ranges; the exact versions an image installs are in requirements.lock.
 dependencies = [
@@ -12,7 +12,6 @@ dependencies = [
     "pglast>=8.4,<9",
     "pydantic>=2.13.4,<3",
     "httpx>=0.28.1,<0.29",
-    "qdrant-client>=1.9.0,<1.10.0",
     "cryptography>=50.0.1,<51",
 ]
 

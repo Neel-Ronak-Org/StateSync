@@ -1,20 +1,11 @@
 """
 mcp/embeddings.py
-Text embedding for AgentSM trajectory memory (A6, BD2 — see
-docs/phase_b_amendment.md) and, since Part E1, for document_chunks
-retrieval (A4.6/A4.7) and query-time ss_embed support.
+Text embeddings, from the Ollama container (mxbai-embed-large: 1,024 numbers per text).
 
-Calls the mcp-only Ollama container's /api/embeddings endpoint. This is a
-network call from mcp to ollama (both on db_net) — unrelated to A4.7's
-ss_embed, which must never make a network call from inside postgres: the
-embedding computed here by mcp is what gets bound into ss_embed's session
-GUC before query execution, not something ss_embed itself ever fetches.
-
-Model identifier defaults to memory.embedding_model/embedding_dim
-(config/statesync.toml, A0.2 — no model literal in source); callers with
-their own concern (retrieval.embedding_model/embedding_dim) pass them
-explicitly rather than sharing memory's config path, even though both
-happen to name the same underlying model today.
+Used twice: when a document is uploaded (every passage, in batches) and when a question is searched (the
+question's text). Both must use the same model, or the cosine scores mean nothing; the model and its size
+are [retrieval] embedding_model and embedding_dim in config/statesync.toml, and a vector of the wrong size
+is an error, not a silent mismatch. Ollama is reachable only from the MCP (both on db_net).
 """
 
 from __future__ import annotations
@@ -39,7 +30,7 @@ _client: httpx.AsyncClient | None = None
 def _get_client() -> httpx.AsyncClient:
     global _client
     if _client is None:
-        _client = httpx.AsyncClient(timeout=cfg.memory.embedding_timeout_s)
+        _client = httpx.AsyncClient(timeout=cfg.retrieval.embedding_timeout_s)
     return _client
 
 
@@ -52,16 +43,14 @@ async def embed_text(
     """
     Compute the embedding vector for a piece of text via Ollama.
 
-    model/dim default to memory.embedding_model/embedding_dim for existing
-    (C1 trajectory) callers; E1 retrieval callers pass
-    retrieval.embedding_model/embedding_dim explicitly.
+    model/dim default to [retrieval] embedding_model/embedding_dim.
 
     Raises:
         RuntimeError: if the response is malformed or the vector's dimension
                       does not match the expected dim.
     """
-    effective_model = model if model is not None else cfg.memory.embedding_model
-    expected_dim = dim if dim is not None else cfg.memory.embedding_dim
+    effective_model = model if model is not None else cfg.retrieval.embedding_model
+    expected_dim = dim if dim is not None else cfg.retrieval.embedding_dim
 
     client = _get_client()
     response = await client.post(

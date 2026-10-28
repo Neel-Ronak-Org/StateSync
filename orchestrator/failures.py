@@ -11,7 +11,7 @@ from __future__ import annotations
 # importable here (the openai package is only needed when a hosted provider is
 # selected). docs/V3_PLAN.md 0.4.
 _RATE_LIMITED = frozenset({"RateLimitError"})
-_MISCONFIGURED = frozenset({"GroqConfigError", "AzureConfigError", "GeminiConfigError"})
+_MISCONFIGURED = frozenset({"OpenAICompatConfigError"})
 _UNAVAILABLE = frozenset({"APIConnectionError", "APITimeoutError", "InternalServerError",
                           "ConnectError", "ConnectTimeout", "ReadTimeout", "HTTPStatusError"})
 

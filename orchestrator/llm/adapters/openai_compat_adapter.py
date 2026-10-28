@@ -1,41 +1,31 @@
 """
 orchestrator/llm/adapters/openai_compat_adapter.py
-One adapter for every OpenAI-compatible endpoint (Groq, OpenRouter, Google AI Studio's OpenAI
-endpoint, a local router such as OmniRoute), configured by NAME in config/flags.toml
-[llm.endpoints.<name>], plus a chain that may fall back between endpoints under a policy.
+The one model client: any OpenAI-compatible chat endpoint, named in config/flags.toml [llm.endpoints.<name>].
 
-WHY (owner's question, 2026-10-03: free tiers and routers before paying for credits). The
-pipeline's numbers are only comparable when every call comes from the model the experiment
-names. Routers fall back to other models, providers rename models, and temperature 0 is not
-determinism across models. So:
-  1. Each role names "endpoint:model" (or a list of them, in order).
-  2. [llm.openai_compat] fallback is "off" (measurements), "same_model" (another endpoint
-     serving the same model id) or "any". Off by default.
-  3. Every response carries the model the SERVER says answered (`served_model`) and the
-     endpoint; the call trace records both. With require_served_match = true, an answer from
-     a different model is refused (ServedModelMismatch) instead of silently used.
-  4. Keys are Docker secret files named per endpoint (key_secret), never environment values
-     in config; a missing key fails when that endpoint is first used, naming the file.
-  5. Only https base URLs, except a local router on localhost / host.docker.internal.
-  6. A router that forwards to several upstream providers (OpenRouter) is pinned per model with
-     [llm.endpoints.<name>.extra_body."<model>"] provider = {order = [...], allow_fallbacks =
-     false}: the serving stack is then a known one. The provider the router reports is recorded
-     per call, and with require_served_match = true an answer from another provider is refused.
-Rate-limit handling (retry-after, waiting, reasoning-token headroom) is GroqAdapter's,
-inherited unchanged.
+What it guarantees, because each of these once broke a measurement or an answer silently:
+  1. The model you asked for is the model that answered. Each role names "endpoint:model"; every reply
+     carries the model the SERVER says answered, and with require_served_match = true an answer from another
+     model is refused (ServedModelMismatch) instead of silently used. Fallback to another endpoint is off.
+  2. Rate limits are waited out, not scored as wrong answers. A rate limit, a server error or a dropped
+     connection is retried after the server's retry-after (or a doubling backoff), up to models.max_retries
+     and models.max_total_wait_s. A bad request or a bad key is raised at once: retrying cannot fix it.
+  3. A reasoning model (gpt-oss) spends hidden "thinking" tokens from the same budget as the answer, so a
+     model listed in the endpoint's reasoning_effort gets that effort level plus
+     models.reasoning_headroom_tokens of extra budget. Otherwise the visible answer can come back empty.
+  4. Keys are Docker secret files named by the endpoint's key_secret, read when the endpoint is first used;
+     never environment values or config. Only https endpoints (or http on this machine).
 """
 
 from __future__ import annotations
 
-
+import asyncio
 import logging
 import os
 from dataclasses import dataclass, replace
 from urllib.parse import urlparse
 
-from config_loader import flags
+from config_loader import cfg, flags
 from llm.adapters.base import LLMResponse
-from llm.adapters.groq_adapter import GroqAdapter, GroqConfigError
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +35,13 @@ SECRETS_DIR_ENV = "STATESYNC_SECRETS_DIR"
 SECRETS_DIR_DEFAULT = "/run/secrets"
 
 
-class OpenAICompatConfigError(GroqConfigError):
-    """An endpoint, key or role spec is unusable."""
+def _max_total_wait_s() -> float:
+    """models.max_total_wait_s as an accessor so tests can lower it (cfg is read-only)."""
+    return float(cfg.models.max_total_wait_s)
+
+
+class OpenAICompatConfigError(RuntimeError):
+    """An endpoint, key or role spec is unusable (reported as "not configured correctly", never retried)."""
 
 
 class ServedModelMismatch(RuntimeError):
@@ -140,8 +135,8 @@ def served_matches(served: str, requested: str, aliases: dict | None) -> bool:
     return same_model(served, requested) or served in (aliases or {}).get(requested, [])
 
 
-class OpenAICompatAdapter(GroqAdapter):
-    """GroqAdapter's behaviour against any named OpenAI-compatible endpoint."""
+class OpenAICompatAdapter:
+    """One model on one named OpenAI-compatible endpoint (see the module docstring)."""
 
     def __init__(self, model: str, ep: Endpoint, require_served_match: bool = False) -> None:
         self.model = model
@@ -151,15 +146,13 @@ class OpenAICompatAdapter(GroqAdapter):
             from openai import AsyncOpenAI
         except ImportError as exc:  # pragma: no cover - environment-dependent
             raise OpenAICompatConfigError("the `openai` package is not installed in this image") from exc
-        from config_loader import cfg
         self._client = AsyncOpenAI(api_key=self._key(ep), base_url=ep.base_url,
-                                   timeout=float(cfg.models.groq_timeout_s), max_retries=0)
+                                   timeout=float(cfg.models.timeout_s), max_retries=0)   # retries: _call below
         self._reasoning_effort = str(ep.reasoning_effort.get(model, "") or "").strip()
         self._omit_temperature = model in ep.omit_temperature
         self._extra_body = (ep.extra_body or {}).get(model) or None
         self._pinned_provider = pinned_provider(self._extra_body)
-        if ep.max_retries is not None:
-            self._max_retries = ep.max_retries
+        self._max_retries = ep.max_retries if ep.max_retries is not None else int(cfg.models.max_retries)
         logger.info("OpenAICompatAdapter ready (endpoint=%s model=%s).", ep.name, model)
 
     @staticmethod
@@ -173,8 +166,107 @@ class OpenAICompatAdapter(GroqAdapter):
             raise OpenAICompatConfigError(f"No API key for endpoint {ep.name!r}: put it in the secret file {path}.")
         return key
 
+    @staticmethod
+    def _retry_delay(exc: Exception, fallback: float) -> float:
+        """The server's retry-after if it sent one, else the backoff delay."""
+        response = getattr(exc, "response", None)
+        headers = getattr(response, "headers", None) or {}
+        try:
+            delay = float(headers.get("retry-after", ""))
+        except (TypeError, ValueError):
+            delay = fallback
+        return min(max(delay, 0.0), float(cfg.models.retry_max_wait_s))
+
+    async def _call(
+        self,
+        *,
+        system: str,
+        messages: list[dict],
+        max_tokens: int,
+    ) -> LLMResponse:
+        """One chat completion: the system prompt is the first message. Rate limits, server errors and
+        dropped connections are retried (see the module docstring); anything else is raised at once."""
+        from openai import APIConnectionError, InternalServerError, RateLimitError
+
+        budget = max_tokens
+        extra: dict = {}
+        if self._reasoning_effort:
+            budget += int(cfg.models.reasoning_headroom_tokens)
+            extra["reasoning_effort"] = self._reasoning_effort
+
+        attempts = self._max_retries + 1
+        if not self._omit_temperature:
+            extra["temperature"] = cfg.models.temperature
+        if self._extra_body:
+            extra["extra_body"] = self._extra_body       # the endpoint's own request fields for this model
+        backoff = float(cfg.models.retry_base_delay_s)
+        waited_s = 0.0
+        retries = 0
+        headers: dict = {}
+        for attempt in range(attempts):
+            try:
+                raw = await self._client.chat.completions.with_raw_response.create(
+                    model=self.model,
+                    max_completion_tokens=budget,
+                    messages=[{"role": "system", "content": system}] + messages,
+                    **extra,
+                )
+                headers = raw.headers
+                completion = raw.parse()
+                break
+            except (RateLimitError, InternalServerError, APIConnectionError) as exc:
+                if attempt == attempts - 1:
+                    raise
+                delay = self._retry_delay(exc, backoff)
+                if waited_s + delay > _max_total_wait_s():
+                    logger.warning(
+                        "Endpoint %s gave up after %.1fs of waiting (models.max_total_wait_s=%.1f, "
+                        "model=%s); raising %s.",
+                        self.endpoint.name, waited_s, _max_total_wait_s(), self.model, type(exc).__name__,
+                    )
+                    raise
+                logger.warning(
+                    "Endpoint %s call failed transiently (%s, attempt %d/%d, model=%s); retrying in %.1fs.",
+                    self.endpoint.name, type(exc).__name__, attempt + 1, attempts, self.model, delay,
+                )
+                await asyncio.sleep(delay)
+                waited_s += delay
+                retries += 1
+                backoff *= 2
+
+        choice = completion.choices[0]
+        text = (choice.message.content or "").strip()
+        if not text and choice.finish_reason == "length":
+            logger.warning(
+                "No visible text: the %d-token budget ran out first "
+                "(model=%s). Raise models.reasoning_headroom_tokens or the "
+                "role's max_tokens cap.",
+                budget, self.model,
+            )
+        usage = completion.usage
+        details = getattr(usage, "prompt_tokens_details", None)
+        try:
+            remaining: int | None = int(headers.get("x-ratelimit-remaining-tokens", ""))
+        except (TypeError, ValueError):
+            remaining = None
+        return LLMResponse(
+            text=text,
+            # completion_tokens includes reasoning tokens: they are billed and
+            # they count against the per-minute token limit, so they belong in
+            # the accounting. A missing usage block undercounts rather than crashes.
+            tokens_in=getattr(usage, "prompt_tokens", 0) or 0,
+            tokens_out=getattr(usage, "completion_tokens", 0) or 0,
+            cached_tokens=getattr(details, "cached_tokens", 0) or 0,
+            retries=retries,
+            waited_ms=int(waited_s * 1000),  # noqa: literals - seconds to milliseconds
+            rate_remaining_tokens=remaining,
+            served_model=getattr(completion, "model", None),
+            served_provider=getattr(completion, "provider", None),
+        )
+
     async def complete(self, *, system: str, messages: list[dict], max_tokens: int) -> LLMResponse:
-        response = replace(await super().complete(system=system, messages=messages, max_tokens=max_tokens),
+        """The call, then the check that the model (and a pinned provider) that answered is the one asked for."""
+        response = replace(await self._call(system=system, messages=messages, max_tokens=max_tokens),
                            endpoint=self.endpoint.name)
         served = response.served_model
         if served and not served_matches(served, self.model, self.endpoint.served_aliases):

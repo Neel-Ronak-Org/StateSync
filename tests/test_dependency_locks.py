@@ -24,7 +24,7 @@ from packaging.utils import canonicalize_name  # noqa: E402
 from packaging.version import Version  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
-LOCKED_SERVICES = ("mcp", "orchestrator", "simulator", "parser", "reranker")
+LOCKED_SERVICES = ("mcp", "orchestrator", "parser")
 
 
 def _lock(service: str) -> dict[str, str]:

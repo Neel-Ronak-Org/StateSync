@@ -230,10 +230,8 @@ def title_fallback(raw_query: str | None, rewritten_query: str | None, rewrite_a
 
 
 def default_interval(target_schema: str | None) -> int:
-    """The refresh interval a pin gets when none is asked for: per dataset, else the global default."""
-    per_schema = cfg.tiles.get("schema_default_refresh_s")
-    value = per_schema.get(target_schema) if per_schema is not None and target_schema else None
-    return int(value) if value is not None else int(cfg.tiles.default_refresh_s)
+    """The refresh interval a pin gets when none is asked for ([tiles] default_refresh_s)."""
+    return int(cfg.tiles.default_refresh_s)
 
 
 def _fail(code: str, message: str) -> dict[str, Any]:

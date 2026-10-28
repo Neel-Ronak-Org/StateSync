@@ -3,7 +3,6 @@
 # Regenerate after an intended upgrade: docker compose exec -T orchestrator pip freeze, minus pip/setuptools.
 annotated-doc==0.0.5
 annotated-types==0.8.0
-anthropic==0.122.0
 anyio==4.14.2
 attrs==26.1.0
 certifi==2026.7.22
@@ -11,12 +10,8 @@ cffi==2.1.1
 charset-normalizer==3.5.1
 click==8.4.2
 cryptography==50.0.0
-digipin==2.1.1
 distro==1.9.0
-docstring-parser==0.18.0
 fastapi==0.141.1
-google-auth==2.56.3
-google-genai==2.18.1
 h11==0.16.0
 httpcore2==2.10.0
 httpcore==1.0.9
@@ -41,8 +36,6 @@ orjson==3.12.0
 ormsgpack==1.12.2
 packaging==26.3
 pglast==8.4
-pyasn1-modules==0.4.2
-pyasn1==0.6.4
 pycparser==3.0
 pydantic-core==2.46.4
 pydantic==2.13.4
@@ -63,7 +56,6 @@ urllib3==2.7.0
 uuid-utils==0.17.0
 uvicorn==0.52.3
 uvloop==0.22.1
-vl-convert-python==1.9.0.post1
 watchfiles==1.2.0
 websockets==15.0.1
 xxhash==4.0.0

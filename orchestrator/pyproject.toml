@@ -1,7 +1,7 @@
 [project]
 name = "statesync-orchestrator"
 version = "0.1.0"
-description = "StateSync Orchestrator — Phase B Walking Skeleton"
+description = "StateSync orchestrator: the question-answering pipeline"
 requires-python = ">=3.12"
 # Compatible ranges; the exact versions an image installs are in requirements.lock.
 dependencies = [
@@ -11,26 +11,11 @@ dependencies = [
     "pydantic>=2.13.4,<3",
     "langgraph>=1.2.11,<2",
     "langchain-core>=1.5.5,<2",
-    "anthropic>=0.122.0,<1",
-    # Azure OpenAI / AI Foundry adapter (BD1 seam). Imported lazily inside
-    # AzureAdapter.__init__, so a provider="local" stack never loads it.
+    # Every language model is reached through an OpenAI-compatible endpoint (llm/adapters/).
     "openai>=3.1.0,<4",
-    # Gemini adapter (BD1 seam). Lazily imported inside GeminiAdapter.__init__,
-    # so a provider="local" stack never loads it.
-    "google-genai>=2.18.1,<3",
     "jsonschema>=4.26.0,<5",
-    "tomllib>=2.0.0 ; python_version < '3.11'",
-    "digipin>=2.1.1,<3",
-    # Same parser the mcp Layer-1 gate uses (A4.5). Here it is read-only and
-    # non-security-bearing: sql_agent parses its own draft SQL to learn which
-    # tables to interrogate. Version-matched to mcp/pyproject.toml on purpose.
+    # The same SQL parser the MCP's safety gate uses; here it only reads which tables a draft query uses.
     "pglast>=8.4,<9",
-    # D11 VisionScorer's rendering half. orchestrator/vision.py imports
-    # vl_convert directly and this was never declared here -- only in
-    # evaluator/Dockerfile -- so the orchestrator image shipped a registered
-    # scorer whose renderer was absent. Pure Rust wheel: no browser, no
-    # network, so it costs image size and nothing else (A1).
-    "vl-convert-python>=1.9.0,<2",
 ]
 
 [tool.uv]

@@ -62,10 +62,9 @@ class Harness:
         self.result: dict[str, Any] = {"ok": True}
         self.exception: Exception | None = None
         self.parser_response: httpx.Response | Exception = httpx.Response(
-            200, json={"ok": True, "pages": [{"page": 1, "text": "a"}, {"page": 2, "text": "b"}],
-                       "blocks": [{"page": 1, "kind": "paragraph", "text": "a"}]})
+            200, json={"ok": True, "pages": [{"page": 1, "text": "a"}, {"page": 2, "text": "b"}]})
         self.parser_requests: list[httpx.Request] = []
-        self.ingested: list[tuple[str, list, list | None, str | None]] = []
+        self.ingested: list[tuple[str, list]] = []
         self.ingest_calls: list[dict[str, Any]] = []
 
     async def audit(self, principal_id, tenant_id, route, outcome, query_id=None, session_id=None,
@@ -78,8 +77,8 @@ class Harness:
             raise self.exception
         return self.result
 
-    async def ingest(self, call, document_id, pages, blocks=None, title=None) -> None:
-        self.ingested.append((document_id, pages, blocks, title))
+    async def ingest(self, call, document_id, pages) -> None:
+        self.ingested.append((document_id, pages))
         self.ingest_calls.append(await call("finish_document", document_id=document_id, status="ready"))
 
     def parser_handler(self, request: httpx.Request) -> httpx.Response:
@@ -172,42 +171,10 @@ def test_upload_happy_path_is_202_and_starts_ingest(setup):
                               "sha256": hashlib.sha256(body).hexdigest()}
     assert harness.parser_requests[0].content == body
     assert harness.parser_requests[0].headers["content-type"] == "application/pdf"
-    # the parser's layout blocks and the document's title go to ingest with the pages (rag_v2 Phase C)
-    assert harness.ingested == [("up_1", [{"page": 1, "text": "a"}, {"page": 2, "text": "b"}],
-                                 [{"page": 1, "kind": "paragraph", "text": "a"}], "Q3 contract é")]
+    assert harness.ingested == [("up_1", [{"page": 1, "text": "a"}, {"page": 2, "text": "b"}])]
     assert harness.ingest_calls == [{"ok": True, "document": DOC}]  # the job's call reaches library_manage
     assert harness.calls[-1]["action"] == "finish_document" and harness.calls[-1]["principal_id"] == "p_test"
     assert harness.audit_log[0]["detail"] == "library:start_document folder=fd_1 document=up_1"
-
-
-def test_the_pdf_layout_pass_is_asked_for_only_by_the_layout_chunker(setup, monkeypatch):
-    """WHY: the layout pass is the expensive part of parsing and the paragraph chunker never uses
-    its blocks; run for every PDF it made long SEC filings run out of memory and be refused
-    (docs/eval/external_datasets.md). So the parser is asked for it only in layout mode."""
-    harness, client = setup
-    harness.result = {"ok": True, "document": DOC}
-    real = library_api.cfg
-
-    class _Section:  # the real [library] values, with the chunker overridden (cfg itself is read-only)
-        def __init__(self, chunker: str) -> None:
-            self.chunker = chunker
-
-        def __getattr__(self, name: str):
-            return getattr(real.library, name)
-
-    class _Config:
-        def __init__(self, chunker: str) -> None:
-            self.library = _Section(chunker)
-
-        def __getattr__(self, name: str):
-            return getattr(real, name)
-
-    monkeypatch.setattr(library_api, "cfg", _Config("paragraph"))
-    assert _upload(client).status_code == 202
-    assert "x-layout" not in harness.parser_requests[-1].headers
-    monkeypatch.setattr(library_api, "cfg", _Config("layout"))
-    assert _upload(client).status_code == 202
-    assert harness.parser_requests[-1].headers["x-layout"] == "1"
 
 
 def test_unsupported_type_is_415_before_anything_else(setup):

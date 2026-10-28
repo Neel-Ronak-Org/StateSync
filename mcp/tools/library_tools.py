@@ -1,20 +1,16 @@
 """
 mcp/tools/library_tools.py
-MCP document-library tool (docs/V3_PLAN.md Phase 3c slice 5, decision D-v3-17,
-migration 024): the account's folders of uploaded documents, and which folders
-each workspace searches.
+library.manage: the account's folders of uploaded documents, which folders each workspace searches, and the
+owner's own databases.
 
-One JSON-RPC method, library.manage (decision D-v3-10), takes an `action`:
+One JSON-RPC method takes an `action`:
 
   folders, create_folder, rename_folder, delete_folder   folders in the account's library
   documents, start_document, delete_document             the documents inside them
   add_chunks, finish_document                            ingestion, driven by the orchestrator
   workspace_folders, set_workspace_folders               which folders a workspace searches
   workspace_documents                                    the READY documents a workspace can search
-                                                         (titles, for the router; optional `limit`
-                                                         lifts its router_titles_max cap, T5)
-  workspace_chunks                                       their passages, in reading order (for finding
-                                                         definitions in documents)
+                                                         (id and title), newest first
   connections, create_connection, set_connection_schema,  the owner's own Postgres databases
   test_connection, delete_connection                     (mcp/connections.py; passwords never returned)
 
@@ -68,7 +64,7 @@ logger = logging.getLogger(__name__)
 _ACTIONS = frozenset({
     "folders", "create_folder", "rename_folder", "delete_folder",
     "documents", "start_document", "add_chunks", "finish_document", "delete_document",
-    "workspace_folders", "set_workspace_folders", "workspace_documents", "workspace_chunks",
+    "workspace_folders", "set_workspace_folders", "workspace_documents",
     "connections", "create_connection", "set_connection_schema", "test_connection", "delete_connection",
 })
 _FINISH_STATUSES = frozenset({"ready", "failed"})
@@ -456,11 +452,9 @@ async def _set_workspace_folders(tenant_id, principal_id, workspace_id=None, fol
 
 
 async def _workspace_documents(tenant_id, principal_id, workspace_id=None, limit=None, **_):
-    # The router sees the router_titles_max newest titles. A caller that needs them all (the hybrid
-    # documents half matching titles against entities, T5) passes `limit`, capped at the account's
-    # document limit; without it the answer is what it always was.
+    # At most `limit` documents (default and cap: the account's document limit).
     if limit is None:
-        limit = int(cfg.library.router_titles_max)
+        limit = int(cfg.library.max_documents)
     elif not _is_int(limit) or limit < 1:
         return _fail("invalid", "limit must be a positive integer.")
     else:
@@ -475,21 +469,6 @@ async def _workspace_documents(tenant_id, principal_id, workspace_id=None, limit
             "ORDER BY d.created_at DESC LIMIT %s",
             (tenant_id, workspace_id, limit))).fetchall()
     return {"ok": True, "documents": [{"document_id": r[0], "title": r[1]} for r in rows]}
-
-
-async def _workspace_chunks(tenant_id, principal_id, workspace_id=None, **_):
-    async with get_history_connection() as conn:
-        if not await _owns_workspace(conn, tenant_id, principal_id, workspace_id):
-            return _fail("not_found", "No such workspace.")
-        rows = await (await conn.execute(
-            "SELECT c.chunk_id, c.document_id, d.title, c.page, c.content_md FROM workspace_docs.chunks c "
-            "JOIN workspace_docs.documents d ON d.document_id = c.document_id "
-            "JOIN workspace_docs.workspace_folders wf ON wf.folder_id = d.folder_id "
-            "WHERE c.tenant_id = %s AND wf.workspace_id = %s AND d.status = 'ready' "
-            "ORDER BY d.created_at, c.document_id, c.ordinal LIMIT %s",
-            (tenant_id, workspace_id, int(cfg.library.mine_max_chunks)))).fetchall()
-    fields = ("chunk_id", "document_id", "title", "page", "text")
-    return {"ok": True, "chunks": [dict(zip(fields, row)) for row in rows]}
 
 
 # ── Connections (the owner's own Postgres; mcp/connections.py) ────────────────
@@ -688,7 +667,7 @@ _HANDLERS = {
     "delete_folder": _delete_folder, "documents": _documents, "start_document": _start_document,
     "add_chunks": _add_chunks, "finish_document": _finish_document, "delete_document": _delete_document,
     "workspace_folders": _workspace_folders, "set_workspace_folders": _set_workspace_folders,
-    "workspace_documents": _workspace_documents, "workspace_chunks": _workspace_chunks,
+    "workspace_documents": _workspace_documents,
     "connections": _connections, "create_connection": _create_connection,
     "set_connection_schema": _set_connection_schema, "test_connection": _test_connection,
     "delete_connection": _delete_connection,

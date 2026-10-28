@@ -1,15 +1,14 @@
 """
-tests/test_groq_adapter.py
-Pins the Groq adapter's behaviour at the two places a hosted, rate-limited,
-reasoning model breaks a pipeline silently.
+tests/test_model_retries.py
+Pins the model client's behaviour (llm/adapters/openai_compat_adapter.py) at the two places a hosted,
+rate-limited, reasoning model breaks a pipeline silently.
 
 WHY THIS EXISTS.
 
 1. Rate limits. The owner's key allows 8,000 tokens per minute per model, and
    one question issues several calls, so HTTP 429 mid-question is routine. If
    the adapter gave up, a rate limit would surface as a failed question -- a
-   measurement artifact this project has paid for before (see
-   gemini_adapter.py). The adapter must wait for the server's retry-after and
+   measurement artifact this project has paid for before. The adapter must wait for the server's retry-after and
    retry, and must NOT retry errors that retrying cannot fix.
 2. Reasoning tokens. openai/gpt-oss-* spend reasoning out of the same budget
    as the answer. The ChatModel contract says max_tokens means VISIBLE output,
@@ -39,12 +38,13 @@ except ImportError:          # pragma: no cover - older openai releases
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "orchestrator"))
 
-import llm.adapters.groq_adapter as groq_mod  # noqa: E402
+import llm.adapters.openai_compat_adapter as groq_mod  # noqa: E402
 from config_loader import cfg  # noqa: E402
-from llm.adapters.groq_adapter import GroqAdapter, GroqConfigError  # noqa: E402
+from llm.adapters.openai_compat_adapter import Endpoint, OpenAICompatAdapter, OpenAICompatConfigError  # noqa: E402
 
-REASONING_MODEL = "openai/gpt-oss-120b"     # listed in flags.llm.groq.reasoning_effort
+REASONING_MODEL = "openai/gpt-oss-120b"     # listed in the endpoint's reasoning_effort
 PLAIN_MODEL = "qwen/qwen3.8-27b"            # not listed
+ENDPOINT = Endpoint("test", "https://api.example.test/v1", "test_api_key", {REASONING_MODEL: "low"})
 
 
 def _completion(text: str, finish_reason: str = "stop"):
@@ -82,15 +82,14 @@ class _Recorder:
 
 @pytest.fixture
 def key_file(tmp_path, monkeypatch):
-    path = tmp_path / "groq_api_key"
-    path.write_text("gsk_test_not_a_real_key\n")
-    monkeypatch.setenv("GROQ_API_KEY_FILE", str(path))
-    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    path = tmp_path / "test_api_key"
+    path.write_text("sk_test_not_a_real_key\n")
+    monkeypatch.setenv(groq_mod.SECRETS_DIR_ENV, str(tmp_path))
     return path
 
 
-def _adapter(model: str, outcomes, monkeypatch) -> tuple[GroqAdapter, _Recorder, list[float]]:
-    adapter = GroqAdapter(model=model)
+def _adapter(model: str, outcomes, monkeypatch) -> tuple[OpenAICompatAdapter, _Recorder, list[float]]:
+    adapter = OpenAICompatAdapter(model, ENDPOINT)
     recorder = _Recorder(outcomes)
     adapter._client = SimpleNamespace(chat=SimpleNamespace(completions=recorder))
     sleeps: list[float] = []
@@ -102,7 +101,7 @@ def _adapter(model: str, outcomes, monkeypatch) -> tuple[GroqAdapter, _Recorder,
     return adapter, recorder, sleeps
 
 
-def _complete(adapter: GroqAdapter, max_tokens: int = 128):
+def _complete(adapter: OpenAICompatAdapter, max_tokens: int = 128):
     return asyncio.run(adapter.complete(system="sys", messages=[{"role": "user", "content": "q"}],
                                         max_tokens=max_tokens))
 
@@ -113,7 +112,7 @@ def test_reasoning_model_gets_effort_and_headroom(key_file, monkeypatch):
 
     sent = recorder.calls[0]
     assert sent["reasoning_effort"] == "low"
-    assert sent["max_completion_tokens"] == 128 + int(cfg.models.groq_reasoning_headroom_tokens)
+    assert sent["max_completion_tokens"] == 128 + int(cfg.models.reasoning_headroom_tokens)
     assert sent["messages"][0] == {"role": "system", "content": "sys"}
     assert result.text == '{"route":"sql"}'
     assert (result.tokens_in, result.tokens_out) == (11, 7)
@@ -143,7 +142,7 @@ def test_rate_limit_without_retry_after_falls_back_to_doubling_backoff(key_file,
         PLAIN_MODEL, [_rate_limit(None), _rate_limit(None), _completion("ok")], monkeypatch)
     _complete(adapter)
 
-    base = float(cfg.models.groq_retry_base_delay_s)
+    base = float(cfg.models.retry_base_delay_s)
     assert sleeps == [base, base * 2]
 
 
@@ -151,11 +150,11 @@ def test_retry_after_is_capped(key_file, monkeypatch):
     adapter, _, sleeps = _adapter(PLAIN_MODEL, [_rate_limit("9999"), _completion("ok")], monkeypatch)
     _complete(adapter)
 
-    assert sleeps == [float(cfg.models.groq_retry_max_wait_s)]
+    assert sleeps == [float(cfg.models.retry_max_wait_s)]
 
 
 def test_gives_up_after_the_configured_retries(key_file, monkeypatch):
-    attempts = int(cfg.models.groq_max_retries) + 1
+    attempts = int(cfg.models.max_retries) + 1
     adapter, recorder, _ = _adapter(PLAIN_MODEL, [_rate_limit("1")] * attempts, monkeypatch)
 
     with pytest.raises(openai.RateLimitError):
@@ -175,21 +174,16 @@ def test_bad_request_is_not_retried(key_file, monkeypatch):
 
 
 def test_missing_key_fails_with_an_actionable_message(tmp_path, monkeypatch):
-    monkeypatch.setenv("GROQ_API_KEY_FILE", str(tmp_path / "does_not_exist"))
-    monkeypatch.delenv("GROQ_API_KEY", raising=False)
-
-    with pytest.raises(GroqConfigError, match="secrets/groq_api_key"):
-        GroqAdapter(model=PLAIN_MODEL)
+    monkeypatch.setenv(groq_mod.SECRETS_DIR_ENV, str(tmp_path))
+    with pytest.raises(OpenAICompatConfigError, match="test_api_key"):
+        OpenAICompatAdapter(PLAIN_MODEL, ENDPOINT)
 
 
 def test_placeholder_key_is_treated_as_missing(tmp_path, monkeypatch):
-    path = tmp_path / "groq_api_key"
-    path.write_text("REPLACE_ME")
-    monkeypatch.setenv("GROQ_API_KEY_FILE", str(path))
-    monkeypatch.delenv("GROQ_API_KEY", raising=False)
-
-    with pytest.raises(GroqConfigError):
-        GroqAdapter(model=PLAIN_MODEL)
+    (tmp_path / "test_api_key").write_text("REPLACE_ME")
+    monkeypatch.setenv(groq_mod.SECRETS_DIR_ENV, str(tmp_path))
+    with pytest.raises(OpenAICompatConfigError):
+        OpenAICompatAdapter(PLAIN_MODEL, ENDPOINT)
 
 
 def test_reports_cached_tokens_retries_waited_time_and_rate_headroom(key_file, monkeypatch):
@@ -218,7 +212,7 @@ def test_accounting_defaults_when_provider_reports_nothing(key_file, monkeypatch
 
 def test_fail_fast_gives_up_when_total_wait_would_exceed_the_cap(key_file, monkeypatch):
     monkeypatch.setattr(groq_mod, "_max_total_wait_s", lambda: 5.0)  # noqa: literals - seconds cap for the test
-    attempts = int(cfg.models.groq_max_retries) + 1
+    attempts = int(cfg.models.max_retries) + 1
     adapter, recorder, sleeps = _adapter(PLAIN_MODEL, [_rate_limit("3")] * attempts, monkeypatch)
 
     with pytest.raises(openai.RateLimitError):

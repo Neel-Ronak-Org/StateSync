@@ -26,7 +26,8 @@ e-commerce strategy?") runs here after the SQL agent (graph.py). When the router
 depends on the database part, the search is narrowed to the documents whose titles name a company in the
 SQL result (match_titles); round 1 is then skipped because the titles already named the files.
 
-If Jev fails, the passages keep the dense order: the search never fails because of Jev.
+If Jev fails (or config/flags.toml [pipeline] jev is "off"), the passages keep the dense order: the search
+never fails because of Jev.
 """
 
 from __future__ import annotations
@@ -129,7 +130,10 @@ async def _search_and_rank(state_dict: dict[str, Any], text: str, question: str,
         else:
             searched, round1 = await two_round_search(session, text)
     search_ms = int(time.monotonic() * 1000) - start
-    final, jev = await passage_jev.jev_order(question, searched)
+    if str((state_dict.get("flags_snapshot") or {}).get("pipeline.jev", "on")) == "on":
+        final, jev = await passage_jev.jev_order(question, searched)
+    else:
+        final, jev = searched, {"scored": 0, "failed": 0, "ms": 0}
     logger.info("documents: query_id=%s passages=%d jev scored=%d failed=%d search_ms=%d jev_ms=%d",
                 state_dict.get("query_id", ""), len(final), jev["scored"], jev["failed"], search_ms, jev["ms"])
     return {
