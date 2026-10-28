@@ -17,6 +17,7 @@ in its 10-K?" and StateSync:
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How it works, step by step, why each part exists, and where it is in the code |
 | [docs/EVALUATION.md](docs/EVALUATION.md) | The experiments that shaped it, with their numbers |
+| [docs/RESULTS_EXPLAINED.md](docs/RESULTS_EXPLAINED.md) | Every number in full: what each metric means, how it was produced, and how to quote it |
 | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | Using the app: where everything is, setting up a business, changing things later |
 | [docs/DEMO.md](docs/DEMO.md) | The demo, click by click, with what to say |
 | [docs/FINAL_SYSTEM.md](docs/FINAL_SYSTEM.md) | What was kept, what was removed, and why (the clean-up decision) |

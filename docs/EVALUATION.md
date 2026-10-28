@@ -3,7 +3,8 @@
 Every part of the final system is there because a measurement said it helps, and several parts that were
 built are gone because a measurement said they did not. This page lists the experiments that decided the
 design, oldest first, then the live checks of the final system. The protocols, scripts and result files are
-in [research/](../research/README.md).
+in [research/](../research/README.md). Every metric and statistical term is explained in
+[RESULTS_EXPLAINED.md](RESULTS_EXPLAINED.md).
 
 ## How to read the numbers
 
@@ -143,7 +144,7 @@ seen, connected and uploaded through the API; "Which city has the most customers
 answered; "How many days does a customer have to return an item?" routed to the documents and answered
 "7 days".
 
-Tests: 527 Python tests, 72 web unit tests and 133 browser tests (mocked API) pass in CI.
+Tests: 528 Python tests, 74 web unit tests and 136 browser tests (mocked API) pass in CI.
 
 ## What has not been measured
 
