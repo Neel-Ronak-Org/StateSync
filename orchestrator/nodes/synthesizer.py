@@ -1,26 +1,21 @@
 """
 orchestrator/nodes/synthesizer.py
-Synthesizer node.
+The answer writer: turns the SQL result and/or the passages into the answer the user reads.
 
-Per A7 enforcement:
-- Validates output against A7 schema before returning.
-- If validation fails: returns prose answer with chart: null and logs a
-  validation failure. Never returns a repaired chart.
-- chart: null through Part E1 — chart generation is Phase E2.
+What the model is given: the question, the SQL result (row count, columns, the first rows) or a
+plain-words reason the query failed, the passages the documents engine chose (each labelled with its
+document title and page), and any caveats. What the model writes: the answer text, and optionally the
+SHAPE of a chart (mark and which column goes on which axis).
 
-Per E1-V4: citations are built deterministically from state (sql when
-executed_sql is present, chunk entries from state.retrievals when present),
-not left to the LLM's own citation list -- the same reasoning as
-_ensure_category_mentioned below: this repo's local-model testing has
-repeatedly shown small models are not reliable at following "always include
-both kinds" instructions, and a response citing only one kind is a spec
-failure even if the prose mentions both sources. A hybrid query naturally
-gets both kinds this way, without depending on the model remembering to.
+What code does, not the model, so it cannot be wrong in the model's way:
+  - citations: built from what actually ran (the executed SQL, the passages' chunk ids and pages);
+  - chart data: the real rows are attached to the model's chart shape, and a shape naming a column
+    that is not in the result is dropped;
+  - every answer is checked against the output schema (schemas/synthesizer_output.py); a bad chart
+    is dropped, never repaired;
+  - program code in the answer text is removed (the system answers with data, never with code).
 
-RAG v2 Phase E: when the docs route sets state.doc_abstained (nothing relevant was
-retrieved and pipeline.doc_abstain is on), the answer is retrieval.abstain_message, built
-here with no model call -- a model asked to answer from no passages is exactly where an
-unsupported answer comes from.
+A question neither source can answer gets a fixed reply with no model call.
 """
 
 from __future__ import annotations
@@ -29,14 +24,11 @@ import json
 import logging
 import re
 import time
-from decimal import Decimal
-from numbers import Real
 from typing import Any
 
 import context_carry
 from config_loader import cfg
 from llm.provider import get_agent_llm
-from profiles import profile_for
 from schemas.synthesizer_output import safe_synthesizer_output
 
 logger = logging.getLogger(__name__)
@@ -84,140 +76,8 @@ Rules:
 10. Emit the raw JSON object only. Do not wrap it in markdown code fences."""
 
 
-# The "short" experiment variant (flag pipeline.synth_style): the same rules and
-# JSON shape, but a capped answer, summaries instead of row listings, and NO
-# chart instructions at all. The browser draws the chart from the rows (as the
-# dashboards do) and the full table is shown under the answer, so the tokens
-# spent on chart shapes and on restating rows are pure cost. {max_sentences} is
-# filled from config by _short_system_prompt(). Both writer prompts here are the neutral ones; the
-# ONDC sample's are in profiles_ondc.py, chosen by profiles.profile_for(target_schema).
-_SYSTEM_PROMPT_SHORT = """\
-You are a data analytics assistant. Answer \
-the user's question using only the data context provided below -- SQL \
-query results, retrieved document passages, or both.
-
-Rules:
-1. Be concise and factual. Base your answer only on the provided data --
-   never invent a number or fact that isn't in the context.
-2. If the context includes retrieved document passages, ground every
-   factual claim in them; do not state something as fact unless it traces
-   to a passage or the SQL results.
-3. If the query failed with an error, explain the failure clearly to the user.
-4. Do not mention internal details like table names or SQL syntax unless helpful.
-5. Respond with a JSON object matching this exact schema:
-   {"answer_text": "<string>", "chart": null, "citations": []}
-6. answer_text is at most {max_sentences} sentences. When there are more than 3
-   result rows, summarise them (the extremes, the total, the range) instead of
-   listing rows: the full table is shown under your answer. State units. Follow
-   the formatting hints in the data context.
-7. chart is always null. Leave citations as an empty array -- it is filled in
-   deterministically after your response, not by you.
-8. NEVER include executable code in answer_text -- no Python, matplotlib,
-   JavaScript, shell commands, or any other runnable program text, and no
-   fenced code blocks. If the user asks for code, or asks you to run
-   something, explain in prose that this system answers with data and
-   declarative charts only, and does not produce or execute code (D8).
-9. Emit the raw JSON object only. Do not wrap it in markdown code fences."""
-
 _SECTION_SEP = " › "  # citation title: "{document title} › {section}" for a chunk under a heading
 _PCT_NAME_WORDS = ("rate", "share", "ratio", "pct", "percent", "conversion", "fraction")
-
-
-def _short_system_prompt(target_schema: str | None = None) -> str:
-    return profile_for(target_schema).synthesizer_short_prompt.replace(
-        "{max_sentences}", str(cfg.pipeline.synth_short_max_sentences)
-    )
-
-
-def _as_number(value: Any) -> float | int | None:
-    """A JSON-ish cell as a number, or None when it is not numeric (bool is not)."""
-    if isinstance(value, bool):
-        return None
-    if isinstance(value, Decimal):
-        return int(value) if value == value.to_integral_value() else float(value)
-    if isinstance(value, Real):
-        return value  # type: ignore[return-value]
-    return None
-
-
-def _numeric_values(rows: list[dict], column: str) -> list[float | int] | None:
-    """Non-null values of a column when ALL of them are numeric, else None."""
-    values: list[float | int] = []
-    for row in rows:
-        v = row.get(column)
-        if v is None:
-            continue
-        n = _as_number(v)
-        if n is None:
-            return None
-        values.append(n)
-    return values or None
-
-
-def _fmt_num(value: float | int) -> str:
-    if isinstance(value, float):
-        # Rounded so float noise (0.1 + 0.2) does not reach the prompt.
-        value = round(value, 6)  # noqa: literals - display precision of a prompt number
-    return str(value)
-
-
-def column_summary(rows: list[dict], columns: list[str]) -> dict[str, dict[str, float | int]]:
-    """
-    count/min/max/sum per numeric column over ALL rows (not just the preview),
-    computed in code so the model quotes totals and extremes instead of
-    estimating them from a truncated sample.
-    """
-    out: dict[str, dict[str, float | int]] = {}
-    for col in columns:
-        values = _numeric_values(rows, col)
-        if values is None:
-            continue
-        out[col] = {
-            "count": len(values), "min": min(values), "max": max(values), "sum": sum(values),
-        }
-    return out
-
-
-def percentage_hints(rows: list[dict], columns: list[str]) -> list[str]:
-    """
-    A formatting hint for each numeric column that looks like a proportion:
-    every non-null value lies in [0, 1] and the name says rate/share/ratio/...
-    Models otherwise print 0.0453 as-is or as "0.0453%".
-    """
-    hints: list[str] = []
-    for col in columns:
-        if not any(word in col.lower() for word in _PCT_NAME_WORDS):
-            continue
-        values = _numeric_values(rows, col)
-        if values is None:
-            continue
-        if all(0 <= v <= 1 for v in values):  # noqa: literals - the unit interval
-            hints.append(f"Present {col} as a percentage (e.g. 0.0453 → 4.5%).")
-    return hints
-
-
-def format_short_sql_context(sql_rows: list[dict], sql_columns: list[str]) -> str:
-    """The short-style data context for a non-empty SQL result."""
-    preview = sql_rows[:cfg.pipeline.synth_short_preview_rows]
-    rows_text = json.dumps(preview, separators=(",", ":"), default=str)
-    lines = [
-        f"SQL query returned {len(sql_rows)} row(s).",
-        f"Columns: {', '.join(sql_columns)}",
-    ]
-    summary = column_summary(sql_rows, sql_columns)
-    if summary:
-        lines.append(f"Column summary (all {len(sql_rows)} rows):")
-        for col, st in summary.items():
-            lines.append(
-                f"  {col}: count={st['count']} min={_fmt_num(st['min'])} "
-                f"max={_fmt_num(st['max'])} sum={_fmt_num(st['sum'])}"
-            )
-    hints = percentage_hints(sql_rows, sql_columns)
-    if hints:
-        lines.append("Formatting hints:")
-        lines.extend(f"  {h}" for h in hints)
-    lines.append(f"Results (first {len(preview)} rows):\n{rows_text}")
-    return "\n".join(lines)
 
 
 _A7_MARKS = ("bar", "line", "point", "area", "tick", "rect", "arc")
@@ -437,27 +297,6 @@ def _strip_executable_content(answer_text: str, query_id: str) -> str:
     return cleaned
 
 
-def _ensure_category_mentioned(answer_text: str, sql_error: dict | None) -> str:
-    """
-    C2-V4: "the user-facing response reports failure with the classified
-    category rather than a hallucinated answer." The system prompt already
-    asks the LLM to name the category, but this repo's own local-model
-    testing has repeatedly shown small models are not reliable at following
-    that kind of instruction (see docs/phase_c1_log.md's B-V1 finding) --
-    so this is enforced deterministically rather than only requested.
-    """
-    if not sql_error:
-        return answer_text
-    category = sql_error.get("category", "unclassified")
-    if category.lower() in answer_text.lower():
-        return answer_text
-    suffix = f" (classified failure: {category})"
-    max_len = cfg.sql.answer_max_chars
-    if len(answer_text) + len(suffix) > max_len:
-        answer_text = answer_text[: max_len - len(suffix)]
-    return answer_text + suffix
-
-
 def build_citations(
     executed_sql: str | None, sql_error: dict | None, retrievals: list[dict],
 ) -> list[dict]:
@@ -508,9 +347,9 @@ def build_citations(
     return citations
 
 
-# [pipeline] plain_failures (routing_docs_fixes.md F-S3, F-S4): what the writer is told, in plain words,
-# when the query did not produce an answer. Keyed by the classifier's category, which stays in state.errors
-# and the trace; a category not listed gets _PLAIN_FAILURE_OTHER.
+# What the writer is told, in plain words, when the query did not produce an answer. Keyed by the classifier's
+# category, which stays in state.errors and the trace (never in the user's answer); a category not listed gets
+# _PLAIN_FAILURE_OTHER.
 _PLAIN_FAILURES = {
     "no_data_source": "the database in this workspace does not hold the data this question asks about.",
     "permission_denied": "the request was refused, because this system only runs single, read-only queries.",
@@ -528,7 +367,7 @@ _PLAIN_ZERO_ROWS_CONTEXT = (
     "The SQL query returned zero rows: no records matched it. Say that no matching records were found. "
     "Do not turn this into a figure about something the query did not measure."
 )
-# [pipeline] route_recovery: the documents route ran in place of a SQL route whose data the database lacks.
+# Route recovery: the documents route ran in place of a SQL route whose data the database lacks.
 _RECOVERED_FROM_SQL_CONTEXT = (
     "The database did not hold this, so the answer comes from the document passages below. "
     "Say so in one short clause."
@@ -536,49 +375,36 @@ _RECOVERED_FROM_SQL_CONTEXT = (
 
 
 def plain_failure_context(category: str) -> str:
-    """The failed-query block of the writer's context when plain_failures is on."""
+    """The failed-query block of the writer's context."""
     return _PLAIN_FAILURE_CONTEXT.format(plain=_PLAIN_FAILURES.get(category, _PLAIN_FAILURE_OTHER))
 
 
-def _format_doc_context(retrievals: list[dict], with_titles: bool = False) -> str:
+def _format_doc_context(retrievals: list[dict]) -> str:
+    """The passages the writer reads: the first retrieval.semantic_top_k (the relevance window), each
+    labelled with its document title and page so the answer can say which document it comes from."""
     parts = [f"Retrieved {len(retrievals)} document passage(s):"]
     for r in retrievals[: cfg.retrieval.semantic_top_k]:
         prov = r["provenance"]
-        if with_titles:  # pipeline.passage_titles: the writer sees which filing a passage comes from
-            page = prov.get("page")
-            parts.append(
-                f"  [Document: {prov.get('title') or prov['document_id']} · page {'?' if page is None else page} · "
-                f"chunk_id={prov['chunk_id']} · score={prov['score']:.3f}]\n{r['content']}"
-            )
-            continue
+        page = prov.get("page")
         parts.append(
-            f"  [chunk_id={prov['chunk_id']} document_id={prov['document_id']} "
-            f"page={prov.get('page')} score={prov['score']:.3f}]\n{r['content']}"
+            f"  [Document: {prov.get('title') or prov['document_id']} · page {'?' if page is None else page} · "
+            f"chunk_id={prov['chunk_id']} · score={prov['score']:.3f}]\n{r['content']}"
         )
     return "\n\n".join(parts)
 
 
 async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
-    """
-    Synthesizer node. Generates answer_text from SQL results, retrieved
-    document passages, or both (sql / docs / hybrid routes respectively).
-    Validates output against A7. chart is always null through Part E1.
-    """
+    """The answer writer (see the module docstring). Returns answer_text, the validated chart and metrics."""
     query_id: str = state_dict.get("query_id", "")
     raw_query: str = state_dict.get("normalized_query") or state_dict.get("raw_query", "")
     sql_rows: list[dict] = state_dict.get("sql_rows", [])
     sql_columns: list[str] = state_dict.get("sql_columns", [])
     executed_sql: str | None = state_dict.get("executed_sql")
     retrievals: list[dict] = state_dict.get("retrievals", [])
-    short_style = (
-        state_dict.get("flags_snapshot", {}).get("pipeline.synth_style", "full") == "short"
-    )
-    plain_failures = state_dict.get("flags_snapshot", {}).get("pipeline.plain_failures", "off") == "on"
 
     if state_dict.get("out_of_scope"):
-        # The front door (pipeline.front_door) found that neither the database nor the documents could
-        # answer. The answer is the fixed message: no model call, no citations and no chart, as for the
-        # abstention below; it still goes through the A7 validator.
+        # The router found that neither the database nor the documents could answer. The answer is the
+        # fixed message: no model call, no citations and no chart; it still goes through the validator.
         start_ms = int(time.monotonic() * 1000)
         safe_out = safe_synthesizer_output({
             "answer_text": cfg.front_door.out_of_scope_message, "chart": None, "citations": [],
@@ -593,34 +419,7 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             },
         }
 
-    if state_dict.get("doc_abstained"):
-        # RAG v2 Phase E: the docs route found nothing relevant (pipeline.doc_abstain). The answer
-        # is the fixed message: no model call, so nothing to invent; no citations (there is no
-        # passage and no SQL to cite) and no chart. It still goes through the A7 validator, like
-        # every other answer, and it holds no figure for number grounding to trace.
-        start_ms = int(time.monotonic() * 1000)
-        safe_out = safe_synthesizer_output({
-            "answer_text": cfg.retrieval.abstain_message, "chart": None, "citations": [],
-        })
-        logger.info("Synthesizer abstained for query_id=%s (no model call).", query_id)
-        return {
-            "answer_text": safe_out["answer_text"],
-            "vega_spec": None,
-            "metrics": {
-                "tokens_in": 0, "tokens_out": 0, "llm_calls": 0, "trajectory_steps": 1,
-                "latency_ms": int(time.monotonic() * 1000) - start_ms,
-            },
-        }
-
-    # Derived from the typed, reliably-accumulated state.errors/state.attempt
-    # (same test _route_after_sql uses), NOT a scratch key. A conditional
-    # edge (sql -> [_route_after_sql] -> error_exit) sits between
-    # sql_agent_node and this node whenever the loop terminates on failure;
-    # LangGraph must reconstruct a typed StateSyncState to evaluate that
-    # routing function, and an underscore-prefixed scratch key set by
-    # sql_agent_node's return dict does not survive that reconstruction --
-    # only declared A2 fields do. errors/attempt are declared fields, so
-    # this is the reliable way to know "did the last attempt fail."
+    # The last attempt failed when there are more errors than attempts (the test graph.py uses).
     errors: list[dict] = state_dict.get("errors", [])
     attempt: int = state_dict.get("attempt", 0)
     sql_error: dict | None = errors[-1] if len(errors) > attempt else None
@@ -633,26 +432,10 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     # other's shape.
     context_parts: list[str] = []
 
-    if sql_error and plain_failures:
+    if sql_error:
         context_parts.append(plain_failure_context(sql_error.get("category", "unclassified")))
-    elif sql_error:
-        # Category is C2's classifier output (A3), never LLM-generated.
-        category = sql_error.get("category", "unclassified")
-        context_parts.append(
-            f"The SQL query failed after {sql_error.get('attempt', 0) + 1} attempt(s).\n"
-            f"Classified failure category: {category}\n"
-            f"Error code: {sql_error.get('engine_code') or 'N/A'}\n"
-            f"Error message: {sql_error.get('message', 'Unknown error')}\n"
-            f"Remediation hint (why no further attempt was made): {sql_error.get('remediation_hint', 'N/A')}\n"
-            f"Attempted SQL: {sql_error.get('offending_sql', executed_sql or 'N/A')}\n\n"
-            f"State plainly that the query failed and name the classified failure "
-            f"category ({category}) in your answer -- do not omit it, and do not "
-            f"invent a numeric or factual answer that was never computed."
-        )
     elif executed_sql:
-        if sql_rows and short_style:
-            context_parts.append(format_short_sql_context(sql_rows, sql_columns))
-        elif sql_rows:
+        if sql_rows:
             rows_preview = sql_rows[:cfg.sql.synthesizer_preview_rows]
             rows_text = json.dumps(rows_preview, indent=2, default=str)  # noqa: literals — JSON display indent
             chartable = is_chartable(sql_rows, sql_columns)
@@ -672,14 +455,12 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
                 f"Results (first {len(rows_preview)} rows):\n{rows_text}"
             )
         else:
-            context_parts.append(_PLAIN_ZERO_ROWS_CONTEXT if plain_failures
-                                 else "The SQL query returned zero rows. The answer may be 'none' or 'zero'.")
+            context_parts.append(_PLAIN_ZERO_ROWS_CONTEXT)
 
     if retrievals:
         if state_dict.get("recovered_from") == "sql":
             context_parts.append(_RECOVERED_FROM_SQL_CONTEXT)
-        context_parts.append(_format_doc_context(
-            retrievals, state_dict.get("flags_snapshot", {}).get("pipeline.passage_titles", "off") == "on"))
+        context_parts.append(_format_doc_context(retrievals))
 
     caveats: list[str] = state_dict.get("caveats") or []
     if caveats:
@@ -688,20 +469,14 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
     if not context_parts:
         context_parts.append("No data was retrieved for this question.")
 
-    # pipeline.context_carry (T4d): the documents and hybrid writers read the follow-up's context line after the question.
+    # A follow-up's context line (context_carry.py), for the documents and two-source answers.
     context_line = context_carry.question_context(state_dict) if state_dict.get("route") in ("docs", "hybrid") else ""
     user_message = f"Question: {raw_query}{context_line}\n\nData context:\n" + "\n\n".join(context_parts)
-    # The repair loop's single second attempt (repair_loop.py): the previous answer and what failed.
-    if state_dict.get("repair_note") and state_dict.get("previous_answer"):
-        user_message += (f"\n\nYour previous answer was:\n{state_dict['previous_answer']}\n\n"
-                         f"{state_dict['repair_note']}")
 
     llm = get_agent_llm("synthesizer")
 
     try:
-        target_schema = state_dict.get("target_schema")
-        call = {"system": _short_system_prompt(target_schema) if short_style
-                else profile_for(target_schema).synthesizer_prompt,
+        call = {"system": _SYSTEM_PROMPT,
                 "messages": [{"role": "user", "content": user_message}],
                 "max_tokens": cfg.sql.max_tokens_synthesizer}
         result = await llm.complete(**call)
@@ -762,19 +537,15 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
         # the model is never trusted with data.values). Gated on the same
         # deterministic chartability test the prompt was told about, so a
         # model that proposes a chart for a single scalar still gets null.
-        # In the short style the server never draws: the browser builds the
-        # chart from the rows, so a chart the model proposes anyway is dropped.
         parsed["chart"] = (
             build_chart(parsed.get("chart"), sql_rows, sql_columns, query_id)
-            if is_chartable(sql_rows, sql_columns) and not short_style else None
+            if is_chartable(sql_rows, sql_columns) else None
         )
         parsed["citations"] = citations
 
         # Validate against A7
         safe_out = safe_synthesizer_output(parsed)
         answer_text = _strip_executable_content(safe_out["answer_text"], query_id)
-        # plain_failures: the category stays in state.errors and the trace, not in the user's answer.
-        answer_text = _ensure_category_mentioned(answer_text, None if plain_failures else sql_error)
 
         # safe_out["chart"] is the A7-VALIDATED chart: safe_synthesizer_output
         # nullifies it (never repairs it) if it failed the schema or the BD7
@@ -810,9 +581,8 @@ async def synthesizer_node(state_dict: dict[str, Any]) -> dict[str, Any]:
             "citations": citations,
         }
         safe_out = safe_synthesizer_output(fallback)
-        answer_text = _ensure_category_mentioned(safe_out["answer_text"], None if plain_failures else sql_error)
         return {
-            "answer_text": answer_text,
+            "answer_text": safe_out["answer_text"],
             "vega_spec": None,
             "metrics": {
                 "tokens_in":        0,

@@ -1,9 +1,8 @@
 """
 mcp/tools/workspace_tools.py
-MCP workspaces tool (docs/V3_PLAN.md Phase 3, migration 021): workspaces and
-their knowledge store.
+workspaces.manage: workspaces and what the owner has taught StateSync about each one.
 
-One JSON-RPC method, workspaces.manage (decision D-v3-10), takes an `action`:
+One JSON-RPC method takes an `action`:
 
   list, create, get, update, delete        the workspace itself
   scan                                     read the data source's catalog
@@ -12,11 +11,8 @@ One JSON-RPC method, workspaces.manage (decision D-v3-10), takes an `action`:
   delete_definition                        business terms
   approve                                  the owner accepts the knowledge
   add_example, remove_example              an approved question -> SQL pair, and taking one back
-  context                                  what a question in this workspace may use
-  templates                                approved queries as fill-in-the-values templates (Phase 3c)
-  check_examples, examples                 re-run approved examples with no model; list them with their check state
-  start_run, record_result, finish_run,
-  get_run, set_verdict                     the 10-question setup test
+  examples                                 list the approved examples
+  context                                  what a question in this workspace may use (approved knowledge only)
 
 THE RULES, enforced here rather than trusted from a caller:
 
@@ -39,7 +35,6 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from datetime import datetime, timezone
 from typing import Any
 
 from psycopg.types.json import Jsonb
@@ -49,20 +44,17 @@ from config_loader import cfg
 from db import get_history_connection
 from serialization import to_json_safe
 from session import get_tenant_id
-from tools.data_tools import _check_layer1, run_select, sample_rows
+from tools.data_tools import _check_layer1, sample_rows
 from tools.schema_tools import ALLOWED_SCHEMAS, describe_table, list_tables
-from tools.sql_templates import derive_template
 
 logger = logging.getLogger(__name__)
 
 _ACTIONS = frozenset({
     "list", "create", "get", "update", "delete", "scan", "catalog", "save_descriptions",
     "definitions", "save_definitions", "delete_definition", "approve", "add_example", "remove_example",
-    "context", "templates", "check_examples", "examples",
-    "start_run", "record_result", "finish_run", "get_run", "set_verdict",
+    "context", "examples",
 })
 _NO_WORKSPACE = frozenset({"list", "create"})
-_VERDICTS = frozenset({"pending", "running", "right", "wrong", "error"})
 _DESCRIPTION_SOURCES = frozenset({"ai", "owner"})
 # A definition may also come from an uploaded document (migration 025); it then
 # carries a citation, and like an AI draft it never replaces the owner's words.
@@ -558,16 +550,6 @@ async def _add_example(tenant_id, principal_id, workspace_id=None, question=None
             "INSERT INTO session_state.kb_examples (example_id, workspace_id, tenant_id, question, question_norm, "
             "sql_text, source) VALUES (%s, %s, %s, %s, %s, %s, %s)",
             (example_id, workspace_id, tenant_id, q, norm, sql.strip(), source))
-        # The template is derived in the same transaction, so an example and its
-        # template appear (and, by ON DELETE CASCADE, disappear) together. An SQL
-        # with no usable literals simply gets none.
-        derived = derive_template(sql.strip())
-        if derived is not None:
-            template_sql, slots = derived
-            await conn.execute(
-                "INSERT INTO session_state.kb_templates (template_id, example_id, workspace_id, tenant_id, "
-                "question, question_norm, template_sql, slots) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                (str(uuid.uuid4()), example_id, workspace_id, tenant_id, q, norm, template_sql, Jsonb(slots)))
     return {"ok": True, "example_id": example_id}
 
 
@@ -648,75 +630,8 @@ async def _context(tenant_id, principal_id, workspace_id=None, question=None, **
     }
 
 
-async def _templates(tenant_id, principal_id, workspace_id=None, question=None, **_):
-    """Templates of this workspace's approved examples that resemble a question.
-
-    The exact-question case is excluded: that is the fast path's job (`context`.exact),
-    and a template of the very same question would only re-derive the same SQL.
-    """
-    if not isinstance(question, str) or not question.strip():
-        return _fail("invalid", "question is required.")
-    async with get_history_connection() as conn:
-        if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
-            return _fail("not_found", "No such workspace.")
-        rows = await (await conn.execute(
-            "SELECT t.template_id, t.question, t.question_norm, t.template_sql, t.slots "
-            "FROM session_state.kb_templates t "
-            "JOIN session_state.kb_examples e ON e.example_id = t.example_id AND e.approved "
-            "WHERE t.tenant_id = %s AND t.workspace_id = %s",
-            (tenant_id, workspace_id))).fetchall()
-    norm = normalize_question(question)
-    ranked = sorted(((similarity(question, q), tid, q, sql, slots) for tid, q, n, sql, slots in rows if n != norm),
-                    key=lambda r: r[0], reverse=True)
-    return {"ok": True, "templates": [
-        {"template_id": tid, "question": q, "template_sql": sql, "slots": slots, "score": round(score, 3)}
-        for score, tid, q, sql, slots in ranked
-        if score >= float(cfg.templates.min_similarity)][: int(cfg.templates.max_candidates)]}
-
-
-async def _check_examples(tenant_id, principal_id, workspace_id=None, **_):
-    """Re-run approved examples with no model and compare each result's shape with the first one.
-
-    The SQL goes through run_select: the Layer 1 gate and the read-only connection,
-    the same path every data query takes. A failure is recorded, not raised.
-    """
-    async with get_history_connection() as conn:
-        owned = await _owned(conn, tenant_id, principal_id, workspace_id)
-        if owned is None:
-            return _fail("not_found", "No such workspace.")
-        dataset = owned[1]
-        rows = await (await conn.execute(
-            "SELECT example_id, sql_text, result_signature FROM session_state.kb_examples "
-            "WHERE tenant_id = %s AND workspace_id = %s AND approved "
-            "ORDER BY checked_at ASC NULLS FIRST LIMIT %s",
-            (tenant_id, workspace_id, int(cfg.example_checks.max_per_check)))).fetchall()
-    counts = {"ok": 0, "changed": 0, "failed": 0}
-    outcomes: list[tuple[str, str, str | None, str | None]] = []
-    for example_id, sql_text, recorded in rows:
-        result = await run_select(sql_text, max_rows=1, dataset=dataset)
-        if not result.get("ok"):
-            message = str((result.get("error") or {}).get("message", "The query failed."))
-            outcomes.append((example_id, "failed", recorded, message[:_CHECK_DETAIL_MAX_CHARS]))
-            continue
-        signature = result_signature(result.get("columns", []), int(result.get("row_count", 0)))
-        if recorded is None or recorded == signature:
-            outcomes.append((example_id, "ok", signature, None))
-        else:
-            detail = f"Result shape changed. Was {recorded}; now {signature}."
-            outcomes.append((example_id, "changed", recorded, detail[:_CHECK_DETAIL_MAX_CHARS]))
-    checked_at = datetime.now(timezone.utc)
-    async with get_history_connection() as conn:
-        for example_id, state, signature, detail in outcomes:
-            counts[state] += 1
-            await conn.execute(
-                "UPDATE session_state.kb_examples SET check_state = %s, result_signature = %s, check_detail = %s, "
-                "checked_at = %s WHERE tenant_id = %s AND workspace_id = %s AND example_id = %s",
-                (state, signature, detail, checked_at, tenant_id, workspace_id, example_id))
-    return {"ok": True, "checked": len(outcomes), "counts": counts, "checked_at": checked_at.isoformat()}
-
-
 async def _examples(tenant_id, principal_id, workspace_id=None, **_):
-    """The workspace's approved examples with their check state, worst first."""
+    """The workspace's approved examples."""
     async with get_history_connection() as conn:
         if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
             return _fail("not_found", "No such workspace.")
@@ -735,151 +650,11 @@ async def _examples(tenant_id, principal_id, workspace_id=None, **_):
         for i, q, s, src, st, at, d in rows]}
 
 
-async def _start_run(tenant_id, principal_id, workspace_id=None, graded_by=None, questions=None, **_):
-    if graded_by not in ("reference", "owner"):
-        return _fail("invalid", "graded_by must be reference or owner.")
-    if not isinstance(questions, list) or not questions or len(questions) > int(cfg.workspaces.setup_questions):
-        return _fail("invalid", f"questions must list 1 to {cfg.workspaces.setup_questions} questions.")
-    cleaned: list[tuple[str, str | None]] = []
-    for q in questions:
-        text = clean_text(q.get("question") if isinstance(q, dict) else None, int(cfg.workspaces.question_max_chars))
-        reference = q.get("reference_sql") if isinstance(q, dict) else None
-        if text is None or (reference is not None and (not isinstance(reference, str) or _check_layer1(reference))):
-            return _fail("invalid", "Every setup question needs text, and any reference SQL must pass the SQL gate.")
-        if (graded_by == "reference") != (reference is not None):
-            return _fail("invalid", "Reference-graded runs need reference SQL for every question; owner-graded runs none.")
-        cleaned.append((text, reference))
-    run_id = str(uuid.uuid4())
-    async with get_history_connection() as conn:
-        if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
-            return _fail("not_found", "No such workspace.")
-        await conn.execute(
-            "INSERT INTO session_state.setup_runs (run_id, workspace_id, tenant_id, graded_by, total) VALUES (%s, %s, %s, %s, %s)",
-            (run_id, workspace_id, tenant_id, graded_by, len(cleaned)))
-        for position, (text, reference) in enumerate(cleaned, start=1):
-            await conn.execute(
-                "INSERT INTO session_state.setup_results (run_id, tenant_id, position, question, reference_sql) "
-                "VALUES (%s, %s, %s, %s, %s)", (run_id, tenant_id, position, text, reference))
-    return await _get_run(tenant_id, principal_id, workspace_id=workspace_id, run_id=run_id)
-
-
-async def _owned_run(conn, tenant_id, principal_id, run_id, workspace_id=None):
-    """(run_id, workspace_id) if the run is this owner's (and in workspace_id, when given)."""
-    if not isinstance(run_id, str) or not run_id:
-        return None
-    row = await (await conn.execute(
-        """
-        SELECT r.run_id, r.workspace_id FROM session_state.setup_runs r
-        JOIN session_state.workspaces w ON w.workspace_id = r.workspace_id
-        WHERE r.tenant_id = %s AND w.owner_principal_id = %s AND r.run_id = %s
-        """, (tenant_id, principal_id, run_id))).fetchone()
-    if row is None or (workspace_id is not None and row[1] != workspace_id):
-        return None
-    return row
-
-
-async def _record_result(tenant_id, principal_id, run_id=None, position=None, verdict=None,
-                         answer_text=None, answer_sql=None, detail=None, workspace_id=None, **_):
-    if verdict not in _VERDICTS:
-        return _fail("invalid", f"verdict must be one of {sorted(_VERDICTS)}.")
-    async with get_history_connection() as conn:
-        if await _owned_run(conn, tenant_id, principal_id, run_id, workspace_id) is None:
-            return _fail("not_found", "No such setup run.")
-        row = await (await conn.execute(
-            """
-            UPDATE session_state.setup_results SET verdict = %s,
-                answer_text = COALESCE(%s, answer_text), answer_sql = COALESCE(%s, answer_sql),
-                detail = COALESCE(%s, detail)
-            WHERE run_id = %s AND position = %s RETURNING position
-            """, (verdict, answer_text, answer_sql, detail, run_id, position))).fetchone()
-    return {"ok": True} if row else _fail("not_found", "No such question in that run.")
-
-
-async def _finish_run(tenant_id, principal_id, run_id=None, failed=False, workspace_id=None, **_):
-    """Score the run, and on success make every right answer an approved example."""
-    async with get_history_connection() as conn:
-        owned = await _owned_run(conn, tenant_id, principal_id, run_id, workspace_id)
-        if owned is None:
-            return _fail("not_found", "No such setup run.")
-        workspace_id = owned[1]
-        results = await (await conn.execute(
-            "SELECT question, answer_sql, verdict FROM session_state.setup_results WHERE run_id = %s", (run_id,))).fetchall()
-        score = sum(1 for _q, _s, v in results if v == "right")
-        await conn.execute(
-            "UPDATE session_state.setup_runs SET state = %s, score = %s, finished_at = now() WHERE run_id = %s",
-            ("failed" if failed else "done", score, run_id))
-        if not failed:   # a run that stopped early does not stand for the workspace
-            await conn.execute(
-                "UPDATE session_state.workspaces SET setup_score = %s, setup_total = %s, setup_state = 'tested', "
-                "updated_at = now() WHERE workspace_id = %s", (score, len(results), workspace_id))
-        # An answer the owner has since marked wrong stops being an example.
-        for question, _sql, verdict in results:
-            if verdict == "wrong":
-                await conn.execute(
-                    "DELETE FROM session_state.kb_examples WHERE workspace_id = %s AND question_norm = %s "
-                    "AND source = 'setup_test'", (workspace_id, normalize_question(question)))
-    for question, sql, verdict in results:
-        if verdict == "right" and sql and not _check_layer1(sql):
-            await _add_example(tenant_id, principal_id, workspace_id=workspace_id, question=question, sql=sql,
-                               source="setup_test")
-    return await _get_run(tenant_id, principal_id, workspace_id=workspace_id, run_id=run_id)
-
-
-async def _get_run(tenant_id, principal_id, workspace_id=None, run_id=None, **_):
-    """A run with its results: the given one, or the workspace's latest."""
-    async with get_history_connection() as conn:
-        if run_id is None:
-            if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
-                return _fail("not_found", "No such workspace.")
-            latest = await (await conn.execute(
-                "SELECT run_id FROM session_state.setup_runs WHERE workspace_id = %s ORDER BY started_at DESC LIMIT 1",
-                (workspace_id,))).fetchone()
-            if latest is None:
-                return {"ok": True, "run": None}
-            run_id = latest[0]
-        elif await _owned_run(conn, tenant_id, principal_id, run_id, workspace_id) is None:
-            return _fail("not_found", "No such setup run.")
-        run = await (await conn.execute(
-            "SELECT run_id, workspace_id, state, graded_by, score, total, started_at, finished_at "
-            "FROM session_state.setup_runs WHERE run_id = %s", (run_id,))).fetchone()
-        results = await (await conn.execute(
-            "SELECT position, question, reference_sql IS NOT NULL, answer_text, answer_sql, verdict, detail "
-            "FROM session_state.setup_results WHERE run_id = %s ORDER BY position", (run_id,))).fetchall()
-    rid, wid, state, graded, score, total, started, finished = run
-    return {"ok": True, "run": {
-        "run_id": rid, "workspace_id": wid, "state": state, "graded_by": graded, "score": score, "total": total,
-        "started_at": started.isoformat(), "finished_at": finished.isoformat() if finished else None,
-        "results": [{"position": p, "question": q, "has_reference": ref, "answer_text": at, "answer_sql": s,
-                     "verdict": v, "detail": d} for p, q, ref, at, s, v, d in results],
-    }}
-
-
-async def _set_verdict(tenant_id, principal_id, run_id=None, position=None, verdict=None, workspace_id=None, **_):
-    """The owner marks an answer right or wrong (runs graded by the owner), and the score follows."""
-    if verdict not in ("right", "wrong"):
-        return _fail("invalid", "verdict must be right or wrong.")
-    async with get_history_connection() as conn:
-        owned = await _owned_run(conn, tenant_id, principal_id, run_id, workspace_id)
-        if owned is None:
-            return _fail("not_found", "No such setup run.")
-        graded = (await (await conn.execute(
-            "SELECT graded_by FROM session_state.setup_runs WHERE run_id = %s", (run_id,))).fetchone())[0]
-        if graded != "owner":
-            return _fail("invalid", "This run is graded against reference answers, not by hand.")
-    result = await _record_result(tenant_id, principal_id, run_id=run_id, position=position, verdict=verdict)
-    if not result.get("ok"):
-        return result
-    return await _finish_run(tenant_id, principal_id, run_id=run_id)
-
-
 _HANDLERS = {
     "list": _list, "create": _create, "get": _get, "update": _update, "delete": _delete, "scan": _scan,
     "catalog": _catalog, "save_descriptions": _save_descriptions, "definitions": _definitions,
     "save_definitions": _save_definitions, "delete_definition": _delete_definition, "approve": _approve,
-    "add_example": _add_example, "remove_example": _remove_example, "context": _context, "templates": _templates,
-    "check_examples": _check_examples, "examples": _examples,
-    "start_run": _start_run, "record_result": _record_result,
-    "finish_run": _finish_run, "get_run": _get_run, "set_verdict": _set_verdict,
+    "add_example": _add_example, "remove_example": _remove_example, "context": _context, "examples": _examples,
 }
 
 
@@ -890,6 +665,6 @@ async def manage(action: str, principal_id: str, **params: Any) -> dict[str, Any
         return _fail("invalid", "principal_id is required.")
     if action not in _ACTIONS:
         return _fail("invalid", f"Unknown action {action!r}. Valid: {sorted(_ACTIONS)}.")
-    if action not in _NO_WORKSPACE and "run_id" not in params and not params.get("workspace_id"):
+    if action not in _NO_WORKSPACE and not params.get("workspace_id"):
         return _fail("invalid", f"workspace_id is required for {action!r}.")
     return await _HANDLERS[action](tenant_id, principal_id, **params)

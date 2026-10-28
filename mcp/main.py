@@ -1,35 +1,21 @@
 """
 mcp/main.py
-MCP service — JSON-RPC 2.0 server exposing the tools below (20, the mcp.tool_ceiling).
+The MCP tool server: the only service that holds database passwords. The orchestrator (and so every
+language model) reaches data only by calling these tools over JSON-RPC 2.0 at POST /rpc.
 
-Tools exposed (A4):
-  schema.list_tables      (A4.1)
-  schema.describe_table   (A4.2)
-  data.sample_rows        (A4.3)
-  data.run_select         (A4.4) — with all 3 SELECT-enforcement layers
-  vector.semantic_search  (A4.6, E1)
-  vector.hybrid_select    (A4.7, E1) — with the ss_embed request-scoped vector
-  docs.get_passage        (A4.9, E1)
-  memory.get_trajectory   (A4.8, C1)
-  memory.put_trajectory   (A4.8, C1)
-  history.append_turn       (cycle 007, Workstream A)
-  history.get_recent_turns  (cycle 007, Workstream A)
-  history.check_session     (session ownership, docs/V3_PLAN.md 0.2)
-  tiles.manage              (dashboard tiles, docs/V3_PLAN.md Phase 1)
-  dashboards.manage         (named dashboards, Phase 2b)
-  workspaces.manage         (workspaces and knowledge store, Phase 3)
-  library.manage            (account document library, Phase 3c slice 5)
-  history.get_turn_rows     (full result-set storage)
-  audit.record              (per-identity audit log)
+  schema.list_tables, schema.describe_table   what tables and columns a database has
+  data.sample_rows                             a few rows of a table, for the SQL writer
+  data.run_select                              run one model-written query through the three read-only layers
+  vector.semantic_search                       the passages of a workspace's documents closest to a text
+  history.*                                    conversations: append, read, check ownership, delete
+  workspaces.manage, library.manage            workspaces and their knowledge; folders and uploaded documents
+  tiles.manage, dashboards.manage              answers pinned to dashboards
+  audit.record                                 the per-person audit log
 
-Per A4: tenant_id is bound at session establishment from the X-Tenant-ID header.
-It is not a tool parameter — it is injected server-side by session middleware.
-
-Only the orchestrator may call /rpc: every request must carry the shared service
-token (service_auth.py), checked before the headers above are trusted. /health is open.
-
-Per A4.4: A failed query returns ok: false — it does NOT raise a transport-level
-fault. JSON-RPC errors are reserved for protocol failures only.
+Only the orchestrator may call /rpc: every request carries a shared service token (service_auth.py),
+checked before anything else. The tenant comes from the X-Tenant-ID header bound to the session, never
+from a tool's arguments, and row-level security in Postgres enforces it again. A failed query returns
+ok: false, not a protocol error.
 """
 
 from __future__ import annotations
@@ -47,15 +33,13 @@ from config_loader import cfg
 from db import init_pool, close_pool, get_connection, init_history_pool, close_history_pool
 from embeddings import close_embeddings_client
 from fingerprint import verify_fingerprint_at_startup
-from qdrant_store import init_qdrant, close_qdrant
 from service_auth import ServiceTokenMissing, identify, load_callers
 from session import (set_session, enforce_tenancy_policy,
                      TenancyPolicyNotImplemented, TenantNotAllowed,
                      TenancyAcknowledgementMissing)
 from tools.schema_tools import list_tables, describe_table
 from tools.data_tools import sample_rows, run_select
-from tools.vector_tools import semantic_search, hybrid_select, get_passage
-from tools.memory_tools import get_trajectory, put_trajectory
+from tools.vector_tools import semantic_search
 from serialization import to_json_safe
 from tools.tile_tools import manage as tiles_manage
 from tools.dashboard_tools import manage as dashboards_manage
@@ -88,11 +72,8 @@ async def lifespan(app: FastAPI):
     async with get_connection() as conn:
         await verify_fingerprint_at_startup(conn)
 
-    await init_qdrant()
-
     logger.info("MCP service ready. Exposing %d tools.", len(_REGISTERED_TOOLS))
     yield
-    await close_qdrant()
     await close_external_connections()
     await close_embeddings_client()
     await close_pool()
@@ -103,8 +84,8 @@ async def lifespan(app: FastAPI):
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="StateSync MCP",
-    description="MCP tool server — sole credential holder (A1).",
-    version="0.1.0-phase-b",
+    description="The tool server: the only service with database passwords.",
+    version="1.0.0",
     lifespan=lifespan,
 )
 
@@ -120,10 +101,6 @@ _REGISTERED_TOOLS: dict[str, Any] = {
     "data.sample_rows":      sample_rows,
     "data.run_select":       run_select,
     "vector.semantic_search": semantic_search,
-    "vector.hybrid_select":   hybrid_select,
-    "docs.get_passage":       get_passage,
-    "memory.get_trajectory": get_trajectory,
-    "memory.put_trajectory": put_trajectory,
     "history.append_turn":      append_turn,
     "history.get_recent_turns": get_recent_turns,
     "history.check_session":    check_session,

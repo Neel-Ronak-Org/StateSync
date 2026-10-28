@@ -74,6 +74,7 @@ def _wire(monkeypatch, conn):
 
     monkeypatch.setattr(vt, "get_connection", lambda: _Ctx())
     monkeypatch.setattr(vt, "get_tenant_id", lambda: "t_test")
+    monkeypatch.setattr(vt, "get_workspace_id", lambda: "ws_test")
     monkeypatch.setattr(vt, "embed_text", _embed)
 
 
@@ -88,8 +89,8 @@ def test_semantic_search_turns_index_scans_off_before_searching(monkeypatch):
     result = asyncio.run(vt.semantic_search("What transit time has LP003 committed to?"))
 
     assert conn.statements[0] == EXACT
-    assert conn.statements[1].startswith("SELECT dc.chunk_id")
-    assert "ORDER BY dc.embedding <=>" in conn.statements[1]
+    assert conn.statements[1].startswith("SELECT c.chunk_id")
+    assert "ORDER BY c.embedding <=>" in conn.statements[1]
     assert result["matches"] == [{"chunk_id": "doc_sla_annexure_LP003_c001"}]
 
 

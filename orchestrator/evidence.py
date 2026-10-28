@@ -1,35 +1,19 @@
 """
 orchestrator/evidence.py
-The evidence tier of an answer (docs/V3_PLAN.md Phase 3c, slice 1).
+The evidence label shown on an answer: how much to trust it without reading the SQL.
 
-WHY THIS EXISTS: a reader should see how much to trust an answer without
-reading SQL. The tier is a pure function of facts the pipeline already
-recorded, so it costs no model call and cannot drift from what actually ran:
+  verified    the SQL is an approved example the owner gave a thumbs-up to, run as is
+  unchecked   new SQL the model wrote for this question (the web app shows "New query")
+  None        no SQL ran (a documents-only or failed answer): nothing to label
 
-  verified   an approved example's SQL ran as is
-  compiled   an approved example's template filled with the question's values in code
-  checked    new SQL that passed the automatic answer checks (checks on, no caveat)
-  unchecked  new SQL with a caveat, or with the checks off
-  None       no SQL ran (documents-only or failed answers): nothing to label
-
-"compiled" outranks the checks tiers: its SQL is an approved query with values swapped,
-not new SQL, but it ranks below "verified" because the values came from a model.
+A pure function of what the pipeline recorded: no model call, so it cannot disagree with what ran.
+A new query that needed a correction also carries a caution in its caveats (nodes/sql_agent.py).
 """
 
 from __future__ import annotations
 
-from typing import Any
 
-
-def evidence_tier(verified_example: bool, executed_sql: str | None, flags_snapshot: dict[str, Any],
-                  caveats: list[str], compiled_template: bool = False) -> str | None:
-    """The evidence tier for one finished answer; see the module docstring."""
+def evidence_tier(verified_example: bool, executed_sql: str | None) -> str | None:
     if verified_example:
         return "verified"
-    if not executed_sql:
-        return None
-    if compiled_template:
-        return "compiled"
-    if flags_snapshot.get("pipeline.answer_checks") == "on" and not caveats:
-        return "checked"
-    return "unchecked"
+    return "unchecked" if executed_sql else None

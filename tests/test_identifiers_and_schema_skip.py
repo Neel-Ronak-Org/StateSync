@@ -54,9 +54,10 @@ def _retriever():
 def test_mixed_case_names_reach_the_model_quoted_and_plain_ones_unchanged():
     sr = _retriever()
     assert sr.sql_ident("orders") == "orders" and sr.sql_ident("OrderItems") == '"OrderItems"'
-    text = sr._format_table("cn_0123456789abcdef.OrderItems", {
+    text = sr.format_table_block("OrderItems", {
         "columns": [{"name": "ItemID", "type": "bigint", "nullable": False}, {"name": "price", "type": "numeric", "nullable": True}],
-        "foreign_keys": [{"column": "OrderID", "references_table": "Orders", "references_column": "OrderID"}]})
+        "foreign_keys": [{"column": "OrderID", "references_table": "Orders", "references_column": "OrderID"}]},
+        "cn_0123456789abcdef")
     assert 'TABLE cn_0123456789abcdef."OrderItems":' in text
     assert '"ItemID" bigint NOT NULL' in text and "price numeric NULL" in text
     assert 'FK: cn_0123456789abcdef."OrderItems"."OrderID" -> "Orders"."OrderID"' in text
@@ -76,10 +77,10 @@ def test_a_refused_table_is_skipped_and_only_all_refused_is_an_error(monkeypatch
         return {"columns": [{"name": "id", "type": "int", "nullable": False}], "foreign_keys": []}
 
     monkeypatch.setattr(sr, "schema_describe_table", fake_describe)
-    text, descs = asyncio.run(sr.DirectSchemaRetriever().retrieve(None, ["good", "bad"]))
-    assert "TABLE good:" in text and "bad" not in text and len(descs) == 1
+    text, descs = asyncio.run(sr.describe_schema(None, ["good", "bad"], "cn_0123456789abcdef"))
+    assert "TABLE cn_0123456789abcdef.good:" in text and "bad" not in text and len(descs) == 1
     with pytest.raises(RuntimeError):
-        asyncio.run(sr.DirectSchemaRetriever().retrieve(None, ["bad"]))
+        asyncio.run(sr.describe_schema(None, ["bad"], "cn_0123456789abcdef"))
 
 
 def test_a_refused_sample_is_skipped_not_fatal(monkeypatch):

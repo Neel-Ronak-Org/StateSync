@@ -211,92 +211,15 @@ async def vector_semantic_search(
     query_text: str,
     top_k: int | None = None,
     document_ids: list[str] | None = None,
-    mode: str | None = None,
-    dataset: str | None = None,
-    scope: str | None = None,
-    rerank: str | None = None,
-    rerank_titles: bool | None = None,
 ) -> dict[str, Any]:
-    """A4.6 vector.semantic_search. mode ("dense" | "hybrid"), dataset and scope ("dataset") are sent
-    only when given; scope "all" and rerank "off" are the server's defaults and are not sent, so the
-    shipped request is unchanged. rerank_titles (the re-ranker also reads each passage's document
-    title) is sent only as True and only with a re-ranker, so an older MCP never sees it."""
+    """vector.semantic_search: the passages of the session's workspace closest to query_text, optionally
+    only inside some documents. The MCP decides which documents are searchable from the session."""
     params: dict[str, Any] = {"query_text": query_text}
     if top_k is not None:
         params["top_k"] = top_k
     if document_ids is not None:
         params["document_ids"] = document_ids
-    if mode is not None:
-        params["mode"] = mode
-    if dataset is not None:
-        params["dataset"] = dataset
-    if scope is not None and scope != "all":
-        params["scope"] = scope
-    if rerank is not None and rerank != "off":
-        params["rerank"] = rerank
-        if rerank_titles:
-            params["rerank_titles"] = True
-        # A re-ranked search waits on the cross-encoder; the session's 20 s default would time it out
-        # and lose the re-ranking. Wait the MCP's own budget: embedding + re-ranking + overhead.
-        timeout = (float(cfg.retrieval.embedding_timeout_s) + float(cfg.retrieval.rerank_timeout_s)
-                   + float(cfg.mcp.network_overhead_s))
-        return await session.call("vector.semantic_search", params, timeout=timeout)
     return await session.call("vector.semantic_search", params)
-
-
-async def vector_hybrid_select(
-    session: MCPSession,
-    sql: str,
-    max_rows: int | None = None,
-) -> dict[str, Any]:
-    """A4.7 vector.hybrid_select — same ok/error contract as data.run_select."""
-    params: dict[str, Any] = {"sql": sql}
-    if max_rows is not None:
-        params["max_rows"] = max_rows
-    return await session.call("vector.hybrid_select", params)
-
-
-async def docs_get_passage(session: MCPSession, chunk_id: str) -> dict[str, Any]:
-    """A4.9 docs.get_passage"""
-    return await session.call("docs.get_passage", {"chunk_id": chunk_id})
-
-
-async def memory_get_trajectory(
-    session: MCPSession,
-    query_text: str,
-    schema_fingerprint: str,
-    top_k: int | None = None,
-) -> dict[str, Any]:
-    """A4.8 memory.get_trajectory"""
-    params: dict[str, Any] = {
-        "query_text": query_text,
-        "schema_fingerprint": schema_fingerprint,
-    }
-    if top_k is not None:
-        params["top_k"] = top_k
-    return await session.call("memory.get_trajectory", params)
-
-
-async def memory_put_trajectory(
-    session: MCPSession,
-    query_text: str,
-    schema_fingerprint: str,
-    insight: str,
-    tables: list[str],
-    join_path: list[str],
-    dialect_notes: list[str] | None = None,
-) -> dict[str, Any]:
-    """A4.8 memory.put_trajectory"""
-    params: dict[str, Any] = {
-        "query_text": query_text,
-        "schema_fingerprint": schema_fingerprint,
-        "insight": insight,
-        "tables": tables,
-        "join_path": join_path,
-    }
-    if dialect_notes is not None:
-        params["dialect_notes"] = dialect_notes
-    return await session.call("memory.put_trajectory", params)
 
 
 # ── history.* (cycle 007, Workstream A) ─────────────────────────────────────

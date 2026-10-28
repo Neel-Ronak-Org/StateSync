@@ -22,7 +22,6 @@ Architectural decisions:
 
 from __future__ import annotations
 
-import dataclasses
 import hashlib
 import hmac
 import json

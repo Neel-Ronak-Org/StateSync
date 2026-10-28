@@ -90,7 +90,7 @@ def _fake_schema(listing, describe):
     return lt, dt
 
 
-def test_card_unchanged_when_flag_off_and_extended_when_on(monkeypatch):
+def test_the_card_gains_the_coverage_line(monkeypatch):
     listing = {"tables": [{"name": "annual_metrics"}]}
     describe = {"annual_metrics": {"columns": _cols(("company", "text"), ("value", "numeric"))}}
     lt, dt = _fake_schema(listing, describe)
@@ -98,14 +98,11 @@ def test_card_unchanged_when_flag_off_and_extended_when_on(monkeypatch):
     async def fake_cov(session, schema, tables, max_values, max_chars):
         return "Coverage (every value the rows hold): annual_metrics.company: 3M;"
 
-    data = object.__getattribute__(fd.cfg.front_door, "_data")
-    for flag, expect in (("off", False), ("on", True)):
-        fd._CARD_CACHE.clear()
-        monkeypatch.setitem(data, "card_coverage", flag)
-        with patch.object(fd, "schema_list_tables", lt), patch.object(fd, "schema_describe_table", dt), \
-                patch.object(fd, "build_coverage", fake_cov):
-            card, status = asyncio.run(fd._schema_card(SimpleNamespace(), "t", "cn_x"))
-        assert status == "ok"
-        assert card.startswith('Database "cn_x": annual_metrics(company, value)')
-        assert ("Coverage" in card) is expect
+    fd._CARD_CACHE.clear()
+    with patch.object(fd, "schema_list_tables", lt), patch.object(fd, "schema_describe_table", dt), \
+            patch.object(fd, "build_coverage", fake_cov):
+        card, status = asyncio.run(fd._schema_card(SimpleNamespace(), "t", "cn_x"))
+    assert status == "ok"
+    assert card == ('Database "cn_x": annual_metrics(company, value)\n'
+                    "Coverage (every value the rows hold): annual_metrics.company: 3M;")
     fd._CARD_CACHE.clear()
