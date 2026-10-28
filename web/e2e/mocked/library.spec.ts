@@ -256,51 +256,6 @@ test.describe('a workspace and its documents', () => {
     expect(api.library.folderSaves).toEqual([['fo-1'], []])
   })
 
-  test('definitions are found in the chosen documents, each with its sentence and page', async ({ page }) => {
-    const api = await openApp(page, { hash: '#/workspaces/ws-1', seed })
-    await page.getByRole('tab', { name: 'Knowledge' }).click()
-    const find = page.getByRole('button', { name: 'Find in documents' })
-    // No folder chosen yet: nothing to read.
-    await expect(find).toBeDisabled()
-    await expect(page.getByText('Choose library folders with ready documents in the Documents tab')).toBeVisible()
-
-    api.library.workspaceFolders.set('ws-1', ['fo-1'])
-    await page.reload()
-    await page.getByRole('tab', { name: 'Knowledge' }).click()
-    await expect(page.getByText(/written in the 1 document this workspace searches/)).toBeVisible()
-    await find.click()
-    const summary = page.getByTestId('mine-summary')
-    await expect(summary).toContainText('Found 1 definition to review below.')
-    await expect(summary).toContainText('2 suggestions were left out because the quoted sentence is not in the document.')
-
-    const row = page.getByTestId('definition-row').filter({ hasText: 'On time' })
-    await expect(row.getByTestId('source-badge')).toHaveText('From document')
-    await expect(row.getByTestId('definition-citation')).toContainText(
-      '“An order is on time when it is delivered on or before the estimated delivery date.”')
-    await expect(row.getByTestId('definition-citation')).toContainText('Ops handbook, p. 4')
-  })
-
-  test("finding definitions never replaces the owner's own", async ({ page }) => {
-    const api = await openApp(page, {
-      hash: '#/workspaces/ws-1',
-      seed: (a) => {
-        seed(a)
-        a.library.workspaceFolders.set('ws-1', ['fo-1'])
-        a.workspaces.workspaces.get('ws-1')!.definitions.push({
-          definition_id: 'def-own', term: 'On time', definition: 'Within 3 days.', source: 'owner', approved: true,
-        })
-      },
-    })
-    await page.getByRole('tab', { name: 'Knowledge' }).click()
-    await page.getByRole('button', { name: 'Find in documents' }).click()
-    await expect(page.getByTestId('mine-summary')).toContainText('No new definitions were found.')
-    const row = page.getByTestId('definition-row').filter({ hasText: 'On time' })
-    await expect(row).toContainText('Within 3 days.')
-    await expect(row.getByTestId('source-badge')).toHaveText('Yours')
-    await expect(row.getByTestId('definition-citation')).toHaveCount(0)
-    expect(api.workspaces.workspaces.get('ws-1')!.definitions).toHaveLength(1)
-  })
-
   test('a failed save says so and keeps the choice', async ({ page }) => {
     const api = await openApp(page, { hash: '#/workspaces/ws-1', seed })
     await page.getByRole('tab', { name: 'Documents' }).click()

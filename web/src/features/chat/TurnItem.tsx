@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, Download, MoreHorizontal, PanelRight, Pin, ThumbsDown, ThumbsUp, Workflow } from 'lucide-react'
 import { toast } from 'sonner'
@@ -26,8 +26,6 @@ import { copyToClipboard } from '@/lib/clipboard'
 import { downloadCsv } from '@/lib/csv'
 import { sourceLabel } from '@/lib/sources'
 import type { ChatTurn } from '@/types/chat'
-import { resolveKind, shapeOf, VEGA_KINDS } from '@/viz/infer'
-import { buildSpec } from '@/viz/spec'
 
 interface TurnItemProps {
   turn: ChatTurn
@@ -57,20 +55,10 @@ const EVIDENCE_CHIPS: Record<Evidence, { label: string; className: string; hint:
     className: GREEN_CHIP,
     hint: 'Answered with a query approved for this workspace.',
   },
-  compiled: {
-    label: 'Compiled',
-    className: 'border-sky-500/30 bg-sky-500/10 text-sky-500 font-normal text-xs',
-    hint: "Built from an approved query pattern, with this question's values.",
-  },
-  checked: {
-    label: 'Checked',
-    className: 'border-sky-500/30 bg-sky-500/10 text-sky-500 font-normal text-xs',
-    hint: 'New query; it passed the automatic checks.',
-  },
   unchecked: {
-    label: 'Unchecked',
+    label: 'New query',
     className: 'font-normal text-xs text-muted-foreground',
-    hint: 'New query; not independently checked.',
+    hint: 'Written by the model for this question. Check the SQL under "How I got this"; a thumbs-up approves it.',
   },
 }
 
@@ -127,17 +115,7 @@ export function TurnItem({
   const blocks = turn.answer ? answerBlocks(turn.answer) : []
   const grounding = turn.stateTrace?.number_grounding ?? null
 
-  // The short answer writer sends no chart: draw one here from the rows with the
-  // same presentation code the dashboard tiles use. VegaChart still runs the A7
-  // check on it. One row is an answer, not a chart.
-  const clientChart = useMemo(() => {
-    if (turn.chart || turn.stateTrace?.synth_style !== 'short') return null
-    if (!turn.rows || turn.rows.length < 2) return null
-    const shape = shapeOf(turn.rows, turn.columns.length > 0 ? turn.columns : null)
-    const kind = resolveKind(null, shape)
-    return VEGA_KINDS.has(kind) ? buildSpec(kind, shape) : null
-  }, [turn.chart, turn.stateTrace?.synth_style, turn.rows, turn.columns])
-  const chart = turn.chart ?? clientChart
+  const chart = turn.chart
 
   const handlePin = async () => {
     setIsPinning(true)

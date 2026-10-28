@@ -11,12 +11,10 @@
  */
 
 import type {
-  BuildJob,
   Connection,
   ConnectionCheck,
   NewConnection,
   CatalogEntry,
-  ExampleCheckResult,
   ExampleInfo,
   Dashboard,
   Definition,
@@ -32,7 +30,6 @@ import type {
   SessionDetail,
   SessionList,
   SetupJob,
-  SetupRun,
   Tile,
   TurnRows,
   UpdateTileRequest,
@@ -183,13 +180,6 @@ export const api = {
       method: 'PUT',
       body: { items },
     }),
-  buildDashboard: (dashboardId: string, goal?: string, workspaceId?: string) =>
-    apiFetch<{ job: BuildJob }>(`/dashboards/${enc(dashboardId)}/build`, {
-      method: 'POST',
-      body: { ...(goal ? { goal } : {}), ...(workspaceId ? { workspace_id: workspaceId } : {}) },
-    }),
-  buildStatus: (dashboardId: string) =>
-    apiFetch<{ job: BuildJob | null }>(`/dashboards/${enc(dashboardId)}/build`),
 
   workspaces: () => apiFetch<{ workspaces: Workspace[] }>('/workspaces'),
   createWorkspace: (body: { name: string; target_schema: string; business_context?: string }) =>
@@ -240,8 +230,6 @@ export const api = {
 
   workspaceExamples: (workspaceId: string) =>
     apiFetch<{ examples: ExampleInfo[] }>(`/workspaces/${enc(workspaceId)}/examples`),
-  checkExamples: (workspaceId: string) =>
-    apiFetch<ExampleCheckResult>(`/workspaces/${enc(workspaceId)}/examples/check`, { method: 'POST' }),
 
   approveWorkspace: (workspaceId: string) =>
     apiFetch<{ workspace: Workspace; approved_columns: number; approved_definitions: number }>(
@@ -253,30 +241,6 @@ export const api = {
     apiFetch<{ job: SetupJob }>(`/workspaces/${enc(workspaceId)}/draft`, { method: 'POST' }),
   draftStatus: (workspaceId: string) =>
     apiFetch<{ job: SetupJob | null }>(`/workspaces/${enc(workspaceId)}/draft`),
-  startMining: (workspaceId: string) =>
-    apiFetch<{ job: SetupJob }>(`/workspaces/${enc(workspaceId)}/definitions/mine`, { method: 'POST' }),
-  miningStatus: (workspaceId: string) =>
-    apiFetch<{ job: SetupJob | null }>(`/workspaces/${enc(workspaceId)}/definitions/mine`),
-
-  startSetup: (workspaceId: string) =>
-    apiFetch<{ job: SetupJob; graded_by: 'reference' | 'owner' }>(
-      `/workspaces/${enc(workspaceId)}/setup`,
-      { method: 'POST' },
-    ),
-  setupStatus: (workspaceId: string) =>
-    apiFetch<{ run: SetupRun | null; job: SetupJob | null }>(
-      `/workspaces/${enc(workspaceId)}/setup`,
-    ),
-  setResultVerdict: (
-    workspaceId: string,
-    runId: string,
-    position: number,
-    verdict: 'right' | 'wrong',
-  ) =>
-    apiFetch<{ run: SetupRun }>(
-      `/workspaces/${enc(workspaceId)}/setup/${enc(runId)}/results/${enc(String(position))}`,
-      { method: 'PUT', body: { verdict } },
-    ),
 
   connections: () =>
     apiFetch<{ connections: Connection[]; available: boolean }>('/library/connections'),

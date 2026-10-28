@@ -15,13 +15,8 @@ export type ChartSpec = Record<string, unknown>
 export interface Health {
   status: string
   service: string
-  llm_provider: string
   llm_ready: boolean
   llm_detail: string | null
-  default_schema: string
-  available_schemas: string[]
-  /** Datasets whose data keeps changing (Phase 2b): dashboards on them poll and default to fast refresh. */
-  live_schemas?: string[]
 }
 
 export type Route = 'sql' | 'docs' | 'hybrid'
@@ -87,7 +82,7 @@ export interface StateTrace {
   workspace_id?: string | null
   verified_example?: boolean
   /** How much to trust the answer (orchestrator/evidence.py); absent or null when no SQL ran. */
-  evidence?: 'verified' | 'compiled' | 'checked' | 'unchecked' | null
+  evidence?: 'verified' | 'unchecked' | null
   route: Route | null
   executed_sql: string | null
   /** Plain-English reading of the executed SQL ("How I got this"); absent or null when none. */
@@ -98,31 +93,25 @@ export interface StateTrace {
   sql_columns: string[]
   attempt: number
   errors: unknown[]
-  /** Warnings about a result that ran but may mislead (pipeline.answer_checks); absent when none. */
+  /** Warnings shown under the answer: a figure found nowhere, or a query that needed a correction. */
   caveats?: string[]
-  /** Every figure in the prose traced to its source (pipeline.number_grounding); null when off. */
+  /** Every figure in the prose traced to its source (number_grounding.py). */
   number_grounding?: NumberGrounding | null
   metrics: TraceMetrics
-  memory_hit: boolean
-  detected_language: string | null
   normalized_query: string | null
-  preserved_entities: Record<string, string>
   /** The stored turn number, or null when the turn was not recorded. */
   turn_index: number | null
   rewrite_applied: boolean
-  context_guessed: boolean
   subtasks: string[]
   retrievals: Retrieval[]
   calls?: ModelCall[]
-  /** Which answer writer ran (pipeline.synth_style); 'short' leaves the chart to the browser. */
-  synth_style?: 'full' | 'short'
   [key: string]: unknown
 }
 
 export interface QueryRequest {
   query: string
   session_id?: string
-  schema?: string
+  /** Every question is asked in a workspace (its database, documents and approved knowledge). */
   workspace_id?: string
 }
 
@@ -156,7 +145,6 @@ export interface StoredTurn {
   raw_query: string
   rewritten_query: string
   rewrite_applied: boolean
-  context_guessed: boolean
   route: Route | null
   executed_sql: string | null
   answer_text: string
@@ -280,32 +268,7 @@ export interface LayoutItem extends TileLayout {
   tile_id: string
 }
 
-export type BuildItemState = 'queued' | 'running' | 'added' | 'skipped'
-
-export interface BuildItem {
-  title: string
-  question: string
-  viz: VizKindName | null
-  state: BuildItemState
-  /** Why it was skipped, in words a person can act on. */
-  reason: string | null
-  tile_id: string | null
-}
-
-export interface BuildJob {
-  job_id: string
-  dashboard_id: string
-  state: 'planning' | 'running' | 'done' | 'failed'
-  goal: string | null
-  items: BuildItem[]
-  /** Why the whole build failed (planning could not produce insights). */
-  error: string | null
-  started_at: string
-  finished_at: string | null
-}
-
 export type SetupState = 'created' | 'scanned' | 'drafted' | 'approved' | 'tested'
-export type Verdict = 'pending' | 'running' | 'right' | 'wrong' | 'error'
 
 export interface Workspace {
   workspace_id: string
@@ -324,37 +287,14 @@ export interface Workspace {
     definitions: number
     examples: number
   }
-  /** How the approved examples fared at their last re-run (no model involved). */
-  health: WorkspaceHealth
-  /** A workspace whose last check is older than this many seconds is re-checked on opening. */
-  example_check_stale_after_s: number
 }
 
-export type ExampleCheckState = 'ok' | 'changed' | 'failed'
-
-export interface WorkspaceHealth {
-  ok: number
-  changed: number
-  failed: number
-  unchecked: number
-  checked_at: string | null
-}
-
-/** An approved answer with the result of its latest self-check. */
+/** An approved answer: a question whose SQL the owner marked correct. */
 export interface ExampleInfo {
   example_id: string
   question: string
   sql_text: string
   source: string
-  check_state: ExampleCheckState | null
-  checked_at: string | null
-  check_detail: string | null
-}
-
-export interface ExampleCheckResult {
-  checked: number
-  counts: { ok: number; changed: number; failed: number }
-  checked_at: string
 }
 
 export interface CatalogEntry {
@@ -372,56 +312,21 @@ export interface Definition {
   definition_id: string
   term: string
   definition: string
-  source: 'ai' | 'owner' | 'document'
+  source: 'ai' | 'owner'
   approved: boolean
-  /** Where a definition found in a document came from (the exact sentence, checked against the passage). */
-  citation?: DefinitionCitation | null
-}
-
-export interface DefinitionCitation {
-  document_id: string
-  chunk_id: string
-  page: number | null
-  title: string
-  quote: string
 }
 
 export interface SetupJob {
   job_id: string
-  kind: 'draft' | 'test' | 'mine'
+  kind: 'draft'
   workspace_id: string
   state: 'running' | 'done' | 'failed'
   done: number
   total: number
   error: string | null
   run_id: string | null
-  /** mine: definitions proposed, and proposals left out because their quote was not in the document. */
-  found?: number
-  dropped?: number
   started_at: string
   finished_at: string | null
-}
-
-export interface SetupResult {
-  position: number
-  question: string
-  has_reference: boolean
-  answer_text: string | null
-  answer_sql: string | null
-  verdict: Verdict
-  detail: string | null
-}
-
-export interface SetupRun {
-  run_id: string
-  workspace_id: string
-  state: 'running' | 'done' | 'failed'
-  graded_by: 'reference' | 'owner'
-  score: number | null
-  total: number
-  started_at: string
-  finished_at: string | null
-  results: SetupResult[]
 }
 
 export type LibraryDocumentStatus = 'processing' | 'ready' | 'failed'
@@ -488,7 +393,7 @@ export interface ConnectionCheck {
   warnings: string[]
 }
 
-// ── Pipeline Inspector (pipeline.inspect = "on") ─────────────────────────────
+// ── Pipeline Inspector ───────────────────────────────────────────────────────
 
 /** One candidate passage of the documents search, with every score it has (no text). */
 export interface InspectPassage {
@@ -497,7 +402,6 @@ export interface InspectPassage {
   title: string | null
   page: number | null
   score: number
-  rerank_score: number | null
   jev_score: number | null
   /** Its place in the list the search returned (before Jev re-ordered it), from 1. */
   rank_searched?: number | null
@@ -509,12 +413,10 @@ export interface InspectPassage {
 export interface RetrievalTrace {
   search_text: string
   settings: {
-    mode?: string
-    rerank?: string
-    rerank_titles?: boolean
-    passage_order?: string
-    passage_rerank?: string
+    /** Passages the answer writer reads. */
     window: number
+    /** Candidates round 2 returns (the ones Jev re-ranks). */
+    candidates?: number
   }
   round1: InspectPassage[]
   narrowed_to: string[]

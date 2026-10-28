@@ -92,14 +92,13 @@ export function InspectorDialog({ turn, open, onOpenChange }: InspectorDialogPro
 
   if (!turn || !trace) return null
 
-  const hasJevOrder = Boolean(rt?.jev)
-  const hasReranker = Boolean(rt && rt.settings.rerank && rt.settings.rerank !== 'off')
-  const steps = stepsFor(route, Boolean(rt) && (hasJevOrder || hasReranker))
-  const rerankLabel = [hasReranker ? rt?.settings.rerank : null, hasJevOrder ? 'Jev' : null].filter(Boolean).join(' + ') || 'none'
+  const hasJevOrder = Boolean(rt?.jev && rt.jev.scored + rt.jev.failed > 0)
+  const steps = stepsFor(route, Boolean(rt) && hasJevOrder)
+  const rerankLabel = hasJevOrder ? 'Jev' : 'none'
   const probabilities = routeProbabilities(fd)
   const routerLabel = fd?.jev && !fd.jev.fallback ? 'one Jev choice' : fd ? 'LLM router' : 'LLM router'
   const times: Partial<Record<StepId, number>> = {
-    router: fd?.latency_ms ?? (fd?.jev?.ms as number | undefined) ?? callsMs(trace, ['supervisor', 'front_door', 'normalizer', 'rewriter']),
+    router: fd?.latency_ms ?? (fd?.jev?.ms as number | undefined) ?? callsMs(trace, ['supervisor']),
     sql: callsMs(trace, ['sql']),
     search: rt?.ms.search,
     rerank: rt?.ms.jev,
@@ -295,7 +294,7 @@ export function InspectorDialog({ turn, open, onOpenChange }: InspectorDialogPro
             <StepCard id="search" number={(n += 1)} title="Documents: find the right filings, then the right passages" time={times.search} anchor={anchor}>
               {!rt ? (
                 <p className="text-xs text-muted-foreground">
-                  This server does not record the search stage by stage (the switch <span className="font-mono">pipeline.inspect</span> is off). The passages it found are listed under the answer writer.
+                  This answer carries no stage-by-stage search record. The passages it found are listed under the answer writer.
                 </p>
               ) : (
                 <>
@@ -316,7 +315,7 @@ export function InspectorDialog({ turn, open, onOpenChange }: InspectorDialogPro
                             <li key={p.chunk_id} className="flex items-center gap-2 rounded border px-2 py-1">
                               <span className="w-4 shrink-0 text-muted-foreground">{i + 1}</span>
                               <span className="flex-1 truncate" title={passageLabel(p)}>{passageLabel(p)}</span>
-                              <span className="shrink-0 font-mono text-muted-foreground">{(p.rerank_score ?? p.score).toFixed(3)}</span>
+                              <span className="shrink-0 font-mono text-muted-foreground">{p.score.toFixed(3)}</span>
                             </li>
                           ))}
                         </ol>
@@ -357,7 +356,6 @@ export function InspectorDialog({ turn, open, onOpenChange }: InspectorDialogPro
                       <th className="w-10 p-2 font-medium">Final</th>
                       <th className="p-2 font-medium">Passage</th>
                       <th className="w-24 p-2 text-right font-medium">Dense search</th>
-                      {hasReranker && <th className="w-24 p-2 text-right font-medium">Re-ranker ({rt.settings.rerank})</th>}
                       {hasJevOrder && <th className="w-24 p-2 text-right font-medium">Jev P(answer)</th>}
                       {hasJevOrder && <th className="w-16 p-2 text-right font-medium" title="Places gained or lost against the order the search returned">Moved</th>}
                     </tr>
@@ -367,7 +365,7 @@ export function InspectorDialog({ turn, open, onOpenChange }: InspectorDialogPro
                       const id = r.passage.chunk_id
                       const text = texts.get(id)
                       const isOpen = expanded === id
-                      const cols = 3 + (hasReranker ? 1 : 0) + (hasJevOrder ? 2 : 0)
+                      const cols = 3 + (hasJevOrder ? 2 : 0)
                       return (
                         <Fragment key={id}>
                           {i === window && (
@@ -387,11 +385,6 @@ export function InspectorDialog({ turn, open, onOpenChange }: InspectorDialogPro
                               </span>
                             </td>
                             <td className="p-2 text-right font-mono">#{r.dense ?? '—'} <span className="text-muted-foreground">({r.passage.score.toFixed(2)})</span></td>
-                            {hasReranker && (
-                              <td className="p-2 text-right font-mono">
-                                {r.reranker ? <>#{r.reranker} <span className="text-muted-foreground">({(r.passage.rerank_score ?? 0).toFixed(2)})</span></> : '—'}
-                              </td>
-                            )}
                             {hasJevOrder && (
                               <td className="p-2 text-right font-mono">
                                 {r.jev ? <>#{r.jev} <span className="text-muted-foreground">({(r.passage.jev_score ?? 0).toFixed(2)})</span></> : 'failed'}
@@ -419,7 +412,7 @@ export function InspectorDialog({ turn, open, onOpenChange }: InspectorDialogPro
                 </table>
               </div>
               <p className="text-xs text-muted-foreground">
-                Dense search compares meanings as vectors. {hasReranker && 'The re-ranker reads the question and each passage together, with the filing title. '}
+                Dense search compares meanings as vectors.{' '}
                 {hasJevOrder && `Jev answers “does this passage contain the information needed?” for each one (${rt.jev?.scored ?? 0} scored, ${rt.jev?.failed ?? 0} failed).`}
               </p>
             </StepCard>

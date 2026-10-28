@@ -6,14 +6,14 @@ import {
   tablesUsed, windowChanges,
 } from '@/features/inspect/inspect'
 
-const p = (id: string, score: number, rerank: number | null, jev: number | null, searched: number, final: number, doc = 'd1'): InspectPassage => ({
-  chunk_id: id, document_id: doc, title: doc === 'd1' ? 'ACME 2022 10K' : 'ACME 2021 10K', page: 3, score, rerank_score: rerank,
+const p = (id: string, score: number, jev: number | null, searched: number, final: number, doc = 'd1'): InspectPassage => ({
+  chunk_id: id, document_id: doc, title: doc === 'd1' ? 'ACME 2022 10K' : 'ACME 2021 10K', page: 3, score,
   jev_score: jev, rank_searched: searched, rank_final: final,
 })
 
 const rt: RetrievalTrace = {
-  search_text: 'q', settings: { rerank: 'bge', passage_rerank: 'jev', window: 2 }, round1: [], narrowed_to: [],
-  passages: [p('c', 0.6, 0.4, 0.95, 3, 1), p('a', 0.7, 0.9, 0.6, 1, 2, 'd2'), p('b', 0.8, 0.5, 0.1, 2, 3)],
+  search_text: 'q', settings: { window: 2, candidates: 25 }, round1: [], narrowed_to: [],
+  passages: [p('c', 0.6, 0.95, 3, 1), p('a', 0.7, 0.6, 1, 2, 'd2'), p('b', 0.8, 0.1, 2, 3)],
   jev: { scored: 3, failed: 0, ms: 40 }, ms: { search: 120, jev: 40 },
 }
 
@@ -33,13 +33,13 @@ describe('routes and steps', () => {
 
 describe('ranks', () => {
   it('ranks by a score, highest first, null without one', () => {
-    const ranks = ranksBy([...rt.passages, { ...p('z', 0.1, null, null, 4, 4) }], 'rerank_score')
-    expect([ranks.get('a'), ranks.get('b'), ranks.get('c'), ranks.get('z')]).toEqual([1, 2, 3, null])
+    const ranks = ranksBy([...rt.passages, { ...p('z', 0.1, null, 4, 4) }], 'jev_score')
+    expect([ranks.get('c'), ranks.get('a'), ranks.get('b'), ranks.get('z')]).toEqual([1, 2, 3, null])
   })
   it('gives each candidate its rank at every stage and what the writer reads', () => {
     const rows = rankRows(rt)
-    expect(rows.map((r) => [r.passage.chunk_id, r.dense, r.reranker, r.jev, r.final, r.read, r.moved])).toEqual([
-      ['c', 3, 3, 1, 1, true, 2], ['a', 2, 1, 2, 2, true, -1], ['b', 1, 2, 3, 3, false, -1],
+    expect(rows.map((r) => [r.passage.chunk_id, r.dense, r.jev, r.final, r.read, r.moved])).toEqual([
+      ['c', 3, 1, 1, true, 2], ['a', 2, 2, 2, true, -1], ['b', 1, 3, 3, false, -1],
     ])
     expect(windowChanges(rows, 2)).toEqual({ movedIn: 1, movedOut: 1 })
   })

@@ -3,9 +3,7 @@
  *
  * Mirrors orchestrator/workspaces_api.py and mcp/tools/workspace_tools.py:
  * owner text is stored as "owner" and never replaced by a draft; any edit
- * un-approves; approval is required before the setup test (409); sample
- * datasets (olist, public) are graded against references, anything else by the
- * owner; right answers become examples; one setup step at a time (409).
+ * un-approves; one draft at a time (409); a thumbs-up adds an approved example.
  *
  * Background jobs advance one step per status poll, so a test sees "running"
  * at least once and then the result, without timers.
@@ -17,7 +15,6 @@ type Json = Record<string, unknown>
 type Reply = (route: Route, status: number, body: unknown) => Promise<void>
 
 export type SetupState = 'created' | 'scanned' | 'drafted' | 'approved' | 'tested'
-export type Verdict = 'pending' | 'running' | 'right' | 'wrong' | 'error'
 
 export interface CatalogEntry {
   table_name: string
@@ -39,51 +36,23 @@ export interface Definition {
   citation?: { document_id: string; chunk_id: string; page: number | null; title: string; quote: string } | null
 }
 
-export interface SetupResult {
-  position: number
-  question: string
-  has_reference: boolean
-  answer_text: string | null
-  answer_sql: string | null
-  verdict: Verdict
-  detail: string | null
-}
-
-export interface SetupRun {
-  run_id: string
-  workspace_id: string
-  state: 'running' | 'done' | 'failed'
-  graded_by: 'reference' | 'owner'
-  score: number | null
-  total: number
-  started_at: string
-  finished_at: string | null
-  results: SetupResult[]
-}
-
 export interface SetupJob {
   job_id: string
-  kind: 'draft' | 'test' | 'mine'
+  kind: 'draft'
   workspace_id: string
   state: 'running' | 'done' | 'failed'
   done: number
   total: number
   error: string | null
   run_id: string | null
-  found?: number
-  dropped?: number
   started_at: string
   finished_at: string | null
 }
 
-export type CheckState = 'ok' | 'changed' | 'failed'
 
 export interface MockExample {
   question: string
   sql: string
-  check_state?: CheckState | null
-  check_detail?: string | null
-  checked_at?: string | null
 }
 
 export interface MockWorkspace {
@@ -100,12 +69,9 @@ export interface MockWorkspace {
   catalog: CatalogEntry[]
   definitions: Definition[]
   examples: MockExample[]
-  runs: SetupRun[]
 }
 
-const REFERENCE_SCHEMAS = ['olist', 'public']
 const AT = '2026-09-28T10:00:00Z'
-const STALE_AFTER_S = 86400
 
 function entry(table: string, column: string, type: string, samples: string[] = []): CatalogEntry {
   return {
@@ -136,31 +102,13 @@ function aiDescription(e: CatalogEntry): string {
   return e.column_name === '' ? `AI: one row per ${e.table_name.replace(/s$/, '')}.` : `AI: the ${e.column_name.replace(/_/g, ' ')}.`
 }
 
-export const SETUP_QUESTIONS = Array.from({ length: 10 }, (_, i) => `Setup question ${i + 1}?`)
-
 export class WorkspaceMock {
   readonly workspaces = new Map<string, MockWorkspace>()
   readonly calls: string[] = []
-  /** Positions the reference grading marks wrong. */
-  wrongPositions: number[] = [3, 7]
   /** When set, the next draft job fails with this message. */
   failNextDraft: string | null = null
   /** Set by MockApi: true for a connection id that is a usable dataset (a connected database with a schema). */
   extraDataset: (schema: string) => boolean = () => false
-  /** When set, the next setup test stops at its first poll with this message (as when the quota runs out). */
-  failNextTest: string | null = null
-  /** What the next "find in documents" run proposes (the server has already dropped ungrounded ones). */
-  mineProposals: { term: string; definition: string; title: string; page: number | null; quote: string }[] = [
-    {
-      term: 'On time',
-      definition: 'Delivered on or before the estimated delivery date.',
-      title: 'Ops handbook',
-      page: 4,
-      quote: 'An order is on time when it is delivered on or before the estimated delivery date.',
-    },
-  ]
-  mineDropped = 2
-  private nextOutcomes = new Map<string, { state: CheckState; detail: string | null }>()
   private jobs = new Map<string, SetupJob>()
   private seq = 0
 
@@ -180,7 +128,6 @@ export class WorkspaceMock {
       catalog: [],
       definitions: [],
       examples: [],
-      runs: [],
     }
     this.workspaces.set(ws.workspace_id, ws)
     return ws
@@ -215,29 +162,7 @@ export class WorkspaceMock {
         definitions: ws.definitions.length,
         examples: ws.examples.length,
       },
-      health: {
-        ok: ws.examples.filter((e) => e.check_state === 'ok').length,
-        changed: ws.examples.filter((e) => e.check_state === 'changed').length,
-        failed: ws.examples.filter((e) => e.check_state === 'failed').length,
-        unchecked: ws.examples.filter((e) => !e.check_state).length,
-        checked_at: ws.examples.map((e) => e.checked_at ?? null).filter(Boolean).sort().pop() ?? null,
-      },
-      example_check_stale_after_s: STALE_AFTER_S,
     }
-  }
-
-  /** Test hook: mark an approved example as a past check left it (checked just now unless given). */
-  setExampleCheck(workspaceId: string, question: string, state: CheckState | null, detail: string | null = null, checkedAt?: string): void {
-    const example = this.workspaces.get(workspaceId)?.examples.find((e) => e.question === question)
-    if (!example) throw new Error(`no example ${question} in ${workspaceId}`)
-    example.check_state = state
-    example.check_detail = detail
-    example.checked_at = state ? (checkedAt ?? new Date().toISOString()) : null
-  }
-
-  /** Test hook: what the next re-check finds for this example (consumed by it); others come back ok. */
-  nextCheckOutcome(question: string, state: CheckState, detail: string | null = null): void {
-    this.nextOutcomes.set(question, { state, detail })
   }
 
   static normalize(q: string): string {
@@ -307,77 +232,6 @@ export class WorkspaceMock {
     job.finished_at = AT
   }
 
-  /** As doc_definitions.run_mining: drafts with citations; the owner's own terms are never replaced. */
-  private advanceMining(ws: MockWorkspace, job: SetupJob): void {
-    if (job.state !== 'running') return
-    let found = 0
-    for (const p of this.mineProposals) {
-      const existing = ws.definitions.find((d) => d.term.toLowerCase() === p.term.toLowerCase())
-      if (existing?.source === 'owner') continue
-      const citation = { document_id: 'up_doc', chunk_id: 'up_doc_c00003', page: p.page, title: p.title, quote: p.quote }
-      if (existing) Object.assign(existing, { definition: p.definition, source: 'document', approved: false, citation })
-      else {
-        this.seq += 1
-        ws.definitions.push({
-          definition_id: `def-${this.seq}`, term: p.term, definition: p.definition, source: 'document',
-          approved: false, citation,
-        })
-      }
-      found += 1
-    }
-    Object.assign(job, { found, dropped: this.mineDropped, done: job.total, state: 'done', finished_at: AT })
-  }
-
-  private advanceTest(ws: MockWorkspace, job: SetupJob): void {
-    const run = ws.runs.find((r) => r.run_id === job.run_id)
-    if (!run || job.state !== 'running') return
-    if (this.failNextTest) {
-      run.results.forEach((r) => {
-        r.verdict = 'error'
-        r.detail = this.failNextTest
-      })
-      run.state = 'failed'
-      run.score = 0
-      job.state = 'failed'
-      job.error = this.failNextTest
-      job.finished_at = AT
-      this.failNextTest = null
-      return
-    }
-    const next = run.results.filter((r) => r.verdict === 'pending' || r.verdict === 'running')
-    const step = run.graded_by === 'owner' ? run.results.filter((r) => r.answer_text === null) : next
-    for (const r of step.slice(0, 4)) {
-      r.answer_text = `The answer to question ${r.position}.`
-      r.answer_sql = `SELECT ${r.position}`
-      if (run.graded_by === 'reference') {
-        const wrong = this.wrongPositions.includes(r.position)
-        r.verdict = wrong ? 'wrong' : 'right'
-        r.detail = wrong
-          ? 'Different result: 3 rows against the reference\'s 5; 60% of its rows found.'
-          : 'Same result as the reference (5 rows).'
-      }
-    }
-    job.done = run.results.filter((r) => r.answer_text !== null).length
-    if (job.done < run.total) return
-    this.finishRun(ws, run)
-    job.state = 'done'
-    job.finished_at = AT
-  }
-
-  private finishRun(ws: MockWorkspace, run: SetupRun): void {
-    run.state = 'done'
-    run.finished_at = AT
-    run.score = run.results.filter((r) => r.verdict === 'right').length
-    ws.setup_state = 'tested'
-    ws.setup_score = run.score
-    ws.setup_total = run.total
-    for (const r of run.results) {
-      const existing = ws.examples.findIndex((e) => e.question === r.question)
-      if (r.verdict === 'right' && existing < 0) ws.examples.push({ question: r.question, sql: r.answer_sql ?? '' })
-      if (r.verdict === 'wrong' && existing >= 0) ws.examples.splice(existing, 1)
-    }
-  }
-
   async handle(route: Route, method: string, path: string, body: Json, reply: Reply): Promise<void> {
     this.calls.push(`${method} ${path}`)
     const parts = path.split('/').filter(Boolean) // ['workspaces', id?, sub?, ...]
@@ -426,18 +280,6 @@ export class WorkspaceMock {
       }
       return reply(route, 200, { updated: items.length })
     }
-    if (sub === 'definitions' && parts[3] === 'mine') {
-      if (method === 'POST') {
-        if (this.activeJob()) return reply(route, 409, { detail: 'A setup step is already running. Wait for it to finish.' })
-        return reply(route, 202, { job: { ...this.newJob('mine', ws.workspace_id, 2), found: 0, dropped: 0 } })
-      }
-      if (method === 'GET') {
-        const job = this.latestJob(ws.workspace_id, 'mine')
-        const view = job ? { found: 0, dropped: 0, ...job } : null // the poll sees the state before this step
-        if (job) this.advanceMining(ws, job)
-        return reply(route, 200, { job: view })
-      }
-    }
     if (sub === 'definitions') {
       if (method === 'GET') return reply(route, 200, { definitions: ws.definitions })
       if (method === 'PUT') {
@@ -461,30 +303,10 @@ export class WorkspaceMock {
         return reply(route, 200, { deleted: parts[3] })
       }
     }
-    if (sub === 'examples' && parts.length === 4 && parts[3] === 'check' && method === 'POST') {
-      const at = new Date().toISOString()
-      const counts = { ok: 0, changed: 0, failed: 0 }
-      for (const e of ws.examples) {
-        const outcome = this.nextOutcomes.get(e.question) ?? { state: 'ok' as CheckState, detail: null }
-        this.nextOutcomes.delete(e.question)
-        Object.assign(e, { check_state: outcome.state, check_detail: outcome.detail, checked_at: at })
-        counts[outcome.state] += 1
-      }
-      return reply(route, 200, { checked: ws.examples.length, counts, checked_at: at })
-    }
     if (sub === 'examples' && parts.length === 3 && method === 'GET') {
-      const rank = { failed: 0, changed: 1, ok: 2 }
       const listed = ws.examples
-        .map((e, i) => ({
-          example_id: `ex-${ws.workspace_id}-${i}`,
-          question: e.question,
-          sql_text: e.sql,
-          source: 'owner',
-          check_state: e.check_state ?? null,
-          checked_at: e.checked_at ?? null,
-          check_detail: e.check_detail ?? null,
-        }))
-        .sort((a, b) => (a.check_state ? rank[a.check_state] : 3) - (b.check_state ? rank[b.check_state] : 3) || a.question.localeCompare(b.question))
+        .map((e, i) => ({ example_id: `ex-${ws.workspace_id}-${i}`, question: e.question, sql_text: e.sql, source: 'owner' }))
+        .sort((a, b) => a.question.toLowerCase().localeCompare(b.question.toLowerCase()))
       return reply(route, 200, { examples: listed })
     }
     if (sub === 'examples' && parts.length === 3) {
@@ -527,60 +349,6 @@ export class WorkspaceMock {
         const view = job ? { ...job } : null // the poll sees the state before this step
         if (job) this.advanceDraft(ws, job)
         return reply(route, 200, { job: view })
-      }
-    }
-    if (sub === 'setup') {
-      if (parts.length === 3 && method === 'POST') {
-        if (ws.setup_state !== 'approved' && ws.setup_state !== 'tested') {
-          return reply(route, 409, { detail: 'Review and approve the descriptions before the test.' })
-        }
-        if (this.activeJob()) return reply(route, 409, { detail: 'A setup step is already running. Wait for it to finish.' })
-        const gradedBy = REFERENCE_SCHEMAS.includes(ws.target_schema) ? 'reference' : 'owner'
-        this.seq += 1
-        const run: SetupRun = {
-          run_id: `run-${this.seq}`,
-          workspace_id: ws.workspace_id,
-          state: 'running',
-          graded_by: gradedBy,
-          score: null,
-          total: SETUP_QUESTIONS.length,
-          started_at: AT,
-          finished_at: null,
-          results: SETUP_QUESTIONS.map((question, i) => ({
-            position: i + 1,
-            question,
-            has_reference: gradedBy === 'reference',
-            answer_text: null,
-            answer_sql: null,
-            verdict: 'pending' as Verdict,
-            detail: null,
-          })),
-        }
-        ws.runs.push(run)
-        const job = this.newJob('test', ws.workspace_id, run.total)
-        job.run_id = run.run_id
-        return reply(route, 202, { job, graded_by: gradedBy })
-      }
-      if (parts.length === 3 && method === 'GET') {
-        const job = this.latestJob(ws.workspace_id, 'test')
-        if (job) this.advanceTest(ws, job)
-        const run = ws.runs.length ? ws.runs[ws.runs.length - 1] : null
-        return reply(route, 200, { run, job: job ? { ...job } : null })
-      }
-      // PUT /workspaces/{id}/setup/{run_id}/results/{position}
-      if (parts.length === 6 && parts[4] === 'results' && method === 'PUT') {
-        const run = ws.runs.find((r) => r.run_id === parts[3])
-        if (!run) return reply(route, 404, { detail: 'No such setup run.' })
-        if (run.graded_by !== 'owner') {
-          return reply(route, 422, { detail: 'This run is graded against reference answers, not by hand.' })
-        }
-        const verdict = body.verdict
-        if (verdict !== 'right' && verdict !== 'wrong') return reply(route, 422, { detail: 'verdict must be right or wrong.' })
-        const result = run.results.find((r) => r.position === Number(parts[5]))
-        if (!result) return reply(route, 404, { detail: 'No such question in that run.' })
-        result.verdict = verdict
-        this.finishRun(ws, run)
-        return reply(route, 200, { run })
       }
     }
     return reply(route, 404, { detail: 'Not Found' })

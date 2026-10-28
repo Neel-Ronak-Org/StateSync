@@ -74,7 +74,7 @@ test.describe('dashboard', () => {
   test('an empty dashboard says so and leads back to the chat', async ({ page }) => {
     await openApp(page, { hash: '#/dashboards' })
     await expect(page.getByRole('heading', { name: 'No dashboards for public yet' })).toBeVisible()
-    await page.getByRole('button', { name: 'Start empty' }).click()
+    await page.getByRole('button', { name: 'Create a dashboard' }).click()
     await expect(page.getByRole('heading', { name: 'This dashboard is empty' })).toBeVisible()
     await page.getByRole('button', { name: 'Ask a question' }).click()
     await expect(page.getByLabel('Ask a question')).toBeVisible()

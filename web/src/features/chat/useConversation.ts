@@ -90,7 +90,6 @@ export function useConversation({ dataset, workspaceId, onDatasetChange }: UseCo
         const res = await api.query({
           query: question,
           session_id: currentSessionId,
-          schema: currentDataset,
           workspace_id: workspaceId ?? undefined,
         })
 

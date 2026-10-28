@@ -7,6 +7,7 @@
 import { expect, test } from '@playwright/test'
 
 import { ask, openApp } from './helpers'
+import type { MockApi } from './mock-api'
 import { TOKEN } from './mock-api'
 
 test.describe('sign-in', () => {
@@ -77,7 +78,7 @@ test.describe('asking', () => {
     await expect(turn.getByTestId('answer-text')).toHaveText('There are 550 orders in total.')
     await expect(turn.getByRole('table')).toContainText('total_orders')
     await expect(turn.getByRole('table')).toContainText('550')
-    expect(api.queries[0]).toMatchObject({ query: 'How many orders are there in total?', schema: 'public' })
+    expect(api.queries[0]).toMatchObject({ query: 'How many orders are there in total?', workspace_id: 'ws-1' })
     expect(typeof api.queries[0].session_id).toBe('string')
   })
 
@@ -116,22 +117,6 @@ test.describe('asking', () => {
     // shrinks with the chart, so it cannot be the reference.)
     const [chartBox, turnBox] = await Promise.all([canvas.boundingBox(), turn.boundingBox()])
     expect(chartBox?.width ?? 0).toBeGreaterThan((turnBox?.width ?? Infinity) * 0.6)
-  })
-
-  test('short style: the browser draws the chart from the rows, and a single row gets none', async ({ page }) => {
-    const api = await openApp(page, { hash: '#/ask' })
-    api.nextSynthStyle = 'short'
-    await ask(page, 'Show orders by status as a chart')
-    const multi = page.getByTestId('turn').last()
-    await expect(multi.getByTestId('answer-text')).toHaveText('Delivered orders dominate: 96,478 of 98,210.')
-    await expect(multi.getByTestId('vega-chart').locator('canvas')).toBeVisible()
-    await expect(multi.getByRole('table')).toContainText('delivered')
-
-    await ask(page, 'How many orders are there in total?')
-    const single = page.getByTestId('turn').last()
-    await expect(single.getByTestId('answer-text')).toHaveText('There are 550 orders in total.')
-    await expect(single.getByRole('table')).toContainText('550')
-    await expect(single.getByTestId('vega-chart')).toHaveCount(0)
   })
 
   test('a chart that fails the safety check is withheld, and the answer still shows', async ({ page }) => {
@@ -281,17 +266,22 @@ test.describe('asking', () => {
   })
 })
 
-test.describe('conversations and datasets', () => {
-  test('switching dataset starts a new conversation on that dataset', async ({ page }) => {
-    const api = await openApp(page, { hash: '#/ask' })
+const TWO_WORKSPACES = (a: MockApi) => {
+  a.workspaces.createReady('Demo', 'public')
+  a.workspaces.createReady('Shop', 'olist')
+}
+
+test.describe('conversations and workspaces', () => {
+  test('switching workspace starts a new conversation in that workspace', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask', seed: TWO_WORKSPACES })
     await ask(page, 'How many orders are there in total?')
     await expect(page.getByTestId('turn')).toHaveCount(1)
-    await page.getByLabel('Dataset').click()
-    await page.getByRole('option', { name: 'olist' }).click()
+    await page.getByRole('combobox', { name: 'Workspace' }).click()
+    await page.getByRole('option', { name: 'Shop' }).click()
     await expect(page.getByTestId('turn')).toHaveCount(0)
     await ask(page, 'How many orders are there in total?')
     await expect(page.getByTestId('answer-text')).toHaveCount(1)
-    expect(api.queries[1].schema).toBe('olist')
+    expect(api.queries[1].workspace_id).toBe('ws-2')
     expect(api.queries[1].session_id).not.toBe(api.queries[0].session_id)
     await expect(page.getByTestId('turn').last().getByTestId('turn-dataset')).toHaveText('olist')
   })
@@ -320,18 +310,18 @@ test.describe('conversations and datasets', () => {
     expect(api.queries[0].session_id).toBe('seed-session-1')
   })
 
-  test('opening a conversation from the other dataset switches to that dataset', async ({ page }) => {
-    const api = await openApp(page, { hash: '#/ask' })
+  test('opening a conversation from another database switches to the workspace on it', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask', seed: TWO_WORKSPACES })
     await page
       .getByRole('navigation', { name: 'Conversations' })
       .getByRole('button', { name: 'How many orders were delivered on olist?' })
       .click()
     await expect(page.getByTestId('turn')).toHaveCount(1)
-    await expect(page.getByLabel('Dataset')).toContainText('olist')
+    await expect(page.getByRole('combobox', { name: 'Workspace' })).toContainText('Shop')
     await expect(page.getByTestId('turn-dataset').first()).toHaveText('olist')
     await ask(page, 'And how many were canceled?')
     await expect(page.getByTestId('answer-text')).toHaveCount(2)
-    expect(api.queries[0]).toMatchObject({ session_id: 'seed-session-olist', schema: 'olist' })
+    expect(api.queries[0]).toMatchObject({ session_id: 'seed-session-olist', workspace_id: 'ws-2' })
   })
 
   test('a result the store kept only part of says so after loading', async ({ page }) => {

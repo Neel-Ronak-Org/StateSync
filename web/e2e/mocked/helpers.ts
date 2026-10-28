@@ -2,14 +2,19 @@ import { expect, type Page } from '@playwright/test'
 
 import { MockApi } from './mock-api'
 
-/** Mock the API, and optionally start signed in (a live session and the app's signed-in marker). */
+/**
+ * Mock the API, and optionally start signed in (a live session and the app's signed-in marker). Every
+ * question is asked in a workspace, so unless the seed creates its own (or noWorkspace is set), one
+ * workspace, "Demo", on the `public` sample data, is there from the start.
+ */
 export async function openApp(
   page: Page,
-  options: { signedIn?: boolean; hash?: string; seed?: (api: MockApi) => void } = {},
+  options: { signedIn?: boolean; hash?: string; seed?: (api: MockApi) => void; noWorkspace?: boolean } = {},
 ): Promise<MockApi> {
-  const { signedIn = true, hash = '', seed } = options
+  const { signedIn = true, hash = '', seed, noWorkspace = false } = options
   const api = new MockApi()
   seed?.(api)
+  if (!noWorkspace && api.workspaces.workspaces.size === 0) api.workspaces.createReady('Demo', 'public')
   await api.install(page)
   if (signedIn) {
     // The session is an HttpOnly cookie server-side (the mock's sessionActive); the app only

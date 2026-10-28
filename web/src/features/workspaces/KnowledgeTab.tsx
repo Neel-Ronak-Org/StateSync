@@ -9,16 +9,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { DocumentDefinitions } from '@/features/workspaces/DocumentDefinitions'
 
 const SOURCE_LABEL: Record<Definition['source'], string> = {
   ai: 'AI draft',
-  document: 'From document',
   owner: 'Yours',
 }
 
 interface KnowledgeTabProps {
-  workspaceId: string
   catalog: CatalogEntry[]
   definitions: Definition[]
   draftJob: SetupJob | null
@@ -29,12 +26,10 @@ interface KnowledgeTabProps {
   onAddDefinition: (items: { term: string; definition: string }[]) => Promise<unknown>
   onDeleteDefinition: (definitionId: string) => Promise<unknown>
   onApprove: () => Promise<unknown>
-  onSwitchToTest: () => void
 }
 
 /** The Knowledge tab showing catalog descriptions, business terms, and approval. */
 export function KnowledgeTab({
-  workspaceId,
   catalog,
   definitions,
   draftJob,
@@ -43,7 +38,6 @@ export function KnowledgeTab({
   onAddDefinition,
   onDeleteDefinition,
   onApprove,
-  onSwitchToTest,
 }: KnowledgeTabProps) {
   const isDraftRunning = draftJob?.state === 'running'
   const draftFailed = draftJob?.state === 'failed' && Boolean(draftJob?.error)
@@ -160,7 +154,6 @@ export function KnowledgeTab({
     try {
       await onApprove()
       toast.success('Approved')
-      onSwitchToTest()
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Failed to approve knowledge.')
     } finally {
@@ -334,8 +327,6 @@ export function KnowledgeTab({
           Business Definitions
         </h3>
 
-        <DocumentDefinitions workspaceId={workspaceId} />
-
         {definitions.length > 0 && (
           <div className="space-y-2">
             {definitions.map((def) => (
@@ -356,17 +347,6 @@ export function KnowledgeTab({
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground break-words">{def.definition}</p>
-                  {def.citation && (
-                    <div data-testid="definition-citation" className="space-y-0.5 pt-1 text-[11px]">
-                      <blockquote className="border-l-2 border-border pl-2 italic text-muted-foreground break-words">
-                        “{def.citation.quote}”
-                      </blockquote>
-                      <p className="text-muted-foreground">
-                        {def.citation.title || 'Uploaded document'}
-                        {def.citation.page != null ? `, p. ${def.citation.page}` : ''}
-                      </p>
-                    </div>
-                  )}
                 </div>
 
                 <Button

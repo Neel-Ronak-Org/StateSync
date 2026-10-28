@@ -32,7 +32,7 @@ export function stepsFor(route: PathRoute, hasReranking: boolean): StepId[] {
 }
 
 /** Rank (from 1) of each passage by one score, highest first; ties keep list order. Passages without the score get null. */
-export function ranksBy(passages: InspectPassage[], key: 'score' | 'rerank_score' | 'jev_score'): Map<string, number | null> {
+export function ranksBy(passages: InspectPassage[], key: 'score' | 'jev_score'): Map<string, number | null> {
   const scored = passages
     .map((p, i) => ({ id: p.chunk_id, value: p[key], i }))
     .filter((x): x is { id: string; value: number; i: number } => typeof x.value === 'number')
@@ -45,7 +45,6 @@ export function ranksBy(passages: InspectPassage[], key: 'score' | 'rerank_score
 export interface RankRow {
   passage: InspectPassage
   dense: number | null
-  reranker: number | null
   jev: number | null
   final: number
   /** Among the passages the answer writer reads. */
@@ -57,14 +56,12 @@ export interface RankRow {
 /** One row per candidate, in the writer's order, with its rank at every stage. */
 export function rankRows(rt: RetrievalTrace): RankRow[] {
   const dense = ranksBy(rt.passages, 'score')
-  const reranker = ranksBy(rt.passages, 'rerank_score')
   const jev = ranksBy(rt.passages, 'jev_score')
   return rt.passages.map((p, i) => {
     const final = p.rank_final ?? i + 1
     return {
       passage: p,
       dense: dense.get(p.chunk_id) ?? null,
-      reranker: reranker.get(p.chunk_id) ?? null,
       jev: jev.get(p.chunk_id) ?? null,
       final,
       read: final <= rt.settings.window,
@@ -157,8 +154,8 @@ export function costRows(trace: StateTrace | null | undefined): CostRow[] {
   }
   const rt = retrievalTrace(trace)
   if (rt) {
-    rows.push({ step: 'Documents search', detail: rt.settings.rerank && rt.settings.rerank !== 'off' ? `dense + ${rt.settings.rerank} re-ranker` : 'dense', calls: 2, tokensIn: 0, tokensOut: 0, ms: rt.ms.search })
-    if (rt.jev) {
+    rows.push({ step: 'Documents search', detail: 'dense (two rounds)', calls: 2, tokensIn: 0, tokensOut: 0, ms: rt.ms.search })
+    if (rt.jev && rt.jev.scored + rt.jev.failed > 0) {
       rows.push({ step: 'Passage scoring (Jev)', detail: `${rt.jev.scored} scored, ${rt.jev.failed} failed`, calls: rt.jev.scored + rt.jev.failed, tokensIn: 0, tokensOut: 0, ms: rt.ms.jev })
     }
   }

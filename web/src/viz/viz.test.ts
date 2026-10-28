@@ -13,7 +13,6 @@ import { validateA7Chart } from '@/charts/a7'
 import { columnKind, humanize } from '@/viz/columns'
 import { formatDuration, formatMeasure, formatValue, percentChange } from '@/viz/format'
 import { availableKinds, defaultKind, resolveKind, shapeOf, type VizKind } from '@/viz/infer'
-import { insightsFor } from '@/viz/insights'
 import { kpiOf, periodName } from '@/viz/kpi'
 import { buildSpec } from '@/viz/spec'
 
@@ -174,26 +173,6 @@ describe('specs', () => {
     expect(buildSpec('donut', shapeOf(hourly(3, NOW)))).toBeNull()
     expect(buildSpec('heatmap', shapeOf(byCity))).toBeNull()
     expect(buildSpec('scatter', shapeOf(byCity))).toBeNull()
-  })
-})
-
-describe('insights', () => {
-  it('ranks changes above leaders, bigger moves first, and caps at four', () => {
-    const sources = [
-      { tileId: 'a', title: 'Orders by city', shape: shapeOf(byCity), kind: 'bar' as VizKind },
-      { tileId: 'b', title: 'Revenue', shape: shapeOf([{ revenue: 110, previous: 100 }]), kind: 'kpi' as VizKind },
-      { tileId: 'c', title: 'Returns', shape: shapeOf([{ returns: 50, previous: 100 }]), kind: 'kpi' as VizKind },
-    ]
-    const insights = insightsFor(sources, NOW)
-    expect(insights.map((i) => i.tileId)).toEqual(['c', 'b', 'a'])
-    expect(insights[0].text).toBe('Returns: 50 · ▼ 50% vs previous')
-    expect(insights[0].tone).toBe('down')
-    expect(insights[2].text).toBe('Mumbai leads Orders by city with 43% of the total')
-  })
-
-  it('says nothing rather than something weak', () => {
-    const even = Array.from({ length: 10 }, (_, i) => ({ c: `c${i}`, v: 10 }))
-    expect(insightsFor([{ tileId: 'x', title: 'Even', shape: shapeOf(even), kind: 'bar' }], NOW)).toEqual([])
   })
 })
 
