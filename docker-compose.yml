@@ -176,6 +176,8 @@ services:
       # Read by the BROWSER (web/entrypoint.sh writes it into config.js), so it is the address the
       # user's machine reaches the orchestrator at, not a container name.
       - ORCHESTRATOR_URL=http://localhost:8090
+    volumes:
+      - ./config/suggestions.json:/etc/statesync/suggestions.json:ro   # the suggested questions on an empty chat
     depends_on:
       orchestrator:
         condition: service_healthy
