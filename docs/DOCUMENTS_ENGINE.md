@@ -16,7 +16,7 @@ Contents:
 3. [The embedding model](#3-the-embedding-model)
 4. [The vector database](#4-the-vector-database)
 5. [Searching: two rounds](#5-searching-two-rounds)
-6. [Re-ranking](#6-re-ranking)
+6. [Re-ranking](#6-re-ranking), then [a worked example with real values](#6b-a-worked-example-with-real-values)
 7. [The four designs compared](#7-the-four-designs-compared)
 8. [The metrics](#8-the-metrics)
 9. [The experiments, in order](#9-the-experiments-in-order)
@@ -243,6 +243,73 @@ order. A passage whose request failed has no score and goes after the scored one
 outage leaves the plain search order rather than an error.
 
 ---
+
+## 6b. A worked example, with real values
+
+Every number below came from the running system on 29 October 2026.
+
+**1. What an embedding looks like.** The question *"What was Walmart's net revenue growth?"* through
+mxbai-embed-large:
+
+```
+1,024 numbers:  [-0.0323, 0.0566, -0.0292, 0.0309, -0.0258, -0.0265, -0.0353, 0.0279, …]
+each between about -0.10 and 0.16;   length (norm) = 1.0
+```
+
+The numbers have no individual meaning; only the direction of the whole vector does.
+
+**2. How similarity is calculated.** For two vectors *a* and *b*,
+`cosine(a, b) = (a₁b₁ + a₂b₂ + … + a₁₀₂₄b₁₀₂₄) / (|a| · |b|)`. Because these vectors have length 1, it is
+simply the sum of the 1,024 products. pgvector's `<=>` returns the distance `1 − cosine`, and StateSync shows
+`1 − distance`. The same question against four sentences:
+
+| Sentence | Cosine |
+|---|---|
+| "Walmart's total revenues rose 6% year over year." | **0.768** |
+| "Net sales increased 6.7% compared with the previous fiscal year." | 0.593 |
+| "Our stores in Mexico sell groceries and general merchandise." | 0.379 |
+| "The board of directors met in May to approve the dividend." | 0.328 |
+
+Same meaning in other words scores high; unrelated text scores low. Scores are relative: on this model,
+unrelated text rarely goes below about 0.3.
+
+**3. A real dense search.** *"What was Walmart's total revenue in fiscal 2020?"* over all 44,918 passages:
+
+| Rank | Cosine | Passage |
+|---|---|---|
+| 1 | 0.808 | WALMART 2020 10K p.37 (diluted earnings per share) |
+| 2 | 0.800 | WALMART 2020 10K p.82 (disaggregated revenues) |
+| 3 | 0.783 | **WALMART 2020 10K p.51: the income statement, "Total revenues 523,964"** (the answer) |
+| 4 | 0.782 | WALMART 2020 10K p.38 |
+| 5 | 0.773 | WALMART 2019 10K p.35 (the wrong year) |
+| 6–8 | 0.760–0.766 | WALMART 2018 and 2019 10Ks |
+
+The answer is third, and older filings with near-identical scores fill the list: the problem the two rounds and
+the re-ranker exist for.
+
+**4. A real Jev re-ranking call.** One request per passage:
+
+```json
+{ "model": "jev-1.13",
+  "state": "Question: What was Walmart's total revenue in fiscal 2020?\n\nPassage from WALMART 2020 10K, page 51:\nWalmart Inc. Consolidated Statements of Income … Total revenues 523,964 …",
+  "questions": { "contains": { "type": "noul",
+      "instructions": "Does this passage contain the information needed to answer the question?" } } }
+```
+
+The answer is a probability, not text: `{"answers": {"contains": {"noul": 0.99}}}`, about 800 tokens in and 20
+out, about 1–1.5 s.
+
+| Passage | Dense cosine (rank) | Jev P(yes) |
+|---|---|---|
+| 2020 10K p.51, income statement | 0.783 (3rd) | **0.99** → first |
+| 2020 10K p.37, earnings per share | 0.808 (1st) | 0.25 |
+| 2019 10K p.35, the previous year | 0.773 (5th) | 0.06 |
+
+**5. What a cross-encoder outputs** (bge-reranker-v2-m3; saved from the FinanceBench runs, as the service is no
+longer part of the system). Each (question, passage) pair gives one unbounded relevance score, a logit, not a
+probability. In one question's list:
+- a passage with dense cosine 0.692 scored **3.06** and moved to first;
+- the dense list's top passage (0.746, from another filing) scored **0.72** and fell to eleventh.
 
 ## 7. The four designs compared
 
