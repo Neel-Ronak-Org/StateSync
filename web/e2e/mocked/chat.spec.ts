@@ -327,6 +327,34 @@ test.describe('conversations and workspaces', () => {
     expect(api.queries[0].session_id).toBe('seed-session-1')
   })
 
+  test('a conversation reopened from the sidebar, or after a reload, can still be inspected and keeps its sources', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask' })
+    api.nextTrace = {
+      route: 'hybrid',
+      subtasks: ['Which company had the highest revenue?', 'What does its 10-K say?'],
+      front_door: { route: 'hybrid', latency_ms: 1500, jev: { model: 'jev-1.13', ms: 1400, probabilities: { both: 0.94, docs: 0.03, sql: 0.02, neither: 0.01 } } },
+    }
+    await ask(page, 'Which company had the highest revenue, and what does its 10-K say?')
+    await expect(page.getByRole('button', { name: 'Inspect pipeline' })).toHaveCount(1)
+    const sessionId = api.queries[api.queries.length - 1].session_id
+
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Inspect pipeline' })).toHaveCount(1)
+
+    await page.getByRole('button', { name: 'New chat' }).click()
+    await expect(page.getByTestId('turn')).toHaveCount(0)
+    await page.getByRole('navigation', { name: 'Conversations' })
+      .getByRole('button', { name: /Which company had the highest revenue, and what/ }).click()
+    await expect(page.getByTestId('turn')).toHaveCount(1)
+    expect(api.sessions.has(sessionId)).toBe(true)
+    const turn = page.getByTestId('turn').last()
+    await expect(turn.getByText('SQL query')).toBeVisible()
+    await turn.getByRole('button', { name: 'Inspect pipeline' }).click()
+    const inspector = page.getByTestId('inspector')
+    await expect(inspector).toContainText('Route taken: Database + documents')
+    await expect(inspector.getByTestId('split')).toContainText('Database part: Which company had the highest revenue?')
+  })
+
   test('opening a conversation from another database switches to the workspace on it', async ({ page }) => {
     const api = await openApp(page, { hash: '#/ask', seed: TWO_WORKSPACES })
     await page

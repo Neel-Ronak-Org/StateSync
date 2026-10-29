@@ -56,6 +56,7 @@ interface StoredTurn {
   sql_rows_preview: Row[] | null
   sql_rows_count: number | null
   target_schema: string | null
+  detail?: Json | null
 }
 
 export interface Tile {
@@ -525,24 +526,8 @@ export class MockApi {
     this.nextTrace = null
     const turnIndex = turns.length + 1
     const at = this.now()
-    turns.push({
-      turn_index: turnIndex,
-      raw_query: question,
-      rewritten_query: question,
-      rewrite_applied: false,
-      context_guessed: false,
-      route: canned.route,
-      executed_sql: canned.sql,
-      answer_text: canned.answer,
-      computed_at: at,
-      chart: canned.chart,
-      sql_columns: canned.columns.length ? canned.columns : null,
-      sql_rows_preview: canned.rows.slice(0, 100),
-      sql_rows_count: canned.rows.length,
-      target_schema: schema,
-    })
     this.sessions.set(sessionId, turns)
-    return this.json(route, 200, {
+    const response = {
       query_id: `q-${this.queries.length}`,
       answer_text: canned.answer,
       chart: canned.chart,
@@ -584,7 +569,25 @@ export class MockApi {
         ],
         ...traceOverride,
       },
+    }
+    turns.push({
+      turn_index: turnIndex,
+      raw_query: question,
+      rewritten_query: question,
+      rewrite_applied: false,
+      context_guessed: false,
+      route: canned.route,
+      executed_sql: canned.sql,
+      answer_text: canned.answer,
+      computed_at: at,
+      chart: canned.chart,
+      sql_columns: canned.columns.length ? canned.columns : null,
+      sql_rows_preview: canned.rows.slice(0, 100),
+      sql_rows_count: canned.rows.length,
+      target_schema: schema,
+      detail: { state_trace: { ...response.state_trace, sql_rows: [] }, citations: response.citations, latency_ms: response.latency_ms },
     })
+    return this.json(route, 200, response)
   }
 
   private makeTile(

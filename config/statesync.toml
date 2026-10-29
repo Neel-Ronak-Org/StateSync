@@ -91,6 +91,7 @@ history_get_turns_hard_cap = 20
 session_browser_list_limit = 50
 session_browser_turn_limit = 100
 history_row_preview_max   = 100     # rows stored with a turn, shown when a conversation is reopened
+history_detail_max_bytes  = 262144  # a turn's stored trace and citations (Inspector after reopening); larger: passages' text dropped
 history_full_rows_enabled = true    # also store the full result (for "show all rows")
 history_full_rows_max     = 1000
 history_full_rows_max_bytes = 1048576

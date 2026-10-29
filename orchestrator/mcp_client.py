@@ -234,6 +234,7 @@ async def history_append_turn(
     sql_rows_count: int | None = None,
     sql_rows_full: list[dict[str, Any]] | None = None,
     target_schema: str | None = None,
+    detail: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """history.append_turn -- MCP assigns the turn number and returns it."""
     params: dict[str, Any] = {
@@ -261,16 +262,21 @@ async def history_append_turn(
         params["sql_rows_full"] = sql_rows_full
     if target_schema is not None:
         params["target_schema"] = target_schema
+    if detail is not None:
+        params["detail"] = detail
     return await session.call("history.append_turn", params)
 
 
 async def history_get_recent_turns(
     session: MCPSession, session_id: str, principal_id: str, limit: int | None = None,
+    with_detail: bool = False,
 ) -> dict[str, Any]:
-    """history.get_recent_turns"""
+    """history.get_recent_turns (with_detail: each turn's stored trace and citations, for a reopened conversation)"""
     params: dict[str, Any] = {"session_id": session_id, "principal_id": principal_id}
     if limit is not None:
         params["limit"] = limit
+    if with_detail:
+        params["with_detail"] = True
     return await session.call("history.get_recent_turns", params)
 
 

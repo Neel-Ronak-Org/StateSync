@@ -72,6 +72,7 @@ async def append_turn(
     sql_rows_count: int | None = None,
     sql_rows_full: list[dict[str, Any]] | None = None,
     target_schema: str | None = None,
+    detail: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     Insert one completed turn scoped by tenant and principal. Called once per
@@ -119,6 +120,8 @@ async def append_turn(
             )
             preview = preview[:cap]
 
+    detail = _capped_detail(detail, tenant_id, session_id)
+
     params = {
         "tenant": tenant_id,
         "principal": principal_id,
@@ -135,6 +138,7 @@ async def append_turn(
         "preview": Jsonb(preview) if preview is not None else None,
         "rows_count": sql_rows_count,
         "target_schema": target_schema,
+        "detail": Jsonb(detail) if detail is not None else None,
     }
     max_attempts = cfg.mcp.history_append_max_attempts
     async with get_history_connection() as conn:
@@ -150,14 +154,14 @@ async def append_turn(
                 INSERT INTO session_state.conversation_turns
                     (tenant_id, principal_id, session_id, turn_index, raw_query, rewritten_query,
                      rewrite_applied, context_guessed, route, executed_sql, answer_text,
-                     chart, sql_columns, sql_rows_preview, sql_rows_count, target_schema)
+                     chart, sql_columns, sql_rows_preview, sql_rows_count, target_schema, detail)
                 SELECT %(tenant)s, %(principal)s, %(session)s,
                        COALESCE(MAX(t.turn_index), 0) + 1,
                        %(raw_query)s::text, %(rewritten_query)s::text,
                        %(rewrite_applied)s::boolean, %(context_guessed)s::boolean,
                        %(route)s::text, %(executed_sql)s::text, %(answer_text)s::text,
                        %(chart)s::jsonb, %(sql_columns)s::jsonb, %(preview)s::jsonb,
-                       %(rows_count)s::integer, %(target_schema)s::text
+                       %(rows_count)s::integer, %(target_schema)s::text, %(detail)s::jsonb
                 FROM session_state.conversation_turns t
                 WHERE t.tenant_id = %(tenant)s AND t.session_id = %(session)s
                 HAVING COALESCE(BOOL_AND(t.principal_id = %(principal)s), TRUE)
@@ -326,13 +330,15 @@ async def check_session(session_id: str, principal_id: str) -> dict[str, Any]:
             "target_schema": schema if usable else None}
 
 
-async def get_recent_turns(session_id: str, principal_id: str, limit: int | None = None) -> dict[str, Any]:
+async def get_recent_turns(session_id: str, principal_id: str, limit: int | None = None,
+                           with_detail: bool = False) -> dict[str, Any]:
     """
     Return the last `limit` turns for (tenant_id, principal_id, session_id),
     OLDEST first (the order a rewrite prompt wants to read them in), scoped by
     tenant server-side and principal from the orchestrator. Empty list on turn 1
     / an unknown session_id -- not an error; a session with no history is the
-    ordinary case, not a fault.
+    ordinary case, not a fault. with_detail adds each turn's stored trace and citations (migration 028):
+    the session browser asks for it, the router's short history read does not.
     """
     tenant_id = get_tenant_id()
     hard_cap = cfg.mcp.history_get_turns_hard_cap
@@ -343,13 +349,14 @@ async def get_recent_turns(session_id: str, principal_id: str, limit: int | None
             """
             SELECT turn_index, raw_query, rewritten_query, rewrite_applied,
                    context_guessed, route, executed_sql, answer_text, computed_at,
-                   chart, sql_columns, sql_rows_preview, sql_rows_count, target_schema
+                   chart, sql_columns, sql_rows_preview, sql_rows_count, target_schema,
+                   CASE WHEN %s THEN detail END
             FROM session_state.conversation_turns
             WHERE tenant_id = %s AND principal_id = %s AND session_id = %s
             ORDER BY turn_index DESC
             LIMIT %s
             """,
-            (tenant_id, principal_id, session_id, effective_limit),
+            (with_detail, tenant_id, principal_id, session_id, effective_limit),
         )
         rows = await cur.fetchall()
 
@@ -357,8 +364,8 @@ async def get_recent_turns(session_id: str, principal_id: str, limit: int | None
     for r in reversed(rows):  # DESC fetch, ASC (oldest-first) return
         (turn_index, raw_query, rewritten_query, rewrite_applied,
          context_guessed, route, executed_sql, answer_text, computed_at,
-         chart, sql_columns, sql_rows_preview, sql_rows_count, target_schema) = r
-        turns.append({
+         chart, sql_columns, sql_rows_preview, sql_rows_count, target_schema, detail) = r
+        turn: dict[str, Any] = {
             "turn_index": turn_index,
             "raw_query": raw_query,
             "rewritten_query": rewritten_query,
@@ -376,11 +383,32 @@ async def get_recent_turns(session_id: str, principal_id: str, limit: int | None
             "sql_rows_preview": sql_rows_preview,
             "sql_rows_count": sql_rows_count,
             "target_schema": target_schema,
-        })
+        }
+        if with_detail:
+            turn["detail"] = detail
+        turns.append(turn)
     # rows[0] is the newest turn (DESC fetch), so this is correct however
     # small `limit` is -- the bug 0.1 fixed came from counting the window.
     next_turn_index = rows[0][0] + 1 if rows else 1
     return {"turns": turns, "count": len(turns), "next_turn_index": next_turn_index}
+
+
+def _capped_detail(detail: dict[str, Any] | None, tenant_id: str, session_id: str) -> dict[str, Any] | None:
+    """The detail as stored: whole when it fits mcp.history_detail_max_bytes, else without the passages'
+    text (the Inspector then shows where each passage came from, not what it said), else nothing."""
+    if detail is None:
+        return None
+    cap = int(cfg.mcp.history_detail_max_bytes)
+    if len(json.dumps(detail, default=str)) <= cap:
+        return detail
+    trace = dict(detail.get("state_trace") or {})
+    trace["retrievals"] = [{**r, "content": ""} for r in trace.get("retrievals") or []]
+    slim = {**detail, "state_trace": trace}
+    if len(json.dumps(slim, default=str)) <= cap:
+        logger.info("history.append_turn: detail stored without passage text (tenant=%s session=%s)", tenant_id, session_id)
+        return slim
+    logger.warning("history.append_turn: detail over %d bytes, not stored (tenant=%s session=%s)", cap, tenant_id, session_id)
+    return None
 
 
 async def get_turn_rows(session_id: str, principal_id: str, turn_index: int) -> dict[str, Any]:

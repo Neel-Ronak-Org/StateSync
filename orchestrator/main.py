@@ -281,7 +281,7 @@ async def get_session_route(
         base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
     ) as session:
         result = await history_get_recent_turns(
-            session, session_id, principal_id=principal.principal_id, limit=limit
+            session, session_id, principal_id=principal.principal_id, limit=limit, with_detail=True
         )
     client_ip = request.client.host if request.client else None
     await _audit(
@@ -509,6 +509,10 @@ async def answer_question(
                 # Do NOT slice it — MCP applies the caps and logs truncation; slicing here would hide from those logs how large the real result was.
                 sql_rows_full=(final_state.sql_rows or None),
                 target_schema=final_state.target_schema,
+                # What the Inspector and the source chips need when the conversation is reopened; the rows are
+                # left out (stored above), the size is capped by the MCP.
+                detail={"state_trace": {k: v for k, v in state_trace.items() if k != "sql_rows"},
+                        "citations": citations, "latency_ms": latency_ms},
             )
         # MCP assigns the turn number (0.1), so the trace reports the stored one --
         # the web client uses it to fetch this turn's full rows later. A turn that

@@ -156,6 +156,8 @@ export interface StoredTurn {
   sql_rows_count: number | null
   /** Dataset this turn was answered from; null before migration 018. */
   target_schema: string | null
+  /** What the Inspector and the source chips need (migration 028); absent or null for older turns. */
+  detail?: { state_trace: StateTrace; citations: Citation[]; latency_ms: number } | null
 }
 
 export interface SessionDetail {
