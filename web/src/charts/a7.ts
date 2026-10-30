@@ -145,3 +145,29 @@ export function validateA7Chart(chart: unknown): string[] {
 
   return errs
 }
+
+
+// A year field ("year", "fiscal_year", "period_end_year") on a number axis: the theme's compact "~s" format
+// turns 2023 into "2.023k", so such an axis gets a plain integer format instead.
+const YEAR_FIELD = /(^|_)(year|yr|fy)(_|$)/i
+
+/** A copy of the spec whose x/y encodings on year fields use a plain integer axis format (unless one is set).
+ * Applied after validateA7Chart (which refuses axis properties from a spec): the format is a fixed value of ours. */
+export function withYearAxes(spec: Record<string, unknown>): Record<string, unknown> {
+  const encoding = spec.encoding
+  if (!encoding || typeof encoding !== 'object') return spec
+  const enc = encoding as Record<string, unknown>
+  let changed = false
+  const next: Record<string, unknown> = { ...enc }
+  for (const channel of ['x', 'y']) {
+    const ch = enc[channel]
+    if (!ch || typeof ch !== 'object') continue
+    const c = ch as Record<string, unknown>
+    if (c.type !== 'quantitative' || typeof c.field !== 'string' || !YEAR_FIELD.test(c.field)) continue
+    const axis = c.axis && typeof c.axis === 'object' ? (c.axis as Record<string, unknown>) : {}
+    if ('format' in axis || c.axis === null) continue
+    next[channel] = { ...c, axis: { ...axis, format: 'd' } }
+    changed = true
+  }
+  return changed ? { ...spec, encoding: next } : spec
+}
