@@ -43,7 +43,9 @@ describe('columns', () => {
     expect(columnKind('orders', [1, 2.5, null])).toBe('quantitative')
     expect(columnKind('day', ['2026-09-26T00:00:00+00:00', '2026-09-27'])).toBe('temporal')
     expect(columnKind('city', ['Mumbai', 'Delhi'])).toBe('nominal')
-    expect(columnKind('year', [2017, 2018])).toBe('nominal')     // a label, not an amount
+    expect(columnKind('year', [2017, 2018])).toBe('temporal')    // whole years are time, not an amount
+    expect(columnKind('period_end_year', [2019, 2020])).toBe('temporal')
+    expect(columnKind('year', [1, 2])).toBe('nominal')           // not plausible years
     expect(columnKind('hour', [0, 1, 23])).toBe('nominal')
     expect(columnKind('mixed', [1, 'two'])).toBe('nominal')
     expect(columnKind('empty', [null, null])).toBe('nominal')
@@ -173,6 +175,37 @@ describe('specs', () => {
     expect(buildSpec('donut', shapeOf(hourly(3, NOW)))).toBeNull()
     expect(buildSpec('heatmap', shapeOf(byCity))).toBeNull()
     expect(buildSpec('scatter', shapeOf(byCity))).toBeNull()
+  })
+})
+
+describe('series over years', () => {
+  const twoCompanies = [
+    { ticker: 'KO', period_end_year: 2019, value: 37.3, unit: 'USD' },
+    { ticker: 'KO', period_end_year: 2020, value: 33.0, unit: 'USD' },
+    { ticker: 'PEP', period_end_year: 2019, value: 67.2, unit: 'USD' },
+    { ticker: 'PEP', period_end_year: 2020, value: 70.4, unit: 'USD' },
+  ]
+
+  it('draws years as an ordered axis, one line per company', () => {
+    const shape = shapeOf(twoCompanies)
+    expect(availableKinds(shape)).toContain('line')
+    const spec = buildSpec('line', shape) as unknown as { encoding: Record<string, Record<string, unknown>> }
+    expect(spec.encoding.x).toMatchObject({ field: 'period_end_year', type: 'ordinal', sort: 'ascending' })
+    expect(spec.encoding.y).toMatchObject({ field: 'value' })
+    expect(spec.encoding.color).toMatchObject({ field: 'ticker' })
+    expect(validateA7Chart(spec)).toEqual([])
+  })
+
+  it('gives a yearly total a KPI with its trend', () => {
+    const shape = shapeOf([{ year: 2021, total: 10 }, { year: 2022, total: 12 }])
+    expect(availableKinds(shape)[0]).toBe('kpi_trend')
+    expect(kpiOf(shape, Date.parse('2026-10-31'))?.value).toBe(12)
+  })
+
+  it('does not colour bars by a label that matches the category one to one', () => {
+    const shape = shapeOf([{ ticker: 'WMT', company: 'Walmart', value: 5 }, { ticker: 'AMZN', company: 'Amazon', value: 4 }])
+    const spec = buildSpec('hbar', shape) as unknown as { encoding: Record<string, unknown> }
+    expect(spec.encoding.color).toBeUndefined()
   })
 })
 
