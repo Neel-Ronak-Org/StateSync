@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Composer } from '@/features/chat/Composer'
 import { DetailsSheet } from '@/features/chat/DetailsSheet'
+import { InspectorDialog } from '@/features/inspect/InspectorDialog'
 import { EmptyState } from '@/features/chat/EmptyState'
 import { TurnItem } from '@/features/chat/TurnItem'
 import { copyToClipboard } from '@/lib/clipboard'
@@ -36,6 +37,8 @@ export function ChatView({
 }: ChatViewProps) {
   const [activeDetailsTurn, setActiveDetailsTurn] = useState<ChatTurn | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [inspectTurn, setInspectTurn] = useState<ChatTurn | null>(null)
+  const [inspectOpen, setInspectOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Scroll to bottom when new turns arrive
@@ -103,6 +106,10 @@ export function ChatView({
                 turn={turn}
                 devMode={devMode}
                 onOpenDetails={handleOpenDetails}
+                onOpenInspector={(t) => {
+                  setInspectTurn(t)
+                  setInspectOpen(true)
+                }}
                 onRetry={onRetry}
                 onUpdateTurn={onUpdateTurn}
                 sessionId={sessionId}
@@ -126,6 +133,7 @@ export function ChatView({
         onOpenChange={setDetailsOpen}
         devMode={devMode}
       />
+      <InspectorDialog turn={inspectTurn} open={inspectOpen} onOpenChange={setInspectOpen} />
     </div>
   )
 }

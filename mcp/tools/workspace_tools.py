@@ -1,9 +1,8 @@
 """
 mcp/tools/workspace_tools.py
-MCP workspaces tool (docs/V3_PLAN.md Phase 3, migration 021): workspaces and
-their knowledge store.
+workspaces.manage: workspaces and what the owner has taught StateSync about each one.
 
-One JSON-RPC method, workspaces.manage (decision D-v3-10), takes an `action`:
+One JSON-RPC method takes an `action`:
 
   list, create, get, update, delete        the workspace itself
   scan                                     read the data source's catalog
@@ -12,18 +11,15 @@ One JSON-RPC method, workspaces.manage (decision D-v3-10), takes an `action`:
   delete_definition                        business terms
   approve                                  the owner accepts the knowledge
   add_example, remove_example              an approved question -> SQL pair, and taking one back
-  context                                  what a question in this workspace may use
-  templates                                approved queries as fill-in-the-values templates (Phase 3c)
-  check_examples, examples                 re-run approved examples with no model; list them with their check state
-  start_run, record_result, finish_run,
-  get_run, set_verdict                     the 10-question setup test
+  examples                                 list the approved examples
+  context                                  what a question in this workspace may use (approved knowledge only)
 
 THE RULES, enforced here rather than trusted from a caller:
 
-1. Every statement filters on tenant_id (bound server-side, A0.6) AND the
+1. Every statement filters on tenant_id (bound server-side from the session) AND the
    owner principal. Row-level security (migration 021) repeats the tenant
    check in the database as a backstop.
-2. Only APPROVED knowledge leaves through `context` (V3_PLAN §5.1): drafts
+2. Only APPROVED knowledge leaves through `context`: drafts
    never reach a prompt.
 3. An example's SQL must pass the same Layer 1 gate every query passes before
    it is stored; approved examples can run directly (the fast path).
@@ -39,7 +35,6 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from datetime import datetime, timezone
 from typing import Any
 
 from psycopg.types.json import Jsonb
@@ -49,45 +44,23 @@ from config_loader import cfg
 from db import get_history_connection
 from serialization import to_json_safe
 from session import get_tenant_id
-from tools.data_tools import _check_layer1, run_select, sample_rows
+from tools.data_tools import _check_layer1, sample_rows
 from tools.schema_tools import ALLOWED_SCHEMAS, describe_table, list_tables
-from tools.sql_templates import derive_template
 
 logger = logging.getLogger(__name__)
 
 _ACTIONS = frozenset({
     "list", "create", "get", "update", "delete", "scan", "catalog", "save_descriptions",
     "definitions", "save_definitions", "delete_definition", "approve", "add_example", "remove_example",
-    "context", "templates", "check_examples", "examples",
-    "start_run", "record_result", "finish_run", "get_run", "set_verdict",
+    "context", "examples",
 })
 _NO_WORKSPACE = frozenset({"list", "create"})
-_VERDICTS = frozenset({"pending", "running", "right", "wrong", "error"})
 _DESCRIPTION_SOURCES = frozenset({"ai", "owner"})
-# A definition may also come from an uploaded document (migration 025); it then
-# carries a citation, and like an AI draft it never replaces the owner's words.
-_DEFINITION_SOURCES = frozenset({"ai", "owner", "document"})
-_CITATION_FIELDS = ("document_id", "chunk_id", "page", "title", "quote")
+_DEFINITION_SOURCES = frozenset({"ai", "owner"})
 
 
-def clean_citation(value: Any) -> dict[str, Any] | None:
-    """A document citation {document_id, chunk_id, page, title, quote}, or None if malformed."""
-    if not isinstance(value, dict):
-        return None
-    chunk_id = clean_text(value.get("chunk_id"), int(cfg.library.title_max_chars))
-    document_id = clean_text(value.get("document_id"), int(cfg.library.title_max_chars))
-    quote = clean_text(value.get("quote"), int(cfg.workspaces.mine_quote_max_chars))
-    title = clean_text(value.get("title"), int(cfg.library.title_max_chars)) or ""
-    page = value.get("page")
-    if chunk_id is None or document_id is None or quote is None:
-        return None
-    if page is not None and (not isinstance(page, int) or isinstance(page, bool) or page < 0):
-        return None
-    return {"document_id": document_id, "chunk_id": chunk_id, "page": page, "title": title, "quote": quote}
-_EXAMPLE_SOURCES = frozenset({"setup_test", "tile", "owner"})
+_EXAMPLE_SOURCES = frozenset({"tile", "owner"})
 _SAMPLE_VALUE_MAX_CHARS = 80  # noqa: literals - a sample value is a hint for the drafter, not data
-_CHECK_DETAIL_MAX_CHARS = 300  # noqa: literals - a stored error message is truncated for display
-_CHECK_SEVERITY = {"failed": 0, "changed": 1, "ok": 2}
 _STOPWORDS = frozenset(
     "the a an of in on for to and or is are was were by with what which how many much per "
     "from at as that this these those be do does did show me list give total all each".split()
@@ -169,17 +142,7 @@ _VIEW = """
            (SELECT count(*) FROM session_state.kb_columns c WHERE c.workspace_id = w.workspace_id AND c.column_name = ''),
            (SELECT count(*) FROM session_state.kb_columns c WHERE c.workspace_id = w.workspace_id AND c.approved),
            (SELECT count(*) FROM session_state.kb_definitions d WHERE d.workspace_id = w.workspace_id),
-           (SELECT count(*) FROM session_state.kb_examples e WHERE e.workspace_id = w.workspace_id),
-           (SELECT count(*) FROM session_state.kb_examples e
-             WHERE e.workspace_id = w.workspace_id AND e.approved AND e.check_state = 'ok'),
-           (SELECT count(*) FROM session_state.kb_examples e
-             WHERE e.workspace_id = w.workspace_id AND e.approved AND e.check_state = 'changed'),
-           (SELECT count(*) FROM session_state.kb_examples e
-             WHERE e.workspace_id = w.workspace_id AND e.approved AND e.check_state = 'failed'),
-           (SELECT count(*) FROM session_state.kb_examples e
-             WHERE e.workspace_id = w.workspace_id AND e.approved AND e.check_state IS NULL),
-           (SELECT max(e.checked_at) FROM session_state.kb_examples e
-             WHERE e.workspace_id = w.workspace_id AND e.approved)
+           (SELECT count(*) FROM session_state.kb_examples e WHERE e.workspace_id = w.workspace_id)
     FROM session_state.workspaces w
     WHERE w.tenant_id = %s AND w.owner_principal_id = %s
 """
@@ -187,17 +150,13 @@ _VIEW = """
 
 def _to_view(row: tuple) -> dict[str, Any]:
     (workspace_id, name, schema, context, version, state, score, total, created, updated,
-     tables, approved, definitions, examples, h_ok, h_changed, h_failed, h_unchecked, h_checked_at) = row
+     tables, approved, definitions, examples) = row
     return {
         "workspace_id": workspace_id, "name": name, "target_schema": schema,
         "business_context": context, "context_version": version, "setup_state": state,
         "setup_score": score, "setup_total": total,
         "created_at": created.isoformat(), "updated_at": updated.isoformat(),
         "counts": {"tables": tables, "approved": approved, "definitions": definitions, "examples": examples},
-        "health": {"ok": h_ok, "changed": h_changed, "failed": h_failed, "unchecked": h_unchecked,
-                   "checked_at": h_checked_at.isoformat() if h_checked_at else None},
-        # Lets the page decide, from config, when opening a workspace should re-check it.
-        "example_check_stale_after_s": int(cfg.example_checks.stale_after_s),
     }
 
 
@@ -443,13 +402,10 @@ async def _definitions(tenant_id, principal_id, workspace_id=None, **_):
         if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
             return _fail("not_found", "No such workspace.")
         rows = await (await conn.execute(
-            "SELECT definition_id, term, definition, source, approved, cite_document_id, cite_chunk_id, cite_page, "
-            "cite_title, cite_quote FROM session_state.kb_definitions "
+            "SELECT definition_id, term, definition, source, approved FROM session_state.kb_definitions "
             "WHERE workspace_id = %s ORDER BY lower(term)", (workspace_id,))).fetchall()
-    return {"ok": True, "definitions": [
-        {"definition_id": i, "term": t, "definition": d, "source": s, "approved": a,
-         "citation": dict(zip(_CITATION_FIELDS, cite)) if cite[1] else None}
-        for i, t, d, s, a, *cite in rows]}
+    return {"ok": True, "definitions": [{"definition_id": i, "term": t, "definition": d, "source": s, "approved": a}
+                                        for i, t, d, s, a in rows]}
 
 
 async def _save_definitions(tenant_id, principal_id, workspace_id=None, items=None, **_):
@@ -468,11 +424,7 @@ async def _save_definitions(tenant_id, principal_id, workspace_id=None, items=No
                 source = item.get("source", "owner") if isinstance(item, dict) else None
                 if term is None or text is None or source not in _DEFINITION_SOURCES:
                     raise _Abort(_fail("invalid", "Every definition needs a term, a definition and a source of "
-                                                  "ai, owner or document."))
-                citation = clean_citation(item.get("citation")) if source == "document" else None
-                if source == "document" and citation is None:
-                    raise _Abort(_fail("invalid", "A definition from a document needs its citation "
-                                                  "(document_id, chunk_id, quote)."))
+                                                  "ai or owner."))
                 exists = (await (await conn.execute(
                     "SELECT 1 FROM session_state.kb_definitions WHERE workspace_id = %s AND lower(term) = lower(%s)",
                     (workspace_id, term))).fetchone()) is not None
@@ -483,23 +435,15 @@ async def _save_definitions(tenant_id, principal_id, workspace_id=None, items=No
                 await conn.execute(
                     """
                     INSERT INTO session_state.kb_definitions (definition_id, workspace_id, tenant_id, term, definition,
-                        source, cite_document_id, cite_chunk_id, cite_page, cite_title, cite_quote)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        source)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                     ON CONFLICT (workspace_id, lower(term)) DO UPDATE SET
                         term = EXCLUDED.term, definition = EXCLUDED.definition, source = EXCLUDED.source,
-                        -- an owner edit keeps the citation, so the origin stays visible
-                        cite_document_id = COALESCE(EXCLUDED.cite_document_id, session_state.kb_definitions.cite_document_id),
-                        cite_chunk_id = COALESCE(EXCLUDED.cite_chunk_id, session_state.kb_definitions.cite_chunk_id),
-                        cite_page = CASE WHEN EXCLUDED.cite_chunk_id IS NOT NULL THEN EXCLUDED.cite_page
-                                         ELSE session_state.kb_definitions.cite_page END,
-                        cite_title = COALESCE(EXCLUDED.cite_title, session_state.kb_definitions.cite_title),
-                        cite_quote = COALESCE(EXCLUDED.cite_quote, session_state.kb_definitions.cite_quote),
                         approved = FALSE, updated_at = now()
-                    -- a draft (AI or document) never replaces the owner's definition
-                    WHERE EXCLUDED.source = 'owner' OR session_state.kb_definitions.source IN ('ai', 'document')
+                    -- an AI draft never replaces the owner's definition
+                    WHERE EXCLUDED.source = 'owner' OR session_state.kb_definitions.source <> 'owner'
                     """,
-                    (str(uuid.uuid4()), workspace_id, tenant_id, term, text, source,
-                     *((citation[k] for k in _CITATION_FIELDS) if citation else (None,) * len(_CITATION_FIELDS))))
+                    (str(uuid.uuid4()), workspace_id, tenant_id, term, text, source))
     except _Abort as abort:
         return abort.failure
     return await _definitions(tenant_id, principal_id, workspace_id=workspace_id)
@@ -558,16 +502,6 @@ async def _add_example(tenant_id, principal_id, workspace_id=None, question=None
             "INSERT INTO session_state.kb_examples (example_id, workspace_id, tenant_id, question, question_norm, "
             "sql_text, source) VALUES (%s, %s, %s, %s, %s, %s, %s)",
             (example_id, workspace_id, tenant_id, q, norm, sql.strip(), source))
-        # The template is derived in the same transaction, so an example and its
-        # template appear (and, by ON DELETE CASCADE, disappear) together. An SQL
-        # with no usable literals simply gets none.
-        derived = derive_template(sql.strip())
-        if derived is not None:
-            template_sql, slots = derived
-            await conn.execute(
-                "INSERT INTO session_state.kb_templates (template_id, example_id, workspace_id, tenant_id, "
-                "question, question_norm, template_sql, slots) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                (str(uuid.uuid4()), example_id, workspace_id, tenant_id, q, norm, template_sql, Jsonb(slots)))
     return {"ok": True, "example_id": example_id}
 
 
@@ -648,238 +582,24 @@ async def _context(tenant_id, principal_id, workspace_id=None, question=None, **
     }
 
 
-async def _templates(tenant_id, principal_id, workspace_id=None, question=None, **_):
-    """Templates of this workspace's approved examples that resemble a question.
-
-    The exact-question case is excluded: that is the fast path's job (`context`.exact),
-    and a template of the very same question would only re-derive the same SQL.
-    """
-    if not isinstance(question, str) or not question.strip():
-        return _fail("invalid", "question is required.")
-    async with get_history_connection() as conn:
-        if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
-            return _fail("not_found", "No such workspace.")
-        rows = await (await conn.execute(
-            "SELECT t.template_id, t.question, t.question_norm, t.template_sql, t.slots "
-            "FROM session_state.kb_templates t "
-            "JOIN session_state.kb_examples e ON e.example_id = t.example_id AND e.approved "
-            "WHERE t.tenant_id = %s AND t.workspace_id = %s",
-            (tenant_id, workspace_id))).fetchall()
-    norm = normalize_question(question)
-    ranked = sorted(((similarity(question, q), tid, q, sql, slots) for tid, q, n, sql, slots in rows if n != norm),
-                    key=lambda r: r[0], reverse=True)
-    return {"ok": True, "templates": [
-        {"template_id": tid, "question": q, "template_sql": sql, "slots": slots, "score": round(score, 3)}
-        for score, tid, q, sql, slots in ranked
-        if score >= float(cfg.templates.min_similarity)][: int(cfg.templates.max_candidates)]}
-
-
-async def _check_examples(tenant_id, principal_id, workspace_id=None, **_):
-    """Re-run approved examples with no model and compare each result's shape with the first one.
-
-    The SQL goes through run_select: the Layer 1 gate and the read-only connection,
-    the same path every data query takes. A failure is recorded, not raised.
-    """
-    async with get_history_connection() as conn:
-        owned = await _owned(conn, tenant_id, principal_id, workspace_id)
-        if owned is None:
-            return _fail("not_found", "No such workspace.")
-        dataset = owned[1]
-        rows = await (await conn.execute(
-            "SELECT example_id, sql_text, result_signature FROM session_state.kb_examples "
-            "WHERE tenant_id = %s AND workspace_id = %s AND approved "
-            "ORDER BY checked_at ASC NULLS FIRST LIMIT %s",
-            (tenant_id, workspace_id, int(cfg.example_checks.max_per_check)))).fetchall()
-    counts = {"ok": 0, "changed": 0, "failed": 0}
-    outcomes: list[tuple[str, str, str | None, str | None]] = []
-    for example_id, sql_text, recorded in rows:
-        result = await run_select(sql_text, max_rows=1, dataset=dataset)
-        if not result.get("ok"):
-            message = str((result.get("error") or {}).get("message", "The query failed."))
-            outcomes.append((example_id, "failed", recorded, message[:_CHECK_DETAIL_MAX_CHARS]))
-            continue
-        signature = result_signature(result.get("columns", []), int(result.get("row_count", 0)))
-        if recorded is None or recorded == signature:
-            outcomes.append((example_id, "ok", signature, None))
-        else:
-            detail = f"Result shape changed. Was {recorded}; now {signature}."
-            outcomes.append((example_id, "changed", recorded, detail[:_CHECK_DETAIL_MAX_CHARS]))
-    checked_at = datetime.now(timezone.utc)
-    async with get_history_connection() as conn:
-        for example_id, state, signature, detail in outcomes:
-            counts[state] += 1
-            await conn.execute(
-                "UPDATE session_state.kb_examples SET check_state = %s, result_signature = %s, check_detail = %s, "
-                "checked_at = %s WHERE tenant_id = %s AND workspace_id = %s AND example_id = %s",
-                (state, signature, detail, checked_at, tenant_id, workspace_id, example_id))
-    return {"ok": True, "checked": len(outcomes), "counts": counts, "checked_at": checked_at.isoformat()}
-
-
 async def _examples(tenant_id, principal_id, workspace_id=None, **_):
-    """The workspace's approved examples with their check state, worst first."""
+    """The workspace's approved examples."""
     async with get_history_connection() as conn:
         if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
             return _fail("not_found", "No such workspace.")
         rows = await (await conn.execute(
-            "SELECT example_id, question, sql_text, source, check_state, checked_at, check_detail "
-            "FROM session_state.kb_examples WHERE tenant_id = %s AND workspace_id = %s AND approved",
+            "SELECT example_id, question, sql_text, source FROM session_state.kb_examples "
+            "WHERE tenant_id = %s AND workspace_id = %s AND approved ORDER BY lower(question)",
             (tenant_id, workspace_id))).fetchall()
-    def severity(row: tuple) -> tuple[int, str]:
-        _id, question, _sql, _source, state, *_rest = row
-        return _CHECK_SEVERITY.get(state, len(_CHECK_SEVERITY)), question.lower()
-
-    rows = sorted(rows, key=severity)
-    return {"ok": True, "examples": [
-        {"example_id": i, "question": q, "sql_text": s, "source": src, "check_state": st,
-         "checked_at": at.isoformat() if at else None, "check_detail": d}
-        for i, q, s, src, st, at, d in rows]}
-
-
-async def _start_run(tenant_id, principal_id, workspace_id=None, graded_by=None, questions=None, **_):
-    if graded_by not in ("reference", "owner"):
-        return _fail("invalid", "graded_by must be reference or owner.")
-    if not isinstance(questions, list) or not questions or len(questions) > int(cfg.workspaces.setup_questions):
-        return _fail("invalid", f"questions must list 1 to {cfg.workspaces.setup_questions} questions.")
-    cleaned: list[tuple[str, str | None]] = []
-    for q in questions:
-        text = clean_text(q.get("question") if isinstance(q, dict) else None, int(cfg.workspaces.question_max_chars))
-        reference = q.get("reference_sql") if isinstance(q, dict) else None
-        if text is None or (reference is not None and (not isinstance(reference, str) or _check_layer1(reference))):
-            return _fail("invalid", "Every setup question needs text, and any reference SQL must pass the SQL gate.")
-        if (graded_by == "reference") != (reference is not None):
-            return _fail("invalid", "Reference-graded runs need reference SQL for every question; owner-graded runs none.")
-        cleaned.append((text, reference))
-    run_id = str(uuid.uuid4())
-    async with get_history_connection() as conn:
-        if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
-            return _fail("not_found", "No such workspace.")
-        await conn.execute(
-            "INSERT INTO session_state.setup_runs (run_id, workspace_id, tenant_id, graded_by, total) VALUES (%s, %s, %s, %s, %s)",
-            (run_id, workspace_id, tenant_id, graded_by, len(cleaned)))
-        for position, (text, reference) in enumerate(cleaned, start=1):
-            await conn.execute(
-                "INSERT INTO session_state.setup_results (run_id, tenant_id, position, question, reference_sql) "
-                "VALUES (%s, %s, %s, %s, %s)", (run_id, tenant_id, position, text, reference))
-    return await _get_run(tenant_id, principal_id, workspace_id=workspace_id, run_id=run_id)
-
-
-async def _owned_run(conn, tenant_id, principal_id, run_id, workspace_id=None):
-    """(run_id, workspace_id) if the run is this owner's (and in workspace_id, when given)."""
-    if not isinstance(run_id, str) or not run_id:
-        return None
-    row = await (await conn.execute(
-        """
-        SELECT r.run_id, r.workspace_id FROM session_state.setup_runs r
-        JOIN session_state.workspaces w ON w.workspace_id = r.workspace_id
-        WHERE r.tenant_id = %s AND w.owner_principal_id = %s AND r.run_id = %s
-        """, (tenant_id, principal_id, run_id))).fetchone()
-    if row is None or (workspace_id is not None and row[1] != workspace_id):
-        return None
-    return row
-
-
-async def _record_result(tenant_id, principal_id, run_id=None, position=None, verdict=None,
-                         answer_text=None, answer_sql=None, detail=None, workspace_id=None, **_):
-    if verdict not in _VERDICTS:
-        return _fail("invalid", f"verdict must be one of {sorted(_VERDICTS)}.")
-    async with get_history_connection() as conn:
-        if await _owned_run(conn, tenant_id, principal_id, run_id, workspace_id) is None:
-            return _fail("not_found", "No such setup run.")
-        row = await (await conn.execute(
-            """
-            UPDATE session_state.setup_results SET verdict = %s,
-                answer_text = COALESCE(%s, answer_text), answer_sql = COALESCE(%s, answer_sql),
-                detail = COALESCE(%s, detail)
-            WHERE run_id = %s AND position = %s RETURNING position
-            """, (verdict, answer_text, answer_sql, detail, run_id, position))).fetchone()
-    return {"ok": True} if row else _fail("not_found", "No such question in that run.")
-
-
-async def _finish_run(tenant_id, principal_id, run_id=None, failed=False, workspace_id=None, **_):
-    """Score the run, and on success make every right answer an approved example."""
-    async with get_history_connection() as conn:
-        owned = await _owned_run(conn, tenant_id, principal_id, run_id, workspace_id)
-        if owned is None:
-            return _fail("not_found", "No such setup run.")
-        workspace_id = owned[1]
-        results = await (await conn.execute(
-            "SELECT question, answer_sql, verdict FROM session_state.setup_results WHERE run_id = %s", (run_id,))).fetchall()
-        score = sum(1 for _q, _s, v in results if v == "right")
-        await conn.execute(
-            "UPDATE session_state.setup_runs SET state = %s, score = %s, finished_at = now() WHERE run_id = %s",
-            ("failed" if failed else "done", score, run_id))
-        if not failed:   # a run that stopped early does not stand for the workspace
-            await conn.execute(
-                "UPDATE session_state.workspaces SET setup_score = %s, setup_total = %s, setup_state = 'tested', "
-                "updated_at = now() WHERE workspace_id = %s", (score, len(results), workspace_id))
-        # An answer the owner has since marked wrong stops being an example.
-        for question, _sql, verdict in results:
-            if verdict == "wrong":
-                await conn.execute(
-                    "DELETE FROM session_state.kb_examples WHERE workspace_id = %s AND question_norm = %s "
-                    "AND source = 'setup_test'", (workspace_id, normalize_question(question)))
-    for question, sql, verdict in results:
-        if verdict == "right" and sql and not _check_layer1(sql):
-            await _add_example(tenant_id, principal_id, workspace_id=workspace_id, question=question, sql=sql,
-                               source="setup_test")
-    return await _get_run(tenant_id, principal_id, workspace_id=workspace_id, run_id=run_id)
-
-
-async def _get_run(tenant_id, principal_id, workspace_id=None, run_id=None, **_):
-    """A run with its results: the given one, or the workspace's latest."""
-    async with get_history_connection() as conn:
-        if run_id is None:
-            if await _owned(conn, tenant_id, principal_id, workspace_id) is None:
-                return _fail("not_found", "No such workspace.")
-            latest = await (await conn.execute(
-                "SELECT run_id FROM session_state.setup_runs WHERE workspace_id = %s ORDER BY started_at DESC LIMIT 1",
-                (workspace_id,))).fetchone()
-            if latest is None:
-                return {"ok": True, "run": None}
-            run_id = latest[0]
-        elif await _owned_run(conn, tenant_id, principal_id, run_id, workspace_id) is None:
-            return _fail("not_found", "No such setup run.")
-        run = await (await conn.execute(
-            "SELECT run_id, workspace_id, state, graded_by, score, total, started_at, finished_at "
-            "FROM session_state.setup_runs WHERE run_id = %s", (run_id,))).fetchone()
-        results = await (await conn.execute(
-            "SELECT position, question, reference_sql IS NOT NULL, answer_text, answer_sql, verdict, detail "
-            "FROM session_state.setup_results WHERE run_id = %s ORDER BY position", (run_id,))).fetchall()
-    rid, wid, state, graded, score, total, started, finished = run
-    return {"ok": True, "run": {
-        "run_id": rid, "workspace_id": wid, "state": state, "graded_by": graded, "score": score, "total": total,
-        "started_at": started.isoformat(), "finished_at": finished.isoformat() if finished else None,
-        "results": [{"position": p, "question": q, "has_reference": ref, "answer_text": at, "answer_sql": s,
-                     "verdict": v, "detail": d} for p, q, ref, at, s, v, d in results],
-    }}
-
-
-async def _set_verdict(tenant_id, principal_id, run_id=None, position=None, verdict=None, workspace_id=None, **_):
-    """The owner marks an answer right or wrong (runs graded by the owner), and the score follows."""
-    if verdict not in ("right", "wrong"):
-        return _fail("invalid", "verdict must be right or wrong.")
-    async with get_history_connection() as conn:
-        owned = await _owned_run(conn, tenant_id, principal_id, run_id, workspace_id)
-        if owned is None:
-            return _fail("not_found", "No such setup run.")
-        graded = (await (await conn.execute(
-            "SELECT graded_by FROM session_state.setup_runs WHERE run_id = %s", (run_id,))).fetchone())[0]
-        if graded != "owner":
-            return _fail("invalid", "This run is graded against reference answers, not by hand.")
-    result = await _record_result(tenant_id, principal_id, run_id=run_id, position=position, verdict=verdict)
-    if not result.get("ok"):
-        return result
-    return await _finish_run(tenant_id, principal_id, run_id=run_id)
+    return {"ok": True, "examples": [{"example_id": i, "question": q, "sql_text": s, "source": src}
+                                     for i, q, s, src in rows]}
 
 
 _HANDLERS = {
     "list": _list, "create": _create, "get": _get, "update": _update, "delete": _delete, "scan": _scan,
     "catalog": _catalog, "save_descriptions": _save_descriptions, "definitions": _definitions,
     "save_definitions": _save_definitions, "delete_definition": _delete_definition, "approve": _approve,
-    "add_example": _add_example, "remove_example": _remove_example, "context": _context, "templates": _templates,
-    "check_examples": _check_examples, "examples": _examples,
-    "start_run": _start_run, "record_result": _record_result,
-    "finish_run": _finish_run, "get_run": _get_run, "set_verdict": _set_verdict,
+    "add_example": _add_example, "remove_example": _remove_example, "context": _context, "examples": _examples,
 }
 
 
@@ -890,6 +610,6 @@ async def manage(action: str, principal_id: str, **params: Any) -> dict[str, Any
         return _fail("invalid", "principal_id is required.")
     if action not in _ACTIONS:
         return _fail("invalid", f"Unknown action {action!r}. Valid: {sorted(_ACTIONS)}.")
-    if action not in _NO_WORKSPACE and "run_id" not in params and not params.get("workspace_id"):
+    if action not in _NO_WORKSPACE and not params.get("workspace_id"):
         return _fail("invalid", f"workspace_id is required for {action!r}.")
     return await _HANDLERS[action](tenant_id, principal_id, **params)

@@ -26,7 +26,7 @@ const seedOne = (api: MockApi) => void api.connections.add('Shop replica')
 test.describe('the library tabs', () => {
   test('open on Documents; Databases is a second tab and hides the folder button', async ({ page }) => {
     await openApp(page, { hash: '#/library' })
-    const tabs = page.getByRole('tablist', { name: 'Library sections' })
+    const tabs = page.getByRole('tablist', { name: 'Data source sections' })
     await expect(tabs.getByRole('tab', { name: 'Documents' })).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByRole('heading', { name: 'No folders yet' })).toBeVisible()
     await tabs.getByRole('tab', { name: 'Databases' }).click()
@@ -346,6 +346,7 @@ test.describe('using a connected database in a workspace', () => {
   test('the New workspace dialog lists your databases with a schema, and the workspace is created on its id', async ({ page }) => {
     const api = await openApp(page, {
       hash: '#/workspaces',
+      noWorkspace: true,
       seed: (a) => {
         a.connections.add('Shop replica')
         a.connections.add('Half set up', { dbname: 'warehouse', schema: null })
@@ -355,33 +356,22 @@ test.describe('using a connected database in a workspace', () => {
     await page.getByRole('button', { name: 'New workspace' }).click()
     const dialog = page.getByRole('dialog', { name: 'New workspace' })
     await dialog.getByLabel('Name').fill('Shop analytics')
-    await dialog.getByRole('combobox', { name: 'Dataset' }).click()
+    await dialog.getByRole('combobox', { name: 'Database' }).click()
 
-    // The existing options are still there, then the new group.
-    await expect(page.getByRole('option', { name: 'olist', exact: true })).toBeVisible()
-    await expect(page.getByRole('option', { name: 'public', exact: true })).toBeVisible()
-    const group = page.getByRole('group', { name: 'Your databases' })
-    await expect(group.getByRole('option')).toHaveText(['Shop replica'])
+    // Only connected databases with a schema are offered.
+    await expect(page.getByRole('option')).toHaveText(['Shop replica'])
     await expect(page.getByRole('option', { name: 'Half set up' })).toHaveCount(0)
 
-    await group.getByRole('option', { name: 'Shop replica' }).click()
-    await expect(dialog.getByRole('combobox', { name: 'Dataset' })).toHaveText('Shop replica')
+    await page.getByRole('option', { name: 'Shop replica' }).click()
+    await expect(dialog.getByRole('combobox', { name: 'Database' })).toHaveText('Shop replica')
     await dialog.getByRole('button', { name: 'Create' }).click()
     await expect(page.getByRole('heading', { name: 'Shop analytics', exact: true })).toBeVisible()
     expect(api.workspaces.workspaces.get('ws-1')?.target_schema).toBe(id)
 
     // The connection now says it is in use.
-    await page.getByRole('button', { name: 'Library', exact: true }).click()
+    await page.getByRole('button', { name: 'Data sources', exact: true }).click()
     await page.getByRole('tab', { name: 'Databases' }).click()
     await expect(page.getByTestId('connection-item').first()).toContainText('Used by 1 workspace')
-  })
-
-  test('without connections the Dataset select is unchanged', async ({ page }) => {
-    await openApp(page, { hash: '#/workspaces' })
-    await page.getByRole('button', { name: 'New workspace' }).click()
-    await page.getByRole('dialog', { name: 'New workspace' }).getByRole('combobox', { name: 'Dataset' }).click()
-    await expect(page.getByRole('option')).toHaveText(['olist', 'public'])
-    await expect(page.getByRole('group', { name: 'Your databases' })).toHaveCount(0)
   })
 
   test('a workspace card shows the connection name, never its id', async ({ page }) => {

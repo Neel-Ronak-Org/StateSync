@@ -1,18 +1,17 @@
 /**
- * A7: the chart spec allowlist, validator 2 of 2.
+ * The chart allowlist ("A7", the name of the answer's output contract), check 2 of 2.
  *
- * The orchestrator validates every chart spec before it leaves the server
- * (validator 1). This one runs again in the browser, independently, before
+ * The orchestrator checks every chart spec before it leaves the server
+ * (orchestrator/schemas/synthesizer_output.py, check 1). This one runs again in the browser, independently, before
  * anything reaches Vega, so either validator alone blocks a hostile spec.
  * There is no repair path: a spec that fails is withheld, and the prose answer
  * stays.
  *
- * Ported rule-for-rule from the previous frontend (frontend/app.js,
- * validateA7Chart). What it blocks and why:
+ * What it blocks and why:
  * - any property outside the allowlist, at the top level or in an encoding
  *   channel (object-form marks are where mark properties smuggle expressions);
  * - data other than inline `values` (no url, name or format: no network fetch);
- * - expression-bearing keys anywhere in transforms (BD7): Vega expressions
+ * - expression-bearing keys anywhere in transforms: Vega expressions
  *   are code, and even the CSP-safe interpreter should not be handed them;
  * - out-of-range sizes and oversized data.
  */
@@ -51,9 +50,9 @@ function auditExpressions(node: unknown, path: string, out: string[]): void {
   } else if (isPlainObject(node)) {
     for (const [k, v] of Object.entries(node)) {
       if (includes(A7.EXPRESSION_KEYS, k)) {
-        out.push(`${path}/${k}: expression-bearing property is not permitted (BD7)`)
+        out.push(`${path}/${k}: expression-bearing property is not permitted`)
       } else if (includes(A7.DUAL_FORM_EXPRESSION_KEYS, k) && typeof v === 'string') {
-        out.push(`${path}/${k}: string form is an expression; use the predicate-object form instead (BD7)`)
+        out.push(`${path}/${k}: string form is an expression; use the predicate-object form instead`)
       }
       auditExpressions(v, `${path}/${k}`, out)
     }
@@ -145,4 +144,30 @@ export function validateA7Chart(chart: unknown): string[] {
   }
 
   return errs
+}
+
+
+// A year field ("year", "fiscal_year", "period_end_year") on a number axis: the theme's compact "~s" format
+// turns 2023 into "2.023k", so such an axis gets a plain integer format instead.
+const YEAR_FIELD = /(^|_)(year|yr|fy)(_|$)/i
+
+/** A copy of the spec whose x/y encodings on year fields use a plain integer axis format (unless one is set).
+ * Applied after validateA7Chart (which refuses axis properties from a spec): the format is a fixed value of ours. */
+export function withYearAxes(spec: Record<string, unknown>): Record<string, unknown> {
+  const encoding = spec.encoding
+  if (!encoding || typeof encoding !== 'object') return spec
+  const enc = encoding as Record<string, unknown>
+  let changed = false
+  const next: Record<string, unknown> = { ...enc }
+  for (const channel of ['x', 'y']) {
+    const ch = enc[channel]
+    if (!ch || typeof ch !== 'object') continue
+    const c = ch as Record<string, unknown>
+    if (c.type !== 'quantitative' || typeof c.field !== 'string' || !YEAR_FIELD.test(c.field)) continue
+    const axis = c.axis && typeof c.axis === 'object' ? (c.axis as Record<string, unknown>) : {}
+    if ('format' in axis || c.axis === null) continue
+    next[channel] = { ...c, axis: { ...axis, format: 'd' } }
+    changed = true
+  }
+  return changed ? { ...spec, encoding: next } : spec
 }

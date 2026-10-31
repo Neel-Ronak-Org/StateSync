@@ -1,7 +1,6 @@
 """
 orchestrator/library_api.py
-FastAPI routes for the account document library (docs/V3_PLAN.md Phase 3c
-slice 5, decision D-v3-17): folders of uploaded documents, the upload itself,
+FastAPI routes for the account document library: folders of uploaded documents, the upload itself,
 and which folders a workspace searches.
 
 WHY THIS EXISTS. Ownership, quotas and storage are enforced in the MCP's
@@ -41,7 +40,7 @@ from pydantic import BaseModel, ConfigDict
 from auth import Principal
 from config_loader import cfg
 from datasets import is_connection_dataset  # noqa: F401 - re-exported for main.py
-from library_ingest import LAYOUT_CHUNKER, IngestTasks, ingest, safe_filename, title_from_filename
+from library_ingest import IngestTasks, ingest, safe_filename, title_from_filename
 from mcp_client import MCPSession, library_manage
 from tile_render import error_status
 
@@ -197,13 +196,8 @@ def register_library_routes(app: Any, require_principal: Any, audit: Any) -> Non
 
         try:
             async with httpx.AsyncClient(timeout=float(cfg.library.parser_request_timeout_s)) as client:
-                # The PDF layout pass is asked for only when the layout chunker will use it: it is
-                # the expensive part of parsing, and the paragraph chunker reads pages alone.
-                headers = {"Content-Type": content_type}
-                if cfg.library.chunker == LAYOUT_CHUNKER:
-                    headers["X-Layout"] = "1"
                 parsed = await client.post(os.environ.get("PARSER_URL", "http://parser:8095").rstrip("/") + "/parse",
-                                           content=data, headers=headers)
+                                           content=data, headers={"Content-Type": content_type})
         except httpx.HTTPError as exc:
             logger.error("Parser request failed: %s", exc)
             await _audit_error(principal, request, route_path, f"library:upload folder={folder_id} parser_unreachable")
@@ -221,7 +215,6 @@ def register_library_routes(app: Any, require_principal: Any, audit: Any) -> Non
             raise HTTPException(status_code=HTTP_UNPROCESSABLE,
                                 detail=payload.get("message") or "The file could not be read.")
         pages = payload.get("pages") or []
-        blocks = payload.get("blocks") or []
         title = title_from_filename(filename)
 
         result = await _execute(principal, request, "start_document", route_path, folder_id=folder_id,
@@ -234,7 +227,7 @@ def register_library_routes(app: Any, require_principal: Any, audit: Any) -> Non
                 async def call(action: str, **params: Any) -> dict[str, Any]:
                     return await library_manage(session, principal_id=principal.principal_id, action=action,
                                                 **params)
-                await ingest(call, document["document_id"], pages, blocks, title)
+                await ingest(call, document["document_id"], pages)
 
         tasks.start(job())
         return {"document": document}

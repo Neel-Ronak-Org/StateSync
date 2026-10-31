@@ -1,0 +1,223 @@
+{
+ "what": "Blind check by a second model (not a human check). Sheets: routing_set_r2_model_check.md, page_set_r1_model_check.md; one pass each, answers pasted by the owner on 2026-10-10.",
+ "model": "GPT-6.1 Sol, setting Max (as shown in the owner's chat interface, 2026-10-10)",
+ "routing": {
+  "n": 40,
+  "agree": 37,
+  "kappa": 0.904,
+  "disagreements": [
+   "C07",
+   "C19",
+   "C20"
+  ],
+  "note": "All three disagreements are 'neither' items about companies in neither source (Starbucks, McDonald's, Target), labelled 'either'; the sheet does not list which companies the sources hold.",
+  "items": {
+   "C01": {
+    "model": "neither",
+    "construction": "neither",
+    "id": "r2n025"
+   },
+   "C02": {
+    "model": "neither",
+    "construction": "neither",
+    "id": "r2n022"
+   },
+   "C03": {
+    "model": "either",
+    "construction": "either",
+    "id": "r2e006"
+   },
+   "C04": {
+    "model": "either",
+    "construction": "either",
+    "id": "r2e029"
+   },
+   "C05": {
+    "model": "sql",
+    "construction": "sql",
+    "id": "r2s019"
+   },
+   "C06": {
+    "model": "docs",
+    "construction": "docs",
+    "id": "r2d038"
+   },
+   "C07": {
+    "model": "either",
+    "construction": "neither",
+    "id": "r2n009"
+   },
+   "C08": {
+    "model": "docs",
+    "construction": "docs",
+    "id": "r2d003"
+   },
+   "C09": {
+    "model": "hybrid",
+    "construction": "hybrid",
+    "id": "r2h004"
+   },
+   "C10": {
+    "model": "sql",
+    "construction": "sql",
+    "id": "r2s017"
+   },
+   "C11": {
+    "model": "docs",
+    "construction": "docs",
+    "id": "r2d028"
+   },
+   "C12": {
+    "model": "docs",
+    "construction": "docs",
+    "id": "r2d023"
+   },
+   "C13": {
+    "model": "hybrid",
+    "construction": "hybrid",
+    "id": "r2h006"
+   },
+   "C14": {
+    "model": "docs",
+    "construction": "docs",
+    "id": "r2d015"
+   },
+   "C15": {
+    "model": "sql",
+    "construction": "sql",
+    "id": "r2s010"
+   },
+   "C16": {
+    "model": "docs",
+    "construction": "docs",
+    "id": "r2d104"
+   },
+   "C17": {
+    "model": "hybrid",
+    "construction": "hybrid",
+    "id": "r2h030"
+   },
+   "C18": {
+    "model": "either",
+    "construction": "either",
+    "id": "r2e013"
+   },
+   "C19": {
+    "model": "either",
+    "construction": "neither",
+    "id": "r2n003"
+   },
+   "C20": {
+    "model": "either",
+    "construction": "neither",
+    "id": "r2n002"
+   },
+   "C21": {
+    "model": "hybrid",
+    "construction": "hybrid",
+    "id": "r2h026"
+   },
+   "C22": {
+    "model": "docs",
+    "construction": "docs",
+    "id": "r2d046"
+   },
+   "C23": {
+    "model": "docs",
+    "construction": "docs",
+    "id": "r2d100"
+   },
+   "C24": {
+    "model": "hybrid",
+    "construction": "hybrid",
+    "id": "r2h012"
+   },
+   "C25": {
+    "model": "hybrid",
+    "construction": "hybrid",
+    "id": "r2h010"
+   },
+   "C26": {
+    "model": "docs",
+    "construction": "docs",
+    "id": "r2d096"
+   },
+   "C27": {
+    "model": "either",
+    "construction": "either",
+    "id": "r2e001"
+   },
+   "C28": {
+    "model": "sql",
+    "construction": "sql",
+    "id": "r2s020"
+   },
+   "C29": {
+    "model": "docs",
+    "construction": "docs",
+    "id": "r2d047"
+   },
+   "C30": {
+    "model": "either",
+    "construction": "either",
+    "id": "r2e021"
+   },
+   "C31": {
+    "model": "either",
+    "construction": "either",
+    "id": "r2e025"
+   },
+   "C32": {
+    "model": "docs",
+    "construction": "docs",
+    "id": "r2d043"
+   },
+   "C33": {
+    "model": "neither",
+    "construction": "neither",
+    "id": "r2n029"
+   },
+   "C34": {
+    "model": "docs",
+    "construction": "docs",
+    "id": "r2d034"
+   },
+   "C35": {
+    "model": "sql",
+    "construction": "sql",
+    "id": "r2s011"
+   },
+   "C36": {
+    "model": "hybrid",
+    "construction": "hybrid",
+    "id": "r2h007"
+   },
+   "C37": {
+    "model": "docs",
+    "construction": "docs",
+    "id": "r2d051"
+   },
+   "C38": {
+    "model": "either",
+    "construction": "either",
+    "id": "r2e015"
+   },
+   "C39": {
+    "model": "sql",
+    "construction": "sql",
+    "id": "r2s015"
+   },
+   "C40": {
+    "model": "sql",
+    "construction": "sql",
+    "id": "r2s026"
+   }
+  }
+ },
+ "pages": {
+  "n": 30,
+  "answers_yes": 30,
+  "specific_yes": 30,
+  "note": "All 30 sampled items were kept items (already confirmed by the builder's checker), so this measures agreement on accepted questions only."
+ }
+}

@@ -120,20 +120,6 @@ def test_examples_must_pass_the_sql_gate():
                    source="model")["error"] == "invalid"
 
 
-def test_setup_runs_are_validated_before_anything_is_written():
-    ok_q = {"question": "How many orders?", "reference_sql": "SELECT count(*) FROM olist.orders"}
-    assert _manage("start_run", principal_id="p", workspace_id="w", graded_by="model", questions=[ok_q])["error"] == "invalid"
-    assert _manage("start_run", principal_id="p", workspace_id="w", graded_by="reference", questions=[])["error"] == "invalid"
-    too_many = [ok_q] * (int(wt.cfg.workspaces.setup_questions) + 1)
-    assert _manage("start_run", principal_id="p", workspace_id="w", graded_by="reference", questions=too_many)["error"] == "invalid"
-    unsafe = {"question": "q", "reference_sql": "DROP TABLE olist.orders"}
-    assert _manage("start_run", principal_id="p", workspace_id="w", graded_by="reference", questions=[unsafe])["error"] == "invalid"
-    # Reference-graded needs reference SQL; owner-graded must not carry any.
-    assert _manage("start_run", principal_id="p", workspace_id="w", graded_by="reference",
-                   questions=[{"question": "q"}])["error"] == "invalid"
-    assert _manage("start_run", principal_id="p", workspace_id="w", graded_by="owner", questions=[ok_q])["error"] == "invalid"
-
-
 def test_verdicts_are_restricted():
     assert _manage("record_result", principal_id="p", run_id="r", position=1, verdict="maybe")["error"] == "invalid"
     assert _manage("set_verdict", principal_id="p", run_id="r", position=1, verdict="pending")["error"] == "invalid"
@@ -153,14 +139,3 @@ def test_example_checks_need_a_workspace():
     assert _manage("examples", principal_id="p")["error"] == "invalid"
 
 
-def test_document_definitions_need_a_well_formed_citation():
-    ok = {"document_id": "up_1", "chunk_id": "up_1_c00000", "page": 2, "title": "Ops", "quote": "X means Y."}
-    assert wt.clean_citation(ok) == ok
-    assert wt.clean_citation({**ok, "page": None})["page"] is None
-    assert wt.clean_citation({**ok, "quote": "  "}) is None
-    assert wt.clean_citation({**ok, "chunk_id": None}) is None
-    assert wt.clean_citation({**ok, "page": -1}) is None
-    assert wt.clean_citation({**ok, "page": True}) is None
-    assert wt.clean_citation("up_1") is None
-    long_quote = wt.clean_citation({**ok, "quote": "q" * 5000})["quote"]
-    assert len(long_quote) == int(wt.cfg.workspaces.mine_quote_max_chars)

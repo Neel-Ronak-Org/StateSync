@@ -32,8 +32,7 @@ def _exc(class_name: str, base: type = Exception) -> Exception:
 
 @pytest.mark.parametrize("class_name, status, phrase", [
     ("RateLimitError", 503, "rate-limited"),
-    ("GroqConfigError", 503, "not configured correctly"),
-    ("AzureConfigError", 503, "not configured correctly"),
+    ("OpenAICompatConfigError", 503, "not configured correctly"),
     ("HTTPStatusError", 503, "unavailable right now"),
     ("APIConnectionError", 503, "unavailable right now"),
     ("KeyError", 500, "Something went wrong"),
@@ -51,7 +50,7 @@ def test_subclasses_are_recognised_through_the_mro():
     assert user_facing_failure(timeout, "q")[0] == 503
 
 
-@pytest.mark.parametrize("class_name", ["HTTPStatusError", "RuntimeError", "GroqConfigError"])
+@pytest.mark.parametrize("class_name", ["HTTPStatusError", "RuntimeError", "OpenAICompatConfigError"])
 def test_internal_detail_never_reaches_the_user(class_name):
     _, message = user_facing_failure(_exc(class_name), "q")
 

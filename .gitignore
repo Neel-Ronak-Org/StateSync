@@ -53,3 +53,4 @@ data/external/
 
 # The re-ranker run natively on the Mac GPU (scripts/run_reranker_host.sh)
 .venv-reranker/
+backups/

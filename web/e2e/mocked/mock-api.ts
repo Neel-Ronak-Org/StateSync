@@ -56,6 +56,7 @@ interface StoredTurn {
   sql_rows_preview: Row[] | null
   sql_rows_count: number | null
   target_schema: string | null
+  detail?: Json | null
 }
 
 export interface Tile {
@@ -90,34 +91,6 @@ export interface Dashboard {
   tile_count: number
   created_at: string
   updated_at: string
-}
-
-export type BuildItemState = 'queued' | 'running' | 'added' | 'skipped'
-
-export interface BuildItem {
-  title: string
-  question: string
-  viz: VizKindName | null
-  state: BuildItemState
-  reason: string | null
-  tile_id: string | null
-}
-
-export interface BuildJob {
-  job_id: string
-  dashboard_id: string
-  state: 'planning' | 'running' | 'done' | 'failed'
-  goal: string | null
-  items: BuildItem[]
-  error: string | null
-  started_at: string
-  finished_at: string | null
-}
-
-export interface BuildPlanItem {
-  title: string
-  question: string
-  viz: VizKindName | null
 }
 
 interface Canned {
@@ -233,7 +206,6 @@ export class MockApi {
   readonly sessions = new Map<string, StoredTurn[]>()
   readonly tiles = new Map<string, Tile>()
   readonly dashboards = new Map<string, Dashboard>()
-  readonly jobs = new Map<string, BuildJob>()
   /** Workspaces (Phase 3): mock-workspaces.ts. */
   readonly workspaces = new WorkspaceMock()
   /** The document library (Phase 3c slice 5): mock-library.ts. */
@@ -247,36 +219,25 @@ export class MockApi {
   readonly authCalls: string[] = []
   storedRowsLimit: number | null = null
   nextChart: Record<string, unknown> | null = null
-  /** 'short' mimics pipeline.synth_style=short: /query returns no chart and says so in state_trace. */
-  nextSynthStyle: 'full' | 'short' = 'full'
   /** Caveats the next /query reports in state_trace (pipeline.answer_checks); cleared after use. */
   nextCaveats: string[] = []
   /** The figure tracing the next /query reports (pipeline.number_grounding); cleared after use. */
   nextGrounding: Json | null = null
   /** When set, the next /query reports this evidence tier instead of the default (verified or unchecked). */
-  nextEvidence: 'verified' | 'compiled' | 'checked' | 'unchecked' | null = null
+  nextEvidence: 'verified' | 'unchecked' | null = null
   /** When set, the next /query answer text is this instead of the canned one. */
   nextAnswer: string | null = null
-  liveSchemas: string[] = []
+  /** Fields merged over the next /query's state_trace (route, front_door, calls, subtasks…); cleared after use. */
+  nextTrace: Json | null = null
   readonly tileCalls: string[] = []
-  readonly buildCalls: string[] = []
-  buildPlan: BuildPlanItem[] = [
-    { title: 'Total orders', question: 'How many orders are there in total?', viz: 'kpi' },
-    { title: 'Orders by status', question: 'Show orders by status as a chart', viz: 'bar' },
-    { title: 'SLA policy LP003', question: 'What does the SLA policy say for LP003?', viz: 'table' },
-  ]
   private clock = Date.parse('2026-09-27T10:00:00Z')
   private tileSeq = 0
   private dashSeq = 0
-  private jobSeq = 0
 
-  constructor(options: { buildPlan?: BuildPlanItem[] } = {}) {
+  constructor() {
     this.connections.workspaceIdsFor = (id) =>
       [...this.workspaces.workspaces.values()].filter((w) => w.target_schema === id).map((w) => w.workspace_id)
     this.workspaces.extraDataset = (schema) => this.connections.hasDataset(schema)
-    if (options.buildPlan) {
-      this.buildPlan = options.buildPlan
-    }
     const at = new Date(this.clock - 3_600_000).toISOString()
     this.sessions.set('seed-session-1', [
       {
@@ -422,9 +383,6 @@ export class MockApi {
         llm_provider: 'groq',
         llm_ready: true,
         llm_detail: null,
-        default_schema: 'public',
-        available_schemas: ['olist', 'public'],
-        live_schemas: this.liveSchemas,
       })
     }
 
@@ -557,7 +515,6 @@ export class MockApi {
       canned.chart = this.nextChart
       this.nextChart = null
     }
-    if (this.nextSynthStyle === 'short') canned.chart = null
     const caveats = this.nextCaveats
     this.nextCaveats = []
     const grounding = this.nextGrounding
@@ -565,26 +522,12 @@ export class MockApi {
     // The default tier: an approved example ran as is, else new SQL nobody checked; no SQL, no tier.
     const evidence = this.nextEvidence ?? (canned.sql ? (verifiedExample ? 'verified' : 'unchecked') : null)
     this.nextEvidence = null
+    const traceOverride = (this.nextTrace ?? {}) as Record<string, unknown>
+    this.nextTrace = null
     const turnIndex = turns.length + 1
     const at = this.now()
-    turns.push({
-      turn_index: turnIndex,
-      raw_query: question,
-      rewritten_query: question,
-      rewrite_applied: false,
-      context_guessed: false,
-      route: canned.route,
-      executed_sql: canned.sql,
-      answer_text: canned.answer,
-      computed_at: at,
-      chart: canned.chart,
-      sql_columns: canned.columns.length ? canned.columns : null,
-      sql_rows_preview: canned.rows.slice(0, 100),
-      sql_rows_count: canned.rows.length,
-      target_schema: schema,
-    })
     this.sessions.set(sessionId, turns)
-    return this.json(route, 200, {
+    const response = {
       query_id: `q-${this.queries.length}`,
       answer_text: canned.answer,
       chart: canned.chart,
@@ -603,7 +546,6 @@ export class MockApi {
         sql_rows_count: canned.rows.length,
         sql_rows: canned.rows,
         sql_columns: canned.columns,
-        synth_style: this.nextSynthStyle,
         ...(caveats.length > 0 ? { caveats } : {}),
         ...(grounding ? { number_grounding: grounding } : {}),
         attempt: 1,
@@ -625,8 +567,27 @@ export class MockApi {
           { role: 'sql', model: 'openai/gpt-oss-120b', tokens_in: 1290, tokens_out: 71, cached_tokens: 0, retries: 1, waited_ms: 2000, ms: 3410, rate_remaining_tokens: 3500 },
           { role: 'synthesizer', model: 'openai/gpt-oss-120b', tokens_in: 703, tokens_out: 71, cached_tokens: 0, retries: 0, waited_ms: 0, ms: 840, rate_remaining_tokens: 2700 },
         ],
+        ...traceOverride,
       },
+    }
+    turns.push({
+      turn_index: turnIndex,
+      raw_query: question,
+      rewritten_query: question,
+      rewrite_applied: false,
+      context_guessed: false,
+      route: canned.route,
+      executed_sql: canned.sql,
+      answer_text: canned.answer,
+      computed_at: at,
+      chart: canned.chart,
+      sql_columns: canned.columns.length ? canned.columns : null,
+      sql_rows_preview: canned.rows.slice(0, 100),
+      sql_rows_count: canned.rows.length,
+      target_schema: schema,
+      detail: { state_trace: { ...response.state_trace, sql_rows: [] }, citations: response.citations, latency_ms: response.latency_ms },
     })
+    return this.json(route, 200, response)
   }
 
   private makeTile(
@@ -668,101 +629,10 @@ export class MockApi {
     }
   }
 
-  private makeTileFromBuild(dashboardId: string, item: BuildItem, canned: Canned): Tile {
-    const at = this.now()
-    this.tileSeq += 1
-    const targetDash = this.dashboards.get(dashboardId)
-    const schema = targetDash?.target_schema ?? 'public'
-    const rows = canned.rows
-    const chart = canned.chart ? { ...canned.chart, data: { values: rows } } : null
-    return {
-      tile_id: `tile-${this.tileSeq}`,
-      dashboard_id: dashboardId,
-      target_schema: schema,
-      viz: item.viz ?? null,
-      layout: { x: 0, y: 0, w: 6, h: 4 },
-      title: item.title,
-      state: 'ok',
-      version: 1,
-      refresh_interval_s: 3600,
-      created_at: at,
-      updated_at: at,
-      sql: canned.sql ?? '',
-      chart,
-      columns: canned.columns,
-      schemas: [schema],
-      source: { session_id: 'build', turn_index: 1 },
-      result: { rows, row_count: rows.length, truncated: false, computed_at: at, version: 1 },
-      stale: false,
-      last_error: null,
-      error_at: null,
-      versions: [{ version: 1, created_at: at, source: { session_id: 'build', turn_index: 1 } }],
-    }
-  }
-
   private dashboardsRoute(route: Route, method: string, path: string, url: URL, body: Record<string, unknown>) {
     this.tileCalls.push(`${method} ${path}`)
 
-    let m = path.match(/^\/dashboards\/([^/]+)\/build$/)
-    if (m) {
-      this.buildCalls.push(`${method} ${path}`)
-      const id = decodeURIComponent(m[1])
-      const dashboard = this.dashboards.get(id)
-      if (!dashboard) return this.json(route, 404, { detail: 'No such dashboard.' })
-
-      if (method === 'POST') {
-        this.jobSeq += 1
-        const jobId = `job-${this.jobSeq}`
-        const items: BuildItem[] = this.buildPlan.map((p) => ({
-          title: p.title,
-          question: p.question,
-          viz: p.viz,
-          state: 'queued',
-          reason: null,
-          tile_id: null,
-        }))
-        const job: BuildJob = {
-          job_id: jobId,
-          dashboard_id: id,
-          state: 'running',
-          goal: typeof body.goal === 'string' ? body.goal : null,
-          items,
-          error: null,
-          started_at: this.now(),
-          finished_at: null,
-        }
-        this.jobs.set(id, job)
-        return this.json(route, 202, { job })
-      }
-
-      if (method === 'GET') {
-        const job = this.jobs.get(id)
-        if (!job) return this.json(route, 200, { job: null })
-        if (job.state === 'running') {
-          const nextItem = job.items.find((i) => i.state === 'queued')
-          if (nextItem) {
-            const canned = cannedAnswer(nextItem.question)
-            if (canned.route === 'docs') {
-              nextItem.state = 'skipped'
-              nextItem.reason = 'Answered from documents, not the database.'
-            } else {
-              nextItem.state = 'added'
-              const tile = this.makeTileFromBuild(id, nextItem, canned)
-              this.tiles.set(tile.tile_id, tile)
-              nextItem.tile_id = tile.tile_id
-            }
-            if (!job.items.some((i) => i.state === 'queued')) {
-              job.state = 'done'
-              job.finished_at = this.now()
-            }
-          }
-        }
-        return this.json(route, 200, { job })
-      }
-      return this.json(route, 404, { detail: 'Not Found' })
-    }
-
-    m = path.match(/^\/dashboards\/([^/]+)\/layout$/)
+    let m = path.match(/^\/dashboards\/([^/]+)\/layout$/)
     if (m && method === 'PUT') {
       const id = decodeURIComponent(m[1])
       const dashboard = this.dashboards.get(id)

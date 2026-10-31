@@ -1,6 +1,6 @@
 """
 orchestrator/config_loader.py
-Single loader module for all three config artifacts (A0.2).
+Single loader module for all three config artifacts.
 Imported by every service that needs configuration values.
 No numeric literals in agent source — all values come from here.
 
@@ -102,11 +102,11 @@ cfg: _Namespace = _load_cfg()        # statesync.toml  — locked constants
 flags: _Namespace = _load_flags()    # flags.toml      — feature flags
 
 
-# ── Snapshot helper (for flags_snapshot in A2) ────────────────────────────────
+# ── Snapshot helper (each question's flags_snapshot) ───────────────────────────
 def snapshot_flags() -> dict[str, bool | str]:
     """
     Returns a flat {key: value} snapshot of all flags for inclusion in
-    StateSyncState.flags_snapshot (A2). Called once at query entry.
+    StateSyncState.flags_snapshot. Called once at query entry.
     Nested sections are flattened with dot notation, e.g.
     {"memory.enabled": True, "routing.table": ["sql", "docs", "hybrid"]}.
     """

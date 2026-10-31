@@ -1,0 +1,3942 @@
+{
+ "preregistration": "docs/research/paperb_reruns_prereg.md",
+ "seed": 20261009,
+ "writer": [
+  "glm-5.3-flash",
+  "cheaperinference"
+ ],
+ "checker": [
+  "gpt-oss-120b",
+  "cheaperinference"
+ ],
+ "data_defects": [
+  "General Mills: the Revenues tag in sec.annual_metrics is about 2 billion dollars a year, not net sales (about 18 billion); revenue ratios for General Mills are wrong in the database.",
+  "Kraft Heinz: no fiscal-2022 revenue row.",
+  "Fiscal years: period_end_year mislabels 52/53-week years ending 1-2 January (Johnson & Johnson); reference queries use the year of period_end - 20 days."
+ ],
+ "items": [
+  {
+   "id": "r2d001",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Why did Adobe's cost of services and support revenue increase in fiscal 2017?",
+   "gold_answer": "The increase was driven primarily by higher compensation costs, as Adobe added employees to take over work that had previously been handled by outside consultants providing consulting and training services to customers.",
+   "filing": "ADOBE_2017_10K",
+   "page": 45,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d003",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In Walmart's fiscal 2019 annual report, what does the CFO's certification say has been disclosed to the company's auditors and the board's audit committee regarding internal control over financial reporting?",
+   "gold_answer": "The certifying officer states that, based on the most recent evaluation, he and the other certifying officer have informed Walmart's auditors and the Audit Committee of the Board of Directors of any significant shortcomings or material weaknesses in the design or operation of internal control over financial reporting that could reasonably impair the company's ability to capture, process, summarize, and report financial data, as well as any fraud, whether or not material, involving management or other employees who play a significant part in the company's internal control over financial reporting.",
+   "filing": "WALMART_2019_10K",
+   "page": 151,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d005",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "How can the performance condition attached to the restricted stock units that AES granted to certain executives in 2021 and 2022 affect what those executives ultimately receive?",
+   "gold_answer": "Those awards carry a performance condition tied to the achievement of the company's environmental, social and governance targets over the three-year periods ending December 31, 2023 and December 31, 2024, respectively. Depending on how well those targets are met, the final number of units that vest can be adjusted upward or downward by as much as 15% of the total units granted across all three years, with the adjustment reflected in the units that vest at the end of the three-year performance period.",
+   "filing": "AES_2022_10K",
+   "page": 184,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d007",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to PepsiCo's 2021 Form 10-K, how does the Pension Equalization Plan 409A Program determine the lump sum value of a participant's pension?",
+   "gold_answer": "The plan values lump sums for pensions, pre-retirement spouse's pensions, and pre-retirement domestic partner's pensions by applying the same conversion factors that the Salaried Plan uses for lump sum payouts, disregarding any transition factors, and those factors remain subject to change.",
+   "filing": "PEPSICO_2021_10K",
+   "page": 350,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d009",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "How do NIKE's employee stock purchase plans work, and on what terms were employees able to acquire shares through them in fiscal 2023?",
+   "gold_answer": "Under its ESPPs, NIKE lets employees buy company shares at a reduced price. Subject to an annual statutory limit, employees can participate through payroll deductions capped at 10% of their compensation. At the close of each six-month offering period, participants buy shares at 85% of the lower of the stock's fair market value at either the start or the end of that period. In fiscal 2023, employees purchased 3.0 million shares through the plans, up from 2.0 million in fiscal 2022 and compared with 2.5 million in fiscal 2021.",
+   "filing": "NIKE_2023_10K",
+   "page": 80,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d011",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to PayPal's fiscal 2022 Form 10-K, what measures does the company use to protect its intellectual property?",
+   "gold_answer": "PayPal protects its intellectual property through a combination of legal and contractual measures. It relies on applicable laws, regulations, and administrative procedures in the U.S. and internationally; it has registered its core brands as domain names and trademarks in the U.S. and many foreign jurisdictions, and it runs an active program to secure and enforce those marks in markets of interest. It also files patent applications in the U.S. and abroad covering aspects of its proprietary technology and new innovations. In addition, it uses contractual safeguards\u2014requiring employees and contractors to sign agreements covering confidentiality and assignment of inventions, and entering into non-disclosure agreements with business counterparties\u2014to control access to and the use and disclosure of its proprietary information.",
+   "filing": "PAYPAL_2022_10K",
+   "page": 11,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d013",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Who administers Walmart's executive incentive plan as described in its fiscal 2018 10-K, and what authority does that administering body hold over plan interpretation, benefits, and disputes?",
+   "gold_answer": "The plan is administered by a Committee, which holds sole authority to interpret the plan's provisions, determine who is eligible for benefits and in what amounts, and resolve any disputes about participants' or beneficiaries' rights. The Committee can also create, modify, or eliminate administrative rules for operating the plan, and may designate individuals to help carry out its duties or prepare needed forms. Its decisions on plan matters are definitive and binding on Walmart, related affiliates, participants, beneficiaries, and anyone affected, subject to the claims process in a later article. However, a Committee member must recuse from any proceeding or vote concerning his or her own rights or benefits under the plan, and the Committee may allocate or delegate portions of its responsibilities to its members in writing.",
+   "filing": "WALMART_2018_10K",
+   "page": 252,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d015",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In its fiscal 2021 10-K, why does Lockheed Martin use its incremental borrowing rate, rather than a rate implicit in the contract, to measure its operating lease assets and liabilities?",
+   "gold_answer": "Because most of the company's leases do not provide an implicit rate that can be readily determined. It therefore applies a discount rate based on its incremental borrowing rate, which is derived using the company's credit rating and information available as of the lease commencement date.",
+   "filing": "LOCKHEEDMARTIN_2021_10K",
+   "page": 78,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d017",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to Block's fiscal 2020 Form 10-K, what motivated the company's decision to divest its Caviar food ordering and delivery business to DoorDash?",
+   "gold_answer": "The divestiture supported Block's strategy of directing its investment toward its two larger, faster-growing businesses, Seller and Cash App. Because Caviar was a minor part of the company\u2014accounting for under 5% of consolidated total assets and revenues\u2014its sale did not constitute a strategic shift with a major effect on operations or financial results, so it was not reported as a discontinued operation.",
+   "filing": "BLOCK_2020_10K",
+   "page": 113,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d019",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Why did MGM Resorts decide to suspend its dividend in early 2023, and what would determine whether it gets reinstated?",
+   "gold_answer": "In February 2023, MGM Resorts' board chose to pause the dividend because the company currently favors buying back stock as its way of returning value to shareholders. Any future reinstatement would be at the board's discretion and would depend on conditions at the time, such as the company's operating results, financial condition, and other factors the board considers relevant.",
+   "filing": "MGMRESORTS_2023Q2_10Q",
+   "page": 38,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d021",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In The Coca-Cola Company's fiscal 2022 Form 10-K, what does the certifying officer undertake to disclose to the company's auditors and audit committee based on his most recent evaluation of internal control over financial reporting?",
+   "gold_answer": "The certifying officer, President and CFO John Murphy, commits to disclosing all significant deficiencies and material weaknesses in the design or operation of internal control over financial reporting that could reasonably be expected to hurt the company's ability to record, process, summarize, and report financial information, as well as any fraud, whether or not material, that involves management or other employees who play a significant role in the company's internal control over financial reporting.",
+   "filing": "COCACOLA_2022_10K",
+   "page": 182,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d023",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Under PepsiCo's 2021 Form 10-K, how are employer contribution credits to the defined contribution component of the company's retirement plan determined for employees who first become plan participants on or after January 1, 2021?",
+   "gold_answer": "For eligible employees who first become active plan participants on or after January 1, 2021 and have no prior U.S. service with the company, the contribution is set as a percentage of eligible pay using a points-based formula in which points equal the sum of the employee's age and years of service. The contribution percentage rises in steps as the point total increases, starting at the lowest percentage for those with fewer than 35 points and reaching the highest percentage for those with 65 or more points. For other participants, the plan's administrator assigns the applicable percentage at its sole discretion, and no employee has a legally binding right to any particular percentage; credits are also limited as needed to comply with IRS compensation limits and other plan restrictions.",
+   "filing": "PEPSICO_2021_10K",
+   "page": 179,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d025",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Which legacy enterprise software products are included in Adobe's Digital Marketing segment as of fiscal 2015, and how has the company approached selling and transitioning them?",
+   "gold_answer": "The Digital Marketing segment includes two legacy offerings: Adobe Connect, a web conferencing tool, and Adobe LiveCycle, a platform for enterprise documents and forms. Since fiscal 2012, Adobe has concentrated the marketing and licensing of these products on financial services and government customers through a subset of its enterprise sales force. In addition, Adobe has been moving some legacy LiveCycle customers to an updated offering with similar capabilities built on its Adobe Experience Manager solution.",
+   "filing": "ADOBE_2015_10K",
+   "page": 6,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d027",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "What conclusion did General Mills' management reach about the effectiveness of its disclosure controls and procedures at the end of fiscal 2019, and were there any changes to internal control over financial reporting during the final quarter of that year?",
+   "gold_answer": "General Mills' CEO and CFO evaluated the design and operation of the company's disclosure controls and concluded that, as of May 26, 2019, they were effective at ensuring that information required in the company's SEC reports is captured and reported within required timeframes and escalated to management in time to support timely disclosure decisions. The company also reported that no changes to its internal control over financial reporting occurred during the fiscal quarter ended May 26, 2019 that materially affected, or are reasonably likely to materially affect, that internal control.",
+   "filing": "GENERALMILLS_2019_10K",
+   "page": 109,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d029",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "As of December 31, 2021, what types of regulatory and other long-term assets did American Water Works report on its consolidated balance sheet?",
+   "gold_answer": "The company's regulatory and other long-term assets consisted of regulatory assets, a seller promissory note received from the sale of the Homeowner Services Group, operating lease right-of-use assets, goodwill, postretirement benefit assets, intangible assets, and other long-term assets.",
+   "filing": "AMERICANWATERWORKS_2021_10K",
+   "page": 84,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d031",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In JPMorgan Chase's Form 10-Q for the second quarter of 2022, how are the credit exposure amounts in the industry-level credit portfolio table (as of December 31, 2021) measured\u2014that is, what items are included in and excluded from those figures?",
+   "gold_answer": "The exposure figures are shown after deducting risk participations, and they give no recognition to credit derivatives, credit-related notes, or liquid securities and other cash collateral held against derivative receivables or loans. At the same time, the figures do include loans held-for-sale and lending-related commitments designated at fair value. The overall total also leaves out cash placed with banks, which is mostly on deposit at central banks such as the Federal Reserve Banks.",
+   "filing": "JPMORGAN_2022Q2_10Q",
+   "page": 65,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d033",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Under Ulta Beauty's fiscal 2023 stock option agreement, what methods are available to an optionee for satisfying the tax withholding obligation that arises from the option?",
+   "gold_answer": "The optionee may cover the tax obligation in whole or in part by: (1) with the company's consent, having Ulta Beauty withhold shares that would otherwise be delivered, valued at the minimum required withholding amount; (2) with the company's consent, surrendering previously owned common stock valued at that minimum amount; (3) paying in cash or by check; or (4) with the company's consent, placing a market sell order through a broker for shares issuable upon exercise and directing the broker to remit enough of the sale proceeds to the company upon settlement to cover the withholding amount.",
+   "filing": "ULTABEAUTY_2023_10K",
+   "page": 93,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d035",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "How does NIKE account for gains and losses on derivatives it designates as cash flow hedges, and under what circumstances must hedge accounting be discontinued, according to its fiscal 2019 10-K?",
+   "gold_answer": "Changes in the fair value of derivatives designated as cash flow hedges are recorded in accumulated other comprehensive income (loss) until the hedged transaction affects net income, and effective hedge results are classified in the income statement in the same line items as the underlying exposure. Hedge accounting must be discontinued when it is no longer probable that the forecasted hedged transaction will occur within the initially identified time period. Gains and losses on such discontinued hedges that sit in accumulated other comprehensive income are recognized immediately in Other (income) expense, net if the forecasted transaction is not expected to occur by the end of the initially identified period or within an additional two-month window thereafter. If the derivative remains outstanding after hedge accounting is discontinued, NIKE accounts for it as an undesignated instrument.",
+   "filing": "NIKE_2019_10K",
+   "page": 78,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d037",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In NIKE's fiscal 2018 Form 10-K, along what different dimensions does the company break down its NIKE Brand revenues in the consolidated operating results discussion?",
+   "gold_answer": "NIKE presents its NIKE Brand revenues in several complementary ways: by product line (footwear, apparel, and equipment, plus Global Brand Divisions), by distribution channel (sales made to wholesale customers versus sales made through its own direct-to-consumer operations), and on a restated basis that treats direct-to-consumer sales as if they had been transacted at wholesale. Within that restated wholesale view, revenues are further disaggregated by consumer demographic (men's, women's, and young athletes') and by key business categories such as running, basketball, the Jordan Brand, football (soccer), training, and sportswear. Converse is reported separately from the NIKE Brand, and a Corporate line captures amounts not attributable to a segment.",
+   "filing": "NIKE_2018_10K",
+   "page": 24,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d039",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Why did Best Buy's non-GAAP operating income rate decline in fiscal 2023?",
+   "gold_answer": "The decline was mainly driven by the Domestic segment earning a lower gross profit rate, combined with reduced leverage of fixed expenses as sales volume fell, which resulted in a less favorable SG&A rate.",
+   "filing": "BESTBUY_2023_10K",
+   "page": 28,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d041",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In its fiscal 2022 Form 10-K, what did AMD disclose about Xilinx-related dealings with Russian government authorities and about AMD's own sales into Russia?",
+   "gold_answer": "AMD explained that before it acquired Xilinx in February 2022, Xilinx had authorized certain third-party resellers to submit notifications and apply for import licenses and permits with Russia's Federal Security Service on its behalf, as allowed under a U.S. Treasury OFAC general license, and those resellers continued making such filings during the quarter ended March 26, 2022. AMD also stated that it and its subsidiaries, including Xilinx, halted shipments into Russia during that quarter, that the filing activities generated no revenue or profit for AMD or its subsidiaries, and that the company does not sell products or provide services to the FSB.",
+   "filing": "AMD_2022_10K",
+   "page": 99,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d043",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In its fiscal 2017 annual report, what growth areas does Best Buy say it will pursue under the new long-term strategy it unveiled after completing its prior transformation plan?",
+   "gold_answer": "Best Buy outlines three growth pillars: first, getting the most out of its multi-channel retail business by enhancing the shopping experience, investing in key product categories, and developing broader, stickier customer relationships; second, offering services and solutions that solve real customer needs\u2014such as technical support, security monitoring, and home automation\u2014to build deeper customer relationships; and third, accelerating growth in its International segment, which consists of Canada and Mexico.",
+   "filing": "BESTBUY_2017_10K",
+   "page": 29,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d045",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "What led Microsoft to lengthen the estimated useful lives of its server and network equipment beginning in fiscal year 2023?",
+   "gold_answer": "Management reassessed the useful lives in July 2022 and concluded they should be extended from four years to six years because software investments had made the company more efficient in operating its server and network equipment, combined with ongoing advances in technology. The change took effect at the start of fiscal 2023.",
+   "filing": "MICROSOFT_2023_10K",
+   "page": 63,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d047",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to The Coca-Cola Company's 2021 Form 10-K, what effects could competitive pressure in the commercial beverage industry have on the company and its bottling partners?",
+   "gold_answer": "The company warns that competitors' actions may limit its ability to maintain or gain share of sales in global and local markets. Competitive pressure could force the company and its bottling partners to lower prices charged to customers, or could prevent them from raising prices when needed to offset rising commodity and other input costs. It could also drive up spending on marketing as well as on securing favorable in-store product placement.",
+   "filing": "COCACOLA_2021_10K",
+   "page": 14,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d049",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "What factors led to the decline in CVS Health's operating income in fiscal 2017 compared with fiscal 2016?",
+   "gold_answer": "The decline was mainly attributable to customers' restricted pharmacy networks that left out CVS Pharmacy locations, ongoing pricing pressure in the Pharmacy Services segment, lower reimbursement in the Retail/LTC business, and the increase in operating expenses during the year.",
+   "filing": "CVSHEALTH_2018_10K",
+   "page": 269,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d051",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to Adobe's fiscal 2022 Form 10-K, what kinds of risks does the company face from operating as a multinational corporation, and how could these affect its results?",
+   "gold_answer": "Because a substantial portion of Adobe's revenue comes from customers outside the Americas, the company is exposed to a range of international risks: inflation and central bank actions to counter it, currency exchange movements and capital controls, regional economic, political and labor instability including sanctions, trade disputes and armed conflicts, differing tax regimes such as U.S. taxes on foreign subsidiaries, heavier financial accounting and reporting burdens, shifting legislative and regulatory requirements, restrictions on the cross-border flow of data, weak legal protection of its intellectual property abroad, inadequate local infrastructure and challenges managing and staffing international operations, delays from obtaining permits to ship certain technology and other trade barriers, government sanctions targeting countries where it does or plans to do business, the expense of developing products in multiple languages, greater exposure to corruption and fraudulent practices in some locations, and events beyond its control such as terrorism, war, natural disasters, climate change and pandemics including COVID-19. Some of its third-party business partners face similar exposures, and if any of these factors cause international sales to be reduced, delayed or canceled, Adobe's revenue could decline.",
+   "filing": "ADOBE_2022_10K",
+   "page": 27,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d053",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "How did the COVID-19 pandemic change the mix of medical membership in CVS Health's Health Care Benefits segment during 2020, and what drove that shift?",
+   "gold_answer": "Commercial membership declined because the company's existing customers reduced their workforces, but those losses were largely offset by growth in Medicaid membership, which was driven by the pause in eligibility redeterminations and rising unemployment during the pandemic.",
+   "filing": "CVSHEALTH_2022_10K",
+   "page": 73,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d055",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In the PepsiCo Pension Equalization Plan's 409A Program (included in PepsiCo's fiscal 2022 Form 10-K), how do the defined terms '409A Vested Pension' and 'Pre-409A Vested Pension' differ in describing a participant's Vested Pension?",
+   "gold_answer": "The 409A Vested Pension refers to the portion of a participant's Vested Pension that is derived from the 409A Program, whereas the Pre-409A Vested Pension refers to the portion of that same Vested Pension that is derived from the Pre-409A Program.",
+   "filing": "PEPSICO_2022_10K",
+   "page": 272,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d057",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to American Water Works' 2020 Form 10-K, how does the company seek to manage the interest rate risk associated with its retirement benefit obligations?",
+   "gold_answer": "The Company works to reduce this risk by diversifying its retirement trust assets and investing in fixed-income securities whose duration closely matches that of its pension liabilities, so that if interest rates fall and liabilities increase, the value of those bond holdings is expected to rise as well, offsetting the impact. It also expects its exposure to be reduced by its ability to recover pension and other benefit costs through the rates it charges customers.",
+   "filing": "AMERICANWATERWORKS_2020_10K",
+   "page": 78,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d059",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Under the equity award terms disclosed in JPMorgan Chase's 2022 Form 10-K, what happens to an employee's unvested RSUs if the employee dies while still eligible to vest in the award?",
+   "gold_answer": "The RSUs immediately vest upon death and are distributed as shares of common stock, after applicable tax withholding, to the employee's named beneficiary as recorded with the firm's stock administration group; if no beneficiary was named, the beneficiary does not survive, or the beneficiary designation is not recognized under local law, the shares pass to the employee's estate unless local legislation requires otherwise. Distribution must occur no later than the end of the calendar year following the year of death, although the firm's administrative practice is to register the shares in the beneficiary's or estate's name within 60 days of receiving any required documentation.",
+   "filing": "JPMORGAN_2022_10K",
+   "page": 333,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d006",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "As of December 31, 2018, how much restricted cash did CVS Health include in its other assets balance, per the reconciliation to the statement of cash flows?",
+   "gold_answer": "$230 million",
+   "filing": "CVSHEALTH_2018_10K",
+   "page": 328,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d008",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "For The Coca-Cola Company's stock option plans, what was the aggregate intrinsic value of options outstanding as of the end of fiscal 2017, and what was the weighted-average exercise price of those outstanding options?",
+   "gold_answer": "$1,879 million aggregate intrinsic value, with a weighted-average exercise price of $35.02",
+   "filing": "COCACOLA_2017_10K",
+   "page": 115,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d010",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "As of June 30, 2023, how much did JPMorgan have in assets under management in the alternatives asset class?",
+   "gold_answer": "$205 billion",
+   "filing": "JPMORGAN_2023Q2_10Q",
+   "page": 43,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d012",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "For Activision Blizzard's fiscal year 2019, what operating income did the company report for its King segment?",
+   "gold_answer": "$740 million",
+   "filing": "ACTIVISIONBLIZZARD_2019_10K",
+   "page": 40,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d014",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "What was the amount of Costco's short-term borrowings outstanding at the end of fiscal 2021?",
+   "gold_answer": "$41 million",
+   "filing": "COSTCO_2021_10K",
+   "page": 51,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d016",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "According to American Express's 2022 Form 10-K, what amount of certificates of deposit was scheduled to mature in 2024, per the maturity schedule in the customer deposits note?",
+   "gold_answer": "$6,554 million",
+   "filing": "AMERICANEXPRESS_2022_10K",
+   "page": 123,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d022",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "As of December 31, 2017, how much solvency capital did The Coca-Cola Company hold in available-for-sale securities through its consolidated insurance captives to meet minimum regulatory capital requirements?",
+   "gold_answer": "$1,159 million",
+   "filing": "COCACOLA_2017_10K",
+   "page": 97,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d024",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "According to Walmart's fiscal 2020 Form 10-K, for how many months after an amendment or waiver of its Code of Ethics or Statement of Ethics will a description of that amendment or waiver be kept on the company's website under the Corporate Governance section?",
+   "gold_answer": "12 months",
+   "filing": "WALMART_2020_10K",
+   "page": 14,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d028",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "According to MGM Resorts International's 2020 Form 10-K, up to what percentage of the company's voting securities can an institutional investor typically acquire under a waiver without having to apply for qualification or a finding of suitability?",
+   "gold_answer": "15%",
+   "filing": "MGMRESORTS_2020_10K",
+   "page": 145,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d030",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "According to American Express's fiscal 2022 Form 10-K, where does the company rank globally among general-purpose card networks based on purchase volume, and which networks rank ahead of it?",
+   "gold_answer": "American Express ranks as the fourth largest general-purpose card network globally based on purchase volume, behind China UnionPay, Visa, and Mastercard.",
+   "filing": "AMERICANEXPRESS_2022_10K",
+   "page": 12,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d034",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "As of December 31, 2021, what was the total amount of Verizon's outstanding letters of credit supporting financing arrangements and payment obligations?",
+   "gold_answer": "Approximately $674 million",
+   "filing": "VERIZON_2021_10K",
+   "page": 103,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d038",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "In MGM Resorts' 2018 fiscal year, what was the benefit (provision) for foreign income taxes as reported in the income tax note?",
+   "gold_answer": "$115,593 thousand (a benefit of approximately $115.6 million)",
+   "filing": "MGMRESORTS_2018_10K",
+   "page": 80,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d046",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "By what percentage did Verizon's Board of Directors increase the quarterly dividend during 2022?",
+   "gold_answer": "2.0%",
+   "filing": "VERIZON_2022_10K",
+   "page": 37,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d048",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "How many holders of record of Lockheed Martin common stock were reported in its 2022 Form 10-K as of January 20, 2023?",
+   "gold_answer": "23,358",
+   "filing": "LOCKHEEDMARTIN_2022_10K",
+   "page": 26,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d052",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "As of December 31, 2022, what was the total notional value of The Coca-Cola Company's commodity derivative instruments?",
+   "gold_answer": "$371 million",
+   "filing": "COCACOLA_2022_10K",
+   "page": 61,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d054",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "Under the PepsiCo Pension Equalization Plan 409A Program described in PepsiCo's 2022 Form 10-K, what minimum age and minimum years of service must a participant satisfy to qualify for an early retirement pension?",
+   "gold_answer": "At least age 55 and 10 or more years of Elapsed Time Service.",
+   "filing": "PEPSICO_2022_10K",
+   "page": 276,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d058",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "According to Adobe's fiscal 2016 annual report, how many assets were available through the Adobe Stock online marketplace?",
+   "gold_answer": "Over 60 million curated photos, graphics, videos, templates and 3D assets.",
+   "filing": "ADOBE_2016_10K",
+   "page": 8,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d060",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "As of the end of NIKE's fiscal year 2021, what approximate percentage of NIKE's Class A Common Stock was beneficially owned by Swoosh, LLC?",
+   "gold_answer": "Approximately 77%",
+   "filing": "NIKE_2021_10K",
+   "page": 24,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d062",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "In Activision Blizzard's 2019 Form 10-K, on what date did the company's Chief Legal Officer sign the employment agreement exhibit with Claudine Naughton Macartney?",
+   "gold_answer": "July 24, 2019",
+   "filing": "ACTIVISIONBLIZZARD_2019_10K",
+   "page": 192,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d064",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "According to MGM Resorts International's Form 10-K for fiscal year 2022, how many shares of its $0.01 par value common stock were outstanding as of February 22, 2023?",
+   "gold_answer": "373,913,450 shares",
+   "filing": "MGMRESORTS_2022_10K",
+   "page": 1,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d066",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "What was NIKE's return on invested capital (ROIC) for the trailing four quarters ended May 31, 2021, as reported in its fiscal 2021 10-K?",
+   "gold_answer": "48.8%",
+   "filing": "NIKE_2021_10K",
+   "page": 32,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d068",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "In Costco's fiscal 2021 balance sheet, what amount was included in accounts payable to reflect the shortfall of cash on deposit at the banks on which outstanding payments were drawn?",
+   "gold_answer": "$999 million",
+   "filing": "COSTCO_2021_10K",
+   "page": 42,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d076",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "In the second quarter of 2023, how much in senior unsecured notes did Pfizer issue through its finance subsidiary to help fund the proposed Seagen acquisition?",
+   "gold_answer": "$31,000 million (i.e., $31 billion) in total principal, across eight tranches maturing from 2025 to 2063.",
+   "filing": "Pfizer_2023Q2_10Q",
+   "page": 22,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d088",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "What amount did Square record in general and administrative expenses for fiscal year 2016 related to the settlement of legal proceedings with Robert E. Morley?",
+   "gold_answer": "$48.0 million",
+   "filing": "BLOCK_2016_10K",
+   "page": 53,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d092",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "How old is Corning's president and chief operating officer, Eric Musser, as reported in the company's 2022 Form 10-K?",
+   "gold_answer": "63",
+   "filing": "CORNING_2022_10K",
+   "page": 11,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d094",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "In fiscal 2023, what was Best Buy's variable lease cost?",
+   "gold_answer": "$233 million",
+   "filing": "BESTBUY_2023_10K",
+   "page": 55,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d096",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "In its 2019 Form 10-K, Amazon disclosed the combined number of shares outstanding plus outstanding stock awards as of December 31, 2019. What was that figure?",
+   "gold_answer": "512 million (compared with 507 million as of December 31, 2018)",
+   "filing": "AMAZON_2019_10K",
+   "page": 20,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d100",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "What percentage of PayPal's total net revenues came from the European Union in fiscal year 2022?",
+   "gold_answer": "17%",
+   "filing": "PAYPAL_2022_10K",
+   "page": 34,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d104",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "For Microsoft's fiscal year 2016, what was the U.S. component of income (loss) before income taxes?",
+   "gold_answer": "$(325) million (a loss of $325 million)",
+   "filing": "MICROSOFT_2016_10K",
+   "page": 81,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2d106",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "On what date was Amazon's CFO Section 906 certification for the fiscal year 2019 Form 10-K signed and dated?",
+   "gold_answer": "January 30, 2020",
+   "filing": "AMAZON_2019_10K",
+   "page": 83,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "split": "r2"
+  },
+  {
+   "id": "r2e001",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much did 3M report as cost of revenue for fiscal 2018?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "3M_2018_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'MMM' AND metric = 'cost_of_revenue' AND period_end_year = 2018",
+   "sql_answer": "16682000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e002",
+   "class": "either",
+   "subclass": "either",
+   "question": "Tell me Adobe's cash and cash equivalents for fiscal year 2017.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "ADOBE_2017_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'ADBE' AND metric = 'cash_and_equivalents' AND period_end_year = 2017",
+   "sql_answer": "2306072000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e003",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much did Boeing report as capital expenditure for fiscal 2018?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "BOEING_2018_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'BA' AND metric = 'capital_expenditure' AND period_end_year = 2018",
+   "sql_answer": "1722000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e004",
+   "class": "either",
+   "subclass": "either",
+   "question": "What was Kraft Heinz's cash and cash equivalents in fiscal 2019?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "KRAFTHEINZ_2019_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'KHC' AND metric = 'cash_and_equivalents' AND period_end_year = 2019",
+   "sql_answer": "2279000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e005",
+   "class": "either",
+   "subclass": "either",
+   "question": "What was Best Buy's cash and cash equivalents in fiscal 2017?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "BESTBUY_2017_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'BBY' AND metric = 'cash_and_equivalents' AND period_end_year = 2017",
+   "sql_answer": "2240000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e006",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much did Nike report as share repurchases for fiscal 2018?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "NIKE_2018_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'NKE' AND metric = 'share_repurchases' AND period_end_year = 2018",
+   "sql_answer": "4254000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e007",
+   "class": "either",
+   "subclass": "either",
+   "question": "What was Walmart's accounts payable in fiscal 2019?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "WALMART_2019_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'WMT' AND metric = 'accounts_payable' AND period_end_year = 2019",
+   "sql_answer": "47060000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e008",
+   "class": "either",
+   "subclass": "either",
+   "question": "Tell me American Water Works's share repurchases for fiscal year 2020.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "AMERICANWATERWORKS_2020_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'AWK' AND metric = 'share_repurchases' AND period_end_year = 2020",
+   "sql_answer": "0",
+   "split": "r2"
+  },
+  {
+   "id": "r2e009",
+   "class": "either",
+   "subclass": "either",
+   "question": "Tell me General Mills's depreciation and amortization for fiscal year 2020.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "GENERALMILLS_2020_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'GIS' AND metric = 'depreciation_and_amortization' AND period_end_year = 2020",
+   "sql_answer": "594700000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e010",
+   "class": "either",
+   "subclass": "either",
+   "question": "What was Verizon's operating income in fiscal 2021?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "VERIZON_2021_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'VZ' AND metric = 'operating_income' AND period_end_year = 2021",
+   "sql_answer": "32448000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e011",
+   "class": "either",
+   "subclass": "either",
+   "question": "Tell me Adobe's gross profit for fiscal year 2022.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "ADOBE_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'ADBE' AND metric = 'gross_profit' AND period_end_year = 2022",
+   "sql_answer": "15441000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e012",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much did Lockheed Martin report as net property, plant and equipment for fiscal 2022?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "LOCKHEEDMARTIN_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'LMT' AND metric = 'property_plant_equipment_net' AND period_end_year = 2022",
+   "sql_answer": "7975000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e013",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much did MGM Resorts report as dividends paid for fiscal 2022?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "MGMRESORTS_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'MGM' AND metric = 'dividends_paid' AND period_end_year = 2022",
+   "sql_answer": "4048000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e014",
+   "class": "either",
+   "subclass": "either",
+   "question": "What was Corning's current assets in fiscal 2022?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "CORNING_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'GLW' AND metric = 'current_assets' AND period_end_year = 2022",
+   "sql_answer": "7453000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e015",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much did General Mills report as dividends paid for fiscal 2022?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "GENERALMILLS_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'GIS' AND metric = 'dividends_paid' AND period_end_year = 2022",
+   "sql_answer": "1244500000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e016",
+   "class": "either",
+   "subclass": "either",
+   "question": "What was Nike's cost of revenue in fiscal 2023?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "NIKE_2023_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'NKE' AND metric = 'cost_of_revenue' AND period_end_year = 2023",
+   "sql_answer": "28925000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e017",
+   "class": "either",
+   "subclass": "either",
+   "question": "Tell me Johnson & Johnson's current liabilities for fiscal year 2022.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "JOHNSON_JOHNSON_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'JNJ' AND metric = 'current_liabilities' AND period_end_year = 2022",
+   "sql_answer": "55802000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e018",
+   "class": "either",
+   "subclass": "either",
+   "question": "What was Amcor's share repurchases in fiscal 2023?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "AMCOR_2023_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'AMCR' AND metric = 'share_repurchases' AND period_end_year = 2023",
+   "sql_answer": "432000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e019",
+   "class": "either",
+   "subclass": "either",
+   "question": "How much did PayPal report as depreciation and amortization for fiscal 2022?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "PAYPAL_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'PYPL' AND metric = 'depreciation_and_amortization' AND period_end_year = 2022",
+   "sql_answer": "1317000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e020",
+   "class": "either",
+   "subclass": "either",
+   "question": "Tell me Pfizer's depreciation and amortization for fiscal year 2021.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "PFIZER_2021_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'PFE' AND metric = 'depreciation_and_amortization' AND period_end_year = 2021",
+   "sql_answer": "5191000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e021",
+   "class": "either",
+   "subclass": "either",
+   "question": "Tell me Coca-Cola's depreciation and amortization for fiscal year 2021.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "COCACOLA_2021_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'KO' AND metric = 'depreciation_and_amortization' AND period_end_year = 2021",
+   "sql_answer": "1452000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e022",
+   "class": "either",
+   "subclass": "either",
+   "question": "Tell me MGM Resorts's revenue for fiscal year 2018.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "MGMRESORTS_2018_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'MGM' AND metric = 'revenue' AND period_end_year = 2018",
+   "sql_answer": "11763096000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e023",
+   "class": "either",
+   "subclass": "either",
+   "question": "What was General Mills's operating cash flow in fiscal 2019?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "GENERALMILLS_2019_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'GIS' AND metric = 'operating_cash_flow' AND period_end_year = 2019",
+   "sql_answer": "2807000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e024",
+   "class": "either",
+   "subclass": "either",
+   "question": "Tell me MGM Resorts's capital expenditure for fiscal year 2020.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "MGMRESORTS_2020_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'MGM' AND metric = 'capital_expenditure' AND period_end_year = 2020",
+   "sql_answer": "270579000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e025",
+   "class": "either",
+   "subclass": "either",
+   "question": "Tell me CVS Health's share repurchases for fiscal year 2022.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "CVSHEALTH_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'CVS' AND metric = 'share_repurchases' AND period_end_year = 2022",
+   "sql_answer": "3500000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e026",
+   "class": "either",
+   "subclass": "either",
+   "question": "Tell me Amcor's revenue for fiscal year 2020.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "AMCOR_2020_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'AMCR' AND metric = 'revenue' AND period_end_year = 2020",
+   "sql_answer": "12467500000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e027",
+   "class": "either",
+   "subclass": "either",
+   "question": "Tell me Lockheed Martin's current assets for fiscal year 2021.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "LOCKHEEDMARTIN_2021_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'LMT' AND metric = 'current_assets' AND period_end_year = 2021",
+   "sql_answer": "19815000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e028",
+   "class": "either",
+   "subclass": "either",
+   "question": "What was American Express's operating cash flow in fiscal 2022?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "AMERICANEXPRESS_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'AXP' AND metric = 'operating_cash_flow' AND period_end_year = 2022",
+   "sql_answer": "21079000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e029",
+   "class": "either",
+   "subclass": "either",
+   "question": "What was American Water Works's operating cash flow in fiscal 2022?",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "AMERICANWATERWORKS_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'AWK' AND metric = 'operating_cash_flow' AND period_end_year = 2022",
+   "sql_answer": "1108000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2e030",
+   "class": "either",
+   "subclass": "either",
+   "question": "Tell me AMD's stockholders' equity for fiscal year 2022.",
+   "acceptable": [
+    "sql",
+    "docs"
+   ],
+   "source": "template",
+   "filing": "AMD_2022_10K",
+   "reference_sql": "SELECT value FROM am WHERE ticker = 'AMD' AND metric = 'stockholders_equity' AND period_end_year = 2022",
+   "sql_answer": "54750000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s001",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Which company had the highest depreciation and amortization in fiscal 2019?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_top",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'depreciation_and_amortization' AND period_end_year = 2019  ORDER BY value DESC LIMIT 1",
+   "sql_answer": "Amazon, 21789000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s002",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Name the company with the lowest long-term debt in fiscal 2021.",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_top",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'long_term_debt' AND period_end_year = 2021  ORDER BY value ASC LIMIT 1",
+   "sql_answer": "AMD, 1000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s003",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Which company had the highest accounts receivable in fiscal 2018?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_top",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'accounts_receivable' AND period_end_year = 2018  ORDER BY value DESC LIMIT 1",
+   "sql_answer": "Microsoft, 26481000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s004",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Name the company with the highest accounts receivable in fiscal 2021.",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_top",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'accounts_receivable' AND period_end_year = 2021  ORDER BY value DESC LIMIT 1",
+   "sql_answer": "Microsoft, 38043000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s005",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Name the company with the lowest long-term debt in fiscal 2020.",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_top",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'long_term_debt' AND period_end_year = 2020  ORDER BY value ASC LIMIT 1",
+   "sql_answer": "Foot Locker, 118000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s006",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "List the 4 companies with the most net property, plant and equipment in fiscal 2018.",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_topk",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'property_plant_equipment_net' AND period_end_year = 2018  ORDER BY value DESC LIMIT 4",
+   "sql_answer": "Walmart, 107675000000; Verizon, 89286000000; Amazon, 61797000000; Microsoft, 29460000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s007",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "List the 3 companies with the most revenue in fiscal 2021.",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_topk",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'revenue' AND period_end_year = 2021  ORDER BY value DESC LIMIT 3",
+   "sql_answer": "Walmart, 559151000000; Amazon, 469822000000; CVS Health, 292111000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s008",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Rank the top 5 companies by stockholders' equity for fiscal 2020.",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_topk",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'stockholders_equity' AND period_end_year = 2020  ORDER BY value DESC LIMIT 5",
+   "sql_answer": "JPMorgan, 279354000000; Microsoft, 118304000000; Amazon, 93404000000; Walmart, 74669000000; CVS Health, 69389000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s009",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Rank the top 5 companies by revenue for fiscal 2023.",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_topk",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'revenue' AND period_end_year = 2023  ORDER BY value DESC LIMIT 5",
+   "sql_answer": "Walmart, 611289000000; Amazon, 574785000000; CVS Health, 357776000000; Costco, 242290000000; Microsoft, 211915000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s010",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "List the 3 companies with the most depreciation and amortization in fiscal 2018.",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_topk",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'depreciation_and_amortization' AND period_end_year = 2018  ORDER BY value DESC LIMIT 3",
+   "sql_answer": "Verizon, 17403000000; Amazon, 15341000000; Walmart, 10529000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s011",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Count the companies whose operating cash flow exceeded 4 billion dollars in fiscal 2018.",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_count",
+   "reference_sql": "SELECT count(*) FROM am WHERE metric = 'operating_cash_flow' AND period_end_year = 2018 AND value > 4e9",
+   "sql_answer": "17",
+   "split": "r2"
+  },
+  {
+   "id": "r2s012",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "How many of the companies reported total liabilities above 34 billion dollars in fiscal 2019?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_count",
+   "reference_sql": "SELECT count(*) FROM am WHERE metric = 'total_liabilities' AND period_end_year = 2019 AND value > 34e9",
+   "sql_answer": "12",
+   "split": "r2"
+  },
+  {
+   "id": "r2s013",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "How many of the companies reported revenue above 32 billion dollars in fiscal 2018?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_count",
+   "reference_sql": "SELECT count(*) FROM am WHERE metric = 'revenue' AND period_end_year = 2018 AND value > 32e9",
+   "sql_answer": "15",
+   "split": "r2"
+  },
+  {
+   "id": "r2s014",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Count the companies whose research and development expense exceeded 1 billion dollars in fiscal 2018.",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_count",
+   "reference_sql": "SELECT count(*) FROM am WHERE metric = 'research_and_development' AND period_end_year = 2018 AND value > 1e9",
+   "sql_answer": "8",
+   "split": "r2"
+  },
+  {
+   "id": "r2s015",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Count the companies whose capital expenditure exceeded 1 billion dollars in fiscal 2018.",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_count",
+   "reference_sql": "SELECT count(*) FROM am WHERE metric = 'capital_expenditure' AND period_end_year = 2018 AND value > 1e9",
+   "sql_answer": "14",
+   "split": "r2"
+  },
+  {
+   "id": "r2s016",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Across the companies, what was the median capital expenditure in fiscal 2019?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_avg",
+   "reference_sql": "SELECT round((percentile_cont(0.5) WITHIN GROUP (ORDER BY value))::numeric, 0) FROM am WHERE metric = 'capital_expenditure' AND period_end_year = 2019",
+   "sql_answer": "1119000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s017",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "What was the median long-term debt across all the companies in fiscal 2018?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_avg",
+   "reference_sql": "SELECT round((percentile_cont(0.5) WITHIN GROUP (ORDER BY value))::numeric, 0) FROM am WHERE metric = 'long_term_debt' AND period_end_year = 2018",
+   "sql_answer": "14514597500",
+   "split": "r2"
+  },
+  {
+   "id": "r2s018",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Across the companies, what was the median dividends paid in fiscal 2017?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_avg",
+   "reference_sql": "SELECT round((percentile_cont(0.5) WITHIN GROUP (ORDER BY value))::numeric, 0) FROM am WHERE metric = 'dividends_paid' AND period_end_year = 2017",
+   "sql_answer": "2106000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s019",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Across the companies, what was the median inventory in fiscal 2017?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_avg",
+   "reference_sql": "SELECT round((percentile_cont(0.5) WITHIN GROUP (ORDER BY value))::numeric, 0) FROM am WHERE metric = 'inventory' AND period_end_year = 2017",
+   "sql_answer": "2735000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s020",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "What was the average accounts receivable across all the companies in fiscal 2017?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_avg",
+   "reference_sql": "SELECT round((avg(value))::numeric, 0) FROM am WHERE metric = 'accounts_receivable' AND period_end_year = 2017",
+   "sql_answer": "6100605950",
+   "split": "r2"
+  },
+  {
+   "id": "r2s021",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "What was Microsoft's long-term debt in each fiscal year from 2018 to 2022?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_series",
+   "reference_sql": "SELECT period_end_year, value FROM am WHERE ticker = 'MSFT' AND metric = 'long_term_debt' AND period_end_year BETWEEN 2018 AND 2022 ORDER BY 1",
+   "sql_answer": "2018, 76200000000; 2019, 72200000000; 2020, 63327000000; 2021, 58146000000; 2022, 49781000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s022",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Show Verizon's operating income for every fiscal year between 2014 and 2018.",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_series",
+   "reference_sql": "SELECT period_end_year, value FROM am WHERE ticker = 'VZ' AND metric = 'operating_income' AND period_end_year BETWEEN 2014 AND 2018 ORDER BY 1",
+   "sql_answer": "2014, 19599000000; 2015, 33060000000; 2016, 27059000000; 2017, 27414000000; 2018, 22278000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s023",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "What was Kraft Heinz's net income in each fiscal year from 2016 to 2020?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_series",
+   "reference_sql": "SELECT period_end_year, value FROM am WHERE ticker = 'KHC' AND metric = 'net_income' AND period_end_year BETWEEN 2016 AND 2020 ORDER BY 1",
+   "sql_answer": "2016, 3632000000; 2017, 10999000000; 2018, -10192000000; 2019, 1935000000; 2020, 356000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s024",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "What was Foot Locker's accounts payable in each fiscal year from 2015 to 2019?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_series",
+   "reference_sql": "SELECT period_end_year, value FROM am WHERE ticker = 'FL' AND metric = 'accounts_payable' AND period_end_year BETWEEN 2015 AND 2019 ORDER BY 1",
+   "sql_answer": "2015, 301000000; 2016, 279000000; 2017, 249000000; 2018, 258000000; 2019, 387000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s025",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "What was American Express's total liabilities in each fiscal year from 2018 to 2022?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_series",
+   "reference_sql": "SELECT period_end_year, value FROM am WHERE ticker = 'AXP' AND metric = 'total_liabilities' AND period_end_year BETWEEN 2018 AND 2022 ORDER BY 1",
+   "sql_answer": "2018, 166312000000; 2019, 175250000000; 2020, 168383000000; 2021, 166371000000; 2022, 203643000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2s026",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Which company grew its capital expenditure the most from fiscal 2019 to fiscal 2020?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_growth",
+   "reference_sql": "SELECT b.company, round(((b.value / a.value - 1) * 100)::numeric, 1) AS pct FROM am a JOIN am b ON b.company = a.company AND b.metric = a.metric AND b.period_end_year = 2020 WHERE a.metric = 'capital_expenditure' AND a.period_end_year = 2019 AND a.value > 0  ORDER BY b.value / a.value DESC LIMIT 1",
+   "sql_answer": "Block, 121.5",
+   "split": "r2"
+  },
+  {
+   "id": "r2s027",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Which company grew its gross profit the most from fiscal 2020 to fiscal 2021?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_growth",
+   "reference_sql": "SELECT b.company, round(((b.value / a.value - 1) * 100)::numeric, 1) AS pct FROM am a JOIN am b ON b.company = a.company AND b.metric = a.metric AND b.period_end_year = 2021 WHERE a.metric = 'gross_profit' AND a.period_end_year = 2020 AND a.value > 0  ORDER BY b.value / a.value DESC LIMIT 1",
+   "sql_answer": "AMD, 82.4",
+   "split": "r2"
+  },
+  {
+   "id": "r2s028",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Which company grew its total liabilities the most from fiscal 2022 to fiscal 2023?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_growth",
+   "reference_sql": "SELECT b.company, round(((b.value / a.value - 1) * 100)::numeric, 1) AS pct FROM am a JOIN am b ON b.company = a.company AND b.metric = a.metric AND b.period_end_year = 2023 WHERE a.metric = 'total_liabilities' AND a.period_end_year = 2022 AND a.value > 0  ORDER BY b.value / a.value DESC LIMIT 1",
+   "sql_answer": "3M, 44.3",
+   "split": "r2"
+  },
+  {
+   "id": "r2s029",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Which company grew its inventory the most from fiscal 2021 to fiscal 2022?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_growth",
+   "reference_sql": "SELECT b.company, round(((b.value / a.value - 1) * 100)::numeric, 1) AS pct FROM am a JOIN am b ON b.company = a.company AND b.metric = a.metric AND b.period_end_year = 2022 WHERE a.metric = 'inventory' AND a.period_end_year = 2021 AND a.value > 0  ORDER BY b.value / a.value DESC LIMIT 1",
+   "sql_answer": "AMD, 92.9",
+   "split": "r2"
+  },
+  {
+   "id": "r2s030",
+   "class": "sql",
+   "subclass": "sql",
+   "question": "Which company grew its accounts payable the most from fiscal 2017 to fiscal 2018?",
+   "acceptable": [
+    "sql"
+   ],
+   "source": "template",
+   "pattern": "p_growth",
+   "reference_sql": "SELECT b.company, round(((b.value / a.value - 1) * 100)::numeric, 1) AS pct FROM am a JOIN am b ON b.company = a.company AND b.metric = a.metric AND b.period_end_year = 2018 WHERE a.metric = 'accounts_payable' AND a.period_end_year = 2017 AND a.value > 0  ORDER BY b.value / a.value DESC LIMIT 1",
+   "sql_answer": "Block, 117.2",
+   "split": "r2"
+  },
+  {
+   "id": "r2h001",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Of JPMorgan, Johnson & Johnson and PepsiCo, which reported the lowest operating cash flow in fiscal 2022? Summarise what that company's 2022 annual report says about what drove its results that year.",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": true,
+   "filing": "PEPSICO_2022_10K",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'operating_cash_flow' AND period_end_year = 2022 AND ticker IN ('JNJ', 'JPM', 'PEP') ORDER BY 2 DESC",
+   "sql_answer": "JPM, 107119000000; JNJ, 21194000000; PEP, 10811000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h002",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Which company among Nike and Lockheed Martin had the highest cash and cash equivalents at year end in fiscal 2021, and what does its 2021 10-K say about any material legal proceedings?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": true,
+   "filing": "NIKE_2021_10K",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'cash_and_equivalents' AND period_end_year = 2021 AND ticker IN ('LMT', 'NKE') ORDER BY 2 DESC",
+   "sql_answer": "NKE, 9889000000; LMT, 3604000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h003",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Of Coca-Cola and Johnson & Johnson, which reported the highest long-term debt at year end in fiscal 2022? Summarise what that company's 2022 annual report says about the main risks it faces.",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": true,
+   "filing": "COCACOLA_2022_10K",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'long_term_debt' AND period_end_year = 2022 AND ticker IN ('JNJ', 'KO') ORDER BY 2 DESC",
+   "sql_answer": "KO, 36776000000; JNJ, 28439000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h004",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Which company among PepsiCo, American Water Works and Coca-Cola had the highest cash and cash equivalents at year end in fiscal 2021, and what does its 2021 10-K say about its competition?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": true,
+   "filing": "COCACOLA_2021_10K",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'cash_and_equivalents' AND period_end_year = 2021 AND ticker IN ('AWK', 'KO', 'PEP') ORDER BY 2 DESC",
+   "sql_answer": "KO, 9684000000; PEP, 5596000000; AWK, 116000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h005",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Which company among General Mills, Amcor and Corning had the highest operating income in fiscal 2020, and what does its 2020 10-K say about what drove its results that year?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": true,
+   "filing": "GENERALMILLS_2020_10K",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'operating_income' AND period_end_year = 2020 AND ticker IN ('AMCR', 'GIS', 'GLW') ORDER BY 2 DESC",
+   "sql_answer": "GIS, 2953900000; AMCR, 994000000; GLW, 509000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h006",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Of Lockheed Martin, American Water Works and MGM Resorts, which reported the lowest dividends paid in fiscal 2020? Summarise what that company's 2020 annual report says about any material legal proceedings.",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": true,
+   "filing": "MGMRESORTS_2020_10K",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'dividends_paid' AND period_end_year = 2020 AND ticker IN ('AWK', 'LMT', 'MGM') ORDER BY 2 DESC",
+   "sql_answer": "LMT, 2764000000; AWK, 389000000; MGM, 77606000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h007",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Of Costco and American Water Works, which reported the highest capital expenditure in fiscal 2021? Summarise what that company's 2021 annual report says about what drove its results that year.",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": true,
+   "filing": "COSTCO_2021_10K",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'capital_expenditure' AND period_end_year = 2021 AND ticker IN ('AWK', 'COST') ORDER BY 2 DESC",
+   "sql_answer": "COST, 3588000000; AWK, 1764000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h008",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Which company among Walmart and American Water Works had the lowest operating cash flow in fiscal 2020, and what does its 2020 10-K say about any material legal proceedings?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": true,
+   "filing": "AMERICANWATERWORKS_2020_10K",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'operating_cash_flow' AND period_end_year = 2020 AND ticker IN ('AWK', 'WMT') ORDER BY 2 DESC",
+   "sql_answer": "WMT, 25255000000; AWK, 1426000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h009",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Which company among AES, CVS Health and 3M had the lowest total assets at year end in fiscal 2022, and what does its 2022 10-K say about any material legal proceedings?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": true,
+   "filing": "AES_2022_10K",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'total_assets' AND period_end_year = 2022 AND ticker IN ('AES', 'CVS', 'MMM') ORDER BY 2 DESC",
+   "sql_answer": "CVS, 228275000000; MMM, 46455000000; AES, 38363000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h010",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Which company among MGM Resorts, American Express and AMD had the lowest long-term debt at year end in fiscal 2022, and what does its 2022 10-K say about what drove its results that year?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": true,
+   "filing": "AMD_2022_10K",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'long_term_debt' AND period_end_year = 2022 AND ticker IN ('AMD', 'AXP', 'MGM') ORDER BY 2 DESC",
+   "sql_answer": "AXP, 42573000000; MGM, 8719290000; AMD, 2467000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h011",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Of Verizon and Nike, which reported the highest net income in fiscal 2021? Summarise what that company's 2021 annual report says about its employees and workforce.",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": true,
+   "filing": "VERIZON_2021_10K",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'net_income' AND period_end_year = 2021 AND ticker IN ('NKE', 'VZ') ORDER BY 2 DESC",
+   "sql_answer": "VZ, 22065000000; NKE, 5727000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h012",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Of PepsiCo, Coca-Cola and American Express, which reported the highest dividends paid in fiscal 2022? Summarise what that company's 2022 annual report says about its employees and workforce.",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": true,
+   "filing": "COCACOLA_2022_10K",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'dividends_paid' AND period_end_year = 2022 AND ticker IN ('AXP', 'KO', 'PEP') ORDER BY 2 DESC",
+   "sql_answer": "KO, 7616000000; PEP, 6172000000; AXP, 1565000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h013",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Of AMD and PepsiCo, which reported the highest revenue in fiscal 2022? Summarise what that company's 2022 annual report says about its competition.",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": true,
+   "filing": "PEPSICO_2022_10K",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'revenue' AND period_end_year = 2022 AND ticker IN ('AMD', 'PEP') ORDER BY 2 DESC",
+   "sql_answer": "PEP, 86392000000; AMD, 23601000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h014",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Which company among MGM Resorts, Verizon and General Mills had the highest cash and cash equivalents at year end in fiscal 2022, and what does its 2022 10-K say about the main risks it faces?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": true,
+   "filing": "MGMRESORTS_2022_10K",
+   "reference_sql": "SELECT ticker, value FROM am WHERE metric = 'cash_and_equivalents' AND period_end_year = 2022 AND ticker IN ('GIS', 'MGM', 'VZ') ORDER BY 2 DESC",
+   "sql_answer": "MGM, 5911893000; VZ, 2605000000; GIS, 569400000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h015",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Which company among 3M, Boeing and MGM Resorts had the lowest current ratio in fiscal 2022, and what does its 2022 10-K say about its competition?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": true,
+   "filing": "BOEING_2022_10K",
+   "reference_sql": "SELECT n.ticker, round((n.value / d.value * 100)::numeric, 2) FROM am n JOIN am d ON d.company = n.company AND d.period_end_year = n.period_end_year AND d.metric = 'current_liabilities' WHERE n.metric = 'current_assets' AND n.period_end_year = 2022 AND d.value <> 0 AND n.ticker IN ('BA', 'MGM', 'MMM') ORDER BY 2 DESC",
+   "sql_answer": "MGM, 180.58; MMM, 154.24; BA, 121.62",
+   "split": "r2"
+  },
+  {
+   "id": "r2h016",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "For fiscal 2023: which company held the most cash and cash equivalents, and how does Ulta Beauty's 2023 annual report describe its liquidity and capital resources?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": false,
+   "filing": "ULTABEAUTY_2023_10K",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'cash_and_equivalents' AND period_end_year = 2023  ORDER BY value DESC LIMIT 1",
+   "sql_answer": "Amazon, 73387000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h017",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Which two companies reported the most long-term debt in fiscal 2022? Also, what does General Mills's 2022 10-K say about its properties and facilities?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": false,
+   "filing": "GENERALMILLS_2022_10K",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'long_term_debt' AND period_end_year = 2022  ORDER BY value DESC LIMIT 2",
+   "sql_answer": "Amazon, 70542000000; Boeing, 56794000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h018",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "For fiscal 2022: which two companies reported the most long-term debt, and how does AMD's 2022 annual report describe its competition?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": false,
+   "filing": "AMD_2022_10K",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'long_term_debt' AND period_end_year = 2022  ORDER BY value DESC LIMIT 2",
+   "sql_answer": "Amazon, 70542000000; Boeing, 56794000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h019",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "What was the average diluted earnings per share across the companies in fiscal 2017? Also, what does Best Buy's 2017 10-K say about its liquidity and capital resources?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": false,
+   "filing": "BESTBUY_2017_10K",
+   "reference_sql": "SELECT round(avg(value)::numeric, 2) FROM am WHERE metric = 'eps_diluted' AND period_end_year = 2017",
+   "sql_answer": "3.71",
+   "split": "r2"
+  },
+  {
+   "id": "r2h020",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "For fiscal 2020: what was the average diluted earnings per share across the companies, and how does American Water Works's 2020 annual report describe its liquidity and capital resources?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": false,
+   "filing": "AMERICANWATERWORKS_2020_10K",
+   "reference_sql": "SELECT round(avg(value)::numeric, 2) FROM am WHERE metric = 'eps_diluted' AND period_end_year = 2020",
+   "sql_answer": "5.23",
+   "split": "r2"
+  },
+  {
+   "id": "r2h021",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "For fiscal 2020: how many of the companies had negative net income, and how does Amcor's 2020 annual report describe its liquidity and capital resources?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": false,
+   "filing": "AMCOR_2020_10K",
+   "reference_sql": "SELECT count(*) FROM am WHERE metric = 'net_income' AND period_end_year = 2020 AND value < 0",
+   "sql_answer": "2",
+   "split": "r2"
+  },
+  {
+   "id": "r2h022",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "For fiscal 2021: which company held the most cash and cash equivalents, and how does Verizon's 2021 annual report describe its employees and workforce?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": false,
+   "filing": "VERIZON_2021_10K",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'cash_and_equivalents' AND period_end_year = 2021  ORDER BY value DESC LIMIT 1",
+   "sql_answer": "Amazon, 36220000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h023",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "For fiscal 2020: how many of the companies had negative net income, and how does General Mills's 2020 annual report describe its liquidity and capital resources?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": false,
+   "filing": "GENERALMILLS_2020_10K",
+   "reference_sql": "SELECT count(*) FROM am WHERE metric = 'net_income' AND period_end_year = 2020 AND value < 0",
+   "sql_answer": "2",
+   "split": "r2"
+  },
+  {
+   "id": "r2h024",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "How many of the companies had negative net income in fiscal 2022? Also, what does Corning's 2022 10-K say about its employees and workforce?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": false,
+   "filing": "CORNING_2022_10K",
+   "reference_sql": "SELECT count(*) FROM am WHERE metric = 'net_income' AND period_end_year = 2022 AND value < 0",
+   "sql_answer": "4",
+   "split": "r2"
+  },
+  {
+   "id": "r2h025",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Which two companies reported the most long-term debt in fiscal 2021? Also, what does Lockheed Martin's 2021 10-K say about any material legal proceedings?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": false,
+   "filing": "LOCKHEEDMARTIN_2021_10K",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'long_term_debt' AND period_end_year = 2021  ORDER BY value DESC LIMIT 2",
+   "sql_answer": "Microsoft, 58146000000; Boeing, 57921000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h026",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "For fiscal 2019: which company held the most cash and cash equivalents, and how does General Mills's 2019 annual report describe how its business segments are organised?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": false,
+   "filing": "GENERALMILLS_2019_10K",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'cash_and_equivalents' AND period_end_year = 2019  ORDER BY value DESC LIMIT 1",
+   "sql_answer": "Amazon, 36092000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h027",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "What was the combined capital expenditure of all the companies in fiscal 2022? Also, what does PepsiCo's 2022 10-K say about its liquidity and capital resources?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": false,
+   "filing": "PEPSICO_2022_10K",
+   "reference_sql": "SELECT sum(value) FROM am WHERE metric = 'capital_expenditure' AND period_end_year = 2022",
+   "sql_answer": "70197498000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h028",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "Which company held the most cash and cash equivalents in fiscal 2019? Also, what does Kraft Heinz's 2019 10-K say about how its business segments are organised?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": false,
+   "filing": "KRAFTHEINZ_2019_10K",
+   "reference_sql": "SELECT company, value FROM am WHERE metric = 'cash_and_equivalents' AND period_end_year = 2019  ORDER BY value DESC LIMIT 1",
+   "sql_answer": "Amazon, 36092000000",
+   "split": "r2"
+  },
+  {
+   "id": "r2h029",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "How many of the companies had negative net income in fiscal 2022? Also, what does JPMorgan's 2022 10-K say about any material legal proceedings?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": false,
+   "filing": "JPMORGAN_2022_10K",
+   "reference_sql": "SELECT count(*) FROM am WHERE metric = 'net_income' AND period_end_year = 2022 AND value < 0",
+   "sql_answer": "4",
+   "split": "r2"
+  },
+  {
+   "id": "r2h030",
+   "class": "hybrid",
+   "subclass": "hybrid",
+   "question": "What was the average diluted earnings per share across the companies in fiscal 2019? Also, what does Nike's 2019 10-K say about its employees and workforce?",
+   "acceptable": [
+    "hybrid"
+   ],
+   "source": "template",
+   "dependent": false,
+   "filing": "NIKE_2019_10K",
+   "reference_sql": "SELECT round(avg(value)::numeric, 2) FROM am WHERE metric = 'eps_diluted' AND period_end_year = 2019",
+   "sql_answer": "5.11",
+   "split": "r2"
+  },
+  {
+   "id": "r2n001",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "What was Visa's long-term debt in fiscal 2020?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "company in neither source",
+   "split": "r2"
+  },
+  {
+   "id": "r2n002",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "How much accounts receivable did Target report for fiscal 2022?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "company in neither source",
+   "split": "r2"
+  },
+  {
+   "id": "r2n003",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "How much accounts payable did McDonald's report for fiscal 2022?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "company in neither source",
+   "split": "r2"
+  },
+  {
+   "id": "r2n004",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "How much dividends paid did Mastercard report for fiscal 2018?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "company in neither source",
+   "split": "r2"
+  },
+  {
+   "id": "r2n005",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "How much accounts payable did Disney report for fiscal 2018?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "company in neither source",
+   "split": "r2"
+  },
+  {
+   "id": "r2n006",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "How much current liabilities did Intel report for fiscal 2018?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "company in neither source",
+   "split": "r2"
+  },
+  {
+   "id": "r2n007",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "How much dividends paid did Home Depot report for fiscal 2020?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "company in neither source",
+   "split": "r2"
+  },
+  {
+   "id": "r2n008",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "How much revenue did Chevron report for fiscal 2020?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "company in neither source",
+   "split": "r2"
+  },
+  {
+   "id": "r2n009",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "What was Starbucks's cost of revenue in fiscal 2022?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "company in neither source",
+   "split": "r2"
+  },
+  {
+   "id": "r2n010",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "How much share repurchases did General Motors report for fiscal 2020?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "company in neither source",
+   "split": "r2"
+  },
+  {
+   "id": "r2n011",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "What is Nike's market capitalization today?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "live or future data",
+   "split": "r2"
+  },
+  {
+   "id": "r2n012",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "What is PepsiCo's market capitalization today?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "live or future data",
+   "split": "r2"
+  },
+  {
+   "id": "r2n013",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "How did Verizon's stock trade this morning?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "live or future data",
+   "split": "r2"
+  },
+  {
+   "id": "r2n014",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "How did Walmart's stock trade this morning?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "live or future data",
+   "split": "r2"
+  },
+  {
+   "id": "r2n015",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "What is Boeing's market capitalization today?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "live or future data",
+   "split": "r2"
+  },
+  {
+   "id": "r2n016",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "How did Block's stock trade this morning?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "live or future data",
+   "split": "r2"
+  },
+  {
+   "id": "r2n017",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "What do analysts expect Costco to earn per share in fiscal 2027?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "live or future data",
+   "split": "r2"
+  },
+  {
+   "id": "r2n018",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "What is Johnson & Johnson's share price right now?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "live or future data",
+   "split": "r2"
+  },
+  {
+   "id": "r2n019",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "How did American Express's stock trade this morning?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "live or future data",
+   "split": "r2"
+  },
+  {
+   "id": "r2n020",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "What is 3M's share price right now?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "live or future data",
+   "split": "r2"
+  },
+  {
+   "id": "r2n021",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "Write a short poem about autumn leaves.",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "outside data analysis",
+   "split": "r2"
+  },
+  {
+   "id": "r2n022",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "Recommend a good science fiction novel.",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "outside data analysis",
+   "split": "r2"
+  },
+  {
+   "id": "r2n023",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "Explain how a rainbow forms, in simple words.",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "outside data analysis",
+   "split": "r2"
+  },
+  {
+   "id": "r2n024",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "Write a limerick about a sleepy cat.",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "outside data analysis",
+   "split": "r2"
+  },
+  {
+   "id": "r2n025",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "Translate 'thank you very much' into Spanish.",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "outside data analysis",
+   "split": "r2"
+  },
+  {
+   "id": "r2n026",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "Summarise the plot of Romeo and Juliet in two sentences.",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "outside data analysis",
+   "split": "r2"
+  },
+  {
+   "id": "r2n027",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "Suggest a name for a pet goldfish.",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "outside data analysis",
+   "split": "r2"
+  },
+  {
+   "id": "r2n028",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "What is the boiling point of water at sea level in Fahrenheit?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "outside data analysis",
+   "split": "r2"
+  },
+  {
+   "id": "r2n029",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "Who painted the Mona Lisa?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "outside data analysis",
+   "split": "r2"
+  },
+  {
+   "id": "r2n030",
+   "class": "neither",
+   "subclass": "neither",
+   "question": "How do I make a cup of masala chai?",
+   "acceptable": [
+    "neither"
+   ],
+   "source": "template",
+   "why": "outside data analysis",
+   "split": "r2"
+  }
+ ],
+ "dropped_docs": [
+  {
+   "id": "r2d061",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In Pfizer's Form 10-Q for the second quarter of 2023, what does the company mean by the term 'Upjohn Business,' and what ultimately happened to that business?",
+   "gold_answer": "The Upjohn Business refers to Pfizer's former worldwide operation centered on off-patent branded medicines and generics. It included a portfolio of about 20 well-known solid oral dose brands such as Lipitor, Lyrica, Norvasc, Celebrex and Viagra, along with the U.S.-based generics operation Greenstone. That business was spun off in November 2020 and merged with Mylan to form Viatris.",
+   "filing": "Pfizer_2023Q2_10Q",
+   "page": 6,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d063",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to CVS Health's 2022 Form 10-K, why did the company's estimates of health care costs from prior years decline during fiscal 2022, and why does this favorable development not translate directly into improved operating results?",
+   "gold_answer": "The prior-year estimates declined because claims were ultimately settled for less than the company had originally projected, mainly due to lower-than-expected health care cost trend and claims being submitted more quickly than assumed, which meant the completion factors used in the prior-year estimates were too conservative. However, this favorable development does not directly improve operating results, because the reductions are offset when the company sets its estimates for health care costs incurred in the current period.",
+   "filing": "CVSHEALTH_2022_10K",
+   "page": 153,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d065",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In American Water Works' 2022 Form 10-K, what risks does the company identify from government-imposed water use restrictions during droughts, and why might recovery of the associated costs be uncertain?",
+   "gold_answer": "The company warns that government restrictions on water use can reduce demand for its services even when its water supplies are sufficient, because regional mandates may apply to all systems in an area regardless of how adequate any single system's supply is. Such responses can range from voluntary limits to mandatory rationing, conservation rules, and leak-reduction requirements. While spending on conservation and rationing programs is often recoverable if the relevant state regulator deems it reasonable and prudent, the company cannot be sure those costs will be fully recovered. It also cautions that lower consumption\u2014whether from efficiency equipment or changed customer habits\u2014may continue even after a drought ends and restrictions are lifted, which could adversely affect its business, financial condition, results of operations, and cash flows.",
+   "filing": "AMERICANWATERWORKS_2022_10K",
+   "page": 29,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d067",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "For The Coca-Cola Company's fiscal year 2021 Form 10-K, which company officers did director Helene D. Gayle authorize to sign and file the annual report on her behalf?",
+   "gold_answer": "Through a power of attorney dated February 22, 2022, Helene D. Gayle designated James Quincey (Chairman of the Board and CEO), John Murphy (Executive Vice President and CFO), Monica Howard Douglas (Senior Vice President and General Counsel), and Jennifer Manning (Corporate Secretary), or any one of them, to execute the annual report for the year ended December 31, 2021, including any amendments or supplements, in her name and to file it with the SEC.",
+   "filing": "COCACOLA_2021_10K",
+   "page": 172,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d069",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to AMD's 2015 Form 10-K, why might the company fail to realize the revenue it expects from its semi-custom SoC products?",
+   "gold_answer": "Because this revenue depends on AMD's technology being adopted into products that other companies design, build, and sell. AMD earns it through design and development fees charged to those partners plus sales tied to their end products, so it must continually win new design customers and relies on those customers choosing to move forward with their projects. AMD also has no control over how its partners market their products, so if the end products do not sell successfully in the market, the anticipated revenue may not be fully realized and AMD's operating results could suffer.",
+   "filing": "AMD_2015_10K",
+   "page": 21,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d071",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to MGM Resorts' fiscal 2022 Form 10-K, why might the company's data security measures and cyber insurance fail to protect it from the fallout of a cyber attack?",
+   "gold_answer": "MGM Resorts depends on proprietary and commercially available systems to secure customer and employee information, and although it reviews those safeguards regularly, they may not withstand increasingly advanced and aggressive attacks. The company and the third-party service providers it relies on have experienced breaches in the past and could again, and it does not directly control those providers' information security operations. While it carries cyber risk insurance to help cover recovery costs from a major incident, that coverage may fall short. A significant theft, loss, or fraudulent use of data could damage its reputation, materially disrupt operations, and lead to remediation expenses, regulatory penalties, and litigation, adversely affecting its business, results of operations, and cash flows.",
+   "filing": "MGMRESORTS_2022_10K",
+   "page": 25,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d073",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Under the credit agreement PepsiCo entered into in May 2023, what options does the company have if some lenders decline to extend the facility's termination date?",
+   "gold_answer": "PepsiCo can either withdraw its extension request, leaving the existing termination date in place, or\u2014provided no default has occurred and is continuing\u2014pay the non-consenting lenders in full for all principal, interest, and other amounts owed, reduce the aggregate commitments by those lenders' commitments, and proceed with the 364-day extension at the reduced commitment level. Alternatively, before the extension date, PepsiCo may require any non-consenting lender to assign all of its rights and obligations under the agreement to a replacement lender of PepsiCo's choosing that agrees to the extension, so long as the assignment complies with the agreement's assignment provisions and the departing lender receives full payment of principal, accrued interest, and other amounts due.",
+   "filing": "PEPSICO_2023_8K_dated-2023-05-30",
+   "page": 27,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d075",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to MGM Resorts International's 2018 Form 10-K, how are the costs of arbitration allocated between the company and its employees under the company's employee dispute resolution program?",
+   "gold_answer": "The company is responsible for paying the arbitration filing fee and the arbitrator's fees, while each party covers its own expenses, attorney's fees, and costs related to witnesses, photocopying, and other preparation. An exception applies if a statutory claim allows the prevailing party to recover fees or if a written agreement provides for them, in which case the arbitrator may award reasonable attorney's fees and/or costs to the prevailing party using the same standards a court would apply.",
+   "filing": "MGMRESORTS_2018_10K",
+   "page": 139,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d077",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to American Water Works' 2021 Form 10-K, how are the registered senior notes issued by its financing subsidiary backed by the parent company?",
+   "gold_answer": "The notes were issued by American Water Capital Corp. (AWCC), and the parent company has a support agreement with AWCC that effectively operates as a complete and unconditional backstop of AWCC's payment obligations on those registered securities.",
+   "filing": "AMERICANWATERWORKS_2021_10K",
+   "page": 178,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d079",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "What data privacy protections and participant rights does AMD's 2015 PRSU plan provide for employees in Italy?",
+   "gold_answer": "Personal data collected under the plan is handled with the confidentiality and security safeguards required by Italian data protection law (D.lgs. 196/2003) and is retained only as long as legally required or as needed to administer the employee's participation. Participants have the right to access, update, correct, or delete their data and to stop its processing for legitimate reasons, and the data will not be used for direct marketing. Questions or complaints can be raised with AMD's local representative at its Milan, Italy office.",
+   "filing": "AMD_2015_10K",
+   "page": 192,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d081",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In Walmart's fiscal 2020 10-K, what pricing philosophy does the company describe, and how does it keep prices low for its customers?",
+   "gold_answer": "Walmart follows a philosophy of pricing items at a low level every day so that customers trust prices will not fluctuate due to frequent promotional activity. This is supported by a parallel commitment to controlling expenses, which allows the company's cost savings to be passed along to customers.",
+   "filing": "WALMART_2020_10K",
+   "page": 7,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d083",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Per American Water Works' 2020 Form 10-K, why does the company focus its acquisition strategy on water and wastewater systems located close to its existing regulated operations rather than pursuing targets elsewhere?",
+   "gold_answer": "Because acquiring systems near its regulated footprint allows American Water to fold the acquired systems into its operations using largely its existing management team (while typically retaining most or all of the acquired systems' employees), which enables the company to capture operational efficiencies and set capital investment priorities for the combined systems.",
+   "filing": "AMERICANWATERWORKS_2020_10K",
+   "page": 9,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d085",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Under Johnson & Johnson's 2022 Form 10-K, what determines whether an employee can participate in the company's deferred compensation plan?",
+   "gold_answer": "An employee automatically becomes a member if they qualify for the company's qualified retirement plan and their eligible pay exceeds the IRS annual compensation cap, provided the plan administrator considers them part of a select group of management or highly paid employees. Additionally, anyone who is not eligible to receive contributions under the qualified plan cannot participate in this plan, and changes in eligibility do not affect benefits already credited to a member's account.",
+   "filing": "JOHNSON_JOHNSON_2022_10K",
+   "page": 126,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d087",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Under the retirement plan included as an exhibit in American Water Works Company's 2022 Form 10-K, which body is treated as the plan's administrator and named fiduciary for ERISA purposes?",
+   "gold_answer": "The Benefits Administration Committee, along with its successors and delegates, is deemed to be the plan's administrator and named fiduciary as those roles are defined in sections 3(16)(A) and 402(a)(2) of ERISA or corresponding successor laws.",
+   "filing": "AMERICANWATERWORKS_2022_10K",
+   "page": 192,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d089",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "What is Netflix's accounting policy for handling legal costs and potential losses from litigation, as described in its fiscal 2015 Form 10-K?",
+   "gold_answer": "Netflix charges legal fees to expense as they are incurred. For potential losses arising from litigation, it records a provision only when a liability is considered probable and the amount of the loss can be estimated with reasonable accuracy.",
+   "filing": "NETFLIX_2015_10K",
+   "page": 54,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d091",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to Boeing's 2022 Form 10-K, why might the company's actual environmental cleanup costs ultimately turn out to be higher than the liabilities it has recorded for remediation sites?",
+   "gold_answer": "Boeing explains that its recorded remediation liabilities could prove insufficient for several reasons: regulators could issue orders or directives requiring additional work, environmental laws or regulations could change, cleanup costs could run above what was anticipated, or contamination that was not previously identified could be discovered at the sites. The company also notes that for some potential remediation obligations, the associated costs cannot be reasonably estimated at all, and its recorded amounts reflect its best estimate or the low end of a range of possible costs, including long-term operation and maintenance that may span decades.",
+   "filing": "BOEING_2022_10K",
+   "page": 88,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d093",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to Walmart's fiscal 2018 Form 10-K, how is the deferred compensation plan for directors funded, and what is the nature of Walmart's obligations to plan participants?",
+   "gold_answer": "The plan is maintained on an unfunded basis for federal tax purposes. Participants' cash and share deferral accounts exist only as entries in a special ledger and represent nothing more than a promise of future payments; Walmart's obligations under the plan are unsecured, general contractual obligations of the company.",
+   "filing": "WALMART_2018_10K",
+   "page": 210,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d095",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In its fiscal 2020 10-K, how does MGM Resorts account for the compensation paid to gaming promoters who bring VIP players to its MGM China operations?",
+   "gold_answer": "Gaming promoters buy special nonnegotiable chips and resell them to their players, which lets the company track each promoter's VIP wagering. Their compensation is paid as a share of the tables' gross winnings or of total wagering volume, and they also receive a complimentary allowance tied to wagering volume that can cover guests' hotel rooms, dining and other discretionary expenses. Rather than being expensed, these promoter commissions are deducted from casino revenue; commissions for in-house VIP play, which are tied to the volume of chips wagered, are treated the same way.",
+   "filing": "MGMRESORTS_2020_10K",
+   "page": 9,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d097",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "What was Amcor's approach to managing its exposure to interest rate risk in fiscal year 2023?",
+   "gold_answer": "Amcor managed interest rate exposure by maintaining a blend of fixed-rate and floating-rate borrowings, monitoring global interest rate movements, and, where appropriate, hedging floating-rate exposure or locking in fixed rates on debt using derivative instruments such as interest rate swaps, cross-currency swaps, and rate locks. For swaps designated as fair value hedges, gains and losses from changes in their fair value were recorded in interest expense and offset changes in the fair value of the hedged debt attributable to market rate movements, while changes in the value of swaps not designated as hedges were reported in other income, net.",
+   "filing": "AMCOR_2023_10K",
+   "page": 77,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d099",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In its fiscal 2020 10-K, how does General Mills characterize the adequacy of the reserve recorded on its LIFO-valued inventories relative to current replacement costs?",
+   "gold_answer": "General Mills values a substantial portion of its fiscal 2020 inventories (about $892.6 million at year-end) on a LIFO basis, and it explains that the gap between what it would cost to replace that inventory and its recorded LIFO value is essentially in line with the reserve it has established, meaning the LIFO reserve adequately reflects current replacement costs.",
+   "filing": "GENERALMILLS_2020_10K",
+   "page": 91,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d101",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "What exposures did JPMorgan's interest rate cash flow hedges primarily cover in the second quarter of 2022, and where in its income statement were the gains and losses on those hedges recognized?",
+   "gold_answer": "The interest rate cash flow hedges primarily covered floating-rate assets indexed to LIBOR and SOFR, and the associated gains and losses were recognized in net interest income.",
+   "filing": "JPMORGAN_2022Q2_10Q",
+   "page": 121,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d103",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In its fiscal 2022 Form 10-K, why does Adobe conclude that its customer contracts generally do not contain a significant financing component?",
+   "gold_answer": "Because Adobe's invoicing terms are designed to give customers a simple and predictable way to purchase its products and services, such as billing at the start of a subscription term while recognizing revenue ratably over the contract period, rather than to obtain financing from customers; any potential financing fees are considered immaterial in the context of its contracts.",
+   "filing": "ADOBE_2022_10K",
+   "page": 66,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d105",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to Adobe's fiscal 2016 Form 10-K, what factors could cause the market price of Adobe's common stock to fluctuate or decline?",
+   "gold_answer": "Adobe points to a range of possible drivers of stock price volatility, including missing targets on revenue, margins, earnings, Annualized Recurring Revenue, or bookings in its Marketing Cloud business; shifts in securities analysts' estimates or recommendations; results falling short of analyst expectations; changes in the valuation multiples investors apply to high-technology SaaS companies; new product or service announcements by Adobe or its competitors; losing large customers or failing to grow, retain, or attract customers; differences in operating results versus competitors and broader industry developments; and unusual events such as major acquisitions, divestitures, litigation, or general economic, regulatory, political, or market conditions, even ones unrelated to Adobe's own performance. The company also notes that uneven investor confidence across the technology sector can push its stock down for reasons having nothing to do with its operating results.",
+   "filing": "ADOBE_2016_10K",
+   "page": 29,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d107",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In NIKE's fiscal 2019 10-K, why does the company consider the interest rate and foreign currency risks tied to its non-functional currency intercompany loans to be immaterial?",
+   "gold_answer": "Because the intercompany loans and the related interest are removed when the subsidiaries are consolidated, and the loans are largely protected against foreign exchange movements through forward contracts that are already captured in the company's VaR measure. As a result, NIKE views the associated interest rate and currency risks as having no material effect on its consolidated financial position, results of operations, or cash flows.",
+   "filing": "NIKE_2019_10K",
+   "page": 47,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d109",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In Johnson & Johnson's fiscal 2022 supplementary sales disclosure, why might the geographic percentage changes not tie out exactly when an analyst recomputes them from the dollar amounts shown in the table?",
+   "gold_answer": "Because the reported percent changes were calculated using actual, unrounded amounts, so recalculating them from the rounded millions presented in the table may not reproduce the stated percentages precisely.",
+   "filing": "JOHNSON_JOHNSON_2023_8K_dated-2023-08-30",
+   "page": 11,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d111",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In its second-quarter 2023 Form 10-Q, what did JPMorgan Chase disclose about the July 2023 U.S. regulatory proposal to overhaul capital rules for large banking organizations, and how would it affect the Firm if adopted?",
+   "gold_answer": "The Federal Reserve, OCC and FDIC proposed amending the capital rules applicable to large banking organizations. Under the proposal, the advanced approach would be replaced with a new expanded risk-based approach under which banks could no longer use their own internal models to compute risk-weighted assets (except for market risk), and the stress capital buffer requirement would apply under both the expanded risk-based and standardized approaches. The proposal would significantly revise risk-based capital requirements for all banks with $100 billion or more of assets, including JPMorgan Chase and other U.S. GSIBs, with a proposed effective date of July 1, 2025 and a three-year transition period for the expanded risk-based approach.",
+   "filing": "JPMORGAN_2023Q2_10Q",
+   "page": 48,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d113",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "How does Lockheed Martin present the different components of its pension and retiree medical and life insurance benefit costs on its consolidated statement of earnings in its 2021 annual report?",
+   "gold_answer": "Lockheed Martin records the service cost component of these benefit plans within cost of sales. The non-service components of its qualified defined benefit pension plans are shown in a separate line item for non-service pension expense or income, while the non-service components of its retiree medical and life insurance plans are included within other non-operating income and expense.",
+   "filing": "LOCKHEEDMARTIN_2021_10K",
+   "page": 92,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d115",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In its fiscal 2022 annual report, what categories of employee benefit plans does General Mills separately present when disclosing amounts accumulated in other comprehensive income related to its benefit plans?",
+   "gold_answer": "General Mills breaks the disclosure into three categories: its defined benefit pension plans, its other postretirement benefit plans, and its postemployment benefit plans, and also shows a combined total across the three categories for fiscal 2022 and fiscal 2021.",
+   "filing": "GENERALMILLS_2022_10K",
+   "page": 76,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d117",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to Pfizer's 2021 Form 10-K, how does the company manage the credit risk associated with the trade receivables it extends to customers, and does it generally require collateral?",
+   "gold_answer": "Pfizer continuously monitors and reviews credit risk across its customer base, financial institutions, and investment portfolio. For trade receivables, it assesses the financial standing of customers to whom it grants credit in the ordinary course of business, and as a general practice it does not require customers to post collateral.",
+   "filing": "PFIZER_2021_10K",
+   "page": 87,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d119",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "What do the bank guarantees MGM Resorts posted with the Macau government in connection with its January 2023 gaming concession cover, and how were they secured as of June 30, 2023?",
+   "gold_answer": "The guarantees, totaling MOP 1 billion (roughly $124 million), back the company's labor obligations and cover any damages or losses arising from failure to comply with the terms of the concession, and they remain in effect until 180 days after the concession term ends. While the full amount was originally backed by cash pledged as collateral, MOP 300 million of that cash was released during the first half of 2023, leaving MOP 700 million (about $87 million) of the guarantees still secured by pledged cash at June 30, 2023.",
+   "filing": "MGMRESORTS_2023Q2_10Q",
+   "page": 22,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d121",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Why did Amcor record a hyperinflation-related adjustment in its fiscal 2020 results?",
+   "gold_answer": "Because Amcor's subsidiaries in Argentina use the Argentine peso as their functional currency, U.S. GAAP required the company to apply highly inflationary accounting to those operations, which had an adverse effect on results; the adjustment removes that impact.",
+   "filing": "AMCOR_2020_10K",
+   "page": 32,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d123",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Which firm served as Netflix's independent auditor for fiscal year 2017, and what conclusions did it reach regarding the company's financial statements and its internal control over financial reporting?",
+   "gold_answer": "Ernst & Young LLP, which has been Netflix's auditor since 2012, audited the consolidated financial statements for fiscal year 2017 and issued an unqualified opinion that they comply with U.S. GAAP. The firm also audited Netflix's internal control over financial reporting as of December 31, 2017, using the COSO 2013 framework, and issued an unqualified opinion on that as well, with both reports dated January 29, 2018.",
+   "filing": "NETFLIX_2017_10K",
+   "page": 41,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d125",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to Corning's 2022 Form 10-K, at what level does the company group long-lived assets for impairment testing, and what judgment is involved in that grouping?",
+   "gold_answer": "Corning groups long-lived assets with other assets and liabilities at the smallest unit whose cash flows can be identified as largely independent of the cash flows of other assets and liabilities. This assessment is performed at the operating segment level, and for most of its operating segments, Corning concluded that locations or businesses within a segment that share production along the supply chain must be combined together in order to appropriately identify cash flows that are independent of other assets and liabilities.",
+   "filing": "CORNING_2022_10K",
+   "page": 40,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d127",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In Pfizer's 2021 Form 10-K, how were the comparative prior-year financial statements treated in connection with the change in accounting principle, and which parts of the financial statements did the change affect?",
+   "gold_answer": "The change was applied retrospectively: fiscal 2021 results are presented as reported under the new principle, while the comparative 2020 and 2019 figures were adjusted to reflect it. The adjustments touched the income statement (other income/deductions, the tax provision, net income and earnings per share), components of comprehensive income (foreign currency translation and benefit-plan-related gains, losses and reclassifications, plus the related tax), cash flow amounts for deferred taxes and benefit plan contributions, and balance sheet items including noncurrent deferred tax assets, retained earnings, and accumulated other comprehensive loss.",
+   "filing": "PFIZER_2021_10K",
+   "page": 64,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d129",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In its fiscal 2015 Form 10-K, what risks does Netflix identify in connection with how it processes customer payments?",
+   "gold_answer": "Netflix accepts many forms of payment from members, including cards, gift cards, direct debit, and online wallets, and it depends on both its own systems and outside processors to handle these transactions. The company warns that disruptions to these systems, higher interchange and processing fees, major shifts in the payments landscape such as large-scale card re-issuances, delays in receiving funds from processors, or new rules and regulations governing payment processing could hurt its revenue, operating expenses, and results of operations. It also notes that it periodically experiences fraudulent use of payment methods, which, if not adequately controlled, could harm its results and create negative perceptions of its service among consumers.",
+   "filing": "NETFLIX_2015_10K",
+   "page": 11,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d131",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to General Mills' fiscal 2019 Form 10-K, what conditions must be met before the company can be legally released from its payment obligations on its 2020, 2023, and 2027 notes through full defeasance?",
+   "gold_answer": "General Mills would need to irrevocably place in trust, for the benefit of note holders, cash and/or specified German government securities generating enough cash to cover all future interest, principal, and other payments on those notes. A change in U.S. federal tax law or an IRS ruling must also allow the deposit without changing how investors are taxed relative to a direct repayment, and the company must give the trustee a legal opinion confirming that tax law change. Additionally, no default on those notes may exist when the deposit is made (or, for bankruptcy-type events, during the following 90 days), and the company must deliver a certificate and legal opinion that the deposit would not delist the notes, create a conflicting interest for the trustee under the Trust Indenture Act of 1939, breach any other agreement it is party to, or cause the trust to be an investment company under the Investment Company Act of 1940 unless registered or exempt. Once full defeasance is accomplished, investors can only look to the trust deposit for repayment rather than to General Mills, although the deposit would likely be shielded from claims of the company's other creditors if it becomes bankrupt or insolvent.",
+   "filing": "GENERALMILLS_2019_10K",
+   "page": 130,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d133",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "How are changes in unearned revenue reflected in Microsoft's operating cash flow for fiscal year 2016?",
+   "gold_answer": "Unearned revenue is handled through two separate reconciling adjustments to net income: cash collected for revenue not yet recognized is added back as a deferral, while revenue recognized from amounts previously deferred is subtracted. In fiscal 2016 the deferral adjustment was larger than the recognition adjustment, so unearned revenue was a net positive contributor to cash generated from operations.",
+   "filing": "MICROSOFT_2016_10K",
+   "page": 55,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d135",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Why does JPMorgan not view the full contractual value of its wholesale lending-related commitments as a reliable indicator of the credit exposure it actually expects to face in the first quarter of 2021?",
+   "gold_answer": "Because historically most of these commitments and guarantees have been refinanced, extended, cancelled, or expired without ever being drawn upon or resulting in a client default, so the maximum contractual amounts rarely translate into actual credit losses or funding needs for the Firm.",
+   "filing": "JPMORGAN_2021Q1_10Q",
+   "page": 61,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d137",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to NIKE's fiscal 2023 Form 10-K, what is the status of the European Commission's State aid investigation into the tax rulings NIKE received from the Netherlands, and what would be the potential consequence for NIKE if the matter were resolved unfavorably?",
+   "gold_answer": "The European Commission opened a formal investigation in January 2019 into whether the Netherlands breached State Aid rules in granting certain tax rulings to NIKE. NIKE believes the investigation lacks merit. However, if the matter were resolved adversely, the Netherlands could be required to assess additional amounts for prior periods, which would increase NIKE's income taxes related to those prior periods in the Netherlands.",
+   "filing": "NIKE_2023_10K",
+   "page": 78,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d139",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In its fiscal 2017 Form 10-K, how does Amazon treat revenue from items sold by third-party sellers on its platform differently from revenue on merchandise it sells from its own inventory?",
+   "gold_answer": "Amazon records the gross amount of sales of items it has purchased for resale and sells from its own inventory as product sales, whereas for items sold by third-party sellers on its sites it records only its net share of the revenue, which it classifies as service sales.",
+   "filing": "AMAZON_2017_10K",
+   "page": 19,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d141",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to Lockheed Martin's 2020 Form 10-K, are all of the subsidiaries identified in Exhibit 21 included in the company's consolidated financial statements, and does the company have any other significant subsidiaries beyond those listed?",
+   "gold_answer": "Yes. Every subsidiary listed in Exhibit 21 is included in Lockheed Martin's consolidated financial statements. In addition, the company notes that any remaining operating subsidiaries, if grouped together as one entity, would not rise to the level of a significant subsidiary.",
+   "filing": "LOCKHEEDMARTIN_2020_10K",
+   "page": 117,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d143",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In Best Buy's fiscal 2024 second-quarter Form 10-Q, how does the company define its comparable sales metric, and what types of revenue are included in or excluded from the calculation?",
+   "gold_answer": "Best Buy uses comparable sales to gauge the performance of its existing stores, websites and call centers by measuring the change in net sales for a period against the equivalent prior-year period. It covers locations and channels that have been operating for a minimum of 14 full months and includes online revenue no matter how the customer takes delivery, along with credit card revenue, gift card breakage, commercial sales, and sales to wholesalers and dealers. Revenue from acquisitions enters the metric starting with the first full quarter after the one-year anniversary of the deal. Stores shut for more than 14 days\u2014such as those relocated, remodeled, expanded, downsized or hit by natural disasters\u2014are left out until 14 full months after reopening. The metric also strips out discontinued operations, profit-share revenue from the services plan portfolio, and, for the International segment, foreign currency movements. Management considers it a useful supplement because it separates growth from existing operations versus openings or closures of stores, while cautioning that its calculation method may differ from other retailers'.",
+   "filing": "BESTBUY_2024Q2_10Q",
+   "page": 14,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d145",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In its 2017 Form 10-K, how does Amazon describe the arrangements it uses to run its Chinese and Indian marketplaces in light of local foreign-investment restrictions, and what consequences could follow if regulators disagreed with its approach?",
+   "gold_answer": "Because China and India impose licensing and ownership rules that limit foreign participation in areas such as internet infrastructure, data centers, retail, and delivery, Amazon operates www.amazon.cn through local companies owned wholly or partly by Chinese nationals and supplies certain technology services in China alongside locally licensed partners. In India, where foreign control of companies engaged in internet-based retail of multiple brands is restricted, Amazon offers marketing and logistics support to independent sellers and maintains small indirect equity stakes in some sellers on its Indian marketplace. Amazon believes these structures comply with current law but flags distinctive risks: China is weighing changes to its foreign investment rules, and the interpretation of both countries' regulations is highly uncertain, so authorities could reach conclusions contrary to Amazon's view. If its international activities were found to violate existing or future rules, the affected businesses could face fines or other monetary penalties, lose their licenses, or be forced to cease operating entirely.",
+   "filing": "AMAZON_2017_10K",
+   "page": 8,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d147",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Which individual products does Johnson & Johnson break out within its Oncology franchise when reporting second quarter 2023 sales?",
+   "gold_answer": "The Oncology franchise is itemized into CARVYKTI, DARZALEX, ERLEADA, IMBRUVICA, ZYTIGA (abiraterone acetate), and a residual other oncology category, with each shown for the U.S., international, and worldwide markets alongside prior-year comparisons.",
+   "filing": "JOHNSON_JOHNSON_2023Q2_EARNINGS",
+   "page": 17,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d149",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "According to 3M's second quarter 2023 10-Q, what sources does the company rely on to cover its near-term liquidity requirements?",
+   "gold_answer": "3M covers its short-term liquidity requirements primarily with cash held on hand together with issuances of U.S. commercial paper.",
+   "filing": "3M_2023Q2_10Q",
+   "page": 73,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d151",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Why did 3M's sales in the Asia Pacific region grow in fiscal year 2017?",
+   "gold_answer": "Growth in Asia Pacific was driven by stronger demand for electronics across most market segments, which benefited 3M's Electronics and Energy business since it is heavily concentrated in that region, along with strong performance from the Safety and Graphics business.",
+   "filing": "3M_2018_10K",
+   "page": 25,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d153",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Why did Johnson & Johnson's net earnings decline in fiscal 2022 even though sales to customers grew for the full year?",
+   "gold_answer": "The decline was driven primarily by a much larger income tax burden: the provision for taxes on income nearly doubled versus 2021, lifting the effective tax rate from 8.3% to 17.4%. Higher other net expenses and a slightly lower gross profit margin also weighed on results, more than offsetting the modest 1.3% sales growth.",
+   "filing": "JOHNSON_JOHNSON_2022Q4_EARNINGS",
+   "page": 11,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d155",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "Why did PepsiCo's financing activities shift from using cash in the first quarter of 2022 to providing cash in the first quarter of 2023?",
+   "gold_answer": "The swing was driven primarily by PepsiCo issuing long-term debt during the 2023 quarter after issuing none in the year-earlier period, supplemented by proceeds from short-term borrowings. These inflows more than offset the company's ongoing outflows for dividends, share repurchases, and debt repayments, which continued at broadly similar levels in both quarters.",
+   "filing": "PEPSICO_2023Q1_EARNINGS",
+   "page": 7,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "page does not answer it"
+  },
+  {
+   "id": "r2d157",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "What factors caused Amcor's adjusted free cash flow to decline in fiscal 2023 compared with the prior fiscal year?",
+   "gold_answer": "The decline was mainly driven by higher interest payments and a lower accounts payable balance, as purchasing activity moderated in response to weaker demand and the company's inventory reduction efforts.",
+   "filing": "AMCOR_2023Q4_EARNINGS",
+   "page": 5,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d159",
+   "class": "docs",
+   "subclass": "docs_statement",
+   "question": "In PepsiCo's first quarter of 2023, how does the company determine the tax provision applied to items affecting comparability when reconciling its reported GAAP results to core non-GAAP measures?",
+   "gold_answer": "The provision for income taxes on each adjusting item reflects the expected tax charge or benefit for that item, calculated using the tax laws and income tax rates that apply to the item in the tax jurisdiction where it arises.",
+   "filing": "PEPSICO_2023Q1_EARNINGS",
+   "page": 13,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d002",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "BESTBUY_2019_10K",
+   "page": 32,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d004",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "JPMORGAN_2022_10K",
+   "page": 163,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d018",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "BESTBUY_2019_10K",
+   "page": 46,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d020",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "AMCOR_2023_10K",
+   "page": 124,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d026",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "VERIZON_2021_10K",
+   "page": 46,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d032",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "VERIZON_2022_10K",
+   "page": 14,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d036",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "BOEING_2018_10K",
+   "page": 106,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d040",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "KRAFTHEINZ_2019_10K",
+   "page": 64,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d042",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "3M_2022_10K",
+   "page": 132,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d044",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "As of what date did Best Buy's management assess the effectiveness of its internal control over financial reporting in its fiscal 2017 Form 10-K?",
+   "gold_answer": "January 28, 2017",
+   "filing": "BESTBUY_2017_10K",
+   "page": 52,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "not a figure question"
+  },
+  {
+   "id": "r2d050",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "ULTABEAUTY_2023_10K",
+   "page": 77,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d056",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "CORNING_2021_10K",
+   "page": 58,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d070",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "WALMART_2019_10K",
+   "page": 34,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d072",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "BLOCK_2016_10K",
+   "page": 72,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d074",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "3M_2022_10K",
+   "page": 180,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d078",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "NIKE_2018_10K",
+   "page": 35,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d080",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "JOHNSON_JOHNSON_2022_10K",
+   "page": 67,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d082",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "ADOBE_2015_10K",
+   "page": 47,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d084",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "BOEING_2018_10K",
+   "page": 46,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d086",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "PEPSICO_2023_8K_dated-2023-05-30",
+   "page": 121,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d090",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "MICROSOFT_2023_10K",
+   "page": 92,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d098",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "CORNING_2020_10K",
+   "page": 26,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d102",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "ADOBE_2017_10K",
+   "page": 6,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d108",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "GENERALMILLS_2020_10K",
+   "page": 105,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d110",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "On what date did The AES Corporation's President and CEO sign the Section 906 certification accompanying the fiscal year 2022 Form 10-K?",
+   "gold_answer": "March 1, 2023",
+   "filing": "AES_2022_10K",
+   "page": 256,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d112",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "According to Corning's fiscal 2021 Form 10-K, how old is Michael A. Bell, the senior vice president and general manager of the Optical Communications business?",
+   "gold_answer": "57",
+   "filing": "CORNING_2021_10K",
+   "page": 11,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d114",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "NETFLIX_2017_10K",
+   "page": 15,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d116",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "CORNING_2020_10K",
+   "page": 59,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d118",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "For fiscal year 2022, what was the loss from operations reported for Boeing's Defense, Space & Security segment?",
+   "gold_answer": "A loss of $3,544 million (compared with earnings of $1,544 million in 2021)",
+   "filing": "BOEING_2022_10K",
+   "page": 25,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d120",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "AMCOR_2020_10K",
+   "page": 41,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d122",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "What was the total amount of JPMorgan Chase's pledged assets as of March 31, 2021?",
+   "gold_answer": "$803.8 billion",
+   "filing": "JPMORGAN_2021Q1_10Q",
+   "page": 155,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d124",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "LOCKHEEDMARTIN_2022_10K",
+   "page": 32,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d126",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "KRAFTHEINZ_2019_10K",
+   "page": 105,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d128",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "In its fiscal 2022 10-K, over what range of useful lives does General Mills amortize its finite-lived intangible assets?",
+   "gold_answer": "4 to 30 years",
+   "filing": "GENERALMILLS_2022_10K",
+   "page": 51,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d130",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "According to Block's fiscal 2020 Form 10-K, what tariff rate applied to the company's remaining hardware products imported from China after the U.S. rolled back the tariffs in February 2020?",
+   "gold_answer": "7.5%",
+   "filing": "BLOCK_2020_10K",
+   "page": 34,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d132",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "How large was AMD's global workforce as of the end of fiscal year 2022?",
+   "gold_answer": "Approximately 25,000 employees",
+   "filing": "AMD_2022_10K",
+   "page": 14,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d134",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "FOOTLOCKER_2022_8K_dated_2022-08-19",
+   "page": 15,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d136",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "JOHNSON_JOHNSON_2023Q2_EARNINGS",
+   "page": 14,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d138",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "FOOTLOCKER_2022_8K_dated_2022-08-19",
+   "page": 9,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d140",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "What was the accumulated benefit obligation for all of Lockheed Martin's qualified defined benefit pension plans as of December 31, 2020?",
+   "gold_answer": "$51.3 billion",
+   "filing": "LOCKHEEDMARTIN_2020_10K",
+   "page": 94,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d142",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "JOHNSON_JOHNSON_2023_8K_dated-2023-08-30",
+   "page": 8,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d144",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "In the second supplemental indenture dated June 30, 2022 described in Amcor's 2022 8-K, what is the coupon rate on the Guaranteed Senior Notes due 2028 issued by Amcor Finance (USA), Inc.?",
+   "gold_answer": "4.500%",
+   "filing": "AMCOR_2022_8K_dated-2022-07-01",
+   "page": 4,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d146",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "What was 3M's Safety and Graphics segment operating income in fiscal year 2018?",
+   "gold_answer": "$1,720 million",
+   "filing": "3M_2018_10K",
+   "page": 34,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d148",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "What were Johnson & Johnson's worldwide over-the-counter (OTC) sales within the Consumer Health segment in the fourth quarter of 2022?",
+   "gold_answer": "$1,569 million",
+   "filing": "JOHNSON_JOHNSON_2022Q4_EARNINGS",
+   "page": 15,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d150",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "As of June 30, 2023, what was the fair value of 3M's interest rate contracts recorded as liabilities?",
+   "gold_answer": "$99 million",
+   "filing": "3M_2023Q2_10Q",
+   "page": 26,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d152",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "MGMRESORTS_2022Q4_EARNINGS",
+   "page": 1,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d154",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "As of December 31, 2022, what was the estimated fair value of Amcor's long-term debt with fixed interest rates (excluding commercial paper and finance leases), including the effect of receive-fixed/pay-variable interest rate swaps?",
+   "gold_answer": "$3,651 million",
+   "filing": "AMCOR_2023Q2_10Q",
+   "page": 17,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d156",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": "What was Amcor's Flexibles segment Adjusted EBIT for the three months ended December 31, 2022, and how did it compare to the prior-year quarter?",
+   "gold_answer": "$353 million for the three months ended December 31, 2022, essentially in line with $352 million in the prior-year quarter.",
+   "filing": "AMCOR_2023Q2_10Q",
+   "page": 36,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "beyond the first 30 kept"
+  },
+  {
+   "id": "r2d158",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "BESTBUY_2024Q2_10Q",
+   "page": 22,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  },
+  {
+   "id": "r2d160",
+   "class": "docs",
+   "subclass": "docs_figure",
+   "question": null,
+   "gold_answer": null,
+   "filing": "AMCOR_2023Q4_EARNINGS",
+   "page": 4,
+   "acceptable": [
+    "docs"
+   ],
+   "source": "page",
+   "dropped": "writer reply did not parse"
+  }
+ ],
+ "conversations": []
+}

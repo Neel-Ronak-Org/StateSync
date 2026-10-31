@@ -22,7 +22,6 @@ Architectural decisions:
 
 from __future__ import annotations
 
-import dataclasses
 import hashlib
 import hmac
 import json
@@ -236,9 +235,9 @@ class RateLimiter:
     Prunes fully expired windows on access to bound memory.
     Reads its ceiling from cfg.api.<max_requests_key> and its window from
     cfg.api.rate_limit_window_seconds, at every check, without hardcoded
-    numeric constants (A0.2).
+    numeric constants.
 
-    Two instances, two budgets (docs/V3_PLAN.md Phase 2b): routes that run the
+    Two instances, two budgets: routes that run the
     model share the tight one; everything else (reads, tile and dashboard
     edits, polling) has its own, larger one, so a live dashboard refreshing
     itself cannot lock its owner out of asking a question, and a burst of

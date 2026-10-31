@@ -1,14 +1,13 @@
 """
 orchestrator/schemas/synthesizer_output.py
-Pydantic model + JSON Schema validator for the A7 synthesizer output contract.
+The answer's output contract: {answer_text, chart, citations}, checked against a JSON Schema.
 
-Two independent validations (A7 enforcement rule):
-  1. In the orchestrator (here) before the response leaves the process.
-  2. In the frontend before rendering.
-
-If validation fails: return prose answer with chart: null, log a validation
-failure. Never return a repaired chart (A7: "silent repair would hide M7
-regressions").
+Why a chart is checked at all: the chart is a Vega-Lite specification the browser draws, and Vega-Lite can
+evaluate expression strings. So only a fixed list of chart properties is allowed, and no expression text
+anywhere. The check runs twice, independently: here, before the response leaves the server, and in the web
+app before drawing (web/src/charts/a7.ts). A chart that fails is dropped (chart: null) and the failure is
+logged; the answer text still goes out. A failing chart is never repaired: a silent repair would hide a
+problem.
 """
 
 from __future__ import annotations
@@ -23,9 +22,9 @@ from config_loader import cfg
 
 logger = logging.getLogger(__name__)
 
-# ── JSON Schema (verbatim from A7, constants sourced from cfg) ────────────────
+# ── JSON Schema (limits from config/statesync.toml) ───────────────────────────
 def _build_schema() -> dict[str, Any]:
-    """Build the A7 JSON Schema dict from config so values stay in sync."""
+    """The JSON Schema, with its limits read from config so they stay in step with the rest of the system."""
     return {
         "$id": "statesync://schemas/synthesizer-output.json",
         "type": "object",
@@ -110,7 +109,7 @@ class Citation(BaseModel):
     kind: str
     ref:  str
     page: int | None = None
-    title: str | None = None   # an uploaded document's title (Phase 3c slice 5)
+    title: str | None = None   # the cited document's title
 
     @field_validator("kind")
     @classmethod
@@ -127,19 +126,10 @@ class SynthesizerOutput(BaseModel):
     citations:   list[Citation] = Field(default_factory=list)
 
 
-# ── Validation function ───────────────────────────────────────────────────────
-# ── Expression-string audit (BD7) ─────────────────────────────────────────────
-# A7 states its allowlist "excludes every one of" Vega-Lite's expression-string
-# properties. `additionalProperties: false` delivers that everywhere EXCEPT
-# `transform`, whose items A7 itself declares `additionalProperties: true` --
-# so a `{"calculate": "<expression>"}` transform satisfies the literal schema.
-# fixtures/malicious_specs.json ms_05 is exactly that case, and its own
-# expected_rejection calls it "a known bypass vector ... audited in E2-V3",
-# while E2-V3 requires 10/10 rejected by each validator independently. The
-# schema alone cannot deliver that, and A7 forbids relaxing (or, by the same
-# reasoning, silently re-tightening) its declared shape. Resolved as a second,
-# separately-named deterministic check rather than an edit to the schema --
-# see BD7 in docs/phase_b_amendment.md.
+# ── Expression-string audit ───────────────────────────────────────────────────
+# The schema forbids unknown properties everywhere except inside `transform`, whose items it leaves open, so
+# a {"calculate": "<expression>"} transform would pass the schema alone (fixtures/malicious_specs.json ms_05).
+# This second check walks `transform` and rejects any expression-bearing property.
 # Always an expression string in Vega/Vega-Lite, wherever it appears.
 _EXPRESSION_KEYS = frozenset({
     "expr", "signal", "calculate", "test", "init", "update", "on",
@@ -152,23 +142,17 @@ _DUAL_FORM_EXPRESSION_KEYS = frozenset({"filter"})
 
 
 def _audit_expression_strings(node: Any, path: str = "chart/transform") -> list[str]:
-    """
-    Walks a `transform` subtree and reports every expression-bearing property.
-    Deterministic, non-LLM, and not an allowlist of transform operations -- the
-    rule is that a chart specification may not carry expression text, which is
-    what A7's allowlist says it excludes everywhere else. An otherwise-
-    legitimate chart needing `calculate` is a correct rejection per A7 ("an
-    unsupported chart is a correct rejection"), not a reason to widen this.
-    """
+    """Every expression-bearing property in a `transform` subtree. A chart that needs one (`calculate`, say)
+    is rejected on purpose: an unsupported chart is a correct rejection, not a reason to allow expressions."""
     found: list[str] = []
     if isinstance(node, dict):
         for key, value in node.items():
             if key in _EXPRESSION_KEYS:
-                found.append(f"[{path}/{key}] expression-bearing property is not permitted (BD7)")
+                found.append(f"[{path}/{key}] expression-bearing property is not permitted")
             elif key in _DUAL_FORM_EXPRESSION_KEYS and isinstance(value, str):
                 found.append(
                     f"[{path}/{key}] string form is an expression; use the "
-                    f"predicate-object form instead (BD7)"
+                    f"predicate-object form instead"
                 )
             found.extend(_audit_expression_strings(value, f"{path}/{key}"))
     elif isinstance(node, list):
@@ -183,10 +167,7 @@ def _flatten_errors(errors: Any) -> list[tuple[str, str]]:
 
     Without this, `chart`'s `oneOf` [null, object] collapses every chart
     violation into one generic "is not valid under any of the given schemas"
-    whose message merely embeds the whole spec. E2-V3's worked example requires
-    three DISTINCT rejection grounds in the log -- "a single generic rejection
-    means the other two paths are untested" -- so the sub-errors must be
-    surfaced individually, not implied by a dump of the input.
+    whose message merely embeds the whole spec; the log should name each real reason.
 
     The trivial "not of type 'null'" branch of that oneOf is dropped: a
     non-null chart failing the null branch is never the interesting reason.
@@ -208,8 +189,8 @@ def _flatten_errors(errors: Any) -> list[tuple[str, str]]:
 
 def validate_synthesizer_output(raw: dict[str, Any]) -> tuple[bool, str | None]:
     """
-    Validates raw synthesizer output against the A7 JSON Schema, then audits
-    the chart's `transform` subtree for expression strings (BD7).
+    Checks the writer's output against the JSON Schema, then audits the chart's `transform` subtree for
+    expression strings.
 
     Returns:
         (True, None)  — valid
@@ -229,7 +210,7 @@ def validate_synthesizer_output(raw: dict[str, Any]) -> tuple[bool, str | None]:
 
     error_messages = "; ".join(messages)
     logger.error(
-        "Synthesizer output failed A7 schema validation: %s",
+        "Synthesizer output failed the output schema: %s",
         error_messages,
     )
     return False, error_messages
@@ -240,8 +221,7 @@ def safe_synthesizer_output(raw: dict[str, Any]) -> dict[str, Any]:
     Returns the output if it validates, or a safe fallback with chart: null
     if validation fails. Never repairs — only nullifies the chart.
 
-    This is the first of two independent validations (A7: in-process validation).
-    The frontend performs the second.
+    This is the first of the two independent checks; the web app performs the second.
     """
     ok, error = validate_synthesizer_output(raw)
     if ok:
@@ -249,7 +229,7 @@ def safe_synthesizer_output(raw: dict[str, Any]) -> dict[str, Any]:
 
     # Nullify chart; preserve answer_text and citations if they are strings/lists.
     logger.warning(
-        "Returning chart: null due to A7 validation failure. Error: %s", error
+        "Returning chart: null after an output schema failure. Error: %s", error
     )
     return {
         "answer_text": raw.get("answer_text", ""),

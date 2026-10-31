@@ -1,6 +1,6 @@
-import { useId, useMemo, useRef, useState } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Download, MoreHorizontal, PanelRight, Pin, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { AlertTriangle, Download, MoreHorizontal, PanelRight, Pin, ThumbsDown, ThumbsUp, Workflow } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { api, ApiError } from '@/api/client'
@@ -26,13 +26,12 @@ import { copyToClipboard } from '@/lib/clipboard'
 import { downloadCsv } from '@/lib/csv'
 import { sourceLabel } from '@/lib/sources'
 import type { ChatTurn } from '@/types/chat'
-import { resolveKind, shapeOf, VEGA_KINDS } from '@/viz/infer'
-import { buildSpec } from '@/viz/spec'
 
 interface TurnItemProps {
   turn: ChatTurn
   devMode: boolean
   onOpenDetails: (turn: ChatTurn) => void
+  onOpenInspector: (turn: ChatTurn) => void
   onRetry: (turn: ChatTurn) => void
   onUpdateTurn: (turnId: string, updates: Partial<ChatTurn>) => void
   sessionId: string
@@ -56,50 +55,53 @@ const EVIDENCE_CHIPS: Record<Evidence, { label: string; className: string; hint:
     className: GREEN_CHIP,
     hint: 'Answered with a query approved for this workspace.',
   },
-  compiled: {
-    label: 'Compiled',
-    className: 'border-sky-500/30 bg-sky-500/10 text-sky-500 font-normal text-xs',
-    hint: "Built from an approved query pattern, with this question's values.",
-  },
-  checked: {
-    label: 'Checked',
-    className: 'border-sky-500/30 bg-sky-500/10 text-sky-500 font-normal text-xs',
-    hint: 'New query; it passed the automatic checks.',
-  },
   unchecked: {
-    label: 'Unchecked',
+    label: 'New query',
     className: 'font-normal text-xs text-muted-foreground',
-    hint: 'New query; not independently checked.',
+    hint: 'Written by the model for this question. Check the SQL under "How I got this"; a thumbs-up approves it.',
   },
 }
 
-/** A chunk of answer text with each figure marked: dotted when it matches its source, amber when it does not. */
+/** A chunk of answer text with each figure marked: dotted when it matches its source, amber when it does not.
+ * The model's **bold** is shown as bold; with an unpaired marker the text is shown as written. */
 function renderFigures(segments: (chunk: string) => Segment[], chunk: string) {
-  return segments(chunk).map((seg, i) =>
-    seg.figure ? (
-      <span
-        key={i}
-        data-testid="figure"
-        data-matched={seg.figure.matched ? 'true' : 'false'}
-        title={figureSource(seg.figure)}
-        className={
-          seg.figure.matched
-            ? 'underline decoration-dotted decoration-muted-foreground/60 underline-offset-2'
-            : 'rounded-sm bg-destructive/10 px-0.5 text-destructive underline decoration-dotted underline-offset-2'
-        }
-      >
-        {seg.text}
-      </span>
-    ) : (
-      <span key={i}>{seg.text}</span>
-    ),
-  )
+  const parseBold = (chunk.split('**').length - 1) % 2 === 0
+  let bold = false
+  const out: ReactNode[] = []
+  segments(chunk).forEach((seg, i) => {
+    const parts = parseBold ? seg.text.split('**') : [seg.text]
+    parts.forEach((part, j) => {
+      if (j > 0) bold = !bold
+      if (!part) return
+      const key = `${i}-${j}`
+      const node = seg.figure ? (
+        <span
+          key={key}
+          data-testid="figure"
+          data-matched={seg.figure.matched ? 'true' : 'false'}
+          title={figureSource(seg.figure)}
+          className={
+            seg.figure.matched
+              ? 'underline decoration-dotted decoration-muted-foreground/60 underline-offset-2'
+              : 'rounded-sm bg-destructive/10 px-0.5 text-destructive underline decoration-dotted underline-offset-2'
+          }
+        >
+          {part}
+        </span>
+      ) : (
+        <span key={key}>{part}</span>
+      )
+      out.push(bold ? <strong key={key} className="font-semibold">{node}</strong> : node)
+    })
+  })
+  return out
 }
 
 export function TurnItem({
   turn,
   devMode,
   onOpenDetails,
+  onOpenInspector,
   onRetry,
   onUpdateTurn,
   sessionId,
@@ -125,17 +127,7 @@ export function TurnItem({
   const blocks = turn.answer ? answerBlocks(turn.answer) : []
   const grounding = turn.stateTrace?.number_grounding ?? null
 
-  // The short answer writer sends no chart: draw one here from the rows with the
-  // same presentation code the dashboard tiles use. VegaChart still runs the A7
-  // check on it. One row is an answer, not a chart.
-  const clientChart = useMemo(() => {
-    if (turn.chart || turn.stateTrace?.synth_style !== 'short') return null
-    if (!turn.rows || turn.rows.length < 2) return null
-    const shape = shapeOf(turn.rows, turn.columns.length > 0 ? turn.columns : null)
-    const kind = resolveKind(null, shape)
-    return VEGA_KINDS.has(kind) ? buildSpec(kind, shape) : null
-  }, [turn.chart, turn.stateTrace?.synth_style, turn.rows, turn.columns])
-  const chart = turn.chart ?? clientChart
+  const chart = turn.chart
 
   const handlePin = async () => {
     setIsPinning(true)
@@ -526,6 +518,22 @@ export function TurnItem({
                 </TooltipTrigger>
                 <TooltipContent>Details</TooltipContent>
               </Tooltip>
+
+              {turn.stateTrace && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Inspect pipeline"
+                      onClick={() => onOpenInspector(turn)}
+                    >
+                      <Workflow className="size-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Inspect: how this answer was produced</TooltipContent>
+                </Tooltip>
+              )}
 
               {turn.rows && turn.rows.length > 0 && (
                 <Tooltip>

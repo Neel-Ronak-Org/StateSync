@@ -10,13 +10,25 @@
 
 import type { ChartSpec } from '@/api/types'
 import { A7 } from '@/charts/a7'
-import type { Column } from '@/viz/columns'
+import { isYearColumn, type Column } from '@/viz/columns'
 import type { Shape, VizKind } from '@/viz/infer'
 
 type Encoding = Record<string, Record<string, unknown>>
 
 function channel(column: Column, type: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
   return { field: column.name, type, title: column.label, ...extra }
+}
+
+/** A time axis: years (2018) are ordered labels; dates are a real time scale. */
+function timeChannel(time: Column, shape: Shape): Record<string, unknown> {
+  return isYearColumn(time, shape.rows) ? channel(time, 'ordinal', { sort: 'ascending' }) : channel(time, 'temporal')
+}
+
+/** A second category worth colouring by: fewer distinct values than the first (not a 1:1 label such as name beside ticker). */
+function grouping(shape: Shape, category: Column, category2: Column | undefined): Column | undefined {
+  if (!category2) return undefined
+  const distinct = (c: Column) => new Set(shape.rows.map((r) => String(r[c.name]))).size
+  return distinct(category2) < distinct(category) ? category2 : undefined
 }
 
 function base(mark: string, encoding: Encoding, shape: Shape): ChartSpec {
@@ -36,7 +48,7 @@ export function buildSpec(kind: VizKind, shape: Shape): ChartSpec | null {
     case 'line':
     case 'area': {
       if (!measure) return null
-      const x = time ? channel(time, 'temporal') : category ? channel(category, 'ordinal', { sort: null }) : null
+      const x = time ? timeChannel(time, shape) : category ? channel(category, 'ordinal', { sort: null }) : null
       if (!x) return null
       const encoding: Encoding = { x, y: channel(measure, 'quantitative') }
       if (time && category) encoding.color = channel(category, 'nominal')
@@ -44,13 +56,18 @@ export function buildSpec(kind: VizKind, shape: Shape): ChartSpec | null {
     }
     case 'bar': {
       if (!measure) return null
-      if (time) return base('bar', { x: channel(time, 'temporal'), y: channel(measure, 'quantitative') }, shape)
+      if (time) {
+        const encoding: Encoding = { x: timeChannel(time, shape), y: channel(measure, 'quantitative') }
+        if (category) encoding.color = channel(category, 'nominal')
+        return base('bar', encoding, shape)
+      }
       if (!category) return null
       const encoding: Encoding = {
         x: channel(category, 'nominal', { sort: '-y' }),
         y: channel(measure, 'quantitative'),
       }
-      if (category2) encoding.color = channel(category2, 'nominal')
+      const group = grouping(shape, category, category2)
+      if (group) encoding.color = channel(group, 'nominal')
       return base('bar', encoding, shape)
     }
     case 'hbar': {
@@ -59,7 +76,8 @@ export function buildSpec(kind: VizKind, shape: Shape): ChartSpec | null {
         y: channel(category, 'nominal', { sort: '-x' }),
         x: channel(measure, 'quantitative'),
       }
-      if (category2) encoding.color = channel(category2, 'nominal')
+      const group = grouping(shape, category, category2)
+      if (group) encoding.color = channel(group, 'nominal')
       return base('bar', encoding, shape)
     }
     case 'donut': {

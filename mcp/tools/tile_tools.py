@@ -1,12 +1,11 @@
 """
 mcp/tools/tile_tools.py
 MCP tiles tool: dashboard tiles that re-run their SAVED SQL instead of asking
-the model again (docs/V3_PLAN.md Phase 1, migration 017).
+the model again.
 
 One JSON-RPC method, tiles.manage, takes an `action`: pin, list, get, refresh,
-replace, update, confirm, unpin. One method rather than eight because the MCP
-tool ceiling is a guard against API sprawl (mcp.tool_ceiling, raised for this
-in docs/V3_PLAN.md's decision log), and Phase 3 needs room of its own.
+replace, update, confirm, unpin. One method rather than eight, because the MCP
+caps its number of tools ([mcp] tool_ceiling) as a guard against API sprawl.
 
 Since migration 019 every tile sits on a dashboard (dashboard_tools.py) of the
 same owner and dataset, and carries its presentation choice (viz) and grid slot
@@ -20,7 +19,7 @@ THE SECURITY PROPERTIES, each enforced here rather than trusted from a caller:
    by tenant and principal, and copy the SQL the pipeline actually executed.
    No action accepts a SQL string, so this API cannot become a SQL console.
 2. Every read and write filters on tenant_id (bound server-side from the
-   session, A0.6) AND principal_id (supplied by the authenticating
+   session) AND principal_id (supplied by the authenticating
    orchestrator). A tile_id alone never reaches a tile; someone else's tile
    looks exactly like one that does not exist.
 3. A refresh runs the stored SQL through data.run_select: the same Layer 1
@@ -34,9 +33,7 @@ THE SECURITY PROPERTIES, each enforced here rather than trusted from a caller:
    is capped, and refresh intervals are bounded (config [tiles]).
 
 6. A pin made in a workspace (workspace_id given) also saves the answer as
-   that workspace's approved example, source "tile" (docs/V3_PLAN.md 5.3:
-   "pinned tiles become approved examples, so the chat and the dashboard
-   agree"). Only when a person asked for it: the question is the stand-alone
+   that workspace's approved example, source "tile". Only when a person asked for it: the question is the stand-alone
    form the fast path matches, the turn must be a plain database answer
    (route "sql"; a hybrid turn's SQL answers only part of its question), and
    the workspace must be the owner's and use the turn's dataset. Build with AI
@@ -72,13 +69,8 @@ from tools.dashboard_tools import default_dashboard, owned_dashboard, resolve_la
 from tools.data_tools import _check_layer1, run_select
 from tools.schema_tools import DEFAULT_SCHEMA, describe_table
 
-try:
-    import pglast
-    from pglast.visitors import Visitor
-    _PGLAST_AVAILABLE = True
-except ImportError:  # pragma: no cover - pglast is a declared mcp dependency
-    _PGLAST_AVAILABLE = False
-    Visitor = object  # type: ignore[misc,assignment]
+import pglast
+from pglast.visitors import Visitor
 
 logger = logging.getLogger(__name__)
 
@@ -127,8 +119,6 @@ def table_refs(sql: str, dataset: str | None = None) -> list[tuple[str, str]]:
     search_path does. An unqualified name that matches a CTE is the CTE, not a
     table, and is left out.
     """
-    if not _PGLAST_AVAILABLE:  # pragma: no cover
-        raise RuntimeError("pglast is required to fingerprint tile SQL.")
     collector = _RelationCollector()
     for raw in pglast.parse_sql(sql):
         collector(raw.stmt)
@@ -230,10 +220,8 @@ def title_fallback(raw_query: str | None, rewritten_query: str | None, rewrite_a
 
 
 def default_interval(target_schema: str | None) -> int:
-    """The refresh interval a pin gets when none is asked for: per dataset, else the global default."""
-    per_schema = cfg.tiles.get("schema_default_refresh_s")
-    value = per_schema.get(target_schema) if per_schema is not None and target_schema else None
-    return int(value) if value is not None else int(cfg.tiles.default_refresh_s)
+    """The refresh interval a pin gets when none is asked for ([tiles] default_refresh_s)."""
+    return int(cfg.tiles.default_refresh_s)
 
 
 def _fail(code: str, message: str) -> dict[str, Any]:

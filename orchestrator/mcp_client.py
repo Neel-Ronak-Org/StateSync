@@ -1,12 +1,10 @@
 """
 orchestrator/mcp_client.py
-MCP client — sends JSON-RPC 2.0 calls to the mcp service.
+The orchestrator's side of the MCP: one JSON-RPC 2.0 call per tool, over HTTP to the MCP service.
 
-Per A0.6: tenant_id is bound at session establishment and injected server-side.
-It is part of every call's session context, never passed as a parameter.
-
-Per A4: All tools are JSON-RPC 2.0 methods. A failed query returns ok: false
-with a populated error field — it does not raise a transport-level fault.
+Who is asking travels in headers bound to the session (X-Tenant-ID, X-Session-ID, X-Workspace-ID), never as
+tool parameters, and every call carries the service token the MCP requires. A failed query comes back as
+ok: false with the error, not as an exception.
 """
 
 from __future__ import annotations
@@ -58,16 +56,12 @@ class MCPSession:
         # MCP runs the SQL on the right database: ours for a built-in schema,
         # the owner's for a connected one (mcp/connections.py, cn_... names).
         self.dataset = dataset
-        # Phase 3: the workspace a question is asked in, carried as
+        # The workspace a question is asked in, carried as
         # X-Workspace-ID. The MCP checks it against tenant and principal; it
         # is routing information, not a credential.
         self.workspace_id = workspace_id
-        # Cycle 007 (audit 007 F-007-1): session_id now flows in from the
-        # caller -- the conversation's real StateSyncState.session_id -- so
-        # X-Session-ID actually identifies the conversation, which is what
-        # history_tools.py's session-scoped queries need. Minting a fresh
-        # uuid4 remains the fallback for any caller that has no session of
-        # its own to thread (verify_tenancy.py, one-off scripts).
+        # The conversation's session_id, so X-Session-ID identifies the conversation for the history tools;
+        # a fresh id for a caller with no conversation.
         self.session_id = session_id or str(uuid.uuid4())
         self._base_url = (
             base_url
@@ -102,7 +96,7 @@ class MCPSession:
         Returns the `result` field on success.
         Returns the `error` field on JSON-RPC error (transport/protocol errors).
         Note: Query failures are returned as ok: false in result, NOT as
-        JSON-RPC errors (A4.4 contract).
+        JSON-RPC errors.
 
         Raises:
             httpx.HTTPError: On transport-level failures.
@@ -157,13 +151,13 @@ class MCPProtocolError(Exception):
 # Node code imports these; it does not call MCPSession.call directly.
 
 async def schema_list_tables(session: MCPSession, schema: str | None = None) -> dict[str, Any]:
-    """A4.1 schema.list_tables. `schema` defaults server-side to public (A5)."""
+    """schema.list_tables. `schema` defaults server-side to public."""
     return await session.call("schema.list_tables", {"schema": schema} if schema else {})
 
 
 async def schema_describe_table(session: MCPSession, table: str,
                                 schema: str | None = None) -> dict[str, Any]:
-    """A4.2 schema.describe_table. `schema` defaults server-side to public (A5)."""
+    """schema.describe_table. `schema` defaults server-side to public."""
     params: dict[str, Any] = {"table": table}
     if schema:
         params["schema"] = schema
@@ -177,7 +171,7 @@ async def data_sample_rows(
     limit: int | None = None,
     schema: str | None = None,
 ) -> dict[str, Any]:
-    """A4.3 data.sample_rows. `schema` defaults server-side to public (A5)."""
+    """data.sample_rows. `schema` defaults server-side to public."""
     params: dict[str, Any] = {"table": table}
     if columns is not None:
         params["columns"] = columns
@@ -194,7 +188,7 @@ async def data_run_select(
     max_rows: int | None = None,
 ) -> dict[str, Any]:
     """
-    A4.4 data.run_select
+    data.run_select
     Returns result dict with ok: bool. On ok=False, error.sqlstate is populated.
     Never raises on query failures — only raises on transport failures.
     """
@@ -211,95 +205,18 @@ async def vector_semantic_search(
     query_text: str,
     top_k: int | None = None,
     document_ids: list[str] | None = None,
-    mode: str | None = None,
-    dataset: str | None = None,
-    scope: str | None = None,
-    rerank: str | None = None,
-    rerank_titles: bool | None = None,
 ) -> dict[str, Any]:
-    """A4.6 vector.semantic_search. mode ("dense" | "hybrid"), dataset and scope ("dataset") are sent
-    only when given; scope "all" and rerank "off" are the server's defaults and are not sent, so the
-    shipped request is unchanged. rerank_titles (the re-ranker also reads each passage's document
-    title) is sent only as True and only with a re-ranker, so an older MCP never sees it."""
+    """vector.semantic_search: the passages of the session's workspace closest to query_text, optionally
+    only inside some documents. The MCP decides which documents are searchable from the session."""
     params: dict[str, Any] = {"query_text": query_text}
     if top_k is not None:
         params["top_k"] = top_k
     if document_ids is not None:
         params["document_ids"] = document_ids
-    if mode is not None:
-        params["mode"] = mode
-    if dataset is not None:
-        params["dataset"] = dataset
-    if scope is not None and scope != "all":
-        params["scope"] = scope
-    if rerank is not None and rerank != "off":
-        params["rerank"] = rerank
-        if rerank_titles:
-            params["rerank_titles"] = True
-        # A re-ranked search waits on the cross-encoder; the session's 20 s default would time it out
-        # and lose the re-ranking. Wait the MCP's own budget: embedding + re-ranking + overhead.
-        timeout = (float(cfg.retrieval.embedding_timeout_s) + float(cfg.retrieval.rerank_timeout_s)
-                   + float(cfg.mcp.network_overhead_s))
-        return await session.call("vector.semantic_search", params, timeout=timeout)
     return await session.call("vector.semantic_search", params)
 
 
-async def vector_hybrid_select(
-    session: MCPSession,
-    sql: str,
-    max_rows: int | None = None,
-) -> dict[str, Any]:
-    """A4.7 vector.hybrid_select — same ok/error contract as data.run_select."""
-    params: dict[str, Any] = {"sql": sql}
-    if max_rows is not None:
-        params["max_rows"] = max_rows
-    return await session.call("vector.hybrid_select", params)
-
-
-async def docs_get_passage(session: MCPSession, chunk_id: str) -> dict[str, Any]:
-    """A4.9 docs.get_passage"""
-    return await session.call("docs.get_passage", {"chunk_id": chunk_id})
-
-
-async def memory_get_trajectory(
-    session: MCPSession,
-    query_text: str,
-    schema_fingerprint: str,
-    top_k: int | None = None,
-) -> dict[str, Any]:
-    """A4.8 memory.get_trajectory"""
-    params: dict[str, Any] = {
-        "query_text": query_text,
-        "schema_fingerprint": schema_fingerprint,
-    }
-    if top_k is not None:
-        params["top_k"] = top_k
-    return await session.call("memory.get_trajectory", params)
-
-
-async def memory_put_trajectory(
-    session: MCPSession,
-    query_text: str,
-    schema_fingerprint: str,
-    insight: str,
-    tables: list[str],
-    join_path: list[str],
-    dialect_notes: list[str] | None = None,
-) -> dict[str, Any]:
-    """A4.8 memory.put_trajectory"""
-    params: dict[str, Any] = {
-        "query_text": query_text,
-        "schema_fingerprint": schema_fingerprint,
-        "insight": insight,
-        "tables": tables,
-        "join_path": join_path,
-    }
-    if dialect_notes is not None:
-        params["dialect_notes"] = dialect_notes
-    return await session.call("memory.put_trajectory", params)
-
-
-# ── history.* (cycle 007, Workstream A) ─────────────────────────────────────
+# ── history.* ─────────────────────────────────────
 async def history_append_turn(
     session: MCPSession,
     session_id: str,
@@ -317,6 +234,7 @@ async def history_append_turn(
     sql_rows_count: int | None = None,
     sql_rows_full: list[dict[str, Any]] | None = None,
     target_schema: str | None = None,
+    detail: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """history.append_turn -- MCP assigns the turn number and returns it."""
     params: dict[str, Any] = {
@@ -344,16 +262,21 @@ async def history_append_turn(
         params["sql_rows_full"] = sql_rows_full
     if target_schema is not None:
         params["target_schema"] = target_schema
+    if detail is not None:
+        params["detail"] = detail
     return await session.call("history.append_turn", params)
 
 
 async def history_get_recent_turns(
     session: MCPSession, session_id: str, principal_id: str, limit: int | None = None,
+    with_detail: bool = False,
 ) -> dict[str, Any]:
-    """history.get_recent_turns"""
+    """history.get_recent_turns (with_detail: each turn's stored trace and citations, for a reopened conversation)"""
     params: dict[str, Any] = {"session_id": session_id, "principal_id": principal_id}
     if limit is not None:
         params["limit"] = limit
+    if with_detail:
+        params["with_detail"] = True
     return await session.call("history.get_recent_turns", params)
 
 
@@ -381,7 +304,7 @@ async def history_get_turn_rows(
 async def history_delete_session(
     session: MCPSession, session_id: str, principal_id: str,
 ) -> dict[str, Any]:
-    """history.delete_session -- erase one of the principal's conversations (Phase 2b)."""
+    """history.delete_session -- erase one of the principal's conversations."""
     return await session.call(
         "history.delete_session", {"session_id": session_id, "principal_id": principal_id},
     )
@@ -397,7 +320,7 @@ async def history_list_sessions(
     return await session.call("history.list_sessions", params)
 
 
-# ── audit.* (cycle 008, Workstream C1) ──────────────────────────────────────
+# ── audit.* ──────────────────────────────────────
 async def audit_record(
     session: MCPSession,
     principal_id: str,
@@ -425,7 +348,7 @@ async def audit_record(
     return await session.call("audit.record", params)
 
 
-# ── tiles.* (Phase 1) ────────────────────────────────────────────────────────
+# ── tiles.* ────────────────────────────────────────────────────────
 async def tiles_manage(
     session: MCPSession,
     principal_id: str,
@@ -445,7 +368,7 @@ async def dashboards_manage(
     action: str,
     **params: Any,
 ) -> dict[str, Any]:
-    """Forward a dashboard action to the MCP dashboards.manage tool (Phase 2b)."""
+    """Forward a dashboard action to the MCP dashboards.manage tool."""
     return await session.call(
         "dashboards.manage",
         {"action": action, "principal_id": principal_id, **{k: v for k, v in params.items() if v is not None}},
@@ -459,7 +382,7 @@ async def workspaces_manage(
     action: str,
     **params: Any,
 ) -> dict[str, Any]:
-    """Forward a workspace action to the MCP workspaces.manage tool (Phase 3)."""
+    """Forward a workspace action to the MCP workspaces.manage tool."""
     return await session.call(
         "workspaces.manage",
         {"action": action, "principal_id": principal_id, **{k: v for k, v in params.items() if v is not None}},
@@ -472,7 +395,7 @@ async def library_manage(
     action: str,
     **params: Any,
 ) -> dict[str, Any]:
-    """Forward a document-library action to the MCP library.manage tool (Phase 3c).
+    """Forward a document-library action to the MCP library.manage tool.
 
     add_chunks embeds a whole batch through Ollama before answering, and the MCP waits up to
     retrieval.embedding_timeout_s for that. The session's default timeout (statement timeout

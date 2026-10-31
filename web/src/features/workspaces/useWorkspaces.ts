@@ -2,10 +2,8 @@ import { useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/api/client'
-import type { SetupJob, SetupRun } from '@/api/types'
 
 const DRAFT_POLL_MS = 1500
-const SETUP_POLL_MS = 2000
 
 /** My workspaces (only fetched when signed in), with create and delete. */
 export function useWorkspaces(enabled = true) {
@@ -193,109 +191,6 @@ export function useDraftStatus(workspaceId: string | null) {
   }
 }
 
-/** Finding definitions in the workspace's documents, with polling while it runs. */
-export function useMiningStatus(workspaceId: string) {
-  const queryClient = useQueryClient()
-
-  const query = useQuery({
-    queryKey: ['workspace-mine', workspaceId],
-    queryFn: () => api.miningStatus(workspaceId),
-    refetchInterval: (q) => (q.state.data?.job?.state === 'running' ? DRAFT_POLL_MS : false),
-  })
-
-  const job = query.data?.job ?? null
-  const prevJobState = useRef<string | null>(null)
-
-  useEffect(() => {
-    if (prevJobState.current === 'running' && job && job.state !== 'running') {
-      void queryClient.invalidateQueries({ queryKey: ['workspace-definitions', workspaceId] })
-      void queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] })
-    }
-    prevJobState.current = job?.state ?? null
-  }, [job, workspaceId, queryClient])
-
-  const startMutation = useMutation({
-    mutationFn: () => api.startMining(workspaceId),
-    onSuccess: (res) => {
-      queryClient.setQueryData(['workspace-mine', workspaceId], { job: res.job })
-      void query.refetch()
-    },
-  })
-
-  return { job, startMining: startMutation.mutateAsync, isStarting: startMutation.isPending }
-}
-
-/** Hook for running and grading the setup test. */
-export function useSetupStatus(workspaceId: string | null) {
-  const queryClient = useQueryClient()
-
-  const query = useQuery({
-    queryKey: ['workspace-setup', workspaceId],
-    queryFn: () => api.setupStatus(workspaceId!),
-    enabled: Boolean(workspaceId),
-    refetchInterval: (q) => {
-      const d = q.state.data
-      const isRunning = d?.job?.state === 'running' || d?.run?.state === 'running'
-      return isRunning ? SETUP_POLL_MS : false
-    },
-  })
-
-  const job = query.data?.job ?? null
-  const run = query.data?.run ?? null
-  const isRunning = job?.state === 'running' || run?.state === 'running'
-  const prevRunning = useRef<boolean>(false)
-
-  useEffect(() => {
-    if (prevRunning.current && !isRunning) {
-      void queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] })
-      void queryClient.invalidateQueries({ queryKey: ['workspaces'] })
-    }
-    prevRunning.current = isRunning
-  }, [isRunning, workspaceId, queryClient])
-
-  const startMutation = useMutation({
-    mutationFn: () => api.startSetup(workspaceId!),
-    onSuccess: () => {
-      void query.refetch()
-    },
-  })
-
-  const setVerdictMutation = useMutation({
-    mutationFn: ({
-      runId,
-      position,
-      verdict,
-    }: {
-      runId: string
-      position: number
-      verdict: 'right' | 'wrong'
-    }) => api.setResultVerdict(workspaceId!, runId, position, verdict),
-    onSuccess: (res) => {
-      queryClient.setQueryData(
-        ['workspace-setup', workspaceId],
-        (old: { run: SetupRun | null; job: SetupJob | null } | undefined) => ({
-          job: old?.job ?? null,
-          run: res.run,
-        }),
-      )
-      void queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] })
-      void queryClient.invalidateQueries({ queryKey: ['workspaces'] })
-    },
-  })
-
-  return {
-    job,
-    run,
-    isRunning,
-    startSetup: startMutation.mutateAsync,
-    isStarting: startMutation.isPending,
-    setVerdict: (runId: string, position: number, verdict: 'right' | 'wrong') =>
-      setVerdictMutation.mutateAsync({ runId, position, verdict }),
-    isSettingVerdict: setVerdictMutation.isPending,
-    refetch: query.refetch,
-  }
-}
-
 /** Hook for approving workspace knowledge. */
 export function useApproveWorkspace(workspaceId: string | null) {
   const queryClient = useQueryClient()
@@ -316,7 +211,7 @@ export function useApproveWorkspace(workspaceId: string | null) {
   }
 }
 
-/** The approved answers with their self-check state; re-check and remove. */
+/** The approved answers; remove one. */
 export function useExamples(workspaceId: string | null) {
   const queryClient = useQueryClient()
 
@@ -332,11 +227,6 @@ export function useExamples(workspaceId: string | null) {
     void queryClient.invalidateQueries({ queryKey: ['workspaces'] })
   }
 
-  const checkMutation = useMutation({
-    mutationFn: () => api.checkExamples(workspaceId!),
-    onSuccess: refresh,
-  })
-
   const removeMutation = useMutation({
     mutationFn: (question: string) => api.removeExample(workspaceId!, question),
     onSuccess: refresh,
@@ -345,8 +235,6 @@ export function useExamples(workspaceId: string | null) {
   return {
     examples: query.data?.examples ?? [],
     isLoading: query.isLoading,
-    recheck: checkMutation.mutateAsync,
-    isChecking: checkMutation.isPending,
     removeExample: removeMutation.mutateAsync,
     isRemoving: removeMutation.isPending,
   }

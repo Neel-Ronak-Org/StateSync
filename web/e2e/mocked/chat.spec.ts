@@ -7,6 +7,7 @@
 import { expect, test } from '@playwright/test'
 
 import { ask, openApp } from './helpers'
+import type { MockApi } from './mock-api'
 import { TOKEN } from './mock-api'
 
 test.describe('sign-in', () => {
@@ -77,7 +78,7 @@ test.describe('asking', () => {
     await expect(turn.getByTestId('answer-text')).toHaveText('There are 550 orders in total.')
     await expect(turn.getByRole('table')).toContainText('total_orders')
     await expect(turn.getByRole('table')).toContainText('550')
-    expect(api.queries[0]).toMatchObject({ query: 'How many orders are there in total?', schema: 'public' })
+    expect(api.queries[0]).toMatchObject({ query: 'How many orders are there in total?', workspace_id: 'ws-1' })
     expect(typeof api.queries[0].session_id).toBe('string')
   })
 
@@ -118,22 +119,6 @@ test.describe('asking', () => {
     expect(chartBox?.width ?? 0).toBeGreaterThan((turnBox?.width ?? Infinity) * 0.6)
   })
 
-  test('short style: the browser draws the chart from the rows, and a single row gets none', async ({ page }) => {
-    const api = await openApp(page, { hash: '#/ask' })
-    api.nextSynthStyle = 'short'
-    await ask(page, 'Show orders by status as a chart')
-    const multi = page.getByTestId('turn').last()
-    await expect(multi.getByTestId('answer-text')).toHaveText('Delivered orders dominate: 96,478 of 98,210.')
-    await expect(multi.getByTestId('vega-chart').locator('canvas')).toBeVisible()
-    await expect(multi.getByRole('table')).toContainText('delivered')
-
-    await ask(page, 'How many orders are there in total?')
-    const single = page.getByTestId('turn').last()
-    await expect(single.getByTestId('answer-text')).toHaveText('There are 550 orders in total.')
-    await expect(single.getByRole('table')).toContainText('550')
-    await expect(single.getByTestId('vega-chart')).toHaveCount(0)
-  })
-
   test('a chart that fails the safety check is withheld, and the answer still shows', async ({ page }) => {
     await openApp(page, { hash: '#/ask' })
     await ask(page, 'Show the unsafe chart')
@@ -168,6 +153,23 @@ test.describe('asking', () => {
     await expect(turn.getByTestId('answer-text')).toHaveText('Delivered orders dominate: 96,478 of 98,210, up 12% on last year.')
     await expect(turn.getByTestId('answer-caveat')).toContainText('(12%)')
     await expect(turn.getByTestId('figures-check')).toHaveCount(0)
+  })
+
+  test('the model\'s **bold** shows as bold, figures inside it still marked; an unpaired marker shows as written', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask' })
+    api.nextAnswer = 'Two risks:\n- **Supply chain** delays\n- **96,478** orders late\n\nA lone ** stays.'
+    api.nextGrounding = {
+      figures: [{ text: '96,478', start: 47, end: 53, matched: true, source: { kind: 'cell', row: 0, column: 'n' } }],
+      matched: 1,
+      unmatched: [],
+    }
+    await ask(page, 'What are the risks?')
+    const turn = page.getByTestId('turn').last()
+    const text = turn.getByTestId('answer-text')
+    await expect(text.locator('strong')).toHaveText(['Supply chain', '96,478'])
+    await expect(text.locator('strong [data-testid="figure"]')).toHaveText('96,478')
+    await expect(text).toContainText('A lone ** stays.')
+    await expect(text).not.toContainText('**Supply')
   })
 
   test('when every figure matches, the answer says so', async ({ page }) => {
@@ -281,17 +283,22 @@ test.describe('asking', () => {
   })
 })
 
-test.describe('conversations and datasets', () => {
-  test('switching dataset starts a new conversation on that dataset', async ({ page }) => {
-    const api = await openApp(page, { hash: '#/ask' })
+const TWO_WORKSPACES = (a: MockApi) => {
+  a.workspaces.createReady('Demo', 'public')
+  a.workspaces.createReady('Shop', 'olist')
+}
+
+test.describe('conversations and workspaces', () => {
+  test('switching workspace starts a new conversation in that workspace', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask', seed: TWO_WORKSPACES })
     await ask(page, 'How many orders are there in total?')
     await expect(page.getByTestId('turn')).toHaveCount(1)
-    await page.getByLabel('Dataset').click()
-    await page.getByRole('option', { name: 'olist' }).click()
+    await page.getByRole('combobox', { name: 'Workspace' }).click()
+    await page.getByRole('option', { name: 'Shop' }).click()
     await expect(page.getByTestId('turn')).toHaveCount(0)
     await ask(page, 'How many orders are there in total?')
     await expect(page.getByTestId('answer-text')).toHaveCount(1)
-    expect(api.queries[1].schema).toBe('olist')
+    expect(api.queries[1].workspace_id).toBe('ws-2')
     expect(api.queries[1].session_id).not.toBe(api.queries[0].session_id)
     await expect(page.getByTestId('turn').last().getByTestId('turn-dataset')).toHaveText('olist')
   })
@@ -320,18 +327,46 @@ test.describe('conversations and datasets', () => {
     expect(api.queries[0].session_id).toBe('seed-session-1')
   })
 
-  test('opening a conversation from the other dataset switches to that dataset', async ({ page }) => {
+  test('a conversation reopened from the sidebar, or after a reload, can still be inspected and keeps its sources', async ({ page }) => {
     const api = await openApp(page, { hash: '#/ask' })
+    api.nextTrace = {
+      route: 'hybrid',
+      subtasks: ['Which company had the highest revenue?', 'What does its 10-K say?'],
+      front_door: { route: 'hybrid', latency_ms: 1500, jev: { model: 'jev-1.13', ms: 1400, probabilities: { both: 0.94, docs: 0.03, sql: 0.02, neither: 0.01 } } },
+    }
+    await ask(page, 'Which company had the highest revenue, and what does its 10-K say?')
+    await expect(page.getByRole('button', { name: 'Inspect pipeline' })).toHaveCount(1)
+    const sessionId = api.queries[api.queries.length - 1].session_id
+
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Inspect pipeline' })).toHaveCount(1)
+
+    await page.getByRole('button', { name: 'New chat' }).click()
+    await expect(page.getByTestId('turn')).toHaveCount(0)
+    await page.getByRole('navigation', { name: 'Conversations' })
+      .getByRole('button', { name: /Which company had the highest revenue, and what/ }).click()
+    await expect(page.getByTestId('turn')).toHaveCount(1)
+    expect(api.sessions.has(sessionId)).toBe(true)
+    const turn = page.getByTestId('turn').last()
+    await expect(turn.getByText('SQL query')).toBeVisible()
+    await turn.getByRole('button', { name: 'Inspect pipeline' }).click()
+    const inspector = page.getByTestId('inspector')
+    await expect(inspector).toContainText('Route taken: Database + documents')
+    await expect(inspector.getByTestId('split')).toContainText('Database part: Which company had the highest revenue?')
+  })
+
+  test('opening a conversation from another database switches to the workspace on it', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask', seed: TWO_WORKSPACES })
     await page
       .getByRole('navigation', { name: 'Conversations' })
       .getByRole('button', { name: 'How many orders were delivered on olist?' })
       .click()
     await expect(page.getByTestId('turn')).toHaveCount(1)
-    await expect(page.getByLabel('Dataset')).toContainText('olist')
+    await expect(page.getByRole('combobox', { name: 'Workspace' })).toContainText('Shop')
     await expect(page.getByTestId('turn-dataset').first()).toHaveText('olist')
     await ask(page, 'And how many were canceled?')
     await expect(page.getByTestId('answer-text')).toHaveCount(2)
-    expect(api.queries[0]).toMatchObject({ session_id: 'seed-session-olist', schema: 'olist' })
+    expect(api.queries[0]).toMatchObject({ session_id: 'seed-session-olist', workspace_id: 'ws-2' })
   })
 
   test('a result the store kept only part of says so after loading', async ({ page }) => {
@@ -397,5 +432,34 @@ test.describe('appearance', () => {
     await expect(table.getByTestId('model-call')).toHaveCount(5)
     await expect(table.getByTestId('model-calls-total')).toContainText('5,164')
     await expect(table.getByText('0.84 s')).toBeVisible()
+  })
+})
+
+test.describe('the pipeline inspector', () => {
+  test('shows the route, and for a two-source question the split and its time inside the router step', async ({ page }) => {
+    const api = await openApp(page, { hash: '#/ask' })
+    api.nextTrace = {
+      route: 'hybrid',
+      subtasks: ['Which company had the highest revenue in 2022?', 'How does that company describe its strategy?'],
+      front_door: {
+        route: 'hybrid',
+        latency_ms: 1500,
+        jev: { model: 'jev-1.13', ms: 1400, probabilities: { both: 0.94, docs: 0.03, sql: 0.02, neither: 0.01 } },
+      },
+      calls: [
+        { role: 'decomposer', model: 'qwen', tokens_in: 300, tokens_out: 60, cached_tokens: 0, retries: 0, waited_ms: 0, ms: 2500, rate_remaining_tokens: 0 },
+        { role: 'synthesizer', model: 'gpt-oss-120b', tokens_in: 700, tokens_out: 70, cached_tokens: 0, retries: 0, waited_ms: 0, ms: 800, rate_remaining_tokens: 0 },
+      ],
+    }
+    await ask(page, 'Which company had the highest revenue in 2022, and how does it describe its strategy?')
+    await page.getByRole('button', { name: 'Inspect pipeline' }).last().click()
+    const inspector = page.getByTestId('inspector')
+    await expect(inspector).toContainText('Route taken: Database + documents')
+    await expect(inspector).toContainText('one Jev choice + split')
+    await expect(inspector).toContainText('Both sources')
+    const split = inspector.getByTestId('split')
+    await expect(split).toContainText('The question was split (one small-model call, 2.5 s)')
+    await expect(split).toContainText('Database part: Which company had the highest revenue in 2022?')
+    await expect(split).toContainText('Documents part: How does that company describe its strategy?')
   })
 })

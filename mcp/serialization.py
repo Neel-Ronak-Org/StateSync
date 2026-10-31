@@ -6,7 +6,7 @@ Shared by the JSON-RPC layer (every tool result) and by tile_tools, which
 stores a tile's rows as JSONB itself: those rows come straight from psycopg,
 so a NUMERIC arrives as Decimal and a timestamp as datetime, and json.dumps
 refuses both. Before this module that crashed every refresh of a tile with an
-amount or a time bucket in it (found on the live dataset, Phase 2b).
+amount or a time bucket in it.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ def to_json_safe(obj: Any) -> Any:
         # promised_at)) to timedelta. Previously unhandled: fell through to
         # the raw object, which Starlette's JSON encoder cannot serialize --
         # an uncaught TypeError deep in the response path, surfacing as a
-        # 500 transport fault. A4.4 requires a failed query to return
+        # 500 transport fault. A failed query must return
         # ok:false as data, never a transport-level fault; an aggregate over
         # a timestamp difference (delivery delay, dispute resolution time,
         # etc.) is an ordinary, expected result shape, not a failure.
@@ -47,15 +47,15 @@ def to_json_safe(obj: Any) -> Any:
         return obj
     # Catch-all for any remaining psycopg type mapping that JSON cannot
     # encode natively. Found the hard way twice, one type at a time:
-    # INTERVAL -> timedelta (F-V2 baseline), then INET -> IPv4Address
-    # (F-V1 Class 3). Both surfaced as an uncaught TypeError deep inside
-    # Starlette's encoder, i.e. a 500 transport fault -- exactly what A4.4
+    # INTERVAL -> timedelta, then INET -> IPv4Address
+    #. Both surfaced as an uncaught TypeError deep inside
+    # Starlette's encoder, i.e. a 500 transport fault -- exactly what the tool contract
     # forbids ("A failed query returns ok: false ... it does not raise a
     # transport-level fault"), and worse, a SUCCESSFUL query being reported
     # as a transport failure. Postgres has many more such types (NUMERIC
     # ranges, arrays of custom types, JSONB edge cases, CIDR, MACADDR,
     # tsvector...); enumerating them individually is whack-a-mole. Anything
     # unrecognized degrades to its string form, which is lossy but honest
-    # and keeps the A4.4 contract intact.
+    # and keeps the tool contract intact.
     logger.debug("Serializing unrecognized type %s via str().", type(obj).__name__)
     return str(obj)

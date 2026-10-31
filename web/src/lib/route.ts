@@ -1,6 +1,6 @@
 /**
- * Hash routes (web/DESIGN.md §4): #/dashboards (the home) and #/ask. Links from
- * the Phase 2 app (#/dashboard, #/chat) still land in the right place.
+ * Hash routes (web/DESIGN.md §4): #/ask (the home), #/dashboards, #/workspaces[/id] and #/library[/databases]
+ * (shown as "Data sources"). Links from the Phase 2 app (#/dashboard, #/chat) still land in the right place.
  */
 
 export type AppRoute = 'dashboards' | 'ask' | 'workspaces' | 'library'
@@ -10,7 +10,8 @@ export function routeFromHash(hash: string): AppRoute {
   if (path === 'ask' || path === 'chat') return 'ask'
   if (path === 'workspaces') return 'workspaces'
   if (path === 'library') return 'library'
-  return 'dashboards'
+  if (path === 'dashboards' || path === 'dashboard') return 'dashboards'
+  return 'ask'
 }
 
 export function workspaceIdFromHash(hash: string): string | null {

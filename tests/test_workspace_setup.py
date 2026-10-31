@@ -23,7 +23,6 @@ import os
 import sys
 from pathlib import Path
 
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "orchestrator"))
@@ -81,43 +80,6 @@ def test_catalog_batches_and_summary():
     assert "city (text) -- Where the seller is." in summary
 
 
-# ── Setup questions ──────────────────────────────────────────────────────────
-
-@pytest.mark.parametrize("schema", ["olist", "public"])
-def test_every_sample_dataset_has_ten_reference_questions(schema):
-    chosen = ws.load_reference_set(schema, REPO_ROOT / "fixtures", 10)
-    assert chosen is not None and len(chosen) == 10
-    assert all(q["reference_sql"].lstrip().upper().startswith(("SELECT", "WITH")) for q in chosen)
-    assert len({q["question"] for q in chosen}) == 10
-
-
-def test_reference_questions_take_the_first_eligible_in_order():
-    queries = [{"text": "a", "ground_truth_sql": "SELECT 1"},
-               {"text": "b", "ground_truth_sql": "SELECT 2", "lang": "hi"},
-               {"text": "c", "expected_route": "docs", "ground_truth_sql": "SELECT 3"},
-               {"text": "d"},
-               {"text": "e", "ground_truth_sql": "SELECT 5"}]
-    assert [q["question"] for q in ws.reference_questions(queries, 5)] == ["a", "e"]
-
-
-def test_a_dataset_without_a_reference_set_is_owner_graded():
-    assert ws.load_reference_set("live", REPO_ROOT / "fixtures", 10) is None
-
-
-def test_parse_questions():
-    reply = json.dumps({"questions": ["How many orders?", "how many orders?", "Top sellers?", " "]})
-    assert ws.parse_questions(reply, 2, 300) == [{"question": "How many orders?"}, {"question": "Top sellers?"}]
-    assert isinstance(ws.parse_questions(reply, 3, 300), str)
-    assert isinstance(ws.parse_questions("nope", 1, 300), str)
-
-
-def test_grade_is_execution_accuracy():
-    assert ws.grade([{"n": 5}], [{"count": 5}])[0] == "right"            # names do not matter
-    assert ws.grade([{"a": 1}, {"a": 2}], [{"b": 2}, {"b": 1}])[0] == "right"  # order does not
-    verdict, detail = ws.grade([{"a": 1}], [{"b": 1}, {"b": 2}])
-    assert verdict == "wrong" and "50%" in detail
-
-
 # ── Runners ──────────────────────────────────────────────────────────────────
 
 class FakeManage:
@@ -145,58 +107,6 @@ class HTTPError(Exception):
     def __init__(self, detail):
         super().__init__(detail)
         self.detail = detail
-
-
-def test_run_test_grades_each_answer_and_stops_on_quota():
-    questions = [{"question": f"q{i}", "reference_sql": f"SELECT {i}"} for i in range(1, 6)]
-    answers = {
-        "q1": {"state_trace": {"executed_sql": "SELECT 1", "sql_rows": [{"x": 1}]}},
-        "q2": {"state_trace": {"executed_sql": "SELECT 9", "sql_rows": [{"x": 9}]}},
-        "q3": {"state_trace": {"executed_sql": None, "sql_rows": []}},
-    }
-
-    async def ask(question, session_id):
-        assert session_id.startswith("setup-run-1234")
-        if question == "q4":
-            raise HTTPError("The language model is rate-limited right now. Please try again in a minute.")
-        return answers[question]
-
-    async def run_select(sql):
-        return {"ok": True, "rows": [{"v": int(sql.split()[-1])}]}
-
-    manage = FakeManage()
-    job = ws.new_job("test", "p", "w")
-    asyncio.run(ws.run_test(job, manage, questions, "reference", ask, run_select))
-    got = manage.results()
-    assert got[1][0] == "right" and got[2][0] == "wrong" and got[3] == ("wrong", "No database query was run for it.")
-    assert got[4][0] == "error" and got[5][0] == "error" and "quota" in got[5][1]
-    assert ("finish_run", {"run_id": "run-123456789", "failed": True}) in manage.calls
-    assert job.state == "failed" and job.done == 5
-
-
-def test_a_broken_reference_is_an_error_not_a_point():
-    async def ask(question, session_id):
-        return {"state_trace": {"executed_sql": "SELECT 1", "sql_rows": []}}
-
-    async def run_select(sql):
-        return {"ok": False, "rows": []}
-
-    manage = FakeManage()
-    job = ws.new_job("test", "p", "w")
-    asyncio.run(ws.run_test(job, manage, [{"question": "q", "reference_sql": "SELECT 1"}], "reference", ask, run_select))
-    assert manage.results()[1][0] == "error" and job.state == "done"
-
-
-def test_owner_graded_answers_wait_for_the_owner():
-    async def ask(question, session_id):
-        return {"answer_text": "5", "state_trace": {"executed_sql": "SELECT 5", "sql_rows": [{"n": 5}]}}
-
-    async def run_select(sql):
-        raise AssertionError("owner-graded runs have no reference to run")
-
-    manage = FakeManage()
-    asyncio.run(ws.run_test(ws.new_job("test", "p", "w"), manage, [{"question": "q"}], "owner", ask, run_select))
-    assert manage.results()[1] == ("pending", None)
 
 
 def test_run_draft_scans_first_and_saves_ai_drafts():

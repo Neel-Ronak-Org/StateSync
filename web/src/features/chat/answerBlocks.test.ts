@@ -26,6 +26,16 @@ describe('answerBlocks', () => {
     ])
   })
 
+  it('keeps list items separated by blank lines in one list, but not across a paragraph', () => {
+    const text = 'Risks:\n\n1. Supply\n\n2. Labour\n\n3. Legal\n\nIn short, many.\n\n- A\n\n- B'
+    expect(answerBlocks(text)).toEqual([
+      { kind: 'p', text: 'Risks:' },
+      { kind: 'ol', items: ['Supply', 'Labour', 'Legal'] },
+      { kind: 'p', text: 'In short, many.' },
+      { kind: 'ul', items: ['A', 'B'] },
+    ])
+  })
+
   it('handles the inline " - " case after a colon', () => {
     const text = 'According to the table: - Fashion: 5 days - Electronics: 7 days'
     expect(answerBlocks(text)).toEqual([

@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { formatNumber } from '@/lib/format'
+import { formatCellNumber, formatNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 interface ResultTableProps {
@@ -99,7 +99,7 @@ export function ResultTable({
                       {val === null || val === undefined
                         ? '—'
                         : typeof val === 'number'
-                          ? formatNumber(val)
+                          ? formatCellNumber(col, val)
                           : String(val)}
                     </TableCell>
                   )

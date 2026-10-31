@@ -1,21 +1,20 @@
 """
 orchestrator/context_carry.py
-Multi-turn context with no extra model call (pipeline.context_carry = "on";
-docs/specs/partd_tasks/T4d_context_carry.md, the second part of T4c).
+Follow-up questions, with no model call.
 
-WHY THIS EXISTS. A follow-up ("And in fiscal 2022?", "Has it reported any legal battles?") needs the
-conversation. The shipped rewriter spends a model call per turn to write a standalone question. For the
-front-door arms that do not rewrite the question, this module resolves it deterministically instead:
-detect a follow-up, carry the company and year the question leaves out from the previous turn (its
-question, and its answer: "it" in the second turn of "Which of Coca-Cola, PepsiCo and General Mills had the
-highest revenue? / Has it reported any legal battles?" is PepsiCo, named only in the first turn's answer),
-and give the answering models one line of context. The writers read the line; the document search text
-gains the carried company and year.
+A follow-up ("And in fiscal 2022?", "Has it reported any legal battles?") cannot be answered alone. Instead
+of asking a model to rewrite it, the router runs this code after its decision:
+  1. Is it a follow-up? Yes if it uses a reference word ("it", "its", "that company", ...), or names no
+     company while the previous turn named one.
+  2. Which company and year does it leave out? Taken from the previous turn: its answer first, then its
+     question ("it" in "Has it reported any legal battles?" after "Which of Coca-Cola, PepsiCo and General
+     Mills had the highest revenue?" is PepsiCo, named only in the first answer).
+  3. The SQL writer and the answer writer get one line of context after the question, and the document
+     search text gains the carried company and year.
 
-Everything here is a pure function. Names are the workspace's document title names (title_name, T5b),
-already reduced to lower-case letters and digits; both sides are reduced the same way before matching.
-`previous` is the previous turn as the front door holds it: a mapping with the standalone question
-(`rewritten_query`) and the answer (`answer_text`); `question` and `answer` are read when those are absent.
+Companies are recognised by the names in the workspace's document titles ("COCACOLA 2022 10K" -> COCACOLA),
+reduced to lower-case letters and digits on both sides before matching. Everything here is a pure function;
+`previous` is the previous stored turn (rewritten_query and answer_text, or question and answer).
 """
 
 from __future__ import annotations
@@ -56,16 +55,16 @@ _ANAPHOR_RE = _anaphor_re()
 
 
 def _letters_digits(text: str) -> str:
-    """T5b's reduction (nodes.unstructured_knowledge._letters_digits: lower-case letters and digits only),
+    """The same reduction the documents engine uses for titles (lower-case letters and digits only),
     imported when first used because that module imports this one."""
-    from nodes.unstructured_knowledge import _letters_digits as reduce
+    from nodes.documents import _letters_digits as reduce
     return reduce(text)
 
 
 # ── Companies and years ──────────────────────────────────────────────────────
 def entities(text: str, names: list[str]) -> list[str]:
     """The names (as given) that `text` names, longest first, each once, in order of appearance. Both sides
-    are reduced to lower-case letters and digits ("Coca-Cola" names "cocacola"). As in match_titles (T5b), a
+    are reduced to lower-case letters and digits ("Coca-Cola" names "cocacola"). As in nodes/documents.py match_titles, a
     name occurs anywhere in the text's reduced letters ("JPMORGAN CHASE & CO" names "jpmorgan") when it has
     at least [hybrid] title_name_min_chars of them; a shorter name ("3m") must equal a whole word. A longer
     name's match is used up, so a shorter name inside it ("morgan" in "morganstanley") is not reported."""

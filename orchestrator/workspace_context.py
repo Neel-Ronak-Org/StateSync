@@ -1,7 +1,7 @@
 """
 orchestrator/workspace_context.py
 What a question asked in a workspace adds to the SQL agent's prompt
-(docs/V3_PLAN.md Phase 3, slice 3; §5.1).
+.
 
 Only when a question carries a workspace. Everything here comes from the MCP's
 workspaces.manage `context` action, which returns APPROVED knowledge only:

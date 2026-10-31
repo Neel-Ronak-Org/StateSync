@@ -1,45 +1,43 @@
+# docker-compose.yml: the six services of StateSync.
+#
+#   frontend      the web app (React, served by nginx)                      localhost:3000
+#   orchestrator  the pipeline (graph.py); holds the model keys, no database password   localhost:8090 (override)
+#   mcp           the tool server; the ONLY service with database passwords
+#   postgres      StateSync's own data: workspaces, conversations, uploaded documents and their vectors (pgvector)
+#   ollama        the embedding model (mxbai-embed-large) for documents and questions
+#   parser        turns uploaded files into text, isolated
+#
+# The security idea is in the networks: the orchestrator (which runs the language models) cannot reach any
+# database at all. It can only ask the MCP, and the MCP runs a model's SQL only through its read-only gate.
+
 # ─── Networks ────────────────────────────────────────────────────────────────
-# Security property (A1): postgres & qdrant are ONLY on db_net.
-# orchestrator is ONLY on app_net. An orchestrator process that tries to reach
-# postgres gets "no route to host" at the network layer — verified by B-V3.
 networks:
-  db_net:
-    driver: bridge
-    internal: true   # no external routing; containers cannot reach the internet
-  app_net:
-    driver: bridge
-  # The upload parser's network (docs/V3_PLAN.md Phase 3c slice 5): internal,
-  # shared only with the orchestrator. The parser reaches no database, no
-  # model and no internet; the orchestrator is the only thing that reaches it.
-  parser_net:
+  db_net:          # postgres, ollama and the MCP. Internal: no internet.
     driver: bridge
     internal: true
-  # The re-ranker's network (docs/specs/rag_v3.md): internal, shared only with the MCP.
-  reranker_net:
+  app_net:         # the frontend, the orchestrator and the MCP
+    driver: bridge
+  parser_net:      # the orchestrator and the parser only. Internal: the parser reaches nothing.
     driver: bridge
     internal: true
 
-# ─── Volumes ─────────────────────────────────────────────────────────────────
 volumes:
   postgres_data:
-  qdrant_data:
   ollama_data:
-  evaluator_data:   # BD8: persisted evaluation history (SQLite), owned solely by evaluator
 
-# ─── Services ────────────────────────────────────────────────────────────────
 services:
 
-  # ── 1. postgres ────────────────────────────────────────────────────────────
+  # ── postgres ───────────────────────────────────────────────────────────────
   postgres:
     container_name: postgres
-    image: statesync-postgres
+    image: statesync-postgres            # postgres with pgvector (postgres/Dockerfile)
     build:
       context: ./postgres
       dockerfile: Dockerfile
     restart: unless-stopped
     command: ["postgres", "-c", "log_statement=all"]
     networks:
-      - db_net          # db_net ONLY — no app_net attachment (A1 isolation)
+      - db_net                           # db_net only: the orchestrator cannot route to it
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -54,63 +52,16 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
-    # pgvector extension is required for document_chunks.embedding (A5)
-    # PostGIS image includes it; pgvector must be separately installed.
-    # The migration job installs CREATE EXTENSION IF NOT EXISTS vector.
 
-  # ── 2. qdrant ──────────────────────────────────────────────────────────────
-  qdrant:
-    image: qdrant/qdrant:v1.9.4
-    restart: unless-stopped
-    networks:
-      - db_net          # db_net ONLY — no app_net attachment (A1 isolation)
-    volumes:
-      - qdrant_data:/qdrant/storage
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/6333' 2>/dev/null && exit 0 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-
-  # ── 3. ollama (local model host) ───────────────────────────────────────────
-  # Serves mxbai-embed-large (1024 dims) for trajectory/document embeddings
-  # (A6, E1) to mcp -- mcp's OLLAMA_URL below is hardcoded to this service
-  # (http://ollama:11434) and always reaches it, regardless of the flag one
-  # line down.
-  #
-  # Generation (qwen2.5:7b) is DIFFERENT and NOT wired to this container by
-  # default. orchestrator has no OLLAMA_URL env var at all; it falls back to
-  # config/flags.toml's `llm.ollama_url`, which this repo ships pointing at
-  # `http://host.docker.internal:11434` -- a NATIVE Ollama app on the
-  # developer's host, not this container. **Corrected 2026-08-23 (cycle 006
-  # D1, audit 006 F-006-6)** -- this comment previously claimed the container
-  # served "qwen2.5:7b for generation to orchestrator... when
-  # flags.llm.ollama_url points here," which is false on two counts as
-  # shipped: this container has never had qwen2.5:7b pulled into it, and the
-  # shipped flag does not point here. If you DO want the orchestrator to
-  # generate against this container instead of a native host Ollama, pull
-  # the chat model into it (`docker compose exec ollama ollama pull
-  # qwen2.5:7b`) AND change `llm.ollama_url` to `http://ollama:11434` --
-  # neither is done by default. See README.md's Ollama topology section for
-  # the two supported setups and which env var governs which service.
-  #
-  # On BOTH networks, deliberately, and the comment that used to sit here
-  # ("only mcp needs it; stays off app_net") was stale — it contradicted the
-  # two lines directly below it. orchestrator is app_net-only (A1), so it can
-  # only reach a container-hosted Ollama if that container is on app_net too
-  # -- relevant if you DO repoint llm.ollama_url at this service, per above.
-  # This is not an A1 isolation concern: A1's topology table covers postgres,
-  # qdrant, mcp, orchestrator, frontend and evaluator, and ollama holds no
-  # credentials and fronts no data. postgres/qdrant remain db_net-only, and
-  # B-V3 (orchestrator cannot reach postgres) is unaffected — ollama does not
-  # route between the two networks.
+  # ── ollama: the embedding model ────────────────────────────────────────────
+  # Pull the model once: docker compose exec ollama ollama pull mxbai-embed-large
   ollama:
-    image: ollama/ollama:0.32.9   # pinned 2026-10-03 (the image already running; tagged locally, not pulled)
+    image: ollama/ollama:0.32.9
     restart: unless-stopped
     networks:
       - db_net
-      - app_net
+    environment:
+      - OLLAMA_KEEP_ALIVE=-1             # keep the model loaded: a cold load under load timed out a search
     volumes:
       - ollama_data:/root/.ollama
     healthcheck:
@@ -120,43 +71,29 @@ services:
       retries: 10
       start_period: 90s
 
-  # ── 4. mcp ─────────────────────────────────────────────────────────────────
-  # Sole credential holder. Bridges db_net (to reach postgres/qdrant/ollama)
-  # and app_net (to accept calls from orchestrator/evaluator).
+  # ── mcp: the tool server ───────────────────────────────────────────────────
   mcp:
     build:
       context: ./mcp
       dockerfile: Dockerfile
     restart: unless-stopped
     networks:
-      - db_net
-      - app_net
-      - reranker_net
+      - db_net                           # to postgres and ollama
+      - app_net                          # to accept calls from the orchestrator
     environment:
-      - RERANKER_URL=http://reranker:8096
       - MCP_HOST=0.0.0.0
       - MCP_PORT=8080
-      - POSTGRES_DSN=postgresql://statesync_reader:READER_PLACEHOLDER@postgres:5432/statesync
-      - QDRANT_URL=http://qdrant:6333
       - OLLAMA_URL=http://ollama:11434
       - CONFIG_DIR=/app/config
     volumes:
       - ./config:/app/config:ro
     secrets:
-      - pg_reader_password
-      - pg_history_password
-      # Encrypts the passwords of the owner's own databases (mcp/connections.py).
-      # Held by the MCP only. Create it with scripts/make_connection_key.py.
-      - connection_key
-      # The shared secret every /rpc call must carry (mcp/service_auth.py). Held by
-      # the MCP and the orchestrator only; the MCP will not start without it.
-      - mcp_token
-      # The evaluator's own, restricted token (data.run_select on built-in datasets only).
-      - mcp_token_evaluator
+      - pg_reader_password               # the read-only login model SQL runs as
+      - pg_history_password              # writes conversations, workspaces and documents
+      - connection_key                   # encrypts the passwords of the owner's own databases
+      - mcp_token                        # every call must carry it (mcp/service_auth.py)
     depends_on:
       postgres:
-        condition: service_healthy
-      qdrant:
         condition: service_healthy
       ollama:
         condition: service_healthy
@@ -167,47 +104,28 @@ services:
       retries: 10
       start_period: 30s
 
-  # ── 5. orchestrator ────────────────────────────────────────────────────────
-  # Graph, agents, model API keys. ONLY on app_net — cannot reach db_net (B-V3).
+  # ── orchestrator: the pipeline ─────────────────────────────────────────────
   orchestrator:
     build:
       context: ./orchestrator
       dockerfile: Dockerfile
     restart: unless-stopped
     networks:
-      - app_net         # app_net — intentionally not on db_net
-      - parser_net      # to hand uploads to the parser; the parser reaches nothing
+      - app_net                          # never db_net
+      - parser_net
     environment:
       - ORCHESTRATOR_HOST=0.0.0.0
       - ORCHESTRATOR_PORT=8090
       - MCP_URL=http://mcp:8080
-      - ANTHROPIC_API_KEY_FILE=/run/secrets/anthropic_api_key
-      # Azure OpenAI (BD1 seam, provider = "azure"). Like the Anthropic key,
-      # this is read ONLY when that provider is selected -- a stack running
-      # provider="local" never opens it, so the placeholder file is harmless.
-      - AZURE_OPENAI_API_KEY_FILE=/run/secrets/azure_openai_api_key
-      - GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key
-      # Groq (provider = "groq", the v3 default -- docs/V3_PLAN.md 0.4).
-      - GROQ_API_KEY_FILE=/run/secrets/groq_api_key
-      - CONFIG_DIR=/app/config
-      # Reference questions for a workspace's setup test (docs/V3_PLAN.md Phase 3).
-      - FIXTURES_DIR=/app/fixtures
       - PARSER_URL=http://parser:8095
+      - CONFIG_DIR=/app/config
     volumes:
       - ./config:/app/config:ro
-      - ./fixtures:/app/fixtures:ro
     secrets:
-      - anthropic_api_key
-      - azure_openai_api_key
-      - gemini_api_key
-      - groq_api_key
-      - api_principals
-      - mcp_token       # sent on every MCP call (orchestrator/mcp_client.py)
-      # Client key for a local router (demo/omniroute.sh), used only with provider = "openai_compat";
-      # a "REPLACE..." placeholder means "not configured".
-      - local_router_api_key
-      - openrouter_api_key   # provider = "openai_compat" roles on the openrouter endpoint; same placeholder rule
-      - cheaperinference_api_key   # provider = "openai_compat" roles on the cheaperinference endpoint; same rule
+      - api_principals                   # the sign-in tokens (hashed)
+      - mcp_token
+      - cheaperinference_api_key         # the language models (config/flags.toml)
+      - opencode_api_key                 # Jev
     depends_on:
       mcp:
         condition: service_healthy
@@ -218,11 +136,10 @@ services:
       retries: 10
       start_period: 30s
 
-  # ── 5b. parser ─────────────────────────────────────────────────────────────
-  # Turns uploaded files into text (parser/server.py). The most hostile input
-  # StateSync accepts, so: internal network shared only with the orchestrator,
-  # no secrets, non-root, read-only filesystem, no capabilities, bounded memory
-  # and processes, and each file parsed in a child process with its own limits.
+  # ── parser: uploaded files to text ─────────────────────────────────────────
+  # The most hostile input StateSync accepts, so: no network beyond the orchestrator, no secrets,
+  # non-root, read-only filesystem, no capabilities, bounded memory and processes, and each PDF parsed
+  # in a child process with its own limits (parser/server.py).
   parser:
     build:
       context: ./parser
@@ -245,35 +162,7 @@ services:
     mem_limit: 1g
     pids_limit: 64
 
-  # ── re-ranker ──────────────────────────────────────────────────────────────
-  # Cross-encoder passage re-ranking (reranker/server.py, docs/specs/rag_v3.md). Reached only
-  # by the MCP over reranker_net; no internet, no database, models baked in at build time.
-  reranker:
-    build:
-      context: ./reranker
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    networks:
-      - reranker_net
-    environment:
-      - CONFIG_DIR=/app/config
-      - RERANKER_PORT=8096
-    volumes:
-      - ./config:/app/config:ro
-    read_only: true
-    tmpfs:
-      - /tmp:size=16m
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    mem_limit: 4g
-    pids_limit: 64
-
-  # ── 6. frontend ────────────────────────────────────────────────────────────
-  # The web app (web/, docs/V3_PLAN.md Phase 2): a React bundle served by nginx,
-  # charts rendered via vega-interpreter (A7) under a CSP with no unsafe-eval.
-  # web/entrypoint.sh writes ORCHESTRATOR_URL into /config.js and the CSP.
+  # ── frontend: the web app ──────────────────────────────────────────────────
   frontend:
     build:
       context: ./web
@@ -282,21 +171,13 @@ services:
     networks:
       - app_net
     ports:
-      # localhost only (2026-10-02): the API this UI calls is bound to 127.0.0.1 in the override, so
-      # serving the page on every interface only exposed it to the local network, never usefully.
       - "127.0.0.1:3000:80"
     environment:
-      # Consumed by the BROWSER, not by this container. entrypoint.sh bakes it
-      # into app.js, which runs on the user's machine, so it must be an address
-      # the user's machine can resolve. `http://orchestrator:8090` is a
-      # compose-network DNS name that only exists between containers -- the
-      # browser cannot resolve it, and every query from the UI failed with
-      # "TypeError: Failed to fetch". The published port is what the browser
-      # can reach.
-      #
-      # Contrast the evaluator service below, which keeps
-      # `http://orchestrator:8090`: that one really is container-to-container.
+      # Read by the BROWSER (web/entrypoint.sh writes it into config.js), so it is the address the
+      # user's machine reaches the orchestrator at, not a container name.
       - ORCHESTRATOR_URL=http://localhost:8090
+    volumes:
+      - ./config/suggestions.json:/etc/statesync/suggestions.json:ro   # the suggested questions on an empty chat
     depends_on:
       orchestrator:
         condition: service_healthy
@@ -307,119 +188,22 @@ services:
       retries: 5
       start_period: 10s
 
-  # ── 7. evaluator ───────────────────────────────────────────────────────────
-  # Continuous evaluation pipeline (full impl in Phase F; stub here).
-  evaluator:
-    build:
-      context: ./evaluator
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    networks:
-      - app_net
-    environment:
-      - ORCHESTRATOR_URL=http://orchestrator:8090
-      - MCP_URL=http://mcp:8080
-      - CONFIG_DIR=/app/config
-      - FIXTURES_DIR=/app/fixtures
-      - EVAL_DB_PATH=/app/data/eval_history.db
-    # Its own credentials, never the orchestrator's: an API principal for /query, and an
-    # MCP token that may only run gold SELECTs (mcp/service_auth.py rule 5).
-    secrets:
-      - api_token_evaluator
-      - mcp_token_evaluator
-    volumes:
-      - ./config:/app/config:ro
-      - ./fixtures:/app/fixtures:ro
-      - evaluator_data:/app/data
-    depends_on:
-      orchestrator:
-        condition: service_healthy
-      mcp:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8095/health')\" || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-
-  # ── 8. simulator ───────────────────────────────────────────────────────────
-  # Keeps the `live` demo dataset moving (docs/V3_PLAN.md Phase 2b, migration
-  # 020): backfills 30 days on first start, then appends orders, deliveries,
-  # reviews and web traffic every few seconds. Connects as statesync_simulator,
-  # which can write to the live and live_sim schemas and nothing else.
-  # db_net only: it talks to postgres and nothing talks to it.
-  simulator:
-    build:
-      context: ./simulator
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    networks:
-      - db_net
-    environment:
-      - CONFIG_DIR=/app/config
-      - POSTGRES_HOST=postgres
-      - PG_SIMULATOR_PASSWORD_FILE=/run/secrets/pg_simulator_password
-    volumes:
-      - ./config:/app/config:ro
-    secrets:
-      - pg_simulator_password
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      # main.py rewrites the heartbeat every tick; a stale one means it stopped.
-      test: ["CMD-SHELL", "test -n \"$(find /tmp/heartbeat -mmin -1 2>/dev/null)\""]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 180s
-
 # ─── Secrets ─────────────────────────────────────────────────────────────────
-# In production replace with Docker Swarm / Vault secrets.
-# For local dev, create these files before running:
-#   echo "changeme" > secrets/pg_migrator_password
-#   echo "changeme" > secrets/pg_reader_password
-#   echo "changeme" > secrets/pg_history_password
-#   echo "sk-ant-..." > secrets/anthropic_api_key
+# Files in secrets/ (never committed; see secrets/README.md). Each is mounted only where it is needed.
 secrets:
   pg_migrator_password:
     file: ./secrets/pg_migrator_password
   pg_reader_password:
     file: ./secrets/pg_reader_password
-  pg_simulator_password:
-    # Phase 2b: statesync_simulator (migration 020), writes only to the live and
-    # live_sim schemas. Mounted only into the simulator.
-    file: ./secrets/pg_simulator_password
   pg_history_password:
-    # Cycle 007: statesync_history, table-scoped to
-    # session_state.conversation_turns only (migrations/011). Mounted only
-    # into mcp -- the orchestrator never holds a DB credential (A1).
     file: ./secrets/pg_history_password
-  anthropic_api_key:
-    file: ./secrets/anthropic_api_key
-  azure_openai_api_key:
-    file: ./secrets/azure_openai_api_key
-  gemini_api_key:
-    file: ./secrets/gemini_api_key
   connection_key:
     file: ./secrets/connection_key
-  groq_api_key:
-    file: ./secrets/groq_api_key
   mcp_token:
     file: ./secrets/mcp_token
-  local_router_api_key:
-    file: ./secrets/local_router_api_key
-  openrouter_api_key:
-    # provider = "openai_compat" roles on the openrouter endpoint (config/flags.toml); a placeholder
-    # starting with REPLACE is treated as no key.
-    file: ./secrets/openrouter_api_key
-  cheaperinference_api_key:
-    # provider = "openai_compat" roles on the cheaperinference endpoint; REPLACE placeholder = no key.
-    file: ./secrets/cheaperinference_api_key
-  mcp_token_evaluator:
-    file: ./secrets/mcp_token_evaluator
-  api_token_evaluator:
-    file: ./secrets/api_token_evaluator
   api_principals:
     file: ./secrets/api_principals.json
+  cheaperinference_api_key:
+    file: ./secrets/cheaperinference_api_key
+  opencode_api_key:
+    file: ./secrets/opencode_api_key

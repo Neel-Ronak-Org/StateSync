@@ -15,7 +15,6 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
@@ -109,19 +108,18 @@ def test_exception_is_recorded_and_reraised():
 
 
 def test_get_agent_llm_wraps_the_providers_adapter(monkeypatch):
-    import llm.adapters.ollama_adapter as ollama
+    import llm.adapters.openai_compat_adapter as compat
 
     made = []
 
-    class _Adapter:
-        def __init__(self, model, base_url):
-            made.append((model, base_url))
+    class _Chain:
+        model = "cheaperinference:big-model"
 
-    monkeypatch.setattr(ollama, "OllamaAdapter", _Adapter)
-    # Config is read-only, so swap the module's view of it rather than mutate it.
-    monkeypatch.setattr(provider, "flags", SimpleNamespace(
-        llm=SimpleNamespace(provider="local", ollama_url="http://ollama.test")))
-    monkeypatch.setattr(provider, "_resolve_model", lambda prov, role: f"{prov}-{role}-model")
+        def __init__(self, spec):
+            made.append(spec)
+
+    monkeypatch.setattr(compat, "build", _Chain)
+    monkeypatch.setattr(provider, "_spec", lambda role: f"cheaperinference:{role}-model")
     provider.get_agent_llm.cache_clear()
     try:
         llm = provider.get_agent_llm("sql")
@@ -129,9 +127,9 @@ def test_get_agent_llm_wraps_the_providers_adapter(monkeypatch):
         provider.get_agent_llm.cache_clear()
 
     assert isinstance(llm, RecordingModel)
-    assert isinstance(llm._inner, _Adapter)
-    assert made == [("local-sql-model", "http://ollama.test")]
-    assert llm.role == "sql" and llm.model == "local-sql-model"
+    assert isinstance(llm._inner, _Chain)
+    assert made == ["cheaperinference:sql-model"]
+    assert llm.role == "sql" and llm.model == "cheaperinference:big-model"
 
 
 def test_stop_recording_ends_the_list():

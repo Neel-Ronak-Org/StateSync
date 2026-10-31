@@ -1,33 +1,34 @@
 """
 orchestrator/main.py
-FastAPI application exposing the query endpoint.
+The orchestrator's web API (FastAPI).
 
-Endpoints:
-  POST /query   — Run a query through the graph; returns answer_text + state_trace.
-  GET  /health  — Health check for Docker / B-V1.
+  POST /query            ask a question in a workspace; runs the graph (graph.py) and returns the answer,
+                         its citations, its chart and the trace the Pipeline Inspector shows
+  GET  /health           for Docker and the web app: is the service up, are the models configured
+  /sessions ...          the caller's own conversations
+  /workspaces, /library, /tiles, /dashboards, /auth ...   registered from the *_api.py modules
+
+Every route authenticates the caller (auth.py) and is rate limited; /query has the tighter budget because
+it spends model tokens. Every request is written to the audit log through the MCP.
 """
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import time
 import uuid
 from contextlib import asynccontextmanager
-from typing import Any
 
 import uvicorn
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from auth import (CSRF_HEADER, SESSION_COOKIE, AuthError, Principal, RateLimited, RateLimiter, all_principals,
+from auth import (CSRF_HEADER, SESSION_COOKIE, AuthError, Principal, RateLimited, RateLimiter,
                   authenticate, credential_header, init_auth, rate_limiter, read_rate_limiter)
-from config_loader import cfg, flags, snapshot_flags
-from front_door import DebugTurn, debug_hooks_refused, route_only_trace
-from graph import graph, route_graph
+from config_loader import cfg, snapshot_flags
+from graph import graph
 from llm.provider import LLM_READINESS, validate_llm_config
 from llm.recording import start_recording, stop_recording
 from failures import user_facing_failure
@@ -35,22 +36,19 @@ from evidence import evidence_tier
 from number_grounding import applies as grounding_applies
 from number_grounding import caveat as grounding_caveat
 from number_grounding import ground
-import repair_loop
 from sql_explain import explain_sql
 from mcp_client import (MCPSession, audit_record, history_append_turn,
                         history_check_session, history_get_recent_turns,
                         history_get_turn_rows, history_list_sessions, history_delete_session)
-from nodes.synthesizer import build_citations, synthesizer_node
-from schema_retriever import target_schema
+from nodes.synthesizer import build_citations
 from schemas.synthesizer_output import safe_synthesizer_output
 from state import StateSyncState
 from tiles_api import register_tile_routes
-from builder_api import register_build_routes
 from dashboards_api import register_dashboard_routes
 from library_api import call_library, is_connection_dataset, register_library_routes
 from workspaces_api import call_workspaces, register_workspace_routes
+from inspect_api import register_inspect_routes
 from session_api import register_session_routes
-from example_timer import run_forever as run_example_timer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -62,39 +60,20 @@ logger = logging.getLogger(__name__)
 # ── Lifespan ──────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    provider: str = str(flags.llm.provider)
-    logger.info(
-        "StateSync Orchestrator starting up. LLM provider: %s.",
-        provider,
-    )
-    # Validate LLM config eagerly — fails loudly here rather than mid-query.
-    # For provider='local' this does NOT check the Anthropic key.
-    # For provider='anthropic' this validates key presence and all role→model
-    # mappings before accepting traffic.
+    logger.info("StateSync orchestrator starting.")
+    # Both checks fail loudly here, before any traffic: the model settings and keys, and the sign-in
+    # tokens (a missing or empty token file must never mean "no sign-in needed").
     validate_llm_config()
-    # Eagerly load and validate API principals — fails closed at startup if the
-    # secret file is missing, empty, or malformed, preventing unauthenticated deploys.
     init_auth()
-    timer_task = None
-    if str(cfg.example_checks.timer) == "on":
-        # The self-test timer (example_timer.py): re-checks approved examples on a schedule.
-        timer_task = asyncio.create_task(run_example_timer(
-            all_principals, call_workspaces,
-            interval_s=float(cfg.example_checks.timer_interval_s),
-            initial_delay_s=float(cfg.example_checks.timer_initial_delay_s),
-            stale_after_s=float(cfg.example_checks.stale_after_s),
-            max_workspaces=int(cfg.example_checks.timer_max_workspaces)))
     yield
-    if timer_task is not None:
-        timer_task.cancel()
-    logger.info("StateSync Orchestrator shutting down.")
+    logger.info("StateSync orchestrator shutting down.")
 
 
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="StateSync Orchestrator",
-    description="Text-to-SQL and document analytics API (StateSync).",
-    version="0.1.0-phase-b",
+    description="Answers business questions from a workspace's database and documents.",
+    version="1.0.0",
     lifespan=lifespan,
 )
 
@@ -107,9 +86,9 @@ app.add_middleware(
     # because the origins are an explicit list, never a wildcard.
     allow_credentials=True,
     # PATCH and DELETE for the /tiles routes (rename, unpin); PUT for the
-    # /workspaces knowledge routes (Phase 3). Without them the browser
+    # /workspaces knowledge routes. Without them the browser
     # preflight refuses those calls from the web UI's origin, which no
-    # server-side test can see (found auditing Phase 1).
+    # server-side test can see.
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type", "X-Filename", CSRF_HEADER],
     # Browsers hide every non-safelisted response header from cross-origin
@@ -232,22 +211,9 @@ async def _authenticate_and_limit(request: Request, limiter: RateLimiter) -> Pri
 # ── Request / Response models ─────────────────────────────────────────────────
 class QueryRequest(BaseModel):
     query: str
-    session_id: str | None = None
-    # None means "use the configured default", which keeps existing callers
-    # and every measurement script byte-identical in behaviour.
-    schema: str | None = None
-    # A workspace of the caller's (docs/V3_PLAN.md Phase 3): the question is
-    # answered on its dataset with its approved knowledge.
+    # The workspace the question is asked in: its database, its documents and its approved knowledge.
     workspace_id: str | None = None
-    # Test harness only (C2-V1/V2): seeds the attempt-0 candidate SQL,
-    # bypassing LLM generation. Never sent by the frontend.
-    debug_candidate_sql: str | None = None
-    # Evaluation hooks (docs/specs/partd_tasks/T4a_front_door.md), accepted only when [pipeline]
-    # debug_hooks = "on" (Part D's own container); HTTP 400 otherwise. debug_route_only runs only up to
-    # the routing decision and writes no turn. debug_history gives the earlier turns, used instead of
-    # the stored history by the front door and by the legacy rewrite step.
-    debug_route_only: bool = False
-    debug_history: list[DebugTurn] | None = None
+    session_id: str | None = None
 
 
 class QueryResponse(BaseModel):
@@ -255,7 +221,7 @@ class QueryResponse(BaseModel):
     answer_text: str
     chart: dict | None
     citations: list[dict]
-    state_trace: dict   # subset of state for B-V2 log check
+    state_trace: dict   # what each step did, for the Pipeline Inspector and the "How I got this" panel
     latency_ms: int
 
 
@@ -265,29 +231,16 @@ async def health() -> dict:
     return {
         "status": "ok",
         "service": "orchestrator",
-        "phase": "B",
-        "llm_provider": str(flags.llm.provider),
-        # From startup's check, never a live model call (docs/V3_PLAN.md 0.4).
+        # From startup's check, never a live model call.
         "llm_ready": LLM_READINESS["ready"],
         "llm_detail": LLM_READINESS["detail"],
-        "default_schema": target_schema(),
-        "available_schemas": sorted(cfg.api.allowed_schemas),
-        # Datasets whose data keeps changing (Phase 2b): the web app polls their
-        # dashboards and starts a new browser on the first one.
-        "live_schemas": [s for s in cfg.dashboards.live_schemas if s in cfg.api.allowed_schemas],
     }
 
 
 # ── Session browser ───────────────────────────────────────────────────────────
-# Formerly gated for local development only: history was scoped by tenant_id +
-# session_id alone, so any user of a shared tenant could enumerate every other
-# user's questions and answers (and stored answers contain real rows). C1 added
-# authentication and migration 014 added a NOT NULL principal_id to
-# conversation_turns. Both routes now filter on the authenticated principal, so
-# a caller can only enumerate and read their own conversations. Turns written
-# before auth carry the sentinel principal 'p_preauth_legacy', which no real
-# principal holds, so pre-auth history is deliberately invisible rather than
-# shown to an arbitrary caller.
+# Every route filters on the authenticated person (principal), so a caller can only list and read their own
+# conversations, even inside a shared tenant. Turns written before sign-in existed carry the principal
+# 'p_preauth_legacy', which nobody holds, so they are invisible rather than shown to anyone.
 
 
 @app.get("/sessions", tags=["history"])
@@ -328,7 +281,7 @@ async def get_session_route(
         base_url=os.environ.get("MCP_URL", "http://mcp:8080"),
     ) as session:
         result = await history_get_recent_turns(
-            session, session_id, principal_id=principal.principal_id, limit=limit
+            session, session_id, principal_id=principal.principal_id, limit=limit, with_detail=True
         )
     client_ip = request.client.host if request.client else None
     await _audit(
@@ -348,7 +301,7 @@ async def delete_session_route(
     request: Request,
     principal: Principal = Depends(require_principal),
 ) -> dict:
-    """Erase one of my conversations (Phase 2b). Someone else's is a 404, like a missing one."""
+    """Erase one of my conversations. Someone else's is a 404, like a missing one."""
     try:
         async with MCPSession(
             tenant_id=principal.tenant_id,
@@ -431,63 +384,23 @@ async def answer_question(
     requested: str,
     client_ip: str | None,
     route_path: str = "/query",
-    debug_candidate_sql: str | None = None,
     workspace_id: str | None = None,
-    allow_fast_path: bool = True,
-    debug_route_only: bool = False,
-    debug_history: list[DebugTurn] | None = None,
 ) -> QueryResponse:
-    """
-    Run one question through the pipeline and record the turn: the body of
-    /query after its request checks (schema allowlist, session ownership,
-    dataset match). Also used by the dashboard builder (dashboard_builder.py),
-    which asks its planned questions through exactly this path, so a tile it
-    creates came from the same SQL gate and validators as any answer.
-    Raises HTTPException with a user-facing message when the graph fails.
-    """
+    """Run one question through the pipeline and record the turn: the body of /query after its request
+    checks (the workspace is the caller's, the conversation is the caller's and on the same database).
+    Raises HTTPException with a user-facing message when the graph fails."""
     tenant_id = principal.tenant_id
     query_id = str(uuid.uuid4())
 
-    # Build the initial state input for the entry node
-    initial_input = {
-        "query_id": query_id,   # A2: set once here, immutable from here on
-        "tenant_id": tenant_id,
-        "principal_id": principal.principal_id,
-        "session_id": session_id,
-        "raw_query": query,
-        "target_schema": requested,
-        "flags_snapshot": snapshot_flags(),
-    }
-
     t0 = time.monotonic()
-    model_calls = start_recording()
+    model_calls = start_recording()   # every model call of this question, for the trace's cost table
     try:
-        raw_final = await (route_graph if debug_route_only else graph).ainvoke(
-            StateSyncState(
-                query_id=initial_input["query_id"],
-                tenant_id=initial_input["tenant_id"],
-                principal_id=principal.principal_id,
-                session_id=initial_input["session_id"],
-                raw_query=initial_input["raw_query"],
-                target_schema=requested,
-                workspace_id=workspace_id,
-                library_titles=await _library_titles(principal, workspace_id),
-                allow_fast_path=allow_fast_path,
-                flags_snapshot=initial_input["flags_snapshot"],
-                debug_candidate_sql=debug_candidate_sql,
-                debug_history=[t.model_dump() for t in debug_history] if debug_history is not None else None,
-            )
-        )
+        raw_final = await graph.ainvoke(StateSyncState(
+            query_id=query_id, tenant_id=tenant_id, principal_id=principal.principal_id, session_id=session_id,
+            raw_query=query, target_schema=requested, workspace_id=workspace_id,
+            library_titles=await _library_titles(principal, workspace_id), flags_snapshot=snapshot_flags(),
+        ))
         final_state: StateSyncState = StateSyncState(**raw_final) if isinstance(raw_final, dict) else raw_final
-        # The flag-and-repair loop (repair_loop.py; off when shipped). Inside the recording
-        # window so its one extra model call is counted with the others.
-        repair_record = None
-        variant = str(final_state.flags_snapshot.get("pipeline.repair_loop", "off"))
-        if (not debug_route_only and variant != "off"
-                and final_state.flags_snapshot.get("pipeline.number_grounding") == "on"):
-            update, repair_record = await repair_loop.repair(final_state.model_dump(), variant, synthesizer_node)
-            if update:
-                final_state = final_state.model_copy(update=update)
     except Exception as exc:
         logger.error("Graph execution failed: %s", exc, exc_info=True)
         await _audit(
@@ -507,33 +420,14 @@ async def answer_question(
 
     latency_ms = int((time.monotonic() - t0) * 1000)  # noqa: literals — ms conversion factor
 
-    if debug_route_only:
-        # Evaluation hook: the routing decision only. No answer, no turn written.
-        await _audit(
-            principal.principal_id, principal.tenant_id, route_path, "allowed",
-            query_id=final_state.query_id, session_id=session_id, client_ip=client_ip,
-            detail=f"schema={final_state.target_schema} route_only",
-        )
-        return QueryResponse(
-            query_id=final_state.query_id, answer_text="", chart=None, citations=[],
-            state_trace=route_only_trace(final_state, model_calls), latency_ms=latency_ms,
-        )
-
-    # Build state trace for B-V2 log verification and C1 memory verification.
-    # sql_rows/sql_columns are included (not just the count) so C1-V3 can do
-    # execution-based dataframe equality across repeated runs -- this trace
-    # object is verification/debugging-oriented, not the user-facing payload.
-    # Every figure in the prose, traced to a cell, a total, the question or a
-    # cited passage (number_grounding.py, no model). Unmatched figures become a
-    # caveat, which also keeps the answer out of the "checked" tier.
+    # Every figure in the answer, traced to a cell, a total, the question or a cited passage
+    # (number_grounding.py, no model call). A figure found nowhere becomes a caveat under the answer.
     grounding = None
     caveats = list(final_state.caveats)
-    if (final_state.flags_snapshot.get("pipeline.number_grounding") == "on" and final_state.answer_text
-            and grounding_applies(final_state.route, final_state.executed_sql)):
+    if final_state.answer_text and grounding_applies(final_state.route, final_state.executed_sql):
         grounding = ground(final_state.answer_text, final_state.sql_rows, final_state.sql_columns,
                            final_state.normalized_query or final_state.raw_query,
-                           [r.content for r in final_state.retrievals],
-                           **repair_loop.grounding_options(final_state.flags_snapshot, len(final_state.sql_rows)))
+                           [r.content for r in final_state.retrievals])
         figure_caveat = grounding_caveat(grounding["unmatched"])
         if figure_caveat:
             caveats.append(figure_caveat)
@@ -545,17 +439,12 @@ async def answer_question(
         "target_schema": final_state.target_schema,
         "workspace_id": final_state.workspace_id,
         "verified_example": final_state.verified_example,
-        "evidence": evidence_tier(final_state.verified_example, final_state.executed_sql,
-                                  final_state.flags_snapshot, caveats,
-                                  final_state.compiled_template),
+        "evidence": evidence_tier(final_state.verified_example, final_state.executed_sql),
         "number_grounding": grounding,
-        "repair": repair_record,
-        "self_consistency": final_state.self_consistency,
-        "route":       "neither" if final_state.out_of_scope else final_state.route,   # the front door's out-of-scope answer
-        "recovered_from": final_state.recovered_from,   # "sql" when route_recovery ran the documents route instead
+        "route":       "neither" if final_state.out_of_scope else final_state.route,
+        "recovered_from": final_state.recovered_from,   # "sql" when route recovery ran the documents route instead
         "executed_sql": final_state.executed_sql,
-        # executed_sql is null when a statement was rejected before execution,
-        # so candidate_sql is what a caller inspects to see what the agent actually proposed.
+        # The last query the agent wrote, also when it was refused before running (the Inspector shows it).
         "candidate_sql": final_state.candidate_sql,
         # Plain-English reading of the SQL (deterministic, no model): "How I got this".
         "explanation": explain_sql(final_state.executed_sql),
@@ -565,72 +454,35 @@ async def answer_question(
         "attempt":     final_state.attempt,
         "errors":      [e.model_dump() for e in final_state.errors],
         "interrogation_samples": final_state.interrogation_samples,
-        "script_repairs": final_state.script_repairs,
         "caveats":     caveats,
         "metrics":     final_state.metrics.model_dump(),
-        "memory_hit":       final_state.memory_hit,
-        "memory_trace_id":  final_state.memory_trace_id,
-        "schema_fingerprint": final_state.schema_fingerprint,
-        "detected_language":  final_state.detected_language,
-        "normalized_query":   final_state.normalized_query,
-        "preserved_entities": final_state.preserved_entities,
-        "turn_index":         final_state.turn_index,
-        "rewrite_applied":    final_state.rewrite_applied,
-        "context_guessed":    final_state.context_guessed,
-        "spatial":            final_state.spatial.model_dump(),
-        "subtasks":           final_state.subtasks,
-        "retrievals":         [r.model_dump() for r in final_state.retrievals],
-        "calls":              model_calls,
-        "synth_style":        final_state.flags_snapshot.get("pipeline.synth_style", "full"),
+        "normalized_query": final_state.normalized_query,
+        "turn_index":       final_state.turn_index,
+        "rewrite_applied":  final_state.rewrite_applied,
+        "subtasks":         final_state.subtasks,
+        "retrievals":       [r.model_dump() for r in final_state.retrievals],
+        "calls":            model_calls,
+        "front_door":       final_state.front_door,       # the router: what it read and decided
+        "out_of_scope":     final_state.out_of_scope,
+        "retrieval_trace":  final_state.retrieval_trace,  # the documents search, stage by stage
+        "hybrid_entities":  final_state.hybrid_entities,  # the narrowing step of a two-source question
     }
-    if final_state.front_door is not None:
-        # Only when pipeline.front_door ran: the shipped trace has neither key.
-        state_trace["front_door"] = final_state.front_door
-        state_trace["out_of_scope"] = final_state.out_of_scope
-    if final_state.hybrid_entities is not None:
-        # Only when pipeline.hybrid_entities ran the entity step in the hybrid documents half.
-        state_trace["hybrid_entities"] = final_state.hybrid_entities
 
-    # Recomputed here from final_state's typed fields, not read off the
-    # synthesizer node's own return value: graph.ainvoke()'s return is
-    # reconstructed against StateSyncState's schema (A2, locked -- no
-    # citations field) regardless of whether the last hop was a direct or
-    # conditional edge, so a scratch key set by synthesizer_node cannot
-    # survive out to this boundary (verified empirically; same principle as
-    # C2's scratch-key-through-conditional-edge fix, one level further out).
-    # build_citations is pure and reused as-is, so this always matches what
-    # synthesizer_node itself computed and validated the answer_text against.
+    # The citations are rebuilt here from the final state (the same pure function the writer used), so
+    # the response carries exactly what is validated below.
     sql_error = final_state.errors[-1].model_dump() if len(final_state.errors) > final_state.attempt else None
     citations = build_citations(final_state.executed_sql, sql_error, state_trace["retrievals"])
 
-    # A7 enforcement, validator 1 of 2: "in the orchestrator before the
-    # response leaves the process". This must run HERE, on the exact object
-    # about to be serialized -- not only inside synthesizer_node. The node
-    # validates its own output, but citations are recomputed above (see the
-    # comment on build_citations), so the payload the node validated is not
-    # byte-for-byte the payload this endpoint emits. Validating only in the
-    # node would leave the emitted response unchecked, which is precisely what
-    # A7's "before the response leaves the process" wording rules out.
-    #
-    # safe_synthesizer_output never repairs: on failure it returns the same
-    # prose and citations with chart set to null, and logs the failure (A7:
-    # "silent repair would hide M7 regressions"). The frontend then validates
-    # again, independently (E2-V6).
+    # The response is checked against the output schema on the exact object about to be sent (the web app
+    # checks it again before drawing). A chart that fails is dropped, never repaired.
     validated = safe_synthesizer_output({
         "answer_text": final_state.answer_text or "",
         "chart": final_state.vega_spec,
         "citations": citations,
     })
 
-    # Cycle 007 (Workstream A): record the turn AFTER validation, using the
-    # exact answer_text the user is about to receive -- not final_state's
-    # pre-repair value, for the same reason citations are recomputed here
-    # rather than trusted from the node's own return (see the comment above
-    # build_citations). Best-effort: a history-write failure must never turn
-    # a correct answer into a 500. Logged loudly rather than silently
-    # swallowed -- C2's own verification (row counts per session) would
-    # surface a persistent failure here immediately, so this is not an
-    # unobservable failure mode, just one that must not block the response.
+    # The turn is recorded after validation, with exactly the answer the user receives. Best-effort: a
+    # failed history write is logged but never turns a correct answer into an error.
     try:
         async with MCPSession(
             tenant_id=final_state.tenant_id,
@@ -644,18 +496,11 @@ async def answer_question(
                 raw_query=final_state.raw_query,
                 rewritten_query=final_state.normalized_query or final_state.raw_query,
                 rewrite_applied=final_state.rewrite_applied,
-                context_guessed=final_state.context_guessed,
+                context_guessed=False,
                 answer_text=validated["answer_text"],
                 route="neither" if final_state.out_of_scope else final_state.route,
                 executed_sql=final_state.executed_sql,
-                # Artifacts (migration 012), so a resumed conversation renders
-                # what the user saw. The chart is the VALIDATED spec -- the same
-                # object returned to the browser, already through both A7
-                # validators -- never a pre-repair draft. Rows are sliced to the
-                # preview cap HERE as well as clamped server-side: sending 1000
-                # rows across the MCP boundary only to discard 900 of them is
-                # waste, and the cap is a property of what gets stored, so both
-                # ends enforce it.
+                # What the user saw, so a reopened conversation shows the same answer, chart and rows.
                 chart=validated["chart"],
                 sql_columns=final_state.sql_columns or None,
                 sql_rows_preview=(final_state.sql_rows or None) and
@@ -664,6 +509,10 @@ async def answer_question(
                 # Do NOT slice it — MCP applies the caps and logs truncation; slicing here would hide from those logs how large the real result was.
                 sql_rows_full=(final_state.sql_rows or None),
                 target_schema=final_state.target_schema,
+                # What the Inspector and the source chips need when the conversation is reopened; the rows are
+                # left out (stored above), the size is capped by the MCP.
+                detail={"state_trace": {k: v for k, v in state_trace.items() if k != "sql_rows"},
+                        "citations": citations, "latency_ms": latency_ms},
             )
         # MCP assigns the turn number (0.1), so the trace reports the stored one --
         # the web client uses it to fetch this turn's full rows later. A turn that
@@ -725,39 +574,25 @@ async def run_query(
 ) -> QueryResponse:
     if not body.query or not body.query.strip():
         raise HTTPException(status_code=422, detail="query must not be empty")
-    refusal = debug_hooks_refused(body.debug_route_only, body.debug_history,
-                                  str(flags.pipeline.get("debug_hooks", "off")))
-    if refusal:
-        raise HTTPException(status_code=400, detail=refusal)
-
-    requested = body.schema or target_schema()
-    if body.workspace_id:
-        # The workspace decides the dataset; it must be the caller's own.
-        try:
-            workspace = (await call_workspaces(principal, "get", workspace_id=body.workspace_id)).get("workspace")
-        except Exception as exc:
-            logger.error("Workspace lookup failed for %s: %s", body.workspace_id, exc)
-            raise HTTPException(status_code=503, detail="Workspace service unavailable. Try again shortly.")
-        if workspace is None:
-            raise HTTPException(status_code=404, detail="No such workspace.")
-        if body.schema and body.schema != workspace["target_schema"]:
-            raise HTTPException(status_code=409, detail=(
-                f"This workspace uses the {workspace['target_schema']} dataset, not {body.schema}."))
-        requested = workspace["target_schema"]
-    # A connected database (cn_...) is reachable only through a workspace of the
-    # caller's own, checked just above; the MCP resolves it for this tenant.
-    if requested not in cfg.api.allowed_schemas and not (body.workspace_id and is_connection_dataset(requested)):
-        raise HTTPException(
-            status_code=422,
-            detail=f"Schema {requested!r} is not allowed. Allowed schemas: {sorted(cfg.api.allowed_schemas)}",
-        )
+    if not body.workspace_id:
+        raise HTTPException(status_code=422, detail="Choose a workspace to ask in.")
+    # The workspace decides the database; it must be the caller's own.
+    try:
+        workspace = (await call_workspaces(principal, "get", workspace_id=body.workspace_id)).get("workspace")
+    except Exception as exc:
+        logger.error("Workspace lookup failed for %s: %s", body.workspace_id, exc)
+        raise HTTPException(status_code=503, detail="Workspace service unavailable. Try again shortly.")
+    if workspace is None:
+        raise HTTPException(status_code=404, detail="No such workspace.")
+    requested = workspace["target_schema"]
+    if not is_connection_dataset(requested):
+        raise HTTPException(status_code=409, detail="This workspace has no connected database.")
 
     session_id = body.session_id or str(uuid.uuid4())
     tenant_id = principal.tenant_id
     client_ip = request.client.host if request.client else None
 
-    # A session belongs to the principal who wrote its first turn (docs/V3_PLAN.md
-    # 0.2). The web client generates session ids, so one owned by someone else is
+    # A session belongs to the principal who wrote its first turn. The web client generates session ids, so one owned by someone else is
     # refused here, before any model call -- rather than answered and then not
     # recorded. history.append_turn enforces the same rule at the write.
     if body.session_id:
@@ -808,10 +643,7 @@ async def run_query(
         session_id,
         requested,
         client_ip,
-        debug_candidate_sql=body.debug_candidate_sql,
         workspace_id=body.workspace_id,
-        debug_route_only=body.debug_route_only,
-        debug_history=body.debug_history,
     )
 
 
@@ -819,12 +651,9 @@ register_session_routes(app, require_principal=require_principal, audit=_audit)
 register_tile_routes(app, require_principal=require_principal, audit=_audit)
 register_dashboard_routes(app, require_principal=require_principal, audit=_audit)
 register_workspace_routes(app, require_principal=require_principal, audit=_audit,
-                          require_principal_for_model=require_principal_for_model,
-                          answer_question=answer_question)
+                          require_principal_for_model=require_principal_for_model)
 register_library_routes(app, require_principal=require_principal, audit=_audit)
-register_build_routes(app, require_principal=require_principal,
-                      require_principal_for_model=require_principal_for_model,
-                      audit=_audit, answer_question=answer_question)
+register_inspect_routes(app, require_principal=require_principal, audit=_audit)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

@@ -1,12 +1,7 @@
 # parser/requirements.lock: the exact packages the parser image installs (Docker builds use this, not
-# pyproject ranges). Frozen 2026-10-02 from the running container (python 3.12.14).
-# Regenerate after an intended upgrade: docker compose exec -T parser pip freeze, minus pip/setuptools.
+# ranges). pypdf reads the text; cryptography lets it open PDFs encrypted only to set permission flags
+# (SEC filings). Regenerate after an intended upgrade: docker compose exec -T parser pip freeze.
 cffi==2.1.1
-charset-normalizer==3.5.2
 cryptography==50.0.2
-pdfminer.six==20260107
-pdfplumber==0.11.10
-pillow==12.3.0
 pycparser==3.0
 pypdf==6.19.0
-pypdfium2==5.13.0

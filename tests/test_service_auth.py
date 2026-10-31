@@ -78,35 +78,3 @@ def test_the_orchestrator_refuses_to_call_without_a_token(tmp_path, monkeypatch)
 
 
 # ── Per-caller privileges (rule 5) ────────────────────────────────────────────
-
-def _callers(tmp_path, monkeypatch, evaluator_token=None):
-    main = tmp_path / "mcp_token"
-    main.write_text(TOKEN)
-    monkeypatch.setenv(sa.TOKEN_FILE_ENV, str(main))
-    ev = tmp_path / "mcp_token_evaluator"
-    if evaluator_token is not None:
-        ev.write_text(evaluator_token)
-    monkeypatch.setenv(sa.EVALUATOR_TOKEN_FILE_ENV, str(ev))
-    return sa.load_callers(["data.run_select"])
-
-
-def test_without_its_secret_there_is_no_evaluator_caller(tmp_path, monkeypatch):
-    assert [c.name for c in _callers(tmp_path, monkeypatch)] == ["orchestrator"]
-
-
-def test_the_evaluator_may_only_run_gold_selects_on_built_in_data(tmp_path, monkeypatch):
-    callers = _callers(tmp_path, monkeypatch, "e" * 64)
-    evaluator = sa.identify("Bearer " + "e" * 64, callers)
-    orchestrator = sa.identify(f"Bearer {TOKEN}", callers)
-    assert evaluator.name == "evaluator" and orchestrator.name == "orchestrator"
-    assert evaluator.permits("data.run_select", {"sql": "SELECT 1"})
-    assert not evaluator.permits("data.run_select", {"sql": "SELECT 1", "dataset": "cn_someone"})
-    assert not evaluator.permits("history.get_recent_turns", {})
-    assert not evaluator.permits("workspaces.manage", {"action": "list"})
-    assert orchestrator.permits("workspaces.manage", {"action": "list", "dataset": "x"})
-    assert sa.identify("Bearer " + "x" * 64, callers) is None
-
-
-def test_the_evaluator_token_must_differ_from_the_orchestrators(tmp_path, monkeypatch):
-    with pytest.raises(sa.ServiceTokenMissing):
-        _callers(tmp_path, monkeypatch, TOKEN)

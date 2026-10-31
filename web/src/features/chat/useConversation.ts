@@ -56,9 +56,12 @@ export function useConversation({ dataset, workspaceId, onDatasetChange }: UseCo
 
   // Sync turns to sessionStorage, capping rows per turn at 200 to stay under quota
   const persistTurns = useCallback((updatedTurns: ChatTurn[]) => {
+    // The trace's own copy of the rows is dropped (the turn keeps up to 200 in `rows`): with it, a long
+    // conversation outgrew sessionStorage, the write failed silently and a reload lost the Inspector.
     const capped = updatedTurns.map((t) => ({
       ...t,
       rows: t.rows ? t.rows.slice(0, 200) : null,
+      stateTrace: t.stateTrace ? { ...t.stateTrace, sql_rows: [] } : t.stateTrace,
     }))
     writeJson(KEYS.thread, capped, 'session')
   }, [])
@@ -90,7 +93,6 @@ export function useConversation({ dataset, workspaceId, onDatasetChange }: UseCo
         const res = await api.query({
           query: question,
           session_id: currentSessionId,
-          schema: currentDataset,
           workspace_id: workspaceId ?? undefined,
         })
 
@@ -193,8 +195,11 @@ export function useConversation({ dataset, workspaceId, onDatasetChange }: UseCo
           turnIndex: t.turn_index,
           sqlRowsCount: t.sql_rows_count ?? (t.sql_rows_preview?.length ?? 0),
           dataset: t.target_schema ?? sessionTargetSchema ?? effectiveDataset,
-          citations: [],
-          latencyMs: 0,
+          // The stored trace and citations (migration 028) bring back the Inspector and the source chips.
+          citations: t.detail?.citations ?? [],
+          latencyMs: t.detail?.latency_ms ?? 0,
+          stateTrace: t.detail?.state_trace ? { ...t.detail.state_trace, turn_index: t.turn_index } : undefined,
+          verifiedExample: Boolean(t.detail?.state_trace?.verified_example),
           status: 'done',
         }))
 

@@ -13,22 +13,13 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useConnections } from '@/features/library/useConnections'
 
 interface NewWorkspaceDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  availableSchemas: string[]
   onCreateWorkspace: (data: {
     name: string
     target_schema: string
@@ -37,21 +28,16 @@ interface NewWorkspaceDialogProps {
   onCreated: (workspace: Workspace) => void
 }
 
-/** Dialog for creating a new workspace. */
-export function NewWorkspaceDialog({
-  open,
-  onOpenChange,
-  availableSchemas,
-  onCreateWorkspace,
-  onCreated,
-}: NewWorkspaceDialogProps) {
+/** Dialog for creating a new workspace on one of the owner's connected databases. */
+export function NewWorkspaceDialog({ open, onOpenChange, onCreateWorkspace, onCreated }: NewWorkspaceDialogProps) {
   const [name, setName] = useState('')
-  const [dataset, setDataset] = useState(() => availableSchemas[0] ?? 'public')
+  const [chosen, setDataset] = useState('')
   const [about, setAbout] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  // A connected database with a chosen schema is a dataset; its id is the target_schema.
+  // A connected database with a chosen schema can hold a workspace; its id is the target_schema.
   const yourDatabases = useConnections(open).connections.filter((c) => c.schema_name)
+  const dataset = chosen || yourDatabases[0]?.connection_id || ''
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -63,7 +49,7 @@ export function NewWorkspaceDialog({
   }
 
   const handleCreate = async () => {
-    if (!name.trim() || isSubmitting) return
+    if (!name.trim() || !dataset || isSubmitting) return
     setIsSubmitting(true)
     setErrorMessage(null)
     try {
@@ -113,29 +99,25 @@ export function NewWorkspaceDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="ws-dataset">Dataset</Label>
-            <Select value={dataset} onValueChange={setDataset}>
-              <SelectTrigger id="ws-dataset" aria-label="Dataset">
-                <SelectValue placeholder="Dataset" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableSchemas.map((schema) => (
-                  <SelectItem key={schema} value={schema}>
-                    {schema}
-                  </SelectItem>
-                ))}
-                {yourDatabases.length > 0 && (
-                  <SelectGroup>
-                    <SelectLabel>Your databases</SelectLabel>
-                    {yourDatabases.map((c) => (
-                      <SelectItem key={c.connection_id} value={c.connection_id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                )}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="ws-dataset">Database</Label>
+            {yourDatabases.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Connect a database first: Data sources, then Databases, then Add database.
+              </p>
+            ) : (
+              <Select value={dataset} onValueChange={setDataset}>
+                <SelectTrigger id="ws-dataset" aria-label="Database">
+                  <SelectValue placeholder="Database" />
+                </SelectTrigger>
+                <SelectContent>
+                  {yourDatabases.map((c) => (
+                    <SelectItem key={c.connection_id} value={c.connection_id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -148,7 +130,7 @@ export function NewWorkspaceDialog({
               rows={3}
             />
             <p className="text-xs text-muted-foreground">
-              Optional. Helps the AI understand your schema and generates better answers.
+              Optional. The router and the SQL writer read it as background, as your words.
             </p>
           </div>
 
@@ -163,7 +145,7 @@ export function NewWorkspaceDialog({
             </Button>
             <Button
               type="submit"
-              disabled={!name.trim() || isSubmitting}
+              disabled={!name.trim() || !dataset || isSubmitting}
             >
               {isSubmitting ? 'Creating…' : 'Create'}
             </Button>

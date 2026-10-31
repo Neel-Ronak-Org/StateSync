@@ -1,6 +1,6 @@
 """
 orchestrator/library_ingest.py
-Turning a parsed upload into searchable chunks (docs/V3_PLAN.md Phase 3c slice 5).
+Turning a parsed upload into searchable passages ("chunks").
 
 WHY THIS EXISTS. The parser service returns text page by page. Retrieval needs
 passages small enough for the embedding model (mxbai-embed-large reads about
@@ -22,26 +22,7 @@ a database (tests/test_library_ingest.py). Its rules:
   - fragments shorter than chunk_min_chars (page numbers, running headers) are
     dropped.
 
-That is `chunk_pages`, the shipped chunker ([library].chunker = "paragraph").
-`chunk_blocks` (chunker = "layout", docs/specs/rag_v2.md Phase C) cuts the
-parser's layout blocks instead, so that what retrieval returns is a unit a
-reader would recognise:
-
-  - a heading opens a section; the section path is the stack of open headings
-    (a heading of the same or a shallower level closes the deeper ones); a
-    chunk never contains text from two sections, nor from two pages;
-  - paragraphs and list items are packed up to layout_chunk_chars; one longer
-    than that is cut at sentence ends; consecutive chunks of one section and
-    page overlap by up to layout_overlap_chars (never across a section, a page
-    or a table); a fragment under chunk_min_chars is merged into the previous
-    text chunk of its section and page, or dropped if there is none;
-  - a table is one chunk of Markdown when it fits table_chunk_max_chars, else
-    row groups that each repeat the header row; the short paragraph right
-    before a table (it usually says what the table is) is copied into its
-    chunk;
-  - every chunk starts with a breadcrumb line, "{title} › {h1} › {h2}", then a
-    blank line, so the text that is embedded and shown always says where it is
-    from. A heading that repeats the document title is left out of the path.
+Defaults: chunk_chars 1,400, overlap 200, minimum 40 (config/statesync.toml [library]).
 
 `ingest` runs as a background task after the upload response is sent; it never
 raises, and always leaves the document `ready` or `failed`, never stuck.
@@ -51,7 +32,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import re
 import time
 import unicodedata
 from collections.abc import Awaitable, Callable, Coroutine
@@ -63,9 +43,6 @@ logger = logging.getLogger(__name__)
 
 _PARAGRAPH_SEP = "\n\n"
 _SENTENCE_ENDS = (". ", "? ", "! ")
-_CRUMB_SEP = " › "
-LAYOUT_CHUNKER = "layout"
-_LIST_MARKER = re.compile(r"^(?:•|[-*]\s|\d+[.)]\s)")
 _ELLIPSIS = "…"
 _DEFAULT_TITLE = "Untitled document"
 _DEFAULT_FILENAME = "document"
@@ -166,162 +143,6 @@ def chunk_pages(pages: list[dict], chunk_chars: int, overlap_chars: int, min_cha
     return chunks
 
 
-# ── Layout chunking (docs/specs/rag_v2.md Phase C) ───────────────────────────
-
-def _norm(text: str) -> str:
-    return " ".join(text.casefold().split())
-
-
-def _markdown_row(cells: list[str], width: int) -> str:
-    padded = [" ".join(str(cell).split()).replace("|", "\\|") for cell in cells] + [""] * (width - len(cells))
-    return "| " + " | ".join(padded) + " |"
-
-
-def _table_markdown(rows: list[list[str]]) -> list[str]:
-    """A table as Markdown lines: the header row, the separator row, then one line per body row."""
-    width = max(len(row) for row in rows)
-    lines = [_markdown_row(rows[0], width), "|" + "|".join(["---"] * width) + "|"]
-    lines.extend(_markdown_row(row, width) for row in rows[1:])
-    return lines
-
-
-def _table_groups(rows: list[list[str]], limit: int) -> list[str]:
-    """Markdown of a table in one piece if it fits `limit`, else row groups that each repeat the header."""
-    lines = _table_markdown(rows)
-    whole = "\n".join(lines)
-    if len(whole) <= limit:
-        return [whole]
-    header = lines[:2]
-    groups: list[str] = []
-    current: list[str] = []
-    for row in lines[2:]:
-        if current and len("\n".join(header + current + [row])) > limit:
-            groups.append("\n".join(header + current))
-            current = []
-        current.append(row)
-    if current:
-        groups.append("\n".join(header + current))
-    return groups
-
-
-def _render_piece(block: dict) -> str:
-    """A paragraph as is; a list item with a bullet, unless the document's own marker is already there."""
-    text = block["text"]
-    return text if block["kind"] == "paragraph" or _LIST_MARKER.match(text) else "- " + text
-
-
-def _pack_text(pieces: list[tuple[str, str]], limit: int) -> list[str]:
-    """Bodies of at most `limit` characters from (kind, text) pieces; list items stay on adjacent lines."""
-    bodies: list[str] = []
-    current = ""
-    previous_kind = ""
-    for kind, text in pieces:
-        for part in _split_long(text, limit):
-            separator = "\n" if kind == "list_item" and previous_kind == "list_item" else _PARAGRAPH_SEP
-            if current and len(current) + len(separator) + len(part) > limit:
-                bodies.append(current)
-                current = part
-            else:
-                current = current + separator + part if current else part
-            previous_kind = kind
-    if current:
-        bodies.append(current)
-    return bodies
-
-
-def _clean_blocks(blocks: list[dict]) -> list[dict]:
-    """The blocks this chunker understands, nothing else (the parser is trusted, but not blindly)."""
-    kept: list[dict] = []
-    for block in blocks if isinstance(blocks, list) else []:
-        if not isinstance(block, dict):
-            continue
-        kind = block.get("kind")
-        page = block.get("page")
-        if kind in ("heading", "paragraph", "list_item") and isinstance(block.get("text"), str) and block["text"].strip():
-            entry = {"kind": kind, "page": page, "text": block["text"].strip()}
-            if kind == "heading":
-                level = block.get("level")
-                entry["text"] = " ".join(entry["text"].split())
-                entry["level"] = level if isinstance(level, int) and level >= 1 else 1
-            kept.append(entry)
-        elif kind == "table" and isinstance(block.get("rows"), list):
-            rows = [[str(cell) for cell in row] for row in block["rows"] if isinstance(row, list) and any(map(str, row))]
-            if rows:
-                kept.append({"kind": "table", "page": page, "rows": rows})
-    return kept
-
-
-def chunk_blocks(blocks: list[dict], title: str, cfg: Any) -> list[dict]:
-    """Chunks as [{ordinal, page, text, kind, section}] from the parser's layout blocks, in reading order.
-
-    `cfg` is the whole config object (its `library` section is read), so a test can pass small budgets.
-    """
-    lib = cfg.library
-    chunk_chars, overlap_chars = int(lib.layout_chunk_chars), int(lib.layout_overlap_chars)
-    min_chars, table_chars = int(lib.chunk_min_chars), int(lib.table_chunk_max_chars)
-    context_chars, section_chars = int(lib.table_context_max_chars), int(lib.section_max_chars)
-    hard_limit = int(lib.chunk_max_chars)
-    title = " ".join(str(title or "").split())
-
-    chunks: list[dict] = []
-    stack: list[tuple[int, str]] = []  # the open headings, shallowest first
-
-    def section() -> str | None:
-        path = [text for _, text in stack if _norm(text) != _norm(title)]
-        return _CRUMB_SEP.join(path)[:section_chars].rstrip() or None
-
-    def emit(page: Any, kind: str, body: str, where: str | None) -> dict:
-        crumb = _CRUMB_SEP.join(part for part in (title, where) if part)
-        text = (crumb + _PARAGRAPH_SEP + body if crumb else body)[:hard_limit]
-        chunk = {"ordinal": len(chunks), "page": page, "text": text, "kind": kind, "section": where}
-        chunks.append(chunk)
-        return chunk
-
-    run: list[tuple[str, str]] = []  # (kind, rendered text) pieces of the current section and page
-    run_page: Any = None
-
-    def flush_run() -> None:
-        nonlocal run
-        where = section()
-        previous_body = ""
-        for body in _pack_text(run, chunk_chars):
-            if len(body.strip()) < min_chars:
-                last = chunks[-1] if chunks else None
-                if last and last["kind"] == "text" and last["section"] == where and last["page"] == run_page:
-                    last["text"] = (last["text"] + _PARAGRAPH_SEP + body)[:hard_limit]
-                continue
-            tail = _overlap_tail(previous_body, overlap_chars)
-            emit(run_page, "text", tail + _PARAGRAPH_SEP + body if tail else body, where)
-            previous_body = body
-        run = []
-
-    previous_block: dict | None = None
-    for block in _clean_blocks(blocks):
-        kind = block["kind"]
-        if kind == "heading":
-            flush_run()
-            while stack and stack[-1][0] >= block["level"]:
-                stack.pop()
-            stack.append((block["level"], block["text"]))
-        elif kind == "table":
-            flush_run()
-            where = section()
-            context = ""
-            if (previous_block and previous_block["kind"] == "paragraph" and previous_block["page"] == block["page"]
-                    and len(previous_block["text"]) <= context_chars):
-                context = previous_block["text"] + _PARAGRAPH_SEP
-            for group in _table_groups(block["rows"], table_chars):
-                emit(block["page"], "table", context + group, where)
-        else:
-            if run and block["page"] != run_page:
-                flush_run()
-            run_page = block["page"]
-            run.append((kind, _render_piece(block)))
-        previous_block = block
-    flush_run()
-    return chunks
-
-
 # ── Names ────────────────────────────────────────────────────────────────────
 
 def safe_filename(name: str) -> str:
@@ -369,23 +190,17 @@ async def _finish_failed(call: Call, document_id: str, message: str) -> None:
         logger.error("library: could not mark %s failed", document_id, exc_info=True)
 
 
-def make_chunks(pages: list[dict], blocks: list[dict] | None, title: str | None) -> list[dict]:
-    """The document's chunks by the configured chunker; flat pages whenever layout blocks are not usable."""
-    if cfg.library.chunker == LAYOUT_CHUNKER and blocks:
-        chunks = chunk_blocks(blocks, title or _DEFAULT_TITLE, cfg)
-        if chunks:
-            return chunks
-        logger.warning("library: the layout chunker produced no chunks; cutting flat pages instead")
+def make_chunks(pages: list[dict]) -> list[dict]:
+    """The document's chunks, with the [library] sizes."""
     return chunk_pages(pages, int(cfg.library.chunk_chars), int(cfg.library.chunk_overlap_chars),
                        int(cfg.library.chunk_min_chars))
 
 
-async def ingest(call: Call, document_id: str, pages: list[dict], blocks: list[dict] | None = None,
-                 title: str | None = None) -> None:
+async def ingest(call: Call, document_id: str, pages: list[dict]) -> None:
     """Chunk, embed (through the MCP) and finish one document. Never raises."""
     started = time.monotonic()
     try:
-        chunks = make_chunks(pages, blocks, title)
+        chunks = make_chunks(pages)
         batch = int(cfg.library.embed_batch)
         for start in range(0, len(chunks), batch):
             result = await _add_chunks(call, document_id, chunks[start:start + batch])

@@ -35,10 +35,17 @@ async function tileMenu(page: Page, tileIndex: number, submenu: string, item: st
 }
 
 test.describe('home and navigation', () => {
-  test('the app opens on the dashboards page', async ({ page }) => {
+  test('the app opens on Ask; the sidebar names every page and groups setting up apart', async ({ page }) => {
     await openApp(page)
-    await expect(page.getByRole('button', { name: 'Dashboards', exact: true })).toHaveAttribute('aria-current', 'page')
-    await expect(page.getByRole('heading', { name: 'No dashboards for public yet' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Ask', exact: true })).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByLabel('Ask a question')).toBeVisible()
+    const nav = page.getByRole('navigation', { name: 'Main' })
+    await expect(nav).toContainText('Set up')
+    for (const label of ['Ask', 'Dashboards', 'Workspaces', 'Data sources']) {
+      await expect(nav.getByRole('button', { name: label, exact: true })).toContainText(label)
+    }
+    await nav.getByRole('button', { name: 'Dashboards', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'No dashboards in Demo yet' })).toBeVisible()
   })
 
   test('old links still land in the right place', async ({ page }) => {
@@ -59,8 +66,8 @@ test.describe('home and navigation', () => {
 
 test.describe('dashboards', () => {
   test('a new dashboard can be created, renamed and deleted', async ({ page }) => {
-    const api = await openApp(page)
-    await page.getByRole('button', { name: 'Start empty' }).click()
+    const api = await openApp(page, { hash: '#/dashboards' })
+    await page.getByRole('button', { name: 'Create a dashboard' }).click()
     await expect(page.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
 
     await page.getByRole('button', { name: 'New dashboard' }).click()
@@ -85,8 +92,8 @@ test.describe('dashboards', () => {
   })
 
   test('the open dashboard is remembered across a reload', async ({ page }) => {
-    await openApp(page)
-    await page.getByRole('button', { name: 'Start empty' }).click()
+    await openApp(page, { hash: '#/dashboards' })
+    await page.getByRole('button', { name: 'Create a dashboard' }).click()
     await page.getByRole('button', { name: 'New dashboard' }).click()
     const create = page.getByRole('dialog', { name: 'New dashboard' })
     await create.getByLabel('Dashboard name').fill('Second')
@@ -136,7 +143,6 @@ test.describe('tiles', () => {
     await expect(tile.getByTestId('tile-kpi')).toHaveText('110')
     await expect(tile.getByTestId('tile-delta')).toHaveText('▲ 10%')
     await expect(tile.getByTestId('tile-delta')).toHaveAttribute('aria-label', 'up 10% vs orders previous hour')
-    await expect(page.getByTestId('insight').first()).toContainText('▲ 10% vs orders previous hour')
   })
 
   test('a refreshed tile whose numbers changed counts up and flashes', async ({ page }) => {
@@ -165,7 +171,6 @@ test.describe('tiles', () => {
     await expect(page.getByRole('button', { name: 'Done' })).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('.grid-guides')).toHaveCount(1)
     await expect(page.locator('.tile-drag-handle')).toHaveCount(1)
-    await expect(page.getByTestId('insight')).toHaveCount(0)
     await page.getByRole('button', { name: 'Done' }).click()
     await expect(page.locator('.tile-drag-handle')).toHaveCount(0)
   })
@@ -185,39 +190,6 @@ test.describe('tiles', () => {
     await page.getByRole('tab', { name: 'Archive' }).click()
     await expect(page.getByTestId('tile')).toHaveCount(1)
     expect(api.tiles.get('tile-1')?.dashboard_id).not.toBe(undefined)
-  })
-})
-
-test.describe('build with AI', () => {
-  test('a build shows its progress, adds the cards that work and says why one was skipped', async ({ page }) => {
-    const api = await openApp(page)
-    await page.getByRole('button', { name: 'Build with AI' }).first().click()
-    const dialog = page.getByRole('dialog', { name: 'Build a dashboard with AI' })
-    await dialog.getByLabel('Focus (optional)').fill('order volume')
-    await dialog.getByRole('button', { name: 'Build', exact: true }).click()
-
-    const progress = page.getByTestId('build-progress')
-    await expect(progress).toBeVisible()
-    await expect(progress).toContainText('Focus: order volume')
-    await expect(progress).toContainText('Added 2 of 3 insights', { timeout: 15_000 })
-    await expect(progress).toContainText('Answered from documents, not the database.')
-    await expect(page.getByTestId('tile')).toHaveCount(2)
-    await expect(page.getByText('Added 2 of 3 insights.')).toBeVisible()   // the toast
-    expect(api.buildCalls[0]).toMatch(/^POST \/dashboards\/.+\/build$/)
-
-    await progress.getByRole('button', { name: 'Dismiss' }).click()
-    await expect(progress).toHaveCount(0)
-  })
-
-  test('a finished build is not announced again after a reload', async ({ page }) => {
-    await openApp(page)
-    await page.getByRole('button', { name: 'Build with AI' }).first().click()
-    await page.getByRole('dialog').getByRole('button', { name: 'Build', exact: true }).click()
-    await expect(page.getByTestId('build-progress')).toContainText('Added 2 of 3 insights', { timeout: 15_000 })
-    await page.reload()
-    await expect(page.getByTestId('tile')).toHaveCount(2)
-    await expect(page.getByTestId('build-progress')).toHaveCount(0)
-    await expect(page.getByText('Added 2 of 3 insights.')).toHaveCount(0)
   })
 })
 

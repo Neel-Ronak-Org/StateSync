@@ -82,7 +82,8 @@ def setup(monkeypatch):
     async def require_principal():
         return FakePrincipal()
 
-    register_workspace_routes(app, require_principal=require_principal, audit=harness.audit)
+    register_workspace_routes(app, require_principal=require_principal, audit=harness.audit,
+                              require_principal_for_model=require_principal)
     return harness, TestClient(app)
 
 
@@ -119,15 +120,6 @@ def test_table_level_descriptions_default_to_the_empty_column(setup):
     harness.result = {"ok": True, "updated": 1}
     client.put("/workspaces/ws-1/descriptions", json={"items": [{"table_name": "orders", "description": "x"}]})
     assert harness.calls[-1]["params"]["items"][0]["column_name"] == ""
-
-
-def test_verdicts_are_scoped_to_the_workspace_in_the_url(setup):
-    harness, client = setup
-    harness.result = {"ok": True, "run": {"run_id": "r1", "workspace_id": "ws-1"}}
-    assert client.put("/workspaces/ws-1/setup/r1/results/3", json={"verdict": "right"}).status_code == 200
-    assert harness.calls[-1] == {"principal_id": "p_test", "action": "set_verdict",
-                                 "params": {"workspace_id": "ws-1", "run_id": "r1", "position": 3, "verdict": "right"}}
-    assert client.put("/workspaces/ws-1/setup/r1/results/3", json={"verdict": "pending"}).status_code == 422
 
 
 @pytest.mark.parametrize("code,status", [("not_found", 404), ("invalid", 422), ("limit_reached", 409)])
@@ -177,19 +169,6 @@ def test_example_routes_map_failures_to_statuses(setup):
     assert client.post("/workspaces/ws-1/examples", json={"question": "q", "sql": "DROP TABLE x"}).status_code == 422
 
 
-def test_check_examples_route_runs_the_check_as_the_authenticated_principal(setup):
-    harness, client = setup
-    harness.result = {"ok": True, "checked": 2, "counts": {"ok": 1, "changed": 1, "failed": 0},
-                      "checked_at": "2026-09-29T10:00:00+00:00", "principal_id": "p_attacker"}
-    response = client.post("/workspaces/ws-1/examples/check", json={"principal_id": "p_attacker"})
-    assert response.status_code == 200
-    assert response.json() == {"checked": 2, "counts": {"ok": 1, "changed": 1, "failed": 0},
-                               "checked_at": "2026-09-29T10:00:00+00:00"}
-    assert harness.calls[-1] == {"principal_id": "p_test", "action": "check_examples",
-                                 "params": {"workspace_id": "ws-1"}}
-    assert harness.audit_log[-1]["detail"] == "workspaces:check_examples workspace=ws-1"
-
-
 def test_examples_route_lists_the_approved_answers_with_their_state(setup):
     harness, client = setup
     listed = [{"example_id": "e1", "question": "How many orders?", "sql_text": "SELECT 1", "source": "owner",
@@ -200,11 +179,10 @@ def test_examples_route_lists_the_approved_answers_with_their_state(setup):
     assert harness.calls[-1] == {"principal_id": "p_test", "action": "examples", "params": {"workspace_id": "ws-1"}}
 
 
-def test_example_check_routes_map_failures_to_statuses(setup):
+def test_the_examples_route_maps_failures_to_statuses(setup):
     harness, client = setup
     harness.result = {"ok": False, "error": "not_found", "message": "No such workspace."}
-    assert client.post("/workspaces/ws-9/examples/check").status_code == 404
     assert client.get("/workspaces/ws-9/examples").status_code == 404
     assert harness.audit_log[-1]["detail"] == "workspaces:examples workspace=ws-9 not_found"
     harness.exception = ConnectionError("down")
-    assert client.post("/workspaces/ws-1/examples/check").status_code == 503
+    assert client.get("/workspaces/ws-1/examples").status_code == 503

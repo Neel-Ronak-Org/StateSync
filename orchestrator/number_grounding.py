@@ -1,7 +1,6 @@
 """
 orchestrator/number_grounding.py
-Every figure in an answer's prose, traced to where it came from (docs/V3_PLAN.md
-Phase 3c, "answers you can check").
+Every figure in an answer's prose, traced to where it came from.
 
 WHY. The SQL can be right and the rows correct while the sentence written about
 them states a number that is in neither: a misread row, a sum the model did in
@@ -15,22 +14,14 @@ against what the answer is built on:
   question   a number the question itself contains ("top 5", "last 30 days")
   passage    for document answers, a figure written in a cited passage
   derived    a ratio or difference of two figures traced above ("97.0%" from two counts)
-  shown      (version 2) how many rows the answer writer was shown, when that is fewer than the
-             result has ("the first 50 rows"); a "remaining 610" then traces as derived
 
 A figure matches within the rounding its own digits imply: "1.2M" matches
 anything from 1,150,000 to 1,250,000; "45%" matches 0.4461 or 45.3. Figures
 that match nothing are returned as unmatched; the caller turns them into a
-caveat, which also moves the answer out of the "checked" evidence tier.
+caveat shown under the answer.
 
 Not figures: four-digit years, dates and times, numbered-list markers ("1. "
 at the start of a line), and digits inside identifiers (S001, LP003, order_12).
-Version 2 also skips inline enumerations "(1) ... (2) ...".
-
-Versions ([pipeline] grounding_version): v1 is what shipped and what the BIRD pilot measured.
-Every one of the pilot's 7 grounding flags came from the pipeline's own wording ("the first 50
-rows", "(1) (2) (3)", a remainder of the two), none from a wrong figure
-(docs/eval/bird_pilot_report.md); v2 traces those.
 """
 
 from __future__ import annotations
@@ -59,7 +50,6 @@ _YEAR = re.compile(r"^(1[89]\d{2}|2[01]\d{2})$")
 # A numbered-list marker ("1. ", "2) ") at the start of a line is not a figure.
 _LIST_MARKER = re.compile(r"^[ \t]*\d{1,3}[.)](?=\s)", re.MULTILINE)
 # Version 2: an inline enumerator "(1)", only when the text also has "(2)", so a lone "(5)" stays a figure.
-_ENUMERATOR = re.compile(r"\((\d{1,2})\)")
 
 
 @dataclass(frozen=True)
@@ -80,16 +70,13 @@ def _tolerance(num: str, scale: float) -> float:
 _DASHES = str.maketrans({"\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-", "\u2212": "-"})
 
 
-def extract_mentions(text: str, enumerations: bool = False) -> list[Mention]:
-    """The figures in `text`, with the rounding tolerance each one's digits imply. With
-    `enumerations`, inline "(1) ... (2)" markers are not figures (version 2)."""
+def extract_mentions(text: str) -> list[Mention]:
+    """The figures in `text`, with the rounding tolerance each one's digits imply."""
     # Models write dates with non-breaking hyphens ("2026\u201109\u201120"); one-for-one
     # replacement keeps every offset valid.
     text = text.translate(_DASHES)
     blocked = [(m.start(), m.end()) for m in _DATE_OR_TIME.finditer(text)]
     blocked += [(m.start(), m.end()) for m in _LIST_MARKER.finditer(text)]
-    if enumerations and {"1", "2"} <= set(_ENUMERATOR.findall(text)):
-        blocked += [(m.start(), m.end()) for m in _ENUMERATOR.finditer(text)]
     mentions: list[Mention] = []
     for m in _NUMBER.finditer(text):
         if any(s <= m.start() < e for s, e in blocked):
@@ -168,23 +155,18 @@ def _derived(mention: Mention, grounded: list[float]) -> bool:
 def applies(route: str | None, executed_sql: str | None) -> bool:
     """Whether an answer has anything to ground against. A database answer whose query never ran has
     no result: its text explains the failure and quotes error codes, which would come back as
-    "figures not found in the result" on top of the error (seen on BIRD: 3 of grounding's 4 catches,
-    docs/eval/bird_v2_report.md). Document and hybrid answers keep their passages."""
+    "figures not found in the result" on top of the error. Document and hybrid answers keep their passages."""
     return not (route == "sql" and not executed_sql)
 
 
 def ground(answer_text: str, rows: list[dict], columns: list[str], question: str = "",
-           passages: list[str] | None = None, version: int = 1,
-           shown_rows: int | None = None) -> dict[str, Any]:
-    """Each figure in the answer with where it came from; see the module docstring. Version 2
-    takes `shown_rows`, how many result rows the answer writer was shown."""
-    v2 = version >= 2  # noqa: literals - grounding version
-    shown = shown_rows if v2 and shown_rows and 0 < shown_rows < len(rows) else None
+           passages: list[str] | None = None) -> dict[str, Any]:
+    """Each figure in the answer with where it came from; see the module docstring."""
     question_values = [m.value for m in extract_mentions(question or "")]
     passage_mentions = [m for p in (passages or []) for m in extract_mentions(p)]
     aggregates = _aggregates(rows, columns)
     results: list[dict[str, Any]] = []
-    for mention in extract_mentions(answer_text or "", enumerations=v2):
+    for mention in extract_mentions(answer_text or ""):
         source: dict[str, Any] | None = None
         for index, row in enumerate(rows):
             for column in columns:
@@ -199,8 +181,6 @@ def ground(answer_text: str, rows: list[dict], columns: list[str], question: str
                 if _close(mention, value):
                     source = {"kind": "aggregate", "aggregate": name, "column": column}
                     break
-        if source is None and shown is not None and _close(mention, float(shown)):
-            source = {"kind": "shown"}
         if source is None and any(abs(mention.value - q) <= mention.tolerance for q in question_values):
             source = {"kind": "question"}
         if source is None and any(abs(mention.value - p.value) <= max(mention.tolerance, p.tolerance)
@@ -214,8 +194,6 @@ def ground(answer_text: str, rows: list[dict], columns: list[str], question: str
                         "matched": source is not None, "source": source, "_value": mention})
     # Second pass: arithmetic on figures traced above (a share computed from two counts).
     grounded = [r["_value"].value for r in results if r["matched"] and r["source"]["kind"] != "text"]
-    if shown is not None:
-        grounded.append(float(shown))   # "remaining 610" of 660 needs the 50 shown even when unsaid
     for r in results:
         mention = r.pop("_value")
         if not r["matched"] and _derived(mention, grounded):

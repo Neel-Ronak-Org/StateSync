@@ -13,14 +13,13 @@ const SETUP_STATE_LABEL: Record<SetupState, string> = {
   created: 'New',
   scanned: 'Scanned',
   drafted: 'Drafts to review',
-  approved: 'Approved, not tested',
-  tested: 'Tested',
+  approved: 'Approved',
+  tested: 'Approved',
 }
 
 interface WorkspacesViewProps {
   workspaces: Workspace[]
   isLoading?: boolean
-  availableSchemas: string[]
   onCreateWorkspace: (data: {
     name: string
     target_schema: string
@@ -33,7 +32,6 @@ interface WorkspacesViewProps {
 export function WorkspacesView({
   workspaces,
   isLoading = false,
-  availableSchemas,
   onCreateWorkspace,
   onCreated,
 }: WorkspacesViewProps) {
@@ -66,8 +64,8 @@ export function WorkspacesView({
             </div>
             <h2 className="text-base font-semibold text-foreground mb-1.5">No workspaces yet</h2>
             <p className="text-sm text-muted-foreground max-w-md">
-              A workspace is your data plus what StateSync learns about it: what each table and column
-              means, your business terms, and a 10-question test that shows how well it answers.
+              A workspace is one business: a connected database, the document folders it searches, and
+              what you tell StateSync about it (what each table and column means, your business terms).
             </p>
           </div>
         ) : (
@@ -94,14 +92,6 @@ export function WorkspacesView({
                   </div>
                 </div>
 
-                {ws.setup_score !== null && (
-                  <div className="mt-4 pt-3 border-t flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Setup score</span>
-                    <span className="font-semibold text-foreground">
-                      {ws.setup_score}/{ws.setup_total ?? 10}
-                    </span>
-                  </div>
-                )}
               </a>
             ))}
           </div>
@@ -111,7 +101,6 @@ export function WorkspacesView({
       <NewWorkspaceDialog
         open={newOpen}
         onOpenChange={setNewOpen}
-        availableSchemas={availableSchemas}
         onCreateWorkspace={onCreateWorkspace}
         onCreated={onCreated}
       />

@@ -1,6 +1,6 @@
 """
 orchestrator/failures.py
-What a user is told when answering a question fails (docs/V3_PLAN.md 0.4).
+What a user is told when answering a question fails.
 
 Kept out of main.py so it can be tested without importing the web server.
 """
@@ -8,10 +8,9 @@ Kept out of main.py so it can be tested without importing the web server.
 from __future__ import annotations
 
 # Exception class names, matched through the MRO so no provider SDK has to be
-# importable here (the openai package is only needed when a hosted provider is
-# selected). docs/V3_PLAN.md 0.4.
+# importable here.
 _RATE_LIMITED = frozenset({"RateLimitError"})
-_MISCONFIGURED = frozenset({"GroqConfigError", "AzureConfigError", "GeminiConfigError"})
+_MISCONFIGURED = frozenset({"OpenAICompatConfigError"})
 _UNAVAILABLE = frozenset({"APIConnectionError", "APITimeoutError", "InternalServerError",
                           "ConnectError", "ConnectTimeout", "ReadTimeout", "HTTPStatusError"})
 

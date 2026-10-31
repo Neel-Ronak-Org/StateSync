@@ -24,7 +24,7 @@ import embed, { type Result } from 'vega-embed'
 import { expressionInterpreter } from 'vega-interpreter'
 
 import type { ChartSpec } from '@/api/types'
-import { A7, validateA7Chart } from '@/charts/a7'
+import { A7, validateA7Chart, withYearAxes } from '@/charts/a7'
 import { vegaConfig } from '@/charts/theme'
 import { useTheme } from '@/components/theme-provider'
 import { cn } from '@/lib/utils'
@@ -112,6 +112,8 @@ export function VegaChart({ spec, className, height, onView, showViolations = fa
       sized.height = Math.min(A7.MAX_HEIGHT, Math.max(A7.MIN_DIM, height))
     }
     if (validateA7Chart(sized).length === 0) draw = sized
+    // Added after the A7 check, which refuses any axis property from a spec: this one is ours, a fixed format.
+    draw = withYearAxes(draw)
 
     let cancelled = false
     let result: Result | null = null

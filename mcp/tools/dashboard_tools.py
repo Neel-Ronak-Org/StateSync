@@ -1,6 +1,6 @@
 """
 mcp/tools/dashboard_tools.py
-MCP dashboards tool (docs/V3_PLAN.md Phase 2b, migration 019): named
+MCP dashboards tool: named
 dashboards per dataset, each holding tiles with a stored layout.
 
 One JSON-RPC method, dashboards.manage, takes an `action`: list, create,
@@ -10,7 +10,7 @@ owns the containers and where tiles sit in them.
 THE SECURITY PROPERTIES, enforced here rather than trusted from a caller:
 
 1. Every statement filters on tenant_id (bound server-side from the session,
-   A0.6) AND principal_id (supplied by the authenticating orchestrator).
+   session) AND principal_id (supplied by the authenticating orchestrator).
    Someone else's dashboard looks exactly like one that does not exist.
 2. A dashboard is about one dataset, and the name must be in the MCP's own
    schema allowlist (schema_tools.ALLOWED_SCHEMAS), the authoritative check.

@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 # scripts/lint-no-literals.sh
-# Enforces A0.2: no configurable numeric literals in agent source.
-#
-# A0.2 scope: numeric values that could reasonably be configuration constants
+# No configurable numbers written into the code: numeric values that could reasonably be configuration constants
 # (timeouts, limits, model parameters, counts) must live in statesync.toml or
 # flags.toml, not hard-coded in agent source files.
 #
@@ -25,7 +23,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 VIOLATIONS=0
 FILES_CHECKED=0
 
-SCAN_DIRS=("${REPO_ROOT}/orchestrator" "${REPO_ROOT}/mcp" "${REPO_ROOT}/evaluator")
+SCAN_DIRS=("${REPO_ROOT}/orchestrator" "${REPO_ROOT}/mcp")
 
 echo "==> Scanning for configurable numeric literals in agent source..."
 echo "    Directories: ${SCAN_DIRS[*]}"

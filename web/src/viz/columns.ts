@@ -4,8 +4,10 @@
  * The server says which columns a query returned but not what they mean for a
  * chart, so the kind is inferred from the values: numbers are measures, ISO
  * dates and timestamps are time, everything else is a category. Integer
- * columns named like a part of a date ("year", "month", "hour") are treated as
- * categories: they label a bar, they are not an amount.
+ * columns named like a year ("year", "fiscal_year", "period_end_year") holding
+ * plausible years are time too, so a series over years draws as a line. Other
+ * date parts ("month", "hour") are categories: they label a bar, they are not
+ * an amount.
  */
 
 export type ColumnKind = 'temporal' | 'quantitative' | 'nominal'
@@ -20,6 +22,7 @@ export interface Column {
 export type Row = Record<string, unknown>
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/
+const YEAR_NAME = /(^|_)(year|yr|fy)(_|$)/i
 const DATE_PART = /^(?:year|yr|month|mon|week|wk|day|dow|weekday|hour|hr|quarter|qtr)(?:_?(?:of_?\w+|num|number))?$/i
 
 const ACRONYMS: Record<string, string> = {
@@ -51,10 +54,18 @@ export function columnKind(name: string, values: unknown[]): ColumnKind {
   if (present.length === 0) return 'nominal'
   if (present.every((v) => typeof v === 'number' && Number.isFinite(v))) {
     const allIntegers = present.every((v) => Number.isInteger(v))
+    if (allIntegers && YEAR_NAME.test(name) && present.every((v) => (v as number) >= 1800 && (v as number) <= 2200)) {
+      return 'temporal'
+    }
     return allIntegers && DATE_PART.test(name) ? 'nominal' : 'quantitative'
   }
   if (present.every(isTemporalValue)) return 'temporal'
   return 'nominal'
+}
+
+/** True for a time column holding whole years (2018) rather than dates. */
+export function isYearColumn(column: Column, rows: Row[]): boolean {
+  return column.kind === 'temporal' && rows.some((r) => typeof r[column.name] === 'number')
 }
 
 /** Every column of a result, in order: the server's column list when it has one, else the first row's keys. */

@@ -20,7 +20,15 @@ if printf '%s' "$URL" | grep -q '[^A-Za-z0-9:/._-]'; then
 fi
 ORIGIN=$(printf '%s' "$URL" | sed -E 's#^(https?://[^/]+).*$#\1#')
 
-printf 'window.__STATESYNC_CONFIG__ = { orchestratorUrl: "%s" };\n' "$URL" > /usr/share/nginx/html/config.js
+# Optional sample questions for the chat's empty state: a JSON array of strings mounted at
+# /etc/statesync/suggestions.json (a demo deployment's own). It must start with "[" and may not contain "<";
+# anything else is ignored, and the app keeps its built-in suggestions.
+SUGGEST=""
+SFILE=/etc/statesync/suggestions.json
+if [ -f "$SFILE" ] && head -c 1 "$SFILE" | grep -q '\[' && ! grep -q '<' "$SFILE"; then
+  SUGGEST=", suggestions: $(tr '\n' ' ' < "$SFILE")"
+fi
+printf 'window.__STATESYNC_CONFIG__ = { orchestratorUrl: "%s"%s };\n' "$URL" "$SUGGEST" > /usr/share/nginx/html/config.js
 sed -i "s#__ORCHESTRATOR_ORIGIN__#${ORIGIN}#g" /etc/nginx/conf.d/default.conf
 
 echo "StateSync web configured: orchestrator ${URL} (CSP connect-src ${ORIGIN})"

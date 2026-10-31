@@ -96,7 +96,7 @@ def test_a_different_served_model_is_refused_when_strict(monkeypatch, tmp_path):
 
     async def served_other(self, **_):
         return LLMResponse(text="x", tokens_in=1, tokens_out=1, served_model="meta/llama-3-8b")
-    monkeypatch.setattr(oc.GroqAdapter, "complete", served_other)
+    monkeypatch.setattr(oc.OpenAICompatAdapter, "_call", served_other)
     with pytest.raises(oc.ServedModelMismatch):
         asyncio.run(adapter.complete(system="s", messages=[], max_tokens=5))
     adapter.require_served_match = False
@@ -112,18 +112,18 @@ def test_a_missing_key_names_its_file(monkeypatch, tmp_path):
 
 def test_the_shipped_flags_define_every_role_and_keep_fallback_off():
     from config_loader import flags
-    assert str(flags.llm.provider) == "groq"                       # shipped provider unchanged
+    from llm.provider import ROLES
     assert str(flags.llm.openai_compat.fallback) == "off"
-    for role in ("supervisor", "sql", "synthesizer", "memory_summarizer", "normalizer", "decomposer", "judge", "rewriter"):
+    for role in ROLES:
         oc.parse_spec(getattr(flags.llm.models.openai_compat, role))
 
 
 def test_endpoints_read_from_the_real_flags():
     # The config is a read-only namespace, not a dict; this once broke endpoint() live.
-    ep = oc.endpoint("groq")
-    assert ep.base_url.startswith("https://") and ep.key_secret == "groq_api_key"
-    assert ep.reasoning_effort.get("openai/gpt-oss-120b") == "low"
-    assert oc.endpoint("local_router").base_url.startswith("http://host.docker.internal")
+    ep = oc.endpoint("cheaperinference")
+    assert ep.base_url.startswith("https://") and ep.key_secret == "cheaperinference_api_key"
+    assert ep.reasoning_effort.get("gpt-oss-120b") == "low"
+    assert ep.extra_body["qwen-3-8-27b"] == {"reasoning": {"enabled": False}}
     with pytest.raises(oc.OpenAICompatConfigError):
         oc.endpoint("nope")
 
@@ -153,8 +153,6 @@ def test_reasoning_models_get_no_temperature_and_routers_fewer_retries(monkeypat
     asyncio.run(make("zed-hosted/gemini-3.8-flash").complete(system="s", messages=[], max_tokens=5))
     assert "temperature" not in sent[0] and "temperature" in sent[1]
     assert make("x")._max_retries == 1
-    flags_ep = oc.endpoint("local_router")
-    assert "zed-hosted/gpt-5-mini" in flags_ep.omit_temperature and flags_ep.max_retries == 1
 
 
 def _fake_create(sent, model, provider):

@@ -1,6 +1,6 @@
 """
 orchestrator/dashboards_api.py
-FastAPI routes for dashboards (docs/V3_PLAN.md Phase 2b).
+FastAPI routes for dashboards.
 
 WHY THIS EXISTS: a dashboard is a named, per-dataset container for tiles with a
 stored layout. This layer only authenticates the caller and forwards their

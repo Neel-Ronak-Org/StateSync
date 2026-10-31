@@ -174,7 +174,7 @@ def test_check_session(monkeypatch, owner, schema, expected):
 def test_next_turn_number_comes_from_the_newest_row_not_the_window_size(monkeypatch):
     """Seven turns stored, a 3-turn window read: the next number is 8, not 4."""
     def row(n):
-        return (n, "q", "q", False, False, "sql", None, "a", NOW, None, None, None, None, "olist")
+        return (n, "q", "q", False, False, "sql", None, "a", NOW, None, None, None, None, "olist", None)
     _use(_Conn(insert_results=[], recent_rows=[row(7), row(6), row(5)]), monkeypatch)
 
     result = asyncio.run(ht.get_recent_turns(session_id="s1", principal_id=OWNER, limit=3))
@@ -190,3 +190,28 @@ def test_empty_session_starts_at_one(monkeypatch):
     result = asyncio.run(ht.get_recent_turns(session_id="s1", principal_id=OWNER, limit=3))
 
     assert result["next_turn_index"] == 1
+
+
+def test_detail_is_returned_only_when_asked_for(monkeypatch):
+    """The session browser asks for each turn's stored trace (migration 028); the router's history read does not."""
+    detail = {"state_trace": {"route": "docs"}, "citations": [], "latency_ms": 900}
+    rows = [(1, "q", "q", False, False, "docs", None, "a", NOW, None, None, None, None, "cn_x", detail)]
+    _use(_Conn(insert_results=[], recent_rows=rows), monkeypatch)
+    plain = asyncio.run(ht.get_recent_turns(session_id="s1", principal_id=OWNER, limit=3))
+    assert "detail" not in plain["turns"][0]
+    _use(_Conn(insert_results=[], recent_rows=rows), monkeypatch)
+    full = asyncio.run(ht.get_recent_turns(session_id="s1", principal_id=OWNER, limit=3, with_detail=True))
+    assert full["turns"][0]["detail"] == detail
+
+
+def test_an_oversized_detail_loses_the_passage_text_first_then_is_dropped(monkeypatch):
+    from types import SimpleNamespace
+    monkeypatch.setattr(ht, "cfg", SimpleNamespace(mcp=SimpleNamespace(history_detail_max_bytes=400)))
+    small = {"state_trace": {"route": "docs", "retrievals": [{"content": "x" * 50}]}, "citations": []}
+    assert ht._capped_detail(small, "t", "s") == small
+    big_text = {"state_trace": {"route": "docs", "retrievals": [{"content": "x" * 2000, "provenance": {"page": 3}}]}}
+    slim = ht._capped_detail(big_text, "t", "s")
+    assert slim["state_trace"]["retrievals"] == [{"content": "", "provenance": {"page": 3}}]
+    huge = {"state_trace": {"route": "docs", "front_door": {"card": "y" * 2000}}}
+    assert ht._capped_detail(huge, "t", "s") is None
+    assert ht._capped_detail(None, "t", "s") is None

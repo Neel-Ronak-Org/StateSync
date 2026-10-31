@@ -1,12 +1,11 @@
 import { useCallback, useMemo, useState, type ComponentProps, type ReactNode } from 'react'
-import { LayoutGrid, MessageSquare, MoreHorizontal, Plus, RefreshCw, Wand2 } from 'lucide-react'
+import { LayoutGrid, MessageSquare, MoreHorizontal, Pin, Plus, RefreshCw } from 'lucide-react'
 import { motion } from 'motion/react'
 import ReactGridLayout, { useContainerWidth, verticalCompactor, type EventCallback } from 'react-grid-layout'
 
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 
-import type { Dashboard, Workspace } from '@/api/types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,9 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { BuildProgress } from '@/features/dashboard/BuildProgress'
-import { BuildDialog, DashboardNameDialog, DeleteDashboardDialog } from '@/features/dashboard/DashboardDialogs'
-import { InsightsStrip } from '@/features/dashboard/InsightsStrip'
+import { DashboardNameDialog, DeleteDashboardDialog } from '@/features/dashboard/DashboardDialogs'
 import {
   GRID_COLS,
   GRID_MARGIN,
@@ -31,25 +28,19 @@ import {
   type Slot,
 } from '@/features/dashboard/layout'
 import { TileCard } from '@/features/dashboard/TileCard'
-import { useBuild } from '@/features/dashboard/useBuild'
 import { useDashboards } from '@/features/dashboard/useDashboards'
 import { useTiles } from '@/features/dashboard/useTiles'
-import { useDatasetLabel } from '@/features/library/useConnections'
-import { DatasetPicker } from '@/features/shell/DatasetPicker'
 import { useNow } from '@/hooks/useNow'
 import { formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { insightsFor } from '@/viz/insights'
 import { resolveKind, shapeOf } from '@/viz/infer'
 
 interface DashboardsViewProps {
+  /** The active workspace's database: dashboards belong to it. */
   dataset: string
-  availableSchemas: string[]
-  liveSchemas: string[]
-  workspaces?: Workspace[]
-  activeWorkspaceId?: string | null
-  onChangeDataset: (dataset: string) => void
-  onSelectWorkspace?: (workspaceId: string) => void
+  /** Its name, for the empty state. */
+  workspaceName: string
+  picker: ReactNode
   devMode: boolean
   onAsk: () => void
 }
@@ -67,45 +58,27 @@ function HeaderButton({ label, children, ...props }: { label: string } & Compone
   )
 }
 
-function LiveIndicator({ live, updatedAt }: { live: boolean; updatedAt: number }) {
+function RefreshIndicator({ updatedAt }: { updatedAt: number }) {
   useNow(1000)
   const updated = updatedAt ? formatRelativeTime(updatedAt).relative : ''
   return (
-    <div data-testid="live-indicator" className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
-      <span className="relative flex size-2">
-        {live && <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-50" />}
-        <span className={cn('relative inline-flex size-2 rounded-full', live ? 'bg-success' : 'bg-muted-foreground')} />
-      </span>
-      <span className="font-medium text-foreground/80">{live ? 'Live' : 'Auto-refresh'}</span>
+    <div data-testid="refresh-indicator" className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
+      <span className="relative inline-flex size-2 rounded-full bg-muted-foreground" />
+      <span className="font-medium text-foreground/80">Auto-refresh</span>
       {updated && <span>· Updated {updated}</span>}
     </div>
   )
 }
 
-export function DashboardsView({
-  dataset,
-  availableSchemas,
-  liveSchemas,
-  workspaces,
-  activeWorkspaceId,
-  onChangeDataset,
-  onSelectWorkspace,
-  devMode,
-  onAsk,
-}: DashboardsViewProps) {
+export function DashboardsView({ dataset, workspaceName, picker, devMode, onAsk }: DashboardsViewProps) {
   const boards = useDashboards(dataset)
-  const datasetLabel = useDatasetLabel([dataset])
   const active = boards.active
   const tiles = useTiles(active?.dashboard_id ?? null)
-  const build = useBuild(active?.dashboard_id ?? null)
 
   const [editing, setEditing] = useState(false)
   const [newOpen, setNewOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [buildOpen, setBuildOpen] = useState(false)
-  const [dismissedJob, setDismissedJob] = useState<string | null>(null)
-  const live = liveSchemas.includes(dataset)
 
   const view = useMemo(
     () =>
@@ -117,15 +90,6 @@ export function DashboardsView({
   )
   const slots = useMemo(
     () => placeTiles(view.map((v) => ({ id: v.tile.tile_id, layout: v.tile.layout, kind: v.kind }))),
-    [view],
-  )
-  const insights = useMemo(
-    () =>
-      insightsFor(
-        view
-          .filter((v) => v.tile.result && v.tile.state !== 'needs_review')
-          .map((v) => ({ tileId: v.tile.tile_id, title: v.tile.title, shape: v.shape, kind: v.kind })),
-      ),
     [view],
   )
 
@@ -144,20 +108,6 @@ export function DashboardsView({
     if (slot) void tiles.saveLayout(toItems([resize(slot, preset)]))
   }
 
-  const startBuild = async (goal: string, name: string) => {
-    // Build into the open dashboard while it is empty; otherwise into a new one.
-    let target: Dashboard | null = active
-    if (!target) target = await boards.create('Overview')
-    else if (view.length > 0) target = await boards.create(name || 'AI insights')
-    if (!target) return
-    setDismissedJob(null)
-    // The open workspace's approved knowledge guides the build when it is on this dataset.
-    const workspace = workspaces?.find((w) => w.workspace_id === activeWorkspaceId)
-    const workspaceId = workspace && workspace.target_schema === target.target_schema ? workspace.workspace_id : undefined
-    await build.start(target.dashboard_id, goal || undefined, workspaceId)
-  }
-
-  const job = build.job && build.job.job_id !== dismissedJob ? build.job : null
   const otherDashboards = boards.dashboards.filter((d) => d.dashboard_id !== active?.dashboard_id)
   const noDashboards = !boards.isLoading && !boards.isError && boards.dashboards.length === 0
 
@@ -217,16 +167,8 @@ export function DashboardsView({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {active && <LiveIndicator live={live} updatedAt={tiles.dataUpdatedAt} />}
-          <DatasetPicker
-            dataset={dataset}
-            available={availableSchemas}
-            live={liveSchemas}
-            workspaces={workspaces}
-            activeWorkspaceId={activeWorkspaceId}
-            onSelectDataset={onChangeDataset}
-            onSelectWorkspace={onSelectWorkspace}
-          />
+          {active && <RefreshIndicator updatedAt={tiles.dataUpdatedAt} />}
+          {picker}
           {active && view.length > 0 && (
             <>
               <Button
@@ -244,17 +186,10 @@ export function DashboardsView({
               </HeaderButton>
             </>
           )}
-          <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setBuildOpen(true)} disabled={build.active}>
-            <Wand2 className="size-3.5" />
-            Build with AI
-          </Button>
         </div>
       </header>
 
       <div className="flex-1 overflow-y-auto">
-        {job && <BuildProgress job={job} onDismiss={() => setDismissedJob(job.job_id)} />}
-        {!editing && <InsightsStrip insights={insights} />}
-
         {boards.isLoading || (active && tiles.isLoading) ? (
           <div className="grid gap-4 p-6 sm:grid-cols-2 xl:grid-cols-4">
             {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-36 rounded-xl" />)}
@@ -274,17 +209,15 @@ export function DashboardsView({
           </div>
         ) : noDashboards ? (
           <EmptyState
-            title={<>No dashboards for <span className="text-primary">{datasetLabel(dataset)}</span> yet</>}
-            text="Let the AI plan one from the data, or start empty and pin answers from Ask."
-            onBuild={() => setBuildOpen(true)}
-            secondary={{ label: 'Start empty', onClick: () => void boards.create('Overview') }}
+            title={<>No dashboards in <span className="text-primary">{workspaceName}</span> yet</>}
+            text="Create one, then pin answers to it from Ask. A pinned answer re-runs its query on a schedule."
+            primary={{ label: 'Create a dashboard', onClick: () => void boards.create('Overview'), icon: Plus }}
           />
-        ) : view.length === 0 && !job ? (
+        ) : view.length === 0 ? (
           <EmptyState
             title="This dashboard is empty"
-            text="Build it with AI, or ask a question and pin the answer."
-            onBuild={() => setBuildOpen(true)}
-            secondary={{ label: 'Ask a question', onClick: onAsk, icon: MessageSquare }}
+            text="Ask a question and pin the answer to this dashboard."
+            primary={{ label: 'Ask a question', onClick: onAsk, icon: MessageSquare }}
           />
         ) : (
           <DashboardGrid slots={slots} editing={editing} onStop={onGridStop}>
@@ -339,13 +272,6 @@ export function DashboardsView({
           />
         </>
       )}
-      <BuildDialog
-        open={buildOpen}
-        onOpenChange={setBuildOpen}
-        dataset={datasetLabel(dataset)}
-        needsName={Boolean(active && view.length > 0)}
-        onBuild={startBuild}
-      />
     </div>
   )
 }
@@ -353,12 +279,11 @@ export function DashboardsView({
 interface EmptyStateProps {
   title: ReactNode
   text: string
-  onBuild: () => void
-  secondary: { label: string; onClick: () => void; icon?: typeof MessageSquare }
+  primary: { label: string; onClick: () => void; icon: typeof MessageSquare }
 }
 
-function EmptyState({ title, text, onBuild, secondary }: EmptyStateProps) {
-  const Icon = secondary.icon
+function EmptyState({ title, text, primary }: EmptyStateProps) {
+  const Icon = primary.icon
   return (
     <motion.main
       initial={{ opacity: 0, y: 8 }}
@@ -366,18 +291,14 @@ function EmptyState({ title, text, onBuild, secondary }: EmptyStateProps) {
       className="mx-auto flex max-w-md flex-col items-center px-6 py-24 text-center"
     >
       <div className="mb-5 grid size-14 place-items-center rounded-2xl bg-primary/12 text-primary ring-1 ring-primary/25">
-        <Wand2 className="size-6" />
+        <Pin className="size-6" />
       </div>
       <h2 className="text-lg font-semibold">{title}</h2>
       <p className="mt-1.5 text-sm text-muted-foreground">{text}</p>
       <div className="mt-6 flex gap-2">
-        <Button onClick={onBuild} className="gap-1.5">
-          <Wand2 className="size-4" />
-          Build with AI
-        </Button>
-        <Button variant="outline" onClick={secondary.onClick} className="gap-1.5">
-          {Icon && <Icon className="size-4" />}
-          {secondary.label}
+        <Button onClick={primary.onClick} className="gap-1.5">
+          <Icon className="size-4" />
+          {primary.label}
         </Button>
       </div>
     </motion.main>

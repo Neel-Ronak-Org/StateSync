@@ -13,8 +13,7 @@ touches the database:
   clear it, and anything outside the list must be refused.
 - title_fallback decides what a pinned follow-up is called. "And bottom?"
   means nothing on a dashboard; its rewrite does.
-- default_interval gives tiles on the live dataset a 30 s refresh and every
-  other dataset the global default.
+- default_interval gives every pin the global default refresh.
 The database paths are verified live by scripts/verify_dashboards.py.
 """
 
@@ -154,13 +153,7 @@ def test_without_a_rewrite_the_question_is_the_title():
 
 # ── default_interval / resolve_interval ───────────────────────────────────────
 
-def test_live_tiles_default_to_the_live_interval_and_others_to_the_global_default():
-    assert tt.default_interval("live") == int(tt.cfg.tiles.schema_default_refresh_s.live)
-    assert tt.default_interval("olist") == int(tt.cfg.tiles.default_refresh_s)
+def test_a_pin_without_an_interval_gets_the_global_default():
+    assert tt.default_interval("cn_0123456789abcdef") == int(tt.cfg.tiles.default_refresh_s)
     assert tt.default_interval(None) == int(tt.cfg.tiles.default_refresh_s)
-    assert tt.resolve_interval(None, "live") == int(tt.cfg.tiles.schema_default_refresh_s.live)
-
-
-def test_the_live_default_is_itself_inside_the_bounds():
-    live = int(tt.cfg.tiles.schema_default_refresh_s.live)
-    assert tt.resolve_interval(live) == live
+    assert tt.resolve_interval(None, "cn_0123456789abcdef") == int(tt.cfg.tiles.default_refresh_s)

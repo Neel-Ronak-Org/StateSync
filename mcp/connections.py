@@ -1,6 +1,6 @@
 """
 mcp/connections.py
-The owner's own Postgres (docs/V3_PLAN.md Phase 3c slice 6, migration 026).
+The owner's own Postgres.
 
 A saved connection's id, cn_<16 hex>, is used as a DATASET NAME wherever
 StateSync names a dataset (a workspace's target_schema, a tile's, a turn's).
