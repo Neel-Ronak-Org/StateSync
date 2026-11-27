@@ -579,6 +579,6 @@ Labels were checked by a model, not by hand.
 | `orchestrator/nodes/synthesizer.py` | the answer writer: reads the top 8, citations by code |
 | `config/statesync.toml` `[retrieval]`, `[library]` | every number above |
 | `migrations/021_workspaces_rls.sql`, `024_library.sql` | the tables |
-| `research/paper_b/scripts/` | `eval_writer_window.py`, `build_page_set.py`, `eval_jev_pages.py`, `eval_financebench.py` |
-| `research/paper_b/results/` | `financebench_*`, `partd_writer_window.json`, `jev_pages_r1.json`, `paperb_docs_grades_*` |
-| `research/archive/results/` | `retrieval_v2_report.md`, `rag_v3_report.md` |
+| `research/paper_b/scripts/` (tag `research-archive`) | `eval_writer_window.py`, `build_page_set.py`, `eval_jev_pages.py`, `eval_financebench.py` |
+| `research/paper_b/results/` (tag `research-archive`) | `financebench_*`, `partd_writer_window.json`, `jev_pages_r1.json`, `paperb_docs_grades_*` |
+| `research/archive/results/` (tag `research-archive`) | `retrieval_v2_report.md`, `rag_v3_report.md` |

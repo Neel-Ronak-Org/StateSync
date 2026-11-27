@@ -3,7 +3,7 @@
 Every part of the final system is there because a measurement said it helps, and several parts that were
 built are gone because a measurement said they did not. This page lists the experiments that decided the
 design, oldest first, then the live checks of the final system. The protocols, scripts and result files are
-in [research/](../research/README.md). Every metric and statistical term is explained in
+in the `research/` folder of the [`research-archive` tag](https://github.com/Neel-Ronak-Org/StateSync/tree/research-archive/research) (removed from `main` to keep it small). Every metric and statistical term is explained in
 [RESULTS_EXPLAINED.md](RESULTS_EXPLAINED.md).
 
 ## How to read the numbers
