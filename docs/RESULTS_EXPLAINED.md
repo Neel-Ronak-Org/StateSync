@@ -2,7 +2,7 @@
 
 Every number the report and presentation use, what it measures, how it was produced, and how far it can be
 trusted. [EVALUATION.md](EVALUATION.md) is the short version; this is the long one. The scripts, protocols and
-result files are in [research/](../research/README.md), and every number below can be traced to a file there.
+result files are in the `research/` folder of the [`research-archive` tag](https://github.com/Neel-Ronak-Org/StateSync/tree/research-archive/research), and every number below can be traced to a file there.
 
 Contents:
 
